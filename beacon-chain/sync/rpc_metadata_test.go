@@ -30,7 +30,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	r := &Service{
 		db:  d,
 		p2p: p1,
@@ -44,7 +44,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := new(pb.MetaData)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if !ssz.DeepEqual(p1.LocalMetadata, out) {
@@ -85,7 +85,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	r := &Service{
 		db:  d,
 		p2p: p1,

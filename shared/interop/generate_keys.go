@@ -18,12 +18,12 @@ const (
 // DeterministicallyGenerateKeys creates BLS private keys using a fixed curve order according to
 // the algorithm specified in the Eth2.0-Specs interop mock start section found here:
 // https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
-func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {
-	privKeys := make([]*bls.SecretKey, numKeys)
-	pubKeys := make([]*bls.PublicKey, numKeys)
+func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey, []bls.PublicKey, error) {
+	privKeys := make([]bls.SecretKey, numKeys)
+	pubKeys := make([]bls.PublicKey, numKeys)
 	type keys struct {
-		secrets []*bls.SecretKey
-		publics []*bls.PublicKey
+		secrets []bls.SecretKey
+		publics []bls.PublicKey
 	}
 	results, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
@@ -43,9 +43,9 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey
 	return privKeys, pubKeys, nil
 }
 
-func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]*bls.SecretKey, []*bls.PublicKey, error) {
-	privKeys := make([]*bls.SecretKey, numKeys)
-	pubKeys := make([]*bls.PublicKey, numKeys)
+func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey, []bls.PublicKey, error) {
+	privKeys := make([]bls.SecretKey, numKeys)
+	pubKeys := make([]bls.PublicKey, numKeys)
 	for i := startIndex; i < startIndex+numKeys; i++ {
 		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))

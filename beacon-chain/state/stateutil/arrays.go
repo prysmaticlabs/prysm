@@ -123,11 +123,11 @@ func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 	chunkBuffer.Grow(64)
 	for len(hashLayer) > 1 && i < len(layers) {
 		layer := make([][32]byte, len(hashLayer)/2, len(hashLayer)/2)
-		for i := 0; i < len(hashLayer); i += 2 {
-			chunkBuffer.Write(hashLayer[i][:])
-			chunkBuffer.Write(hashLayer[i+1][:])
+		for j := 0; j < len(hashLayer); j += 2 {
+			chunkBuffer.Write(hashLayer[j][:])
+			chunkBuffer.Write(hashLayer[j+1][:])
 			hashedChunk := hasher(chunkBuffer.Bytes())
-			layer[i/2] = hashedChunk
+			layer[j/2] = hashedChunk
 			chunkBuffer.Reset()
 		}
 		hashLayer = layer

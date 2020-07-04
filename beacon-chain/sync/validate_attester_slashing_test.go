@@ -50,7 +50,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 	}
 	sig0 := privKeys[0].Sign(hashTreeRoot[:])
 	sig1 := privKeys[1].Sign(hashTreeRoot[:])
-	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
 	att2 := &ethpb.IndexedAttestation{
@@ -66,7 +66,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 	}
 	sig0 = privKeys[0].Sign(hashTreeRoot[:])
 	sig1 = privKeys[1].Sign(hashTreeRoot[:])
-	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att2.Signature = aggregateSig.Marshal()[:]
 
 	slashing := &ethpb.AttesterSlashing{
@@ -105,7 +105,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 
@@ -149,7 +149,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 
@@ -181,7 +181,7 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 	msg := &pubsub.Message{

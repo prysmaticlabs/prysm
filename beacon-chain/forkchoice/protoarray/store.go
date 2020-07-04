@@ -101,6 +101,9 @@ func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 
 // Nodes returns the copied list of block nodes in the fork choice store.
 func (f *ForkChoice) Nodes() []*Node {
+	f.store.nodeIndicesLock.RLock()
+	defer f.store.nodeIndicesLock.RUnlock()
+
 	cpy := make([]*Node, len(f.store.Nodes))
 	copy(cpy, f.store.Nodes)
 	return cpy

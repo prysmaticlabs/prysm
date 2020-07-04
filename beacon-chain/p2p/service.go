@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -33,34 +32,30 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 var _ = shared.Service(&Service{})
 
-// Check local table every 15 seconds for newly added peers.
-var pollingPeriod = 15 * time.Second
+// In the event that we are at our peer limit, we
+// stop looking for new peers and instead poll
+// for the current peer limit status for the time period
+// defined below.
+var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
 
-// search limit for number of peers in discovery v5.
-const searchLimit = 100
-
 // lookup limit whenever looking up for random nodes.
 const lookupLimit = 15
-
-const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
 
-const (
-	pubsubFlood  = "flood"
-	pubsubGossip = "gossip"
-	pubsubRandom = "random"
-)
+// Exclusion list cache config values.
+const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -91,9 +86,9 @@ func NewService(cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1000,
-		MaxCost:     1000,
-		BufferItems: 64,
+		NumCounters: cacheNumCounters,
+		MaxCost:     cacheMaxCost,
+		BufferItems: cacheBufferItems,
 	})
 	if err != nil {
 		return nil, err
@@ -137,7 +132,6 @@ func NewService(cfg *Config) (*Service, error) {
 
 	s.host = h
 
-	// TODO(3147): Add gossip sub options
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
@@ -148,19 +142,7 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 
-	var gs *pubsub.PubSub
-	if cfg.PubSub == "" {
-		cfg.PubSub = pubsubGossip
-	}
-	if cfg.PubSub == pubsubFlood {
-		gs, err = pubsub.NewFloodSub(s.ctx, s.host, psOpts...)
-	} else if cfg.PubSub == pubsubGossip {
-		gs, err = pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
-	} else if cfg.PubSub == pubsubRandom {
-		gs, err = pubsub.NewRandomSub(s.ctx, s.host, int(cfg.MaxPeers), psOpts...)
-	} else {
-		return nil, fmt.Errorf("unknown pubsub type %s", cfg.PubSub)
-	}
+	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to start pubsub")
 		return nil, err
@@ -190,11 +172,6 @@ func (s *Service) Start() {
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
-		peer, err := MakePeer(s.cfg.RelayNodeAddr)
-		if err != nil {
-			log.WithError(err).Errorf("Could not create peer")
-		}
-		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
 	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
@@ -229,11 +206,11 @@ func (s *Service) Start() {
 	}
 
 	// Periodic functions.
-	runutil.RunEvery(s.ctx, 5*time.Second, func() {
+	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
-	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
 	runutil.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
@@ -287,15 +264,7 @@ func (s *Service) Started() bool {
 
 // Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
-	encoding := s.cfg.Encoding
-	switch encoding {
-	case encoder.SSZ:
-		return &encoder.SszNetworkEncoder{}
-	case encoder.SSZSnappy:
-		return &encoder.SszNetworkEncoder{UseSnappyCompression: true}
-	default:
-		panic("Invalid Network Encoding Flag Provided")
-	}
+	return &encoder.SszNetworkEncoder{}
 }
 
 // PubSub returns the p2p pubsub framework.
@@ -354,8 +323,8 @@ func (s *Service) MetadataSeq() uint64 {
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
-// with the tracked committee id's for the epoch, allowing our node
-// to be dynamically discoverable by others given our tracked committee id's.
+// with the tracked committee ids for the epoch, allowing our node
+// to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {
@@ -484,6 +453,13 @@ func (s *Service) listenForNewNodes() {
 		// Exit if service's context is canceled
 		if s.ctx.Err() != nil {
 			break
+		}
+		if s.isPeerAtLimit() {
+			// Pause the main loop for a period to stop looking
+			// for new peers.
+			log.Trace("Not looking for peers, at peer limit")
+			time.Sleep(pollingPeriod)
+			continue
 		}
 		exists := iterator.Next()
 		if !exists {

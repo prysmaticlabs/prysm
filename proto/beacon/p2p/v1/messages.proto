@@ -17,7 +17,7 @@ message BeaconBlocksByRangeRequest {
   uint64 count = 2;
   uint64 step = 3;
 }
-
+// Deprecated: Will eventually be removed is only kept around for backward compatibility.
 message BeaconBlocksByRootRequest {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"1024\""];
 }

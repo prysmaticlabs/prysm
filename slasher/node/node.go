@@ -63,6 +63,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		return nil, err
 	}
 
+	cmd.ConfigureSlasher(cliCtx)
 	featureconfig.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 

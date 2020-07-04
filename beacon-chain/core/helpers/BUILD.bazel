@@ -21,6 +21,7 @@ go_library(
         "//shared/benchutil/benchmark_files:__subpackages__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",
+        "//shared/depositutil:__pkg__",
         "//shared/p2putils:__pkg__",
         "//shared/attestationutil:__pkg__",
         "//shared/testutil:__pkg__",
@@ -75,31 +76,6 @@ go_test(
         "//shared/sliceutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-    ],
-)
-
-# gazelle:exclude attestation_aggregation_bench_test.go
-go_test(
-    name = "go_benchmark_test",
-    size = "medium",
-    srcs = ["attestation_aggregation_bench_test.go"],
-    args = [
-        "-test.bench=.",
-        "-test.benchmem",
-        "-test.v",
-    ],
-    embed = [":go_default_library"],
-    local = True,
-    tags = [
-        "benchmark",
-        "manual",
-        "no-cache",
-    ],
-    deps = [
-        "//shared/bls:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

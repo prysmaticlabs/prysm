@@ -16,7 +16,7 @@ import (
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// ReadOnlyDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.ReadOnlyDatabase
+// ReadOnlyDatabase defines a struct which only has read access to database methods.
 type ReadOnlyDatabase interface {
 	// Attestation related methods.
 	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error)
@@ -65,7 +65,7 @@ type ReadOnlyDatabase interface {
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 }
 
-// NoHeadAccessDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.NoHeadAccessDatabase
+// NoHeadAccessDatabase defines a struct without access to chain head data.
 type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
@@ -75,8 +75,6 @@ type NoHeadAccessDatabase interface {
 	SaveAttestation(ctx context.Context, att *eth.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
-	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
-	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
@@ -90,11 +88,8 @@ type NoHeadAccessDatabase interface {
 	// Slashing operations.
 	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error
 	SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error
-	DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error
-	DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error
 	// Block operations.
 	SaveVoluntaryExit(ctx context.Context, exit *eth.VoluntaryExit) error
-	DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error
 	// Checkpoint operations.
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
@@ -111,7 +106,7 @@ type NoHeadAccessDatabase interface {
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
 }
 
-// HeadAccessDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.HeadAccessDatabase
+// HeadAccessDatabase defines a struct with access to reading chain head data.
 type HeadAccessDatabase interface {
 	NoHeadAccessDatabase
 
@@ -122,7 +117,7 @@ type HeadAccessDatabase interface {
 	HeadState(ctx context.Context) (*state.BeaconState, error)
 }
 
-// Database -- See github.com/prysmaticlabs/prysm/beacon-chain/db.Database
+// Database interface with full access.
 type Database interface {
 	io.Closer
 	HeadAccessDatabase

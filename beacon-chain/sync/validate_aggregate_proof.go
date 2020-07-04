@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -17,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -87,7 +85,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
-	if err := validateAggregateAttTime(attSlot, s.chain.GenesisTime()); err != nil {
+	if err := helpers.ValidateAttestationTime(attSlot, s.chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -187,24 +185,6 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 	if !withinCommittee {
 		return fmt.Errorf("validator index %d is not within the committee: %v",
 			validatorIndex, committee)
-	}
-	return nil
-}
-
-// Validates that the incoming aggregate attestation is in the desired time range.
-func validateAggregateAttTime(attSlot uint64, genesisTime time.Time) error {
-	// set expected boundaries for attestations
-	attTime := genesisTime.Add(time.Duration(attSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
-	attSlotRange := attSlot + params.BeaconNetworkConfig().AttestationPropagationSlotRange
-	attTimeRange := genesisTime.Add(time.Duration(attSlotRange*params.BeaconConfig().SecondsPerSlot) * time.Second)
-	currentTime := roughtime.Now()
-	clockDisparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
-
-	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
-	currentSlot := helpers.SlotsSince(genesisTime)
-	if attTime.Add(-clockDisparity).After(currentTime) ||
-		currentTime.Add(-clockDisparity).After(attTimeRange) {
-		return fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconNetworkConfig().AttestationPropagationSlotRange)
 	}
 	return nil
 }

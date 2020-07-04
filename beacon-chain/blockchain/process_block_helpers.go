@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -50,7 +49,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
 	}
 
-	// Verify block slot time is not from the feature.
+	// Verify block slot time is not from the future.
 	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
@@ -147,7 +146,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
 	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
+	if s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
 	} else {
 		newJustifiedBlockSigned, err = s.beaconDB.Block(ctx, justifiedRoot)
@@ -165,7 +164,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
 	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
+	if s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
 		justifiedBlockSigned, err = s.beaconDB.Block(ctx, cachedJustifiedRoot)
@@ -235,7 +234,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
 
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
+	if s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
 		signed = s.getInitSyncBlock(bytesutil.ToBytes32(root))
 	}
 
@@ -294,7 +293,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	return nil
 }
 
-// This retrieves missing blocks from DB (ie. the blocks that couldn't received over sync) and inserts them to fork choice store.
+// This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
 	pendingNodes := make([]*ethpb.BeaconBlock, 0)

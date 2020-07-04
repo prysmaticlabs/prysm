@@ -58,10 +58,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	blockReceiver := s.chain.ReceiveBlockInitialSync
 
 	// Step 1 - Sync to end of finalized epoch.
-	for blk := range queue.fetchedBlocks {
-		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Info("Block is not processed")
-			continue
+	for fetchedBlocks := range queue.fetchedBlocks {
+		for _, blk := range fetchedBlocks {
+			if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+				log.WithError(err).Info("Block is not processed")
+				continue
+			}
 		}
 	}
 
@@ -84,11 +86,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		p2p:         s.p2p,
 		headFetcher: s.chain,
 	})
-	_, _, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
+	_, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	for len(pids) == 0 {
 		log.Info("Waiting for a suitable peer before syncing to the head of the chain")
 		time.Sleep(refreshTime)
-		_, _, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
+		_, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	}
 	best := pids[0]
 

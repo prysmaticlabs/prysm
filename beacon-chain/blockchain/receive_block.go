@@ -7,10 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -26,7 +24,7 @@ type BlockReceiver interface {
 	HasInitSyncBlock(root [32]byte) bool
 }
 
-// ReceiveBlock is a function that defines the operations that are preformed on
+// ReceiveBlock is a function that defines the operations that are performed on
 // blocks that is received from rpc service. The operations consists of:
 //   1. Gossip block to other peers
 //   2. Validate block, apply state transition and update check points
@@ -57,7 +55,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 }
 
 // ReceiveBlockNoPubsub is a function that defines the the operations (minus pubsub)
-// that are preformed on blocks that is received from regular sync service. The operations consists of:
+// that are performed on blocks that is received from regular sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
@@ -83,17 +81,13 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		s.exitPool.MarkIncluded(exit)
 	}
 
-	s.epochParticipationLock.Lock()
-	defer s.epochParticipationLock.Unlock()
-	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
-
 	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot() {
 		if err := s.saveHead(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			return errors.Wrap(err, "could not save head")
+			return errors.Wrap(err, "could not update head")
 		}
 	}
 
@@ -165,10 +159,6 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 		"attestations": len(blockCopy.Block.Body.Attestations),
 		"deposits":     len(blockCopy.Block.Body.Deposits),
 	}).Debug("Finished applying state transition")
-
-	s.epochParticipationLock.Lock()
-	defer s.epochParticipationLock.Unlock()
-	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
 	return nil
 }

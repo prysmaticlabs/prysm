@@ -18,18 +18,18 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -76,7 +76,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Genesis(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -130,7 +130,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -186,7 +186,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -328,13 +328,13 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Errors(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{BeaconDB: db}
-	exceedsMax := int32(flags.Get().MaxPageSize + 1)
+	exceedsMax := int32(cmd.Get().MaxRPCPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.ListBlocksRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -399,7 +399,7 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 }
 
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
@@ -453,7 +453,7 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 }
 
 func TestServer_GetChainHead(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
@@ -537,15 +537,15 @@ func TestServer_GetChainHead(t *testing.T) {
 		t.Errorf("Wanted FinalizedEpoch: %d, got: %d",
 			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedEpoch)
 	}
-	if head.PreviousJustifiedSlot != 3 {
+	if head.PreviousJustifiedSlot != 24 {
 		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
 			3, head.PreviousJustifiedSlot)
 	}
-	if head.JustifiedSlot != 2 {
+	if head.JustifiedSlot != 16 {
 		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
 			2, head.JustifiedSlot)
 	}
-	if head.FinalizedSlot != 1 {
+	if head.FinalizedSlot != 8 {
 		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
 			1, head.FinalizedSlot)
 	}
@@ -564,7 +564,7 @@ func TestServer_GetChainHead(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -591,8 +591,8 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
-	db := dbTest.SetupDB(t)
-
+	db, _ := dbTest.SetupDB(t)
+	params.UseMainnetConfig()
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	if err := db.SaveBlock(context.Background(), genBlock); err != nil {
@@ -607,7 +607,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	finalizedBlock := testutil.NewBeaconBlock()
-	finalizedBlock.Block.Slot = 1
+	finalizedBlock.Block.Slot = 32
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
 	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
 		t.Fatal(err)
@@ -618,7 +618,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	justifiedBlock := testutil.NewBeaconBlock()
-	justifiedBlock.Block.Slot = 2
+	justifiedBlock.Block.Slot = 64
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
 	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
 		t.Fatal(err)
@@ -629,7 +629,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
-	prevJustifiedBlock.Block.Slot = 3
+	prevJustifiedBlock.Block.Slot = 96
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
 	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
 		t.Fatal(err)
@@ -676,13 +676,13 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			HeadSlot:                   b.Block.Slot,
 			HeadEpoch:                  helpers.SlotToEpoch(b.Block.Slot),
 			HeadBlockRoot:              hRoot[:],
-			FinalizedSlot:              1,
+			FinalizedSlot:              32,
 			FinalizedEpoch:             1,
 			FinalizedBlockRoot:         fRoot[:],
-			JustifiedSlot:              2,
+			JustifiedSlot:              64,
 			JustifiedEpoch:             2,
 			JustifiedBlockRoot:         jRoot[:],
-			PreviousJustifiedSlot:      3,
+			PreviousJustifiedSlot:      96,
 			PreviousJustifiedEpoch:     3,
 			PreviousJustifiedBlockRoot: pjRoot[:],
 		},
@@ -708,7 +708,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	chainService := &chainMock.ChainService{}

@@ -15,6 +15,7 @@ require (
 	github.com/d4l3k/messagediff v1.2.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.2
+	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.5 // indirect
 	github.com/emicklei/dot v0.11.0
@@ -60,15 +61,18 @@ require (
 	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/libp2p/go-libp2p-peerstore v0.2.4
 	github.com/libp2p/go-libp2p-pubsub v0.3.1
+	github.com/libp2p/go-libp2p-secio v0.2.2
 	github.com/libp2p/go-libp2p-swarm v0.2.5
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
 	github.com/libp2p/go-maddr-filter v0.1.0 // indirect
+	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.0
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.2.2
 	github.com/multiformats/go-multiaddr-net v0.1.5
+	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d
 	github.com/olekukonko/tablewriter v0.0.4 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/paulbellamy/ratecounter v0.2.0
@@ -86,7 +90,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
-	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
+	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/eth2-signer-api v1.3.0
 	github.com/wealdtech/go-bytesutil v1.1.1
@@ -115,6 +119,6 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200615030327-5f59060ced70
+replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200626171358-a933315235ec
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b

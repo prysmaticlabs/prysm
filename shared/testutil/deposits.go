@@ -23,7 +23,7 @@ var lock sync.Mutex
 
 // Caches
 var cachedDeposits []*ethpb.Deposit
-var privKeys []*bls.SecretKey
+var privKeys []bls.SecretKey
 var trie *trieutil.SparseMerkleTrie
 
 // DeterministicDepositsAndKeys returns the entered amount of deposits and secret keys.
@@ -31,7 +31,7 @@ var trie *trieutil.SparseMerkleTrie
 // account is key n and the withdrawal account is key n+1.  As such,
 // if all secret keys for n validators are required then numDeposits
 // should be n+1.
-func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey, error) {
+func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.SecretKey, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	var err error
@@ -152,7 +152,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 }
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
-func DeterministicGenesisState(t testing.TB, numValidators uint64) (*stateTrie.BeaconState, []*bls.SecretKey) {
+func DeterministicGenesisState(t testing.TB, numValidators uint64) (*stateTrie.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -196,14 +196,14 @@ func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.SparseMerkleT
 // ResetCache clears out the old trie, private keys and deposits.
 func ResetCache() {
 	trie = nil
-	privKeys = []*bls.SecretKey{}
+	privKeys = []bls.SecretKey{}
 	cachedDeposits = []*ethpb.Deposit{}
 }
 
 // DeterministicDepositsAndKeysSameValidator returns the entered amount of deposits and secret keys
 // of the same validator. This is for negative test cases such as same deposits from same validators in a block don't
 // result in duplicated validator indices.
-func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey, error) {
+func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Deposit, []bls.SecretKey, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	var err error

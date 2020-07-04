@@ -17,7 +17,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -48,6 +47,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -102,8 +102,27 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.OverrideBeaconConfig(c)
 	}
 
+	cmd.ConfigureBeaconChain(cliCtx)
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
+
+	// Setting chain network specific flags.
+	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
+		c := params.BeaconNetworkConfig()
+		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
+		params.OverrideBeaconNetworkConfig(c)
+	}
+	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
+		c := params.BeaconNetworkConfig()
+		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
+		params.OverrideBeaconNetworkConfig(c)
+	}
+	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
+		networkCfg := params.BeaconNetworkConfig()
+		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
+		params.OverrideBeaconNetworkConfig(networkCfg)
+	}
+
 	registry := shared.NewServiceRegistry()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -166,10 +185,6 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerArchiverService(); err != nil {
-		return nil, err
-	}
-
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := beacon.registerPrometheusService(); err != nil {
 			return nil, err
@@ -218,7 +233,7 @@ func (b *BeaconNode) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
+				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic")
 			}
 		}
 		panic("Panic closing the beacon node")
@@ -296,22 +311,44 @@ func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
 }
 
+func readbootNodes(fileName string) ([]string, error) {
+	fileContent, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	listNodes := make([]string, 0)
+	err = yaml.Unmarshal(fileContent, &listNodes)
+	if err != nil {
+		return nil, err
+	}
+	return listNodes, nil
+}
+
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeAddrs := strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
-	for i, addr := range bootnodeAddrs {
-		if filepath.Ext(addr) == ".enr" {
-			b, err := ioutil.ReadFile(addr)
+	// Bootnode ENR may be a filepath to a YAML file
+	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes //actual CLI values
+	bootnodeAddrs := make([]string, 0)                           //dest of final list of nodes
+	for _, addr := range bootnodesTemp {
+		if filepath.Ext(addr) == ".yaml" {
+			fileNodes, err := readbootNodes(addr)
 			if err != nil {
 				return err
 			}
-			bootnodeAddrs[i] = string(b)
+			bootnodeAddrs = append(bootnodeAddrs, fileNodes...)
+		} else {
+			bootnodeAddrs = append(bootnodeAddrs, addr)
 		}
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
 	if datadir == "" {
 		datadir = cmd.DefaultDataDir()
+		if datadir == "" {
+			log.Fatal(
+				"Could not determine your system's HOME path, please specify a --datadir you wish " +
+					"to use for your chain data",
+			)
+		}
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
@@ -332,9 +369,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DenyListCIDR:      sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
-		Encoding:          cliCtx.String(cmd.P2PEncoding.Name),
 		StateNotifier:     b,
-		PubSub:            cliCtx.String(cmd.P2PPubsub.Name),
 	})
 	if err != nil {
 		return err
@@ -396,9 +431,9 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-	depAddress := b.cliCtx.String(flags.DepositContractFlag.Name)
+	depAddress := params.BeaconNetworkConfig().DepositContractAddress
 	if depAddress == "" {
-		log.Fatal(fmt.Sprintf("%s is required", flags.DepositContractFlag.Name))
+		log.Fatal("Valid deposit contract is required")
 	}
 
 	if !common.IsHexAddress(depAddress) {
@@ -538,7 +573,6 @@ func (b *BeaconNode) registerRPCService() error {
 		HeadFetcher:             chainService,
 		ForkFetcher:             chainService,
 		FinalizationFetcher:     chainService,
-		ParticipationFetcher:    chainService,
 		BlockReceiver:           chainService,
 		AttestationReceiver:     chainService,
 		GenesisTimeFetcher:      chainService,
@@ -634,21 +668,4 @@ func (b *BeaconNode) registerInteropServices() error {
 		return b.services.RegisterService(svc)
 	}
 	return nil
-}
-
-func (b *BeaconNode) registerArchiverService() error {
-	if !flags.Get().EnableArchive {
-		return nil
-	}
-	var chainService *blockchain.Service
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-	svc := archiver.NewArchiverService(b.ctx, &archiver.Config{
-		BeaconDB:             b.db,
-		HeadFetcher:          chainService,
-		ParticipationFetcher: chainService,
-		StateNotifier:        b,
-	})
-	return b.services.RegisterService(svc)
 }

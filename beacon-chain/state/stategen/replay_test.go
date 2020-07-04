@@ -21,7 +21,7 @@ import (
 
 func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -53,7 +53,7 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 
 func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -85,7 +85,7 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 }
 
 func TestReplayBlocks_AllSkipSlots(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
@@ -129,7 +129,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 }
 
 func TestReplayBlocks_SameSlot(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
@@ -173,7 +173,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 }
 
 func TestLoadBlocks_FirstBranch(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -206,7 +206,7 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 }
 
 func TestLoadBlocks_SecondBranch(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -237,7 +237,7 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 }
 
 func TestLoadBlocks_ThirdBranch(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -270,7 +270,7 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 }
 
 func TestLoadBlocks_SameSlots(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -301,7 +301,7 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 }
 
 func TestLoadBlocks_SameEndSlots(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -331,7 +331,7 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 }
 
 func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -360,7 +360,7 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 }
 
 func TestLoadBlocks_BadStart(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -377,11 +377,11 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 }
 
 func TestLastSavedBlock_Genesis(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:  db,
-		splitInfo: &splitSlotAndRoot{slot: 128},
+		beaconDB:      db,
+		finalizedInfo: &finalizedSlotRoot{slot: 128},
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -409,31 +409,31 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 }
 
 func TestLastSavedBlock_CanGet(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:  db,
-		splitInfo: &splitSlotAndRoot{slot: 128},
+		beaconDB:      db,
+		finalizedInfo: &finalizedSlotRoot{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 5}}
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
 	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
 		t.Fatal(err)
 	}
-	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 10}}
+	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 10}}
 	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
-	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 20}}
+	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 20}}
 	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
 		t.Fatal(err)
 	}
 
-	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.splitInfo.slot+100)
+	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if savedSlot != s.splitInfo.slot+20 {
+	if savedSlot != s.finalizedInfo.slot+20 {
 		t.Error("Did not save correct slot")
 	}
 	wantedRoot, err := stateutil.BlockRoot(b3.Block)
@@ -446,14 +446,14 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 }
 
 func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:  db,
-		splitInfo: &splitSlotAndRoot{slot: 128},
+		beaconDB:      db,
+		finalizedInfo: &finalizedSlotRoot{slot: 128},
 	}
 
-	root, slot, err := s.lastSavedBlock(ctx, s.splitInfo.slot+1)
+	root, slot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,11 +463,11 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 }
 
 func TestLastSavedState_Genesis(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:  db,
-		splitInfo: &splitSlotAndRoot{slot: 128},
+		beaconDB:      db,
+		finalizedInfo: &finalizedSlotRoot{slot: 128},
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -492,18 +492,18 @@ func TestLastSavedState_Genesis(t *testing.T) {
 }
 
 func TestLastSavedState_CanGet(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:  db,
-		splitInfo: &splitSlotAndRoot{slot: 128},
+		beaconDB:      db,
+		finalizedInfo: &finalizedSlotRoot{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 5}}
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
 	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
 		t.Fatal(err)
 	}
-	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 10}}
+	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 10}}
 	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
@@ -512,19 +512,19 @@ func TestLastSavedState_CanGet(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := testutil.NewBeaconState()
-	if err := st.SetSlot(s.splitInfo.slot + 10); err != nil {
+	if err := st.SetSlot(s.finalizedInfo.slot + 10); err != nil {
 		t.Fatal(err)
 	}
 
 	if err := s.beaconDB.SaveState(ctx, st, b2Root); err != nil {
 		t.Fatal(err)
 	}
-	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 20}}
+	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 20}}
 	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
 		t.Fatal(err)
 	}
 
-	savedState, err := s.lastSavedState(ctx, s.splitInfo.slot+100)
+	savedState, err := s.lastSavedState(ctx, s.finalizedInfo.slot+100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -534,11 +534,11 @@ func TestLastSavedState_CanGet(t *testing.T) {
 }
 
 func TestLastSavedState_NoSavedBlockState(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:  db,
-		splitInfo: &splitSlotAndRoot{slot: 128},
+		beaconDB:      db,
+		finalizedInfo: &finalizedSlotRoot{slot: 128},
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
@@ -546,7 +546,7 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := s.lastSavedState(ctx, s.splitInfo.slot+1)
+	_, err := s.lastSavedState(ctx, s.finalizedInfo.slot+1)
 	if err != errUnknownState {
 		t.Error("Did not get wanted error")
 	}
@@ -554,7 +554,7 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 
 func TestArchivedRoot_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
@@ -572,7 +572,7 @@ func TestArchivedRoot_CanGetSpecificIndex(t *testing.T) {
 
 func TestArchivedRoot_CanGetOlderOlder(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
@@ -594,7 +594,7 @@ func TestArchivedRoot_CanGetOlderOlder(t *testing.T) {
 
 func TestArchivedRoot_CanGetGenesisIndex(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -619,7 +619,7 @@ func TestArchivedRoot_CanGetGenesisIndex(t *testing.T) {
 
 func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
@@ -630,7 +630,14 @@ func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
-	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
+	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not get wanted state")
+	}
+	got, err = service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -641,7 +648,7 @@ func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 
 func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -660,7 +667,7 @@ func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
 
 func TestProcessStateUpToSlot_CanProcess(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -727,7 +734,7 @@ func tree1(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	}
 	st := testutil.NewBeaconState()
 
-	returnedBlocks := []*ethpb.SignedBeaconBlock{}
+	returnedBlocks := make([]*ethpb.SignedBeaconBlock, 0)
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b2, b3, b4, b5, b6, b7, b8} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Slot
@@ -787,7 +794,7 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	}
 	st := testutil.NewBeaconState()
 
-	returnedBlocks := []*ethpb.SignedBeaconBlock{}
+	returnedBlocks := make([]*ethpb.SignedBeaconBlock, 0)
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24, b3} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Slot
@@ -843,7 +850,7 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	}
 	st := testutil.NewBeaconState()
 
-	returnedBlocks := []*ethpb.SignedBeaconBlock{}
+	returnedBlocks := make([]*ethpb.SignedBeaconBlock, 0)
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Slot
@@ -895,7 +902,7 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	}
 	st := testutil.NewBeaconState()
 
-	returnedBlocks := []*ethpb.SignedBeaconBlock{}
+	returnedBlocks := make([]*ethpb.SignedBeaconBlock, 0)
 	for _, b := range []*ethpb.BeaconBlock{b0, b21, b22, b23, b24} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Slot

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -32,14 +33,13 @@ func TestPrivateKeyLoading(t *testing.T) {
 	}
 	out := hex.EncodeToString(raw)
 
-	err = ioutil.WriteFile(file.Name(), []byte(out), 0600)
+	err = ioutil.WriteFile(file.Name(), []byte(out), params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
 		t.Fatalf("Could not write key to file: %v", err)
 	}
 	log.WithField("file", file.Name()).WithField("key", out).Info("Wrote key to file")
 	cfg := &Config{
 		PrivateKey: file.Name(),
-		Encoding:   "ssz",
 	}
 	pKey, err := privKey(cfg)
 	if err != nil {

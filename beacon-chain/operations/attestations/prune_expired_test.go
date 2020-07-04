@@ -3,14 +3,87 @@ package attestations
 import (
 	"context"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
-func TestPruneExpiredAtts_CanPrune(t *testing.T) {
+func TestPruneExpired_Ticker(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	s, err := NewService(ctx, &Config{
+		Pool:          NewPool(),
+		pruneInterval: 250 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	atts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1000, 0b1}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1000, 0b1}},
+	}
+	if err := s.pool.SaveUnaggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+	if s.pool.UnaggregatedAttestationCount() != 2 {
+		t.Fatalf("Unexpected number of attestations: %d", s.pool.UnaggregatedAttestationCount())
+	}
+	atts = []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1101, 0b1}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101, 0b1}},
+	}
+	if err := s.pool.SaveAggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+	if s.pool.AggregatedAttestationCount() != 2 {
+		t.Fatalf("Unexpected number of attestations: %d", s.pool.AggregatedAttestationCount())
+	}
+	if err := s.pool.SaveBlockAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rewind back one epoch worth of time.
+	s.genesisTime = uint64(roughtime.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
+
+	go s.pruneAttsPool()
+
+	done := make(chan struct{}, 1)
+	runutil.RunEvery(ctx, 500*time.Millisecond, func() {
+		for _, attestation := range s.pool.UnaggregatedAttestations() {
+			if attestation.Data.Slot == 0 {
+				return
+			}
+		}
+		for _, attestation := range s.pool.AggregatedAttestations() {
+			if attestation.Data.Slot == 0 {
+				return
+			}
+		}
+		for _, attestation := range s.pool.BlockAttestations() {
+			if attestation.Data.Slot == 0 {
+				return
+			}
+		}
+		if s.pool.UnaggregatedAttestationCount() != 1 || s.pool.AggregatedAttestationCount() != 1 {
+			return
+		}
+		done <- struct{}{}
+	})
+	select {
+	case <-done:
+		// All checks are passed.
+	case <-ctx.Done():
+		t.Error("Test case takes too long to complete")
+	}
+}
+
+func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +118,7 @@ func TestPruneExpiredAtts_CanPrune(t *testing.T) {
 	}
 }
 
-func TestExpired_AttsCanExpire(t *testing.T) {
+func TestPruneExpired_Expired(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	if err != nil {
 		t.Fatal(err)

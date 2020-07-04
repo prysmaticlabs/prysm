@@ -5,9 +5,8 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"net"
-	"os"
+	"sync"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -31,7 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -46,11 +45,12 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+const attestationBufferSize = 100
+
 var log logrus.FieldLogger
 
 func init() {
 	log = logrus.WithField("prefix", "rpc")
-	rand.Seed(int64(os.Getpid()))
 }
 
 // Service defining an RPC server for a beacon node.
@@ -61,7 +61,6 @@ type Service struct {
 	headFetcher             blockchain.HeadFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
-	participationFetcher    blockchain.ParticipationFetcher
 	genesisTimeFetcher      blockchain.TimeFetcher
 	genesisFetcher          blockchain.GenesisFetcher
 	attestationReceiver     blockchain.AttestationReceiver
@@ -73,7 +72,7 @@ type Service struct {
 	attestationsPool        attestations.Pool
 	exitPool                *voluntaryexits.Pool
 	slashingsPool           *slashings.Pool
-	syncService             sync.Checker
+	syncService             chainSync.Checker
 	host                    string
 	port                    string
 	listener                net.Listener
@@ -98,6 +97,7 @@ type Service struct {
 	slasherClient           slashpb.SlasherClient
 	stateGen                *stategen.State
 	connectedRPCClients     map[net.Addr]bool
+	clientConnectionLock    sync.Mutex
 }
 
 // Config options for the beacon node RPC server.
@@ -110,7 +110,6 @@ type Config struct {
 	HeadFetcher             blockchain.HeadFetcher
 	ForkFetcher             blockchain.ForkFetcher
 	FinalizationFetcher     blockchain.FinalizationFetcher
-	ParticipationFetcher    blockchain.ParticipationFetcher
 	AttestationReceiver     blockchain.AttestationReceiver
 	BlockReceiver           blockchain.BlockReceiver
 	POWChainService         powchain.Chain
@@ -122,7 +121,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                *voluntaryexits.Pool
 	SlashingsPool           *slashings.Pool
-	SyncService             sync.Checker
+	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
 	PeerManager             p2p.PeerManager
@@ -147,7 +146,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		headFetcher:             cfg.HeadFetcher,
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
-		participationFetcher:    cfg.ParticipationFetcher,
 		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		attestationReceiver:     cfg.AttestationReceiver,
@@ -268,7 +266,6 @@ func (s *Service) Start() {
 		SlashingsPool:               s.slashingsPool,
 		HeadFetcher:                 s.headFetcher,
 		FinalizationFetcher:         s.finalizationFetcher,
-		ParticipationFetcher:        s.participationFetcher,
 		ChainStartFetcher:           s.chainStartFetcher,
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,
@@ -280,8 +277,8 @@ func (s *Service) Start() {
 		Broadcaster:                 s.p2p,
 		StateGen:                    s.stateGen,
 		SyncChecker:                 s.syncService,
-		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
-		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),
+		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
+		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
@@ -403,6 +400,8 @@ func (s *Service) logNewClientConnection(ctx context.Context) {
 	if clientInfo, ok := peer.FromContext(ctx); ok {
 		// Check if we have not yet observed this grpc client connection
 		// in the running beacon node.
+		s.clientConnectionLock.Lock()
+		defer s.clientConnectionLock.Unlock()
 		if !s.connectedRPCClients[clientInfo.Addr] {
 			log.WithFields(logrus.Fields{
 				"addr": clientInfo.Addr.String(),

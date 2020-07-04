@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -41,7 +40,7 @@ var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 //        store.finalized_checkpoint.root
 //    )
 //    # Check that block is later than the finalized epoch slot
-//    assert block.slot > compute_start_slot_of_epoch(store.finalized_checkpoint.epoch)
+//    assert block.slot > compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
 //    # Check the block is valid and compute the post-state
 //    state = state_transition(pre_state, block)
 //    # Add new state for this block to the store
@@ -102,12 +101,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
-			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-				return nil, err
-			}
-			s.clearInitSyncBlocks()
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return nil, err
 		}
+		s.clearInitSyncBlocks()
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
@@ -206,13 +203,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
-		s.saveInitSyncBlock(blockRoot, signed)
-	} else {
-		if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
-			return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
-		}
-	}
+	s.saveInitSyncBlock(blockRoot, signed)
 
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
@@ -222,15 +213,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not save state")
 	}
 
-	if flags.Get().EnableArchive {
-		atts := signed.Block.Body.Attestations
-		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
-			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
-		}
-	}
-
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
-	if len(s.getInitSyncBlocks()) > int(initialSyncBlockCacheSize) {
+	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
@@ -239,12 +223,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
-			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-				return err
-			}
-			s.clearInitSyncBlocks()
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return err
 		}
+		s.clearInitSyncBlocks()
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")

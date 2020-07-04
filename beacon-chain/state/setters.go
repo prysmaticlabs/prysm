@@ -9,9 +9,28 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
+
+// For our setters, we have a field reference counter through
+// which we can track shared field references. This helps when
+// performing state copies, as we simply copy the reference to the
+// field. When we do need to do need to modify these fields, we
+// perform a full copy of the field. This is true of most of our
+// fields except for the following below.
+// 1) BlockRoots
+// 2) StateRoots
+// 3) Eth1DataVotes
+// 4) RandaoMixes
+// 5) HistoricalRoots
+// 6) CurrentEpochAttestations
+// 7) PreviousEpochAttestations
+//
+// The fields referred to above are instead copied by reference, where
+// we simply copy the reference to the underlying object instead of the
+// whole object. This is possible due to how we have structured our state
+// as we copy the value on read, so as to ensure the underlying object is
+// not mutated while it is being accessed during a state read.
 
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
@@ -76,7 +95,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	return nil
 }
 
-// SetBlockRoots for the beacon state. This PR updates the entire
+// SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	if !b.HasInnerState() {
@@ -90,16 +109,17 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
+	b.rebuildTrie[blockRoots] = true
 	return nil
 }
 
-// UpdateBlockRootAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateBlockRootAtIndex for the beacon state. Updates the block root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.BlockRoots) <= int(idx) {
+	if uint64(len(b.state.BlockRoots)) <= idx {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -107,14 +127,9 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.Refs() > 1 {
-		// Copy on write since this is a shared array.
-		if featureconfig.Get().EnableStateRefCopy {
-			r = make([][]byte, len(b.state.BlockRoots))
-			copy(r, b.state.BlockRoots)
-		} else {
-			r = b.blockRoots()
-		}
-
+		// Copy elements in underlying array by reference.
+		r = make([][]byte, len(b.state.BlockRoots))
+		copy(r, b.state.BlockRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
 	}
@@ -127,8 +142,8 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	return nil
 }
 
-// SetStateRoots for the beacon state. This PR updates the entire
-// to a new value by overwriting the previous one.
+// SetStateRoots for the beacon state. Updates the state roots
+// to a new value by overwriting the previous value.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
@@ -145,13 +160,16 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	return nil
 }
 
-// UpdateStateRootAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateStateRootAtIndex for the beacon state. Updates the state root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.StateRoots) <= int(idx) {
+
+	b.lock.RLock()
+	if uint64(len(b.state.StateRoots)) <= idx {
+		b.lock.RUnlock()
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -160,14 +178,9 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	// Check if we hold the only reference to the shared state roots slice.
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.Refs() > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		if featureconfig.Get().EnableStateRefCopy {
-			r = make([][]byte, len(b.state.StateRoots))
-			copy(r, b.state.StateRoots)
-		} else {
-			r = b.stateRoots()
-		}
-
+		// Copy elements in underlying array by reference.
+		r = make([][]byte, len(b.state.StateRoots))
+		copy(r, b.state.StateRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	}
@@ -180,7 +193,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	return nil
 }
 
-// SetHistoricalRoots for the beacon state. This PR updates the entire
+// SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	if !b.HasInnerState() {
@@ -210,7 +223,7 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 	return nil
 }
 
-// SetEth1DataVotes for the beacon state. This PR updates the entire
+// SetEth1DataVotes for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	if !b.HasInnerState() {
@@ -228,7 +241,7 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	return nil
 }
 
-// AppendEth1DataVotes for the beacon state. This PR appends the new value
+// AppendEth1DataVotes for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	if !b.HasInnerState() {
@@ -239,12 +252,9 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 
 	votes := b.state.Eth1DataVotes
 	if b.sharedFieldReferences[eth1DataVotes].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
-			copy(votes, b.state.Eth1DataVotes)
-		} else {
-			votes = b.eth1DataVotes()
-		}
+		// Copy elements in underlying array by reference.
+		votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+		copy(votes, b.state.Eth1DataVotes)
 		b.sharedFieldReferences[eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	}
@@ -268,7 +278,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	return nil
 }
 
-// SetValidators for the beacon state. This PR updates the entire
+// SetValidators for the beacon state. Updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	if !b.HasInnerState() {
@@ -323,13 +333,13 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	return nil
 }
 
-// UpdateValidatorAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.Validators) <= int(idx) {
+	if uint64(len(b.state.Validators)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -365,7 +375,7 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ui
 	b.valIdxMap = m
 }
 
-// SetBalances for the beacon state. This PR updates the entire
+// SetBalances for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
 	if !b.HasInnerState() {
@@ -388,7 +398,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.Balances) <= int(idx) {
+	if uint64(len(b.state.Balances)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -407,8 +417,8 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	return nil
 }
 
-// SetRandaoMixes for the beacon state. This PR updates the entire
-// list to a new value by overwriting the previous one.
+// SetRandaoMixes for the beacon state. Updates the entire
+// randao mixes to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
@@ -425,13 +435,13 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	return nil
 }
 
-// UpdateRandaoMixesAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateRandaoMixesAtIndex for the beacon state. Updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.RandaoMixes) <= int(idx) {
+	if uint64(len(b.state.RandaoMixes)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -439,12 +449,9 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].Refs(); refs > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			mixes = make([][]byte, len(b.state.RandaoMixes))
-			copy(mixes, b.state.RandaoMixes)
-		} else {
-			mixes = b.randaoMixes()
-		}
+		// Copy elements in underlying array by reference.
+		mixes = make([][]byte, len(b.state.RandaoMixes))
+		copy(mixes, b.state.RandaoMixes)
 		b.sharedFieldReferences[randaoMixes].MinusRef()
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
@@ -457,7 +464,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	return nil
 }
 
-// SetSlashings for the beacon state. This PR updates the entire
+// SetSlashings for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
 	if !b.HasInnerState() {
@@ -474,13 +481,13 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 	return nil
 }
 
-// UpdateSlashingsAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateSlashingsAtIndex for the beacon state. Updates the slashings
 // at a specific index to a new value.
 func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.Slashings) <= int(idx) {
+	if uint64(len(b.state.Slashings)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -501,7 +508,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 	return nil
 }
 
-// SetPreviousEpochAttestations for the beacon state. This PR updates the entire
+// SetPreviousEpochAttestations for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -519,7 +526,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 	return nil
 }
 
-// SetCurrentEpochAttestations for the beacon state. This PR updates the entire
+// SetCurrentEpochAttestations for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -537,7 +544,7 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	return nil
 }
 
-// AppendHistoricalRoots for the beacon state. This PR appends the new value
+// AppendHistoricalRoots for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	if !b.HasInnerState() {
@@ -548,12 +555,8 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 
 	roots := b.state.HistoricalRoots
 	if b.sharedFieldReferences[historicalRoots].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			roots = make([][]byte, len(b.state.HistoricalRoots))
-			copy(roots, b.state.HistoricalRoots)
-		} else {
-			roots = b.historicalRoots()
-		}
+		roots = make([][]byte, len(b.state.HistoricalRoots))
+		copy(roots, b.state.HistoricalRoots)
 		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 	}
@@ -563,7 +566,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	return nil
 }
 
-// AppendCurrentEpochAttestations for the beacon state. This PR appends the new value
+// AppendCurrentEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -574,12 +577,9 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
-			copy(atts, b.state.CurrentEpochAttestations)
-		} else {
-			atts = b.currentEpochAttestations()
-		}
+		// Copy elements in underlying array by reference.
+		atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
+		copy(atts, b.state.CurrentEpochAttestations)
 		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 	}
@@ -590,7 +590,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 	return nil
 }
 
-// AppendPreviousEpochAttestations for the beacon state. This PR appends the new value
+// AppendPreviousEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -601,12 +601,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
-			copy(atts, b.state.PreviousEpochAttestations)
-		} else {
-			atts = b.previousEpochAttestations()
-		}
+		atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
+		copy(atts, b.state.PreviousEpochAttestations)
 		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
@@ -618,7 +614,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	return nil
 }
 
-// AppendValidator for the beacon state. This PR appends the new value
+// AppendValidator for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	if !b.HasInnerState() {
@@ -646,7 +642,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	return nil
 }
 
-// AppendBalance for the beacon state. This PR appends the new value
+// AppendBalance for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
 	if !b.HasInnerState() {

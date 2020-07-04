@@ -7,19 +7,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-// Prune expired attestations from the pool every slot interval.
-var pruneExpiredAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
-
-// This prunes attestations pool by running pruneExpiredAtts
-// at every pruneExpiredAttsPeriod.
+// pruneAttsPool prunes attestations pool on every slot interval.
 func (s *Service) pruneAttsPool() {
-	ticker := time.NewTicker(pruneExpiredAttsPeriod)
+	ticker := time.NewTicker(s.pruneInterval)
 	for {
 		select {
 		case <-ticker.C:
 			s.pruneExpiredAtts()
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
+			ticker.Stop()
 			return
 		}
 	}

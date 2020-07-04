@@ -50,7 +50,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	// De-index recent finalized block roots, to be re-indexed.
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
 	if b := bkt.Get(previousFinalizedCheckpointKey); b != nil {
-		if err := decode(b, previousFinalizedCheckpoint); err != nil {
+		if err := decode(ctx, b, previousFinalizedCheckpoint); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
@@ -95,7 +95,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			ChildRoot:  previousRoot,
 		}
 
-		enc, err := encode(container)
+		enc, err := encode(ctx, container)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
@@ -108,12 +108,12 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 		// Found parent, loop exit condition.
 		if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
 			parent := &dbpb.FinalizedBlockRootContainer{}
-			if err := decode(parentBytes, parent); err != nil {
+			if err := decode(ctx, parentBytes, parent); err != nil {
 				traceutil.AnnotateError(span, err)
 				return err
 			}
 			parent.ChildRoot = root
-			enc, err := encode(parent)
+			enc, err := encode(ctx, parent)
 			if err != nil {
 				traceutil.AnnotateError(span, err)
 				return err
@@ -146,7 +146,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Update previous checkpoint
-	enc, err := encode(checkpoint)
+	enc, err := encode(ctx, checkpoint)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err

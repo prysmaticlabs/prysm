@@ -245,7 +245,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
 // the resulting layers of the trie based on the appropriate depth. This function
-// pads the leaves to a power-of-two length.
+// pads the leaves to a length of 32.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
 	layers := make([][][]byte, htrutils.GetDepth(uint64(len(leaves)))+1)
