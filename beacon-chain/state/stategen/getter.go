@@ -23,6 +23,11 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
+	// Short cut if the state is already in the DB.
+	if s.beaconDB.HasState(ctx, blockRoot) {
+		return s.beaconDB.State(ctx, blockRoot)
+	}
+
 	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state summary")

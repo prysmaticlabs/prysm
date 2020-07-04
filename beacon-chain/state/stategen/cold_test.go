@@ -98,7 +98,7 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	loadedState, err := service.loadColdStateByRoot(ctx, blkRoot)
+	loadedState, err := service.StateByRoot(ctx, blkRoot)
 	if err != nil {
 		t.Fatal(err)
 	}

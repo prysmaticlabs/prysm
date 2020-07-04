@@ -120,7 +120,7 @@ func TestStore_OnAttestation(t *testing.T) {
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{Slot: 100 * params.BeaconConfig().SlotsPerEpoch},
 			wantErr:       true,
-			wantErrString: "unknown boundary state",
+			wantErrString: "target epoch 100 does not match current epoch",
 		},
 		{
 			name:          "process nil field (a.Target) in attestation",
