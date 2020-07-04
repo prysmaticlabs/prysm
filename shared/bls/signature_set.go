@@ -25,3 +25,8 @@ func (s *SignatureSet) Join(set *SignatureSet) *SignatureSet {
 	s.Messages = append(s.Messages, set.Messages...)
 	return s
 }
+
+// Verifies the current signature set using the current batch verify algorithm.
+func (s *SignatureSet) Verify() (bool, error) {
+	return VerifyMultipleSignatures(s.Signatures, s.Messages, s.PublicKeys)
+}
