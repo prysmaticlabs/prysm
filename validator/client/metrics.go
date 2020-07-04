@@ -175,15 +175,15 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
+		if _, ok := v.startBalance[pubKeyBytes]; ok == false {
+			v.startBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
+		}
 
 		fmtKey := fmt.Sprintf("%#x", pubKey)
 		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
-			if _, ok := v.startBalance[pubKeyBytes]; ok == false {
-				v.startBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
-			}
 			startBalance := float64(v.startBalance[pubKeyBytes]) / gweiPerEth
 			percentNet := (newBalance - prevBalance) / prevBalance
 			percentSinceStart := (newBalance - startBalance) / startBalance
