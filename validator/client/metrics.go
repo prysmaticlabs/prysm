@@ -216,7 +216,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
 	summary := &v.summaryStats
 	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
-	var included, votedSource, votedTarget, votedHead int
+	var included, correctSource, correctTarget, correctHead int
 
 	for i, _ := range resp.PublicKeys {
 		if resp.InclusionSlots[i] != ^uint64(0) {
@@ -225,15 +225,15 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 			summary.totalDistance += resp.InclusionDistances[i]
 		}
 		if resp.CorrectlyVotedSource[i] {
-			votedSource++
+			correctSource++
 			summary.correctSources++
 		}
 		if resp.CorrectlyVotedTarget[i] {
-			votedTarget++
+			correctTarget++
 			summary.correctTargets++
 		}
 		if resp.CorrectlyVotedHead[i] {
-			votedHead++
+			correctHead++
 			summary.correctHeads++
 		}
 	}
@@ -246,9 +246,9 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	log.WithFields(logrus.Fields{
 		"epoch":                   currentEpoch - 1,
 		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
-		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(votedSource)/float64(len(resp.CorrectlyVotedSource)))*100),
-		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
-		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(votedHead)/float64(len(resp.CorrectlyVotedHead)))*100),
+		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(len(resp.CorrectlyVotedSource)))*100),
+		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
+		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(len(resp.CorrectlyVotedHead)))*100),
 	}).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
