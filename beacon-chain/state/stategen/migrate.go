@@ -32,6 +32,7 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+
 		if i%s.slotsPerArchivedPoint == 0 && i != 0 {
 			cached, exists, err := s.epochBoundaryStateCache.getBySlot(i)
 			if err != nil {
@@ -73,6 +74,7 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 			if s.beaconDB.HasState(ctx, aRoot) {
 				continue
 			}
+
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
 				return err
 			}
