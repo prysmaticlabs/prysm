@@ -138,6 +138,9 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 	if err != nil {
 		return err
 	}
+	if len(set.Signatures) != 1 {
+		return errors.Errorf("signature set contains %d signatures instead of 1", len(set.Signatures))
+	}
 	// We assume only one signature set is returned here.
 	sig := set.Signatures[0]
 	publicKey := set.PublicKeys[0]
