@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
