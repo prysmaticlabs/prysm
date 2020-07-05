@@ -99,7 +99,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 	}
 	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
 	if err != nil {
-		return errors.Errorf("got error in multiple verification: %v", err)
+		return errors.Errorf("could not verify multiple signatures: %v", err)
 	}
 	if !verify {
 		return errors.New("one or more deposit signatures did not verify")
@@ -952,7 +952,7 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 	return verifyAttestationsWithDomain(ctx, beaconState, postForkAtts, currDomain)
 }
 
-// RetrieveAttestationSignatureSet retrieves all the related attestation signature data such as the relevant pubkeys
+// RetrieveAttestationSignatureSet retrieves all the related attestation signature data such as the relevant public keys,
 // signatures and attestation signing data and collate it into a signature set object.
 func RetrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) (*bls.SignatureSet, error) {
 	if len(atts) == 0 {
