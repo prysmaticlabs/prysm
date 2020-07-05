@@ -495,7 +495,7 @@ func ProcessBlockNoVerify(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	// Empty Signature Set
+	// Empty signature set.
 	set := bls.NewSet()
 
 	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
