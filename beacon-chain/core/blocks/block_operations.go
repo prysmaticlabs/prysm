@@ -99,7 +99,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 	}
 	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
 	if err != nil {
-		return errors.Errorf("got error in multiple verification: %v", err)
+		return errors.Errorf("could not verify multiple signatures: %v", err)
 	}
 	if !verify {
 		return errors.New("one or more deposit signatures did not verify")
