@@ -175,8 +175,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
-		if _, ok := v.startBalance[pubKeyBytes]; ok == false {
-			v.startBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
+		if _, ok := v.startBalances[pubKeyBytes]; ok == false {
+			v.startBalances[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
 		}
 
 		fmtKey := fmt.Sprintf("%#x", pubKey)
@@ -184,7 +184,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
-			startBalance := float64(v.startBalance[pubKeyBytes]) / gweiPerEth
+			startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
 			percentNet := (newBalance - prevBalance) / prevBalance
 			percentSinceStart := (newBalance - startBalance) / startBalance
 			log.WithFields(logrus.Fields{
@@ -221,7 +221,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	for i := range resp.PublicKeys {
 		if resp.InclusionSlots[i] != ^uint64(0) {
 			included++
-			summary.includedAttests++
+			summary.includedAttestedCount++
 			summary.totalDistance += resp.InclusionDistances[i]
 		}
 		if resp.CorrectlyVotedSource[i] {
@@ -238,7 +238,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		}
 	}
 
-	summary.totalAttestSlots += uint64(len(resp.InclusionSlots))
+	summary.totalAttestedCount += uint64(len(resp.InclusionSlots))
 	summary.totalSources += uint64(len(resp.CorrectlyVotedSource))
 	summary.totalTargets += uint64(len(resp.CorrectlyVotedTarget))
 	summary.totalHeads += uint64(len(resp.CorrectlyVotedHead))
@@ -252,7 +252,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
-	for i, val := range v.startBalance {
+	for i, val := range v.startBalances {
 		totalStartBal += val
 		totalPrevBal += v.prevBalance[i]
 	}
@@ -260,8 +260,8 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	log.WithFields(logrus.Fields{
 		//+1 to adjust for the original startEpoch calculation
 		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch+1),
-		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttests)/float64(summary.totalAttestSlots))*100),
-		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttests)),
+		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
+		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount)),
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
 		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.correctTargets)/float64(summary.totalTargets))*100),
 		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.correctHeads)/float64(summary.totalHeads))*100),

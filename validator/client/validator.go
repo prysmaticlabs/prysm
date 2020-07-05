@@ -52,9 +52,9 @@ type validator struct {
 	graffiti                           []byte
 	node                               ethpb.NodeClient
 	keyManager                         keymanager.KeyManager
-	startBalance                       map[[48]byte]uint64
+	startBalances                      map[[48]byte]uint64
 	prevBalance                        map[[48]byte]uint64
-	summaryStats                       aggregateStats
+	summaryStats                       voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
 	attLogs                            map[[32]byte]*attSubmitted
@@ -603,15 +603,15 @@ func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
 }
 
 // This will keep track of all validators' voting status.
-type aggregateStats struct {
-	startEpoch       uint64
-	includedAttests  uint64
-	totalAttestSlots uint64
-	totalDistance    uint64
-	correctSources   uint64
-	totalSources     uint64
-	correctTargets   uint64
-	totalTargets     uint64
-	correctHeads     uint64
-	totalHeads       uint64
+type voteStats struct {
+	startEpoch            uint64
+	includedAttestedCount uint64
+	totalAttestedCount    uint64
+	totalDistance         uint64
+	correctSources        uint64
+	totalSources          uint64
+	correctTargets        uint64
+	totalTargets          uint64
+	correctHeads          uint64
+	totalHeads            uint64
 }
