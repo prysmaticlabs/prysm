@@ -54,7 +54,7 @@ type validator struct {
 	keyManager                         keymanager.KeyManager
 	startBalances                      map[[48]byte]uint64
 	prevBalance                        map[[48]byte]uint64
-	summaryStats                       voteStats
+	voteStats                          voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
 	attLogs                            map[[32]byte]*attSubmitted

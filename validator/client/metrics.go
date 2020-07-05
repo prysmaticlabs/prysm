@@ -164,9 +164,9 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	prevEpoch := uint64(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
 		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
-		if v.summaryStats.startEpoch == 0 {
+		if v.voteStats.startEpoch == 0 {
 			//prevEpoch may be 0 so we store startEpoch (+1). Thus a value of 0 tells us it is not set (default)
-			v.summaryStats.startEpoch = prevEpoch + 1
+			v.voteStats.startEpoch = prevEpoch + 1
 		}
 	}
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
@@ -212,9 +212,9 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	return nil
 }
 
-//UpdateLogAggregateStats updates and logs the summaryStats struct of a validator using the RPC response obtained during LogValidatorGainsAndLosses
+//UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained during LogValidatorGainsAndLosses
 func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
-	summary := &v.summaryStats
+	summary := &v.voteStats
 	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	var included, correctSource, correctTarget, correctHead int
 
