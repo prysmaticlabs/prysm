@@ -239,16 +239,16 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	summary.totalAttestedCount += uint64(len(resp.InclusionSlots))
-	summary.totalSources += uint64(len(resp.CorrectlyVotedSource))
-	summary.totalTargets += uint64(len(resp.CorrectlyVotedTarget))
-	summary.totalHeads += uint64(len(resp.CorrectlyVotedHead))
+	summary.totalSources += uint64(included)
+	summary.totalTargets += uint64(included)
+	summary.totalHeads += uint64(included)
 
 	log.WithFields(logrus.Fields{
 		"epoch":                   currentEpoch - 1,
 		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
-		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(len(resp.CorrectlyVotedSource)))*100),
-		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
-		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(len(resp.CorrectlyVotedHead)))*100),
+		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(included))*100),
+		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(included))*100),
+		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(included))*100),
 	}).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
