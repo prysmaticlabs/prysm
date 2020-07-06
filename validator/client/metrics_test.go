@@ -15,7 +15,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		startBalances:        make(map[[48]byte]uint64),
 		prevBalance:          make(map[[48]byte]uint64),
 		voteStats: voteStats{
-			startEpoch: 1, //this would otherwise have been set in LogValidatorGainsAndLosses()
+			startEpoch: 0, //this would otherwise have been previously set in LogValidatorGainsAndLosses()
 		},
 	}
 
@@ -83,7 +83,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+
 		"correctlyVotedHeadPct=\"100%\" correctlyVotedSourcePct=\"100%\" correctlyVotedTargetPct=\"50%\" epoch=2")
-	testutil.AssertLogsContain(t, hook, "msg=\"Aggregate summary since start of node\" attestationsInclusionPct=\"78%\" "+
+	testutil.AssertLogsContain(t, hook, "msg=\"Vote summary since launch\" attestationsInclusionPct=\"78%\" "+
 		"averageInclusionDistance=\"2.29 slots\" correctlyVotedHeadPct=\"86%\" correctlyVotedSourcePct=\"100%\" "+
 		"correctlyVotedTargetPct=\"86%\" numberOfEpochs=3 pctChangeCombinedBalance=\"0.20555%\"")
 

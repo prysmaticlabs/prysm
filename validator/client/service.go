@@ -156,6 +156,7 @@ func (v *ValidatorService) Start() {
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
+		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 	}
 	go run(v.ctx, v.validator)
 }

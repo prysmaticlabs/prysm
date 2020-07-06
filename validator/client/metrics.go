@@ -164,9 +164,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	prevEpoch := uint64(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
 		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
-		if v.voteStats.startEpoch == 0 {
-			//prevEpoch may be 0 so we store startEpoch (+1). Thus a value of 0 tells us it is not set (default)
-			v.voteStats.startEpoch = prevEpoch + 1
+		if v.voteStats.startEpoch == ^uint64(0) { //this stores the first reported epoch number
+			v.voteStats.startEpoch = prevEpoch
 		}
 	}
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
@@ -258,7 +257,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	log.WithFields(logrus.Fields{
-		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch+1), //+1 to include the original epoch
+		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch),
 		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
 		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount)),
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
