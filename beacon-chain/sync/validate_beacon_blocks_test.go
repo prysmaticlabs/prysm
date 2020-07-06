@@ -204,7 +204,6 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
-
 	buf := new(bytes.Buffer)
 	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
@@ -302,7 +301,6 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
-
 	buf := new(bytes.Buffer)
 	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
