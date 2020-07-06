@@ -3,6 +3,7 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -36,7 +37,7 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 		if i%s.slotsPerArchivedPoint == 0 && i != 0 {
 			cached, exists, err := s.epochBoundaryStateCache.getBySlot(i)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not get epoch boundary state for slot %d", i)
 			}
 
 			aIndex := i / s.slotsPerArchivedPoint

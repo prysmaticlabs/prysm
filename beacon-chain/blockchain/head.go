@@ -285,6 +285,9 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 			return err
 		}
 	}
+	if justifiedState == nil {
+		return errors.New("justified state can't be nil")
+	}
 
 	epoch := helpers.CurrentEpoch(justifiedState)
 	validators := justifiedState.Validators()
