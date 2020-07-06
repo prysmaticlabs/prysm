@@ -40,8 +40,7 @@ type Flags struct {
 	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
-	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
-	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	LocalProtection                            bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
 	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
@@ -251,13 +250,9 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	}
-	if ctx.Bool(enableProtectProposerFlag.Name) {
-		log.Warn("Enabled validator proposal slashing protection.")
-		cfg.ProtectProposer = true
-	}
-	if ctx.Bool(enableProtectAttesterFlag.Name) {
-		log.Warn("Enabled validator attestation slashing protection.")
-		cfg.ProtectAttester = true
+	if ctx.Bool(enableLocalProtectionFlag.Name) {
+		log.Warn("Enabled validator slashing protection.")
+		cfg.LocalProtection = true
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")

@@ -98,9 +98,10 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 
-			if featureconfig.Get().ProtectAttester {
+			if featureconfig.Get().LocalProtection {
 				if err := v.UpdateProtections(ctx, slot); err != nil {
 					log.WithError(err).Error("Could not update validator protection")
+					continue
 				}
 			}
 
@@ -140,7 +141,7 @@ func run(ctx context.Context, v Validator) {
 			go func() {
 				wg.Wait()
 				v.LogAttestationsSubmitted()
-				if featureconfig.Get().ProtectAttester {
+				if featureconfig.Get().LocalProtection {
 					if err := v.SaveProtections(ctx); err != nil {
 						log.WithError(err).Error("Could not save validator protection")
 					}
