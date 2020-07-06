@@ -74,9 +74,11 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	return w, nil
 }
 
-// OpenWallet instantiates a wallet from a specified path.
+// OpenWallet instantiates a wallet from a specified path. It checks the
+// type of keymanager associated with the wallet by reading files in the wallet
+// path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	ok, err := hasWalletDir(cfg.WalletDir)
+	ok, err := hasDir(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not check if wallet exists at %s", cfg.WalletDir)
 	}
@@ -95,12 +97,14 @@ func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 			).Errorf("Could not close wallet directory: %v", err)
 		}
 	}()
+	// Retrieve the type of keymanager the wallet uses by looking at
+	// directories in its directory path.
 	list, err := walletDir.Readdirnames(0) // 0 to read all files and folders.
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read files in directory: %s", walletPath)
 	}
 	if len(list) != 1 {
-		return nil, errors.New("no directories found in wallet")
+		return nil, fmt.Errorf("expected a single directory in the wallet path: %s", walletPath)
 	}
 	keymanagerKind, err := v2keymanager.ParseKind(list[0])
 	if err != nil {
@@ -393,19 +397,11 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
+// Checks if a directory indeed exists at the specified path.
 func hasDir(dirPath string) (bool, error) {
 	info, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
 		return false, nil
 	}
 	return info.IsDir(), err
-}
-
-// Check if a user has an existing wallet at the specified path.
-func hasWalletDir(walletPath string) (bool, error) {
-	_, err := os.Stat(walletPath)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return true, err
 }

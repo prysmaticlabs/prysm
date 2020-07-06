@@ -9,11 +9,10 @@ import (
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")

@@ -70,6 +70,8 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
+	flags.WalletPasswordsDirFlag,
+	flags.WalletPasswordsDirFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,

@@ -22,12 +22,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -77,22 +77,33 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
-
-	// TODO: Enable keymanager properly.
-	keyManagerV1, err := selectKeyManager(cliCtx)
+	keyManagerV1, err := selectV1Keymanager(cliCtx)
 	if err != nil {
 		return nil, err
 	}
 
 	var keyManagerV2 v2.IKeymanager
 	if featureconfig.Get().EnableAccountsV2 {
-		keyManagerV2, err = direct.NewKeymanager(context.Background(), nil, nil)
+		walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+		passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
+		// Read the wallet from the specified path.
+		wallet, err := accountsv2.OpenWallet(context.Background(), &accountsv2.WalletConfig{
+			PasswordsDir: passwordsDir,
+			WalletDir:    walletDir,
+		})
+		if err == accountsv2.ErrNoWalletFound {
+			log.Fatal("No wallet found at path, please create a new wallet using `validator accounts-v2 new`")
+		}
 		if err != nil {
-			return nil, err
+			log.Fatalf("Could not open wallet: %v", err)
+		}
+		keyManagerV2, err = wallet.ExistingKeyManager(context.Background())
+		if err != nil {
+			log.Fatalf("Could not read existing keymanager for wallet: %v", err)
 		}
 	}
 
-	pubKeys, err := publicKeysFromKeymanager(keyManagerV1, keyManagerV2)
+	pubKeys, err := ExtractPublicKeysFromKeymanager(cliCtx, keyManagerV2)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +205,7 @@ func (s *ValidatorClient) registerPrometheusService() error {
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager, keyManagerV2 v2.IKeymanager) error {
+func (s *ValidatorClient) registerClientService(keyManager v1.KeyManager, keyManagerV2 v2.IKeymanager) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -250,8 +261,8 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	return s.services.RegisterService(sp)
 }
 
-// selectKeyManager selects the key manager depending on the options provided by the user.
-func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
+// Selects the key manager depending on the options provided by the user.
+func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
 	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
 	opts := ctx.String(flags.KeyManagerOpts.Name)
 	if opts == "" {
@@ -291,20 +302,20 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 		}
 	}
 
-	var km keymanager.KeyManager
+	var km v1.KeyManager
 	var help string
 	var err error
 	switch manager {
 	case "interop":
-		km, help, err = keymanager.NewInterop(opts)
+		km, help, err = v1.NewInterop(opts)
 	case "unencrypted":
-		km, help, err = keymanager.NewUnencrypted(opts)
+		km, help, err = v1.NewUnencrypted(opts)
 	case "keystore":
-		km, help, err = keymanager.NewKeystore(opts)
+		km, help, err = v1.NewKeystore(opts)
 	case "wallet":
-		km, help, err = keymanager.NewWallet(opts)
+		km, help, err = v1.NewWallet(opts)
 	case "remote":
-		km, help, err = keymanager.NewRemoteWallet(opts)
+		km, help, err = v1.NewRemoteWallet(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}
@@ -347,16 +358,8 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	return nil
 }
 
-// ExtractPublicKeysFromKeyManager extracts only the public keys from the specified key manager.
-func ExtractPublicKeysFromKeyManager(ctx *cli.Context) ([][48]byte, error) {
-	km, err := selectKeyManager(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return km.FetchValidatingKeys()
-}
-
-func publicKeysFromKeymanager(keyManagerV1 keymanager.KeyManager, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
+// ExtractPublicKeysFromKeymanager extracts only the public keys from the specified key manager.
+func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
 	var pubKeys [][48]byte
 	var err error
 	if featureconfig.Get().EnableAccountsV2 {
@@ -366,9 +369,9 @@ func publicKeysFromKeymanager(keyManagerV1 keymanager.KeyManager, keyManagerV2 v
 		}
 		return pubKeys, nil
 	}
-	pubKeys, err = keyManagerV1.FetchValidatingKeys()
+	km, err := selectV1Keymanager(cliCtx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to obtain public keys for validation")
+		return nil, err
 	}
-	return pubKeys, nil
+	return km.FetchValidatingKeys()
 }
