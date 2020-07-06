@@ -248,7 +248,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		return nil, nil, nil, err
 	}
 	if !verify {
-		return nil, nil, nil, errors.New("Batch block signature verification failed")
+		return nil, nil, nil, errors.New("batch block signature verification failed")
 	}
 	return preState, fCheckpoints, jCheckpoints, nil
 }
