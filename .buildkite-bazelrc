@@ -2,24 +2,14 @@
 # across machines, developers, and workspaces.
 # 
 # This config is loaded from https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/latest.bazelrc
-build:remote-cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
 build:remote-cache --remote_timeout=3600
-build:remote-cache --auth_enabled=true
 build:remote-cache --spawn_strategy=standalone
 build:remote-cache --strategy=Javac=standalone
 build:remote-cache --strategy=Closure=standalone
 build:remote-cache --strategy=Genrule=standalone
 
-# Build results backend.                                                        
-#build:remote-cache --bes_results_url="https://source.cloud.google.com/results/invocations/"
-#build:remote-cache --bes_backend=buildeventservice.googleapis.com               
-#build:remote-cache --bes_timeout=60s                                            
-#build:remote-cache --project_id=prysmaticlabs
-
 # Prysm specific remote-cache properties.
-build:remote-cache --disk_cache=
-build:remote-cache --host_platform_remote_properties_override='properties:{name:\"cache-silo-key\" value:\"prysm\"}' 
-build:remote-cache --remote_instance_name=projects/prysmaticlabs/instances/default_instance
+#build:remote-cache --disk_cache=
 build:remote-cache --remote_download_minimal
 
 # Import workspace options.
