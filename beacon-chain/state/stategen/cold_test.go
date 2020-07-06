@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -64,7 +65,7 @@ func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 	}
 }
 
-func TestLoadColdStateByRoot_CanGet(t *testing.T) {
+func TestLoadStateByRoot_CanGet(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
@@ -97,11 +98,11 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	loadedState, err := service.loadColdStateByRoot(ctx, blkRoot)
+	loadedState, err := service.StateByRoot(ctx, blkRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loadedState.Slot() != 100 {
+	if !reflect.DeepEqual(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
 		t.Error("Did not correctly save state")
 	}
 }
