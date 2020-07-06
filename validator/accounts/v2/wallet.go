@@ -10,10 +10,9 @@ import (
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/sirupsen/logrus"
 )
 
 const (
