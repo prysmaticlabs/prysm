@@ -10,8 +10,10 @@ import (
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
+
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 const (
@@ -22,6 +24,11 @@ const (
 	numAccountWords          = 3 // Number of words in account human-readable names.
 	accountFilePermissions   = os.O_CREATE | os.O_RDWR
 	directoryPermissions     = os.ModePerm
+)
+
+var (
+	// ErrNoWalletFound signifies there is no data at the given wallet path.
+	ErrNoWalletFound = errors.New("no wallet found at path")
 )
 
 // WalletConfig for a wallet struct, containing important information
@@ -69,11 +76,40 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 
 // OpenWallet instantiates a wallet from a specified path.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
+	ok, err := hasWalletDir(cfg.WalletDir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if wallet exists at %s", cfg.WalletDir)
+	}
+	if !ok {
+		return nil, ErrNoWalletFound
+	}
 	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
+	walletDir, err := os.Open(walletPath)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := walletDir.Close(); err != nil {
+			log.WithField(
+				"path", walletPath,
+			).Errorf("Could not close wallet directory: %v", err)
+		}
+	}()
+	list, err := walletDir.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read files in directory: %s", walletPath)
+	}
+	if len(list) != 1 {
+		return nil, errors.New("no directories found in wallet")
+	}
+	keymanagerKind, err := v2keymanager.ParseKind(list[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "could not parse keymanager kind from wallet path")
+	}
 	return &Wallet{
 		accountsPath:   walletPath,
 		passwordsDir:   cfg.PasswordsDir,
-		keymanagerKind: cfg.KeymanagerKind,
+		keymanagerKind: keymanagerKind,
 	}, nil
 }
 
@@ -116,6 +152,66 @@ func (w *Wallet) AccountNames() ([]string, error) {
 		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.accountsPath)
 	}
 	return list, err
+}
+
+// ExistingKeyManager reads a keymanager config from disk at the wallet path,
+// unmarshals it based on the wallet's keymanager kind, and returns its value.
+func (w *Wallet) ExistingKeyManager(
+	ctx context.Context,
+) (v2keymanager.IKeymanager, error) {
+	var keymanager v2keymanager.IKeymanager
+	switch w.KeymanagerKind() {
+	case v2keymanager.Direct:
+		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read keymanager config")
+		}
+		cfg, err := direct.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
+		}
+		keymanager, err = direct.NewKeymanager(ctx, w, cfg)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize keymanager")
+		}
+	case v2keymanager.Derived:
+		return nil, errors.New("derived keymanager is unimplemented, work in progress")
+	case v2keymanager.Remote:
+		return nil, errors.New("remote keymanager is unimplemented, work in progress")
+	default:
+		return nil, errors.New("keymanager kind must be specified")
+	}
+	return keymanager, nil
+}
+
+// CreateKeymanager determines if a config file exists in the wallet, it
+// reads the config file and initializes the keymanager that way. Otherwise,
+// writes a new configuration file to the wallet and returns the initialized
+// keymanager for use.
+func (w *Wallet) CreateKeymanager(ctx context.Context) (v2keymanager.IKeymanager, error) {
+	var keymanager v2keymanager.IKeymanager
+	var err error
+	switch w.KeymanagerKind() {
+	case v2keymanager.Direct:
+		keymanager, err = direct.NewKeymanager(ctx, w, direct.DefaultConfig())
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read keymanager")
+		}
+	case v2keymanager.Derived:
+		return nil, errors.New("derived keymanager is unimplemented, work in progress")
+	case v2keymanager.Remote:
+		return nil, errors.New("remote keymanager is unimplemented, work in progress")
+	default:
+		return nil, errors.New("keymanager type must be specified")
+	}
+	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal keymanager config file")
+	}
+	if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return nil, errors.Wrap(err, "could not write keymanager config file to disk")
+	}
+	return keymanager, nil
 }
 
 // WriteAccountToDisk creates an account directory under a unique namespace
@@ -298,7 +394,16 @@ func fileExists(filename string) bool {
 }
 
 func hasDir(dirPath string) (bool, error) {
-	_, err := os.Stat(dirPath)
+	info, err := os.Stat(dirPath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return info.IsDir(), err
+}
+
+// Check if a user has an existing wallet at the specified path.
+func hasWalletDir(walletPath string) (bool, error) {
+	_, err := os.Stat(walletPath)
 	if os.IsNotExist(err) {
 		return false, nil
 	}

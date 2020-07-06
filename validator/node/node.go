@@ -79,47 +79,29 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	featureconfig.ConfigureValidator(cliCtx)
 
 	// TODO: Enable keymanager properly.
-	keyManager, err := selectKeyManager(cliCtx)
+	keyManagerV1, err := selectKeyManager(cliCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	var keymanagerv2 v2.IKeymanager
+	var keyManagerV2 v2.IKeymanager
 	if featureconfig.Get().EnableAccountsV2 {
-		keymanagerv2, err = direct.NewKeymanager(context.Background(), nil, nil)
+		keyManagerV2, err = direct.NewKeymanager(context.Background(), nil, nil)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	var pubKeys [][48]byte
-	if featureconfig.Get().EnableAccountsV2 {
-		pubKeys, err = keymanagerv2.FetchValidatingPublicKeys(context.Background())
-		if err != nil {
-			log.WithError(err).Error("Failed to obtain public keys for validation")
-		} else {
-			if len(pubKeys) == 0 {
-				log.Warn("No keys found; nothing to validate")
-			} else {
-				log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
-				for _, key := range pubKeys {
-					log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
-				}
-			}
-		}
+	pubKeys, err := publicKeysFromKeymanager(keyManagerV1, keyManagerV2)
+	if err != nil {
+		return nil, err
+	}
+	if len(pubKeys) == 0 {
+		log.Warn("No keys found; nothing to validate")
 	} else {
-		pubKeys, err = keyManager.FetchValidatingKeys()
-		if err != nil {
-			log.WithError(err).Error("Failed to obtain public keys for validation")
-		} else {
-			if len(pubKeys) == 0 {
-				log.Warn("No keys found; nothing to validate")
-			} else {
-				log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
-				for _, key := range pubKeys {
-					log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
-				}
-			}
+		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
+		for _, key := range pubKeys {
+			log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
 		}
 	}
 
@@ -151,7 +133,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
-	if err := ValidatorClient.registerClientService(keyManager, keymanagerv2); err != nil {
+	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2); err != nil {
 		return nil, err
 	}
 
@@ -372,4 +354,21 @@ func ExtractPublicKeysFromKeyManager(ctx *cli.Context) ([][48]byte, error) {
 		return nil, err
 	}
 	return km.FetchValidatingKeys()
+}
+
+func publicKeysFromKeymanager(keyManagerV1 keymanager.KeyManager, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
+	var pubKeys [][48]byte
+	var err error
+	if featureconfig.Get().EnableAccountsV2 {
+		pubKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to obtain public keys for validation")
+		}
+		return pubKeys, nil
+	}
+	pubKeys, err = keyManagerV1.FetchValidatingKeys()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to obtain public keys for validation")
+	}
+	return pubKeys, nil
 }
