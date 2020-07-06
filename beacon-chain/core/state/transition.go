@@ -8,8 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -129,52 +127,6 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 	}
 
 	return state, nil
-}
-
-// ExecuteStateTransitionNoVerifyAttSigs defines the procedure for a state transition function.
-// This does not validate any BLS signatures of attestations in a block, it is used for performing a state transition as quickly
-// as possible. This function should only be used when we can trust the data we're receiving entirely, such as
-// initial sync or for processing past accepted blocks.
-//
-// WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
-//
-// Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
-//    # Process slots (including those with no blocks) since block
-//    process_slots(state, block.slot)
-//    # Process block
-//    process_block(state, block)
-//    # Return post-state
-//    return state
-func ExecuteStateTransitionNoVerify(
-	ctx context.Context,
-	state *stateTrie.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
-) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
-	if ctx.Err() != nil {
-		return nil, nil, ctx.Err()
-	}
-	if signed == nil || signed.Block == nil {
-		return nil, nil, errors.New("nil block")
-	}
-
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionNoVerifyAttSigs")
-	defer span.End()
-	var err error
-
-	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process slot")
-	}
-
-	// Execute per block transition.
-	set, state, err := ProcessBlockNoVerify(ctx, state, signed)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block")
-	}
-
-	return set, state, nil
 }
 
 // CalculateStateRoot defines the procedure for a state transition function.
@@ -475,64 +427,6 @@ func ProcessBlockNoVerifyAttSigs(
 	return state, nil
 }
 
-// ProcessBlockNoVerify creates a new, modified beacon state by applying block operation
-// transformations as defined in the Ethereum Serenity specification. It does not validate
-// any block signature except for deposit and slashing signatures. It also returns the relevant
-// signature set from all the respective methods.
-//
-// Spec pseudocode definition:
-//
-//  def process_block(state: BeaconState, block: BeaconBlock) -> None:
-//    process_block_header(state, block)
-//    process_randao(state, block.body)
-//    process_eth1_data(state, block.body)
-//    process_operations(state, block.body)
-func ProcessBlockNoVerify(
-	ctx context.Context,
-	state *stateTrie.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
-) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
-	defer span.End()
-
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process block header")
-	}
-	bSet, err := b.BlockSignatureSet(state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
-	}
-	rSet, state, err := b.RandaoSignatureSet(state, signed.Block.Body)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
-	}
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not verify and process randao")
-	}
-
-	state, err = b.ProcessEth1DataInBlock(state, signed.Block)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process eth1 data")
-	}
-
-	aSet, state, err := ProcessOperationsNoVerifySignatureSet(ctx, state, signed.Block.Body)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process block operation")
-	}
-	bSet.Join(rSet)
-	bSet.Join(aSet)
-
-	return bSet, state, nil
-}
-
 // ProcessOperations processes the operations in the beacon block and updates beacon state
 // with the operations in block.
 //
@@ -651,71 +545,6 @@ func ProcessOperationsNoVerify(
 	}
 
 	return state, nil
-}
-
-// ProcessOperationsNoVerifySignatureSet processes the operations in the beacon block and updates beacon state
-// with the operations in block. It does not verify attestation signatures or voluntary exit signatures. It instead
-// returns the relevant signature set for each of the operations
-//
-// WARNING: This method does not verify attestation signatures or voluntary exit signatures.
-// This is used to perform the block operations as fast as possible.
-//
-// Spec pseudocode definition:
-//
-//  def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
-//    # Verify that outstanding deposits are processed up to the maximum number of deposits
-//    assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
-//    # Verify that there are no duplicate transfers
-//    assert len(body.transfers) == len(set(body.transfers))
-//
-//    all_operations = (
-//        (body.proposer_slashings, process_proposer_slashing),
-//        (body.attester_slashings, process_attester_slashing),
-//        (body.attestations, process_attestation),
-//        (body.deposits, process_deposit),
-//        (body.voluntary_exits, process_voluntary_exit),
-//        (body.transfers, process_transfer),
-//    )  # type: Sequence[Tuple[List, Callable]]
-//    for operations, function in all_operations:
-//        for operation in operations:
-//            function(state, operation)
-func ProcessOperationsNoVerifySignatureSet(
-	ctx context.Context,
-	state *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
-	defer span.End()
-
-	if err := verifyOperationLengths(state, body); err != nil {
-		return nil, nil, errors.Wrap(err, "could not verify operation lengths")
-	}
-
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block proposer slashings")
-	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block attester slashings")
-	}
-	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block attestations")
-	}
-	aSet, err := b.RetrieveAttestationSignatureSet(ctx, state, body.Attestations)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
-	}
-	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block validator deposits")
-	}
-	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process validator exits")
-	}
-
-	return aSet, state, nil
 }
 
 func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBlockBody) error {

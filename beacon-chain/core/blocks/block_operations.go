@@ -97,24 +97,21 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		}
 		msgs[i] = ctrRoot
 	}
-	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
-	if err != nil {
-		return errors.Errorf("got error in multiple verification: %v", err)
-	}
-	if !verify {
-		return errors.New("one or more deposit signatures did not verify")
+	as := bls.AggregateSignatures(sigs)
+	if !as.AggregateVerify(pks, msgs) {
+		return errors.New("one or more deposit data signatures did not verify")
 	}
 	return nil
 }
 
-func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domain []byte) (*bls.SignatureSet, error) {
+func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not convert bytes to public key")
+		return errors.Wrap(err, "could not convert bytes to public key")
 	}
 	sig, err := bls.SignatureFromBytes(signature)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not convert bytes to signature")
+		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	signingData := &pb.SigningData{
 		ObjectRoot: signedData,
@@ -122,24 +119,8 @@ func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domai
 	}
 	root, err := ssz.HashTreeRoot(signingData)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not hash container")
+		return errors.Wrap(err, "could not hash container")
 	}
-	return &bls.SignatureSet{
-		Signatures: []bls.Signature{sig},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
-	}, nil
-}
-
-func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
-	set, err := retrieveSignatureSet(signedData, pub, signature, domain)
-	if err != nil {
-		return err
-	}
-	// We assume only one signature set is returned here.
-	sig := set.Signatures[0]
-	publicKey := set.PublicKeys[0]
-	root := set.Messages[0]
 	if !sig.Verify(publicKey, root[:]) {
 		return helpers.ErrSigFailedToVerify
 	}
@@ -267,21 +248,6 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey[:], block.Signature, domain)
 }
 
-func BlockSignatureSet(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) (*bls.SignatureSet, error) {
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		return nil, err
-	}
-	proposerPubKey := proposer.PublicKey
-	return helpers.RetrieveBlockSignatureSet(block.Block, proposerPubKey, block.Signature, domain)
-}
-
 // ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
 // signature verification.
 //
@@ -381,7 +347,17 @@ func ProcessRandao(
 	beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
-	buf, proposerPub, domain, err := randaoSigningData(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get beacon proposer index")
+	}
+	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
+
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
+
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -394,38 +370,6 @@ func ProcessRandao(
 		return nil, errors.Wrap(err, "could not process randao")
 	}
 	return beaconState, nil
-}
-
-func RandaoSignatureSet(beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
-	buf, proposerPub, domain, err := randaoSigningData(beaconState)
-	if err != nil {
-		return nil, nil, err
-	}
-	set, err := retrieveSignatureSet(buf, proposerPub[:], body.RandaoReveal, domain)
-	if err != nil {
-		return nil, nil, err
-	}
-	return set, beaconState, nil
-}
-
-func randaoSigningData(beaconState *stateTrie.BeaconState) ([]byte, []byte, []byte, error) {
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "could not get beacon proposer index")
-	}
-	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
-
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, currentEpoch)
-
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return buf, proposerPub[:], domain, nil
 }
 
 // ProcessRandaoNoVerify generates a new randao mix to update
@@ -943,89 +887,11 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 	return verifyAttestationsWithDomain(ctx, beaconState, postForkAtts, currDomain)
 }
 
-func RetrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) (*bls.SignatureSet, error) {
-	if len(atts) == 0 {
-		return &bls.SignatureSet{
-			Signatures: []bls.Signature{},
-			PublicKeys: []bls.PublicKey{},
-			Messages:   [][32]byte{},
-		}, nil
-	}
-
-	fork := beaconState.Fork()
-	gvr := beaconState.GenesisValidatorRoot()
-	dt := params.BeaconConfig().DomainBeaconAttester
-
-	// Split attestations by fork. Note: the signature domain will differ based on the fork.
-	var preForkAtts []*ethpb.Attestation
-	var postForkAtts []*ethpb.Attestation
-	for _, a := range atts {
-		if helpers.SlotToEpoch(a.Data.Slot) < fork.Epoch {
-			preForkAtts = append(preForkAtts, a)
-		} else {
-			postForkAtts = append(postForkAtts, a)
-		}
-	}
-	set := &bls.SignatureSet{
-		Signatures: []bls.Signature{},
-		PublicKeys: []bls.PublicKey{},
-		Messages:   [][32]byte{},
-	}
-
-	// Check attestations from before the fork.
-	if fork.Epoch > 0 { // Check to prevent underflow.
-		prevDomain, err := helpers.Domain(fork, fork.Epoch-1, dt, gvr)
-		if err != nil {
-			return nil, err
-		}
-		aSet, err := retrieveAttestationSignatureSet(ctx, beaconState, preForkAtts, prevDomain)
-		if err != nil {
-			return nil, err
-		}
-		set.Join(aSet)
-	} else if len(preForkAtts) > 0 {
-		// This is a sanity check that preForkAtts were not ignored when fork.Epoch == 0. This
-		// condition is not possible, but it doesn't hurt to check anyway.
-		return nil, errors.New("some attestations were not verified from previous fork before genesis")
-	}
-
-	// Then check attestations from after the fork.
-	currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
-	if err != nil {
-		return nil, err
-	}
-
-	aSet, err := retrieveAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
-	if err != nil {
-		return nil, err
-	}
-	set.Join(aSet)
-	return set, nil
-}
-
 // Inner method to verify attestations. This abstraction allows for the domain to be provided as an
 // argument.
 func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) error {
 	if len(atts) == 0 {
 		return nil
-	}
-	set, err := retrieveAttestationSignatureSet(ctx, beaconState, atts, domain)
-	if err != nil {
-		return err
-	}
-	verify, err := bls.VerifyMultipleSignatures(set.Signatures, set.Messages, set.PublicKeys)
-	if err != nil {
-		return errors.Errorf("got error in multiple verification: %v", err)
-	}
-	if !verify {
-		return errors.New("one or more attestation signatures did not verify")
-	}
-	return nil
-}
-
-func retrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) (*bls.SignatureSet, error) {
-	if len(atts) == 0 {
-		return nil, nil
 	}
 
 	sigs := make([]bls.Signature, len(atts))
@@ -1034,12 +900,12 @@ func retrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie
 	for i, a := range atts {
 		sig, err := bls.SignatureFromBytes(a.Signature)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		sigs[i] = sig
 		c, err := helpers.BeaconCommitteeFromState(beaconState, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ia := attestationutil.ConvertToIndexed(ctx, a, c)
 		indices := ia.AttestingIndices
@@ -1048,7 +914,7 @@ func retrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie
 			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 			p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 			if err != nil {
-				return nil, errors.Wrap(err, "could not deserialize validator public key")
+				return errors.Wrap(err, "could not deserialize validator public key")
 			}
 			if pk == nil {
 				pk = p
@@ -1060,15 +926,15 @@ func retrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie
 
 		root, err := helpers.ComputeSigningRoot(ia.Data, domain)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get signing root of object")
+			return errors.Wrap(err, "could not get signing root of object")
 		}
 		msgs[i] = root
 	}
-	return &bls.SignatureSet{
-		Signatures: sigs,
-		PublicKeys: pks,
-		Messages:   msgs,
-	}, nil
+	as := bls.AggregateSignatures(sigs)
+	if !as.AggregateVerify(pks, msgs) {
+		return errors.New("one or more attestation signatures did not verify")
+	}
+	return nil
 }
 
 // ProcessDeposits is one of the operations performed on each processed
