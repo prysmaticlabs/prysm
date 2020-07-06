@@ -381,7 +381,7 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 	ctx := context.Background()
 	s := &State{
 		beaconDB:      db,
-		finalizedInfo: &finalizedSlotRoot{slot: 128},
+		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -413,7 +413,7 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	ctx := context.Background()
 	s := &State{
 		beaconDB:      db,
-		finalizedInfo: &finalizedSlotRoot{slot: 128},
+		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
@@ -450,7 +450,7 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 	ctx := context.Background()
 	s := &State{
 		beaconDB:      db,
-		finalizedInfo: &finalizedSlotRoot{slot: 128},
+		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
 	root, slot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+1)
@@ -467,7 +467,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 	ctx := context.Background()
 	s := &State{
 		beaconDB:      db,
-		finalizedInfo: &finalizedSlotRoot{slot: 128},
+		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -496,7 +496,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	ctx := context.Background()
 	s := &State{
 		beaconDB:      db,
-		finalizedInfo: &finalizedSlotRoot{slot: 128},
+		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
@@ -538,7 +538,7 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	ctx := context.Background()
 	s := &State{
 		beaconDB:      db,
-		finalizedInfo: &finalizedSlotRoot{slot: 128},
+		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
