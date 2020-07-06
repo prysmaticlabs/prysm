@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-
 // EffectiveBalance returns the effective balance of the
 // read only validator.
 func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
