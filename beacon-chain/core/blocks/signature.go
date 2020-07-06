@@ -1,16 +1,16 @@
 package blocks
 
 import (
-	"bytes"
-	"fmt"
+	"context"
+	"encoding/binary"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -40,7 +40,7 @@ func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domai
 	}, nil
 }
 
-// verifies the signature  from the raw data, public key and domain provided.
+// verifies the signature from the raw data, public key and domain provided.
 func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
 	set, err := retrieveSignatureSet(signedData, pub, signature, domain)
 	if err != nil {
@@ -59,56 +59,14 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 	return nil
 }
 
-// ProcessBlockHeader validates a block by its header.
-//
-// Spec pseudocode definition:
-//
-//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//    # Verify that the slots match
-//    assert block.slot == state.slot
-//     # Verify that proposer index is the correct index
-//    assert block.proposer_index == get_beacon_proposer_index(state)
-//    # Verify that the parent matches
-//    assert block.parent_root == hash_tree_root(state.latest_block_header)
-//    # Save current block as the new latest block
-//    state.latest_block_header = BeaconBlockHeader(
-//        slot=block.slot,
-//        parent_root=block.parent_root,
-//        # state_root: zeroed, overwritten in the next `process_slot` call
-//        body_root=hash_tree_root(block.body),
-//		  # signature is always zeroed
-//    )
-//    # Verify proposer is not slashed
-//    proposer = state.validators[get_beacon_proposer_index(state)]
-//    assert not proposer.slashed
-//    # Verify proposer signature
-//    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
-func ProcessBlockHeader(
-	beaconState *stateTrie.BeaconState,
-	block *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
-	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block.Block)
-	if err != nil {
-		return nil, err
-	}
-
-	// Verify proposer signature.
-	if err := VerifyBlockSignature(beaconState, block); err != nil {
-		return nil, err
-	}
-
-	return beaconState, nil
-}
-
 // VerifyBlockSignature verifies the proposer signature of a beacon block.
 func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) error {
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
-
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
 	if err != nil {
 		return err
 	}
@@ -118,13 +76,12 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
 func BlockSignatureSet(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) (*bls.SignatureSet, error) {
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
-
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -132,83 +89,139 @@ func BlockSignatureSet(beaconState *stateTrie.BeaconState, block *ethpb.SignedBe
 	return helpers.RetrieveBlockSignatureSet(block.Block, proposerPubKey, block.Signature, domain)
 }
 
-// ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
-// signature verification.
-//
-// WARNING: This method does not verify proposer signature. This is used for proposer to compute state root
-// using a unsigned block.
-//
-// Spec pseudocode definition:
-//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//    # Verify that the slots match
-//    assert block.slot == state.slot
-//     # Verify that proposer index is the correct index
-//    assert block.proposer_index == get_beacon_proposer_index(state)
-//    # Verify that the parent matches
-//    assert block.parent_root == hash_tree_root(state.latest_block_header)
-//    # Save current block as the new latest block
-//    state.latest_block_header = BeaconBlockHeader(
-//        slot=block.slot,
-//        parent_root=block.parent_root,
-//        # state_root: zeroed, overwritten in the next `process_slot` call
-//        body_root=hash_tree_root(block.body),
-//		  # signature is always zeroed
-//    )
-//    # Verify proposer is not slashed
-//    proposer = state.validators[get_beacon_proposer_index(state)]
-//    assert not proposer.slashed
-func ProcessBlockHeaderNoVerify(
-	beaconState *stateTrie.BeaconState,
-	block *ethpb.BeaconBlock,
-) (*stateTrie.BeaconState, error) {
-	if block == nil {
-		return nil, errors.New("nil block")
-	}
-	if beaconState.Slot() != block.Slot {
-		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), block.Slot)
-	}
-	idx, err := helpers.BeaconProposerIndex(beaconState)
+// RandaoSignatureSet retrieves the relevant randao specific signature set object
+// from a block and its corresponding state.
+func RandaoSignatureSet(beaconState *stateTrie.BeaconState,
+	body *ethpb.BeaconBlockBody,
+) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
+	buf, proposerPub, domain, err := randaoSigningData(beaconState)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if block.ProposerIndex != idx {
-		return nil, fmt.Errorf("proposer index: %d is different than calculated: %d", block.ProposerIndex, idx)
+	set, err := retrieveSignatureSet(buf, proposerPub[:], body.RandaoReveal, domain)
+	if err != nil {
+		return nil, nil, err
 	}
-	parentHeader := beaconState.LatestBlockHeader()
-	if parentHeader.Slot >= block.Slot {
-		return nil, fmt.Errorf("block.Slot %d must be greater than state.LatestBlockHeader.Slot %d", block.Slot, parentHeader.Slot)
+	return set, beaconState, nil
+}
+
+// retrieves the randao related signing data from the state.
+func randaoSigningData(beaconState *stateTrie.BeaconState) ([]byte, []byte, []byte, error) {
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "could not get beacon proposer index")
 	}
-	parentRoot, err := stateutil.BlockHeaderRoot(parentHeader)
+	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
+
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
+
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return buf, proposerPub[:], domain, nil
+}
+
+// Method to break down attestations of the same domain and collect them into a single signature set.
+func createAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) (*bls.SignatureSet, error) {
+	if len(atts) == 0 {
+		return nil, nil
+	}
+
+	sigs := make([]bls.Signature, len(atts))
+	pks := make([]bls.PublicKey, len(atts))
+	msgs := make([][32]byte, len(atts))
+	for i, a := range atts {
+		sig, err := bls.SignatureFromBytes(a.Signature)
+		if err != nil {
+			return nil, err
+		}
+		sigs[i] = sig
+		c, err := helpers.BeaconCommitteeFromState(beaconState, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return nil, err
+		}
+		ia := attestationutil.ConvertToIndexed(ctx, a, c)
+		indices := ia.AttestingIndices
+		var pk bls.PublicKey
+		for i := 0; i < len(indices); i++ {
+			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+			p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+			if err != nil {
+				return nil, errors.Wrap(err, "could not deserialize validator public key")
+			}
+			if pk == nil {
+				pk = p
+			} else {
+				pk.Aggregate(p)
+			}
+		}
+		pks[i] = pk
+
+		root, err := helpers.ComputeSigningRoot(ia.Data, domain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get signing root of object")
+		}
+		msgs[i] = root
+	}
+	return &bls.SignatureSet{
+		Signatures: sigs,
+		PublicKeys: pks,
+		Messages:   msgs,
+	}, nil
+}
+
+// AttestationSignatureSet retrieves all the related attestation signature data such as the relevant public keys,
+// signatures and attestation signing data and collate it into a signature set object.
+func AttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) (*bls.SignatureSet, error) {
+	if len(atts) == 0 {
+		return bls.NewSet(), nil
+	}
+
+	fork := beaconState.Fork()
+	gvr := beaconState.GenesisValidatorRoot()
+	dt := params.BeaconConfig().DomainBeaconAttester
+
+	// Split attestations by fork. Note: the signature domain will differ based on the fork.
+	var preForkAtts []*ethpb.Attestation
+	var postForkAtts []*ethpb.Attestation
+	for _, a := range atts {
+		if helpers.SlotToEpoch(a.Data.Slot) < fork.Epoch {
+			preForkAtts = append(preForkAtts, a)
+		} else {
+			postForkAtts = append(postForkAtts, a)
+		}
+	}
+	set := bls.NewSet()
+
+	// Check attestations from before the fork.
+	if fork.Epoch > 0 { // Check to prevent underflow.
+		prevDomain, err := helpers.Domain(fork, fork.Epoch-1, dt, gvr)
+		if err != nil {
+			return nil, err
+		}
+		aSet, err := createAttestationSignatureSet(ctx, beaconState, preForkAtts, prevDomain)
+		if err != nil {
+			return nil, err
+		}
+		set.Join(aSet)
+	} else if len(preForkAtts) > 0 {
+		// This is a sanity check that preForkAtts were not ignored when fork.Epoch == 0. This
+		// condition is not possible, but it doesn't hurt to check anyway.
+		return nil, errors.New("some attestations were not verified from previous fork before genesis")
+	}
+
+	// Then check attestations from after the fork.
+	currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
 	if err != nil {
 		return nil, err
 	}
 
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
-		return nil, fmt.Errorf(
-			"parent root %#x does not match the latest block header signing root in state %#x",
-			block.ParentRoot, parentRoot)
-	}
-
-	proposer, err := beaconState.ValidatorAtIndexReadOnly(idx)
+	aSet, err := createAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
 	if err != nil {
 		return nil, err
 	}
-	if proposer.Slashed() {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
-	}
-
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Body)
-	if err != nil {
-		return nil, err
-	}
-	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:          block.Slot,
-		ProposerIndex: block.ProposerIndex,
-		ParentRoot:    block.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		BodyRoot:      bodyRoot[:],
-	}); err != nil {
-		return nil, err
-	}
-	return beaconState, nil
+	return set.Join(aSet), nil
 }
