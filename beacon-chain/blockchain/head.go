@@ -271,9 +271,22 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 	}
 
 	s.clearInitSyncBlocks()
-	justifiedState, err := s.stateGen.StateByRoot(ctx, justifiedRoot)
-	if err != nil {
-		return err
+
+	var justifiedState *stateTrie.BeaconState
+	var err error
+	if justifiedRoot == s.genesisRoot {
+		justifiedState, err = s.beaconDB.GenesisState(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		justifiedState, err = s.stateGen.StateByRoot(ctx, justifiedRoot)
+		if err != nil {
+			return err
+		}
+	}
+	if justifiedState == nil {
+		return errors.New("justified state can't be nil")
 	}
 
 	epoch := helpers.CurrentEpoch(justifiedState)
