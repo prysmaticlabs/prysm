@@ -136,6 +136,10 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "naive",
 	}
+	newBeaconStateLocks = &cli.BoolFlag{
+		Name:  "new-beacon-state-locks",
+		Usage: "Enable new beacon state locking",
+	}
 	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
@@ -150,6 +154,7 @@ var (
 var devModeFlags = []cli.Flag{
 	initSyncVerifyEverythingFlag,
 	forceMaxCoverAttestationAggregation,
+	newBeaconStateLocks,
 }
 
 // Deprecated flags list.
@@ -581,6 +586,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
+	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
 }...)
