@@ -211,7 +211,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	return nil
 }
 
-//UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained during LogValidatorGainsAndLosses
+// UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
 func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
 	summary := &v.voteStats
 	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
