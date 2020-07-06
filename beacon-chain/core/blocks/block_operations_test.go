@@ -349,6 +349,85 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 }
 
+func TestBlockSignatureSet_OK(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
+		}
+	}
+
+	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Validators:        validators,
+		Slot:              10,
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
+		Fork: &pb.Fork{
+			PreviousVersion: []byte{0, 0, 0, 0},
+			CurrentVersion:  []byte{0, 0, 0, 0},
+		},
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
+	if err != nil {
+		t.Error(err)
+	}
+
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
+	priv := bls.RandKey()
+	pID, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Error(err)
+	}
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: pID,
+			Slot:          10,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: []byte{'A', 'B', 'C'},
+			},
+			ParentRoot: latestBlockSignedRoot[:],
+		},
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	blockSig := priv.Sign(signingRoot[:])
+	block.Signature = blockSig.Marshal()[:]
+
+	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validators[proposerIdx].Slashed = false
+	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
+	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
+	if err != nil {
+		t.Fatal(err)
+	}
+	set, err := blocks.BlockSignatureSet(state, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verified, err := set.Verify()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verified {
+		t.Error("Block signature set returned a set which was unable to be verified")
+	}
+}
+
 func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -486,6 +565,34 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 			"Expected empty signature to be overwritten by randao reveal, received %v",
 			params.BeaconConfig().EmptySignature,
 		)
+	}
+}
+
+func TestRandaoSignatureSet_OK(t *testing.T) {
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
+	epoch := helpers.CurrentEpoch(beaconState)
+	epochSignature, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
+			RandaoReveal: epochSignature,
+		},
+	}
+
+	set, _, err := blocks.RandaoSignatureSet(beaconState, block.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verified, err := set.Verify()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verified {
+		t.Error("Unable to verify randao signature set")
 	}
 }
 
@@ -2217,6 +2324,96 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	if err := blocks.VerifyAttestations(ctx, st, []*ethpb.Attestation{att1, att2}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing.T) {
+	ctx := context.Background()
+	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
+	validators := make([]*ethpb.Validator, numOfValidators)
+	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey: keys[i].PublicKey().Marshal(),
+		}
+	}
+
+	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot:       5,
+		Validators: validators,
+		Fork: &pb.Fork{
+			Epoch:           0,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+
+	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att1 := &ethpb.Attestation{
+		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
+		Data: &ethpb.AttestationData{
+			Slot:           1,
+			CommitteeIndex: 0,
+		},
+		Signature: nil,
+	}
+	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sigs []bls.Signature
+	for i, u := range comm1 {
+		att1.AggregationBits.SetBitAt(uint64(i), true)
+		sigs = append(sigs, keys[u].Sign(root[:]))
+	}
+	att1.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+	comm2, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 1 /*committeeIndex*/)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att2 := &ethpb.Attestation{
+		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
+		Data: &ethpb.AttestationData{
+			Slot:           1,
+			CommitteeIndex: 1,
+		},
+		Signature: nil,
+	}
+	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigs = nil
+	for i, u := range comm2 {
+		att2.AggregationBits.SetBitAt(uint64(i), true)
+		sigs = append(sigs, keys[u].Sign(root[:]))
+	}
+	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+	set, err := blocks.RetrieveAttestationSignatureSet(ctx, st, []*ethpb.Attestation{att1, att2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	verified, err := set.Verify()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verified {
+		t.Error("Multiple signatures were unable to be verified.")
+	}
+
 }
 
 func TestAreEth1DataEqual(t *testing.T) {
