@@ -848,7 +848,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	}
 }
 
-func TestSpanDetector_UpdateSpansCheckCacheSize(t *testing.T) {
+func TestSpanDetector_UpdateMinSpansCheckCacheSize(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableLookback: true})
 	defer resetCfg()
 
