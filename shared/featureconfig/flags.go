@@ -144,12 +144,17 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	batchBlockVerify = &cli.BoolFlag{
+		Name:  "batch-block-verify",
+		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	initSyncVerifyEverythingFlag,
 	forceMaxCoverAttestationAggregation,
+	batchBlockVerify,
 }
 
 // Deprecated flags list.
@@ -583,6 +588,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	attestationAggregationStrategy,
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
+	batchBlockVerify,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

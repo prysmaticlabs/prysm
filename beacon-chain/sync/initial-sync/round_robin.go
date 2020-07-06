@@ -1,6 +1,7 @@
 package initialsync
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/sirupsen/logrus"
 )
@@ -58,21 +60,25 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	if err := queue.start(); err != nil {
 		return err
 	}
-	//blockReceiver := s.chain.ReceiveBlockInitialSync
+
+	blockReceiver := s.chain.ReceiveBlockInitialSync
 	batchReceiver := s.chain.ReceiveBlockBatch
 
 	// Step 1 - Sync to end of finalized epoch.
 	for fetchedBlocks := range queue.fetchedBlocks {
-		if err := s.processBatchedBlocks(ctx, genesis, fetchedBlocks, batchReceiver); err != nil {
-			log.WithError(err).Info("Batch is not processed")
+		// Use Batch Block Verify to process and verify batches directly.
+		if featureconfig.Get().BatchBlockVerify {
+			if err := s.processBatchedBlocks(ctx, genesis, fetchedBlocks, batchReceiver); err != nil {
+				log.WithError(err).Info("Batch is not processed")
+			}
 			continue
-		} /*
-			for _, blk := range fetchedBlocks {
-				if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-					log.WithError(err).Info("Block is not processed")
-					continue
-				}
-			}*/
+		}
+		for _, blk := range fetchedBlocks {
+			if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+				log.WithError(err).Info("Block is not processed")
+				continue
+			}
+		}
 	}
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
@@ -234,7 +240,13 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", firstBlock.Block.ParentRoot)
 	}
 	blockRoots := make([][32]byte, len(blks))
-	for i, b := range blks {
+	blockRoots[0] = blkRoot
+	for i := 1; i < len(blks); i++ {
+		b := blks[i]
+		if !bytes.Equal(b.Block.ParentRoot, blockRoots[i-1][:]) {
+			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
+				blockRoots[i-1][:], b.Block.ParentRoot)
+		}
 		blkRoot, err := stateutil.BlockRoot(b.Block)
 		if err != nil {
 			return err
