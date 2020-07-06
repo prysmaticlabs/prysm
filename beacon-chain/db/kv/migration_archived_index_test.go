@@ -65,6 +65,26 @@ func Test_migrateArchivedIndex(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "deletes bitlist key/value",
+			setup: func(t *testing.T, db *bbolt.DB) {
+				if err := db.Update(func(tx *bbolt.Tx) error {
+					return tx.Bucket(archivedIndexRootBucket).Put(savedStateSlotsKey, []byte("foo"))
+				}); err != nil {
+					t.Error(err)
+				}
+			},
+			eval: func(t *testing.T, db *bbolt.DB) {
+				if err := db.View(func(tx *bbolt.Tx) error {
+					if val := tx.Bucket(archivedIndexRootBucket).Get(savedStateSlotsKey); val != nil {
+						t.Errorf("Expected %v to be deleted but returned %v", savedStateSlotsKey, val)
+					}
+					return nil
+				}); err != nil {
+					t.Error(err)
+				}
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -43,6 +43,8 @@ var (
 	powchainDataKey           = []byte("powchain-data")
 	lastArchivedIndexKey      = []byte("last-archived")
 	savedBlockSlotsKey        = []byte("saved-block-slots")
+
+	// Deprecated: This index was migrated in PR 6461. Do not use, except for migrations.
 	savedStateSlotsKey        = []byte("saved-state-slots")
 
 	// New state management service compatibility bucket.

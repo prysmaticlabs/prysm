@@ -32,5 +32,10 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 		}
 	}
 
+	// Remove the saved bitlist.
+	if err := mb.Delete(savedStateSlotsKey); err != nil {
+		return err
+	}
+
 	return mb.Put(migrationArchivedIndex0Key, migrationCompleted)
 }
