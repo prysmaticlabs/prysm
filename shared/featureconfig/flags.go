@@ -154,6 +154,7 @@ var (
 var devModeFlags = []cli.Flag{
 	initSyncVerifyEverythingFlag,
 	forceMaxCoverAttestationAggregation,
+	newBeaconStateLocks,
 }
 
 // Deprecated flags list.
