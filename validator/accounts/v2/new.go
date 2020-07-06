@@ -72,17 +72,16 @@ func NewAccount(cliCtx *cli.Context) error {
 			log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
 		}
 		isNewWallet = true
-	}
-	if err != nil {
+	} else if err != nil {
 		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 	}
 
 	// We initialize a new keymanager depending on the user's selected keymanager kind.
 	var keymanager v2keymanager.IKeymanager
 	if isNewWallet {
-		keymanager, err = wallet.ExistingKeyManager(ctx)
-	} else {
 		keymanager, err = wallet.CreateKeymanager(ctx)
+	} else {
+		keymanager, err = wallet.ExistingKeyManager(ctx)
 	}
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
@@ -104,7 +103,7 @@ func NewAccount(cliCtx *cli.Context) error {
 func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if walletDir == flags.DefaultValidatorDir() {
-		walletDir = path.Join(walletDir, walletDefaultDirName)
+		walletDir = path.Join(walletDir, WalletDefaultDirName)
 	}
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
@@ -170,7 +169,7 @@ func inputAccountPassword(_ *cli.Context) (string, error) {
 func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
 	if passwordsDir == flags.DefaultValidatorDir() {
-		passwordsDir = path.Join(passwordsDir, walletDefaultDirName, passwordsDefaultDirName)
+		passwordsDir = path.Join(passwordsDir, PasswordsDefaultDirName)
 	}
 	prompt := promptui.Prompt{
 		Label:    "Passwords directory",

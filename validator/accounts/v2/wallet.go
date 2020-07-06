@@ -17,9 +17,11 @@ import (
 )
 
 const (
+	// WalletDefaultDirName for accounts-v2.
+	WalletDefaultDirName = ".prysm-wallet-v2"
+	// PasswordsDefaultDirName where account passwords are stored.
+	PasswordsDefaultDirName  = ".prysm-wallet-v2-passwords"
 	keymanagerConfigFileName = "keymanageropts.json"
-	walletDefaultDirName     = ".prysm-wallet-v2"
-	passwordsDefaultDirName  = ".passwords"
 	passwordFileSuffix       = ".pass"
 	numAccountWords          = 3 // Number of words in account human-readable names.
 	accountFilePermissions   = os.O_CREATE | os.O_RDWR
@@ -86,7 +88,7 @@ func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 		return nil, ErrNoWalletFound
 	}
 	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
-	walletDir, err := os.Open(walletPath)
+	walletDir, err := os.Open(cfg.WalletDir)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +157,17 @@ func (w *Wallet) AccountNames() ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.accountsPath)
 	}
-	return list, err
+	accountNames := make([]string, 0)
+	for _, item := range list {
+		ok, err := hasDir(path.Join(w.accountsPath, item))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
+		}
+		if ok {
+			accountNames = append(accountNames, item)
+		}
+	}
+	return accountNames, err
 }
 
 // ExistingKeyManager reads a keymanager config from disk at the wallet path,

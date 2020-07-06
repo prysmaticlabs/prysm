@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"sync"
 	"syscall"
@@ -85,6 +86,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	var keyManagerV2 v2.IKeymanager
 	if featureconfig.Get().EnableAccountsV2 {
 		walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+		if walletDir == flags.DefaultValidatorDir() {
+			walletDir = path.Join(walletDir, accountsv2.WalletDefaultDirName)
+		}
 		passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
 		// Read the wallet from the specified path.
 		wallet, err := accountsv2.OpenWallet(context.Background(), &accountsv2.WalletConfig{
