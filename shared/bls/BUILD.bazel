@@ -6,6 +6,7 @@ go_library(
         "bls.go",
         "constants.go",
         "interface.go",
+        "signature_set.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls",
     visibility = ["//visibility:public"],

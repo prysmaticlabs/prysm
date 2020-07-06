@@ -61,15 +61,11 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-	enableProtectProposerFlag = &cli.BoolFlag{
-		Name: "enable-protect-proposer",
+
+	enableLocalProtectionFlag = &cli.BoolFlag{
+		Name: "enable-local-protection",
 		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
-	}
-	enableProtectAttesterFlag = &cli.BoolFlag{
-		Name: "enable-protect-attester",
-		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting 2 any slashable attestations.",
+			"broadcasting any messages that could be considered slashable according to its own history.",
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
@@ -131,10 +127,6 @@ var (
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
-	enableStreamDuties = &cli.BoolFlag{
-		Name:  "enable-stream-duties",
-		Usage: "Enables validator duties streaming in the validator client",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -143,6 +135,10 @@ var (
 		Name:  "attestation-aggregation-strategy",
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "naive",
+	}
+	newBeaconStateLocks = &cli.BoolFlag{
+		Name:  "new-beacon-state-locks",
+		Usage: "Enable new beacon state locking",
 	}
 	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-maxcover",
@@ -158,12 +154,18 @@ var (
 var devModeFlags = []cli.Flag{
 	initSyncVerifyEverythingFlag,
 	forceMaxCoverAttestationAggregation,
+	newBeaconStateLocks,
 }
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedP2PEncoding = &cli.StringFlag{
+		Name:   "p2p-encoding",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedP2PPubsub = &cli.StringFlag{
 		Name:   "p2p-pubsub",
 		Usage:  deprecatedUsage,
@@ -440,9 +442,40 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedArchival = &cli.BoolFlag{
+		Name:   "archive",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveValiatorSetChanges = &cli.BoolFlag{
+		Name:   "archive-validator-set-changes",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveBlocks = &cli.BoolFlag{
+		Name:   "archive-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveAttestation = &cli.BoolFlag{
+		Name:   "archive-attestations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableProtectProposerFlag = &cli.BoolFlag{
+		Name:   "enable-protect-proposer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableProtectAttesterFlag = &cli.BoolFlag{
+		Name:   "enable-protect-attester",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedP2PEncoding,
 	deprecatedP2PPubsub,
 	deprecatedEnableKadDht,
 	deprecatedWeb3ProviderFlag,
@@ -498,13 +531,17 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableFieldTrie,
 	deprecateddisableInitSyncBatchSaveBlocks,
 	deprecatedEnableNoise,
+	deprecatedArchival,
+	deprecatedArchiveBlocks,
+	deprecatedArchiveValiatorSetChanges,
+	deprecatedArchiveAttestation,
+	deprecatedEnableProtectProposerFlag,
+	deprecatedEnableProtectAttesterFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
-	enableProtectAttesterFlag,
-	enableProtectProposerFlag,
-	enableStreamDuties,
+	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
@@ -520,9 +557,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--wait-for-synced",
-	"--enable-protect-attester",
-	"--enable-protect-proposer",
-	// "--enable-stream-duties", // Currently disabled due to e2e flakes.
+	"--enable-local-protection",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -551,6 +586,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
+	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
 }...)

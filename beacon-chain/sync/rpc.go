@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -19,6 +21,9 @@ import (
 // request response (time-to-first-byte). The client is expected to give up if
 // they don't receive the first byte within 5 seconds.
 var ttfbTimeout = params.BeaconNetworkConfig().TtfbTimeout
+
+// respTimeout is the maximum time for complete response transfer.
+var respTimeout = params.BeaconNetworkConfig().RespTimeout
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
@@ -67,8 +72,8 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer func() {
-			if err := stream.Close(); err != nil {
-				log.WithError(err).Error("Failed to close stream")
+			if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
+				log.WithError(err).Debug("Failed to reset stream")
 			}
 		}()
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")

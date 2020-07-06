@@ -37,7 +37,6 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	if err := db.SaveBlock(ctx, genesis); err != nil {

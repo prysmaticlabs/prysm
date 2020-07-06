@@ -157,7 +157,7 @@ go_rules_dependencies()
 
 go_register_toolchains(nogo = "@//:nogo")
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 gazelle_dependencies()
 
@@ -354,3 +354,17 @@ load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 geth_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
+
+go_repository(
+    name = "com_github_nbutton23_zxcvbn_go",
+    importpath = "github.com/nbutton23/zxcvbn-go",
+    sum = "h1:AREM5mwr4u1ORQBMvzfzBgpsctsbQikCVpvC+tX285E=",
+    version = "v0.0.0-20180912185939-ae427f1e4c1d",
+)
+
+go_repository(
+    name = "com_github_brianium_mnemonic",
+    importpath = "github.com/brianium/mnemonic",
+    sum = "h1:futFTqrUAf1IanFLU+jK4D1NpgE/+gCbnCG7Fl0rHs0=",
+    version = "v0.0.0-20180124190051-72af92c51f88",
+)

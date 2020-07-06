@@ -30,10 +30,11 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	// State locks
+	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
 	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
-	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -41,8 +42,7 @@ type Flags struct {
 	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
-	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
-	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	LocalProtection                            bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
 	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
@@ -218,6 +218,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
+	if ctx.Bool(newBeaconStateLocks.Name) {
+		log.Warn("Using new beacon state locks")
+		cfg.NewBeaconStateLocks = true
+	}
 	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
 		log.Warn("Forcing max_cover strategy on attestation aggregation")
 		cfg.AttestationAggregationStrategy = "max_cover"
@@ -252,17 +256,9 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	}
-	if ctx.Bool(enableStreamDuties.Name) {
-		log.Warn("Enabled validator duties streaming.")
-		cfg.EnableStreamDuties = true
-	}
-	if ctx.Bool(enableProtectProposerFlag.Name) {
-		log.Warn("Enabled validator proposal slashing protection.")
-		cfg.ProtectProposer = true
-	}
-	if ctx.Bool(enableProtectAttesterFlag.Name) {
-		log.Warn("Enabled validator attestation slashing protection.")
-		cfg.ProtectAttester = true
+	if ctx.Bool(enableLocalProtectionFlag.Name) {
+		log.Warn("Enabled validator slashing protection.")
+		cfg.LocalProtection = true
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")

@@ -26,7 +26,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	if err := beaconState.SetSlot(slot); err != nil {
 		t.Fatal(err)
 	}
-	service.splitInfo.slot = slot + 1
+	service.finalizedInfo.slot = slot + 1
 
 	r := [32]byte{'a'}
 	if err := service.SaveState(ctx, r, beaconState); err != nil {
@@ -45,7 +45,6 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 }
 
 func TestSaveState_HotStateCanBeSaved(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
@@ -63,13 +62,16 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	}
 
 	// Should save both state and state summary.
-	if !service.beaconDB.HasState(ctx, r) {
+	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
 		t.Error("Should have saved the state")
 	}
 	if !service.stateSummaryCache.Has(r) {
 		t.Error("Should have saved the state summary")
 	}
-	testutil.AssertLogsContain(t, hook, "Saved full state on epoch boundary")
 }
 
 func TestSaveState_HotStateCached(t *testing.T) {

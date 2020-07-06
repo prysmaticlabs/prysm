@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -58,8 +57,6 @@ type Service struct {
 	headLock                  sync.RWMutex
 	stateNotifier             statefeed.Notifier
 	genesisRoot               [32]byte
-	epochParticipation        map[uint64]*precompute.Balance
-	epochParticipationLock    sync.RWMutex
 	forkChoiceStore           f.ForkChoicer
 	justifiedCheckpt          *ethpb.Checkpoint
 	prevJustifiedCheckpt      *ethpb.Checkpoint
@@ -116,7 +113,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		p2p:                   cfg.P2p,
 		maxRoutines:           cfg.MaxRoutines,
 		stateNotifier:         cfg.StateNotifier,
-		epochParticipation:    make(map[uint64]*precompute.Balance),
 		forkChoiceStore:       cfg.ForkChoiceStore,
 		initSyncState:         make(map[[32]byte]*stateTrie.BeaconState),
 		boundaryRoots:         [][32]byte{},
@@ -331,7 +327,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
+	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
@@ -340,6 +336,8 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	}); err != nil {
 		return err
 	}
+
+	s.stateGen.SaveFinalizedState(0, genesisBlkRoot, genesisState)
 
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")

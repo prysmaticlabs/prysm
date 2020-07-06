@@ -18,8 +18,10 @@ go_library(
     ],
     deps = [
         "//shared/bls/iface:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@herumi_bls_eth_go_binary//:go_default_library",
@@ -37,6 +39,7 @@ go_test(
     deps = [
         "//shared/bls/iface:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "@herumi_bls_eth_go_binary//:go_default_library",
     ],
 )
 

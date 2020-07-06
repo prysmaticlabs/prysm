@@ -25,7 +25,7 @@ func (kv *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint6
 			return nil
 		}
 		target = &pb.ArchivedActiveSetChanges{}
-		return decode(enc, target)
+		return decode(ctx, enc, target)
 	})
 	return target, err
 }
@@ -35,7 +35,7 @@ func (kv *Store) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch u
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedActiveValidatorChanges")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
-	enc, err := encode(changes)
+	enc, err := encode(ctx, changes)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (kv *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.A
 			return nil
 		}
 		target = &pb.ArchivedCommitteeInfo{}
-		return decode(enc, target)
+		return decode(ctx, enc, target)
 	})
 	return target, err
 }
@@ -69,7 +69,7 @@ func (kv *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, in
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedCommitteeInfo")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
-	enc, err := encode(info)
+	enc, err := encode(ctx, info)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (kv *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint6
 			return nil
 		}
 		target = &ethpb.ValidatorParticipation{}
-		return decode(enc, target)
+		return decode(ctx, enc, target)
 	})
 	return target, err
 }
@@ -134,7 +134,7 @@ func (kv *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch u
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedValidatorParticipation")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
-	enc, err := encode(part)
+	enc, err := encode(ctx, part)
 	if err != nil {
 		return err
 	}

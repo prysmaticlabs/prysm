@@ -121,7 +121,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PDenyList,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
-			cmd.P2PEncoding,
 			flags.MinSyncPeers,
 		},
 	},
@@ -142,15 +141,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropGenesisStateFlag,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
-		},
-	},
-	{
-		Name: "archive",
-		Flags: []cli.Flag{
-			flags.ArchiveEnableFlag,
-			flags.ArchiveValidatorSetChangesFlag,
-			flags.ArchiveBlocksFlag,
-			flags.ArchiveAttestationsFlag,
 		},
 	},
 }

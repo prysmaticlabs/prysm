@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -99,7 +100,11 @@ func NewValidatorAccount(directory string, password string) error {
 	).Info("Keystore generated for validator signatures at path")
 
 	log.Info(`Generating deposit data now, please wait...`)
-	data, depositRoot, err := keystore.DepositInput(validatorKey, shardWithdrawalKey, params.BeaconConfig().MaxEffectiveBalance)
+	data, depositRoot, err := depositutil.DepositInput(
+		validatorKey.SecretKey,
+		shardWithdrawalKey.SecretKey,
+		params.BeaconConfig().MaxEffectiveBalance,
+	)
 	if err != nil {
 		return errors.Wrap(err, "unable to generate deposit data")
 	}
