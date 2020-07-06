@@ -1,12 +1,13 @@
-// Package keystore contains useful functions for dealing
-// with eth2 deposit inputs leveraging go-ethereum's own keystore package.
-package keystore
+// Package depositutil contains useful functions for dealing
+// with eth2 deposit inputs.
+package depositutil
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -25,10 +26,14 @@ import (
 //   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96]) along with a deposit of amount Gwei.
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
+func DepositInput(
+	depositKey bls.SecretKey,
+	withdrawalKey bls.SecretKey,
+	amountInGwei uint64,
+) (*ethpb.Deposit_Data, [32]byte, error) {
 	di := &ethpb.Deposit_Data{
-		PublicKey:             depositKey.PublicKey.Marshal(),
-		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
+		PublicKey:             depositKey.PublicKey().Marshal(),
+		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
 	}
 
@@ -37,7 +42,11 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 		return nil, [32]byte{}, err
 	}
 
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil /*forkVersion*/, nil /*genesisValidatorsRoot*/)
+	domain, err := helpers.ComputeDomain(
+		params.BeaconConfig().DomainDeposit,
+		nil, /*forkVersion*/
+		nil, /*genesisValidatorsRoot*/
+	)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -45,7 +54,7 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	di.Signature = depositKey.SecretKey.Sign(root[:]).Marshal()
+	di.Signature = depositKey.Sign(root[:]).Marshal()
 
 	dr, err := ssz.HashTreeRoot(di)
 	if err != nil {
@@ -55,14 +64,14 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 	return di, dr, nil
 }
 
-// withdrawalCredentialsHash forms a 32 byte hash of the withdrawal public
+// WithdrawalCredentialsHash forms a 32 byte hash of the withdrawal public
 // address.
 //
 // The specification is as follows:
 //   withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE
 //   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
 // where withdrawal_credentials is of type bytes32.
-func withdrawalCredentialsHash(withdrawalKey *Key) []byte {
-	h := hashutil.Hash(withdrawalKey.PublicKey.Marshal())
+func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
+	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
 }

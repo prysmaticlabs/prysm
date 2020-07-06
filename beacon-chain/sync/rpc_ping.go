@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -83,8 +85,8 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 	currentTime := roughtime.Now()
 	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
+			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // Pool implements a struct to maintain pending and recently included voluntary exits. This pool
@@ -51,6 +52,9 @@ func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64) []*ethp
 // InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
 // has been included recently, or the validator is already exited.
 func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.BeaconState, exit *ethpb.SignedVoluntaryExit) {
+	ctx, span := trace.StartSpan(ctx, "exitPool.InsertVoluntaryExit")
+	defer span.End()
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -95,4 +99,9 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 		p.pending = append(p.pending[:i], p.pending[i+1:]...)
 	}
 	p.included[exit.Exit.ValidatorIndex] = true
+}
+
+// HasBeenIncluded returns true if the pool has recorded that a validator index has been recorded.
+func (p *Pool) HasBeenIncluded(bIdx uint64) bool {
+	return p.included[bIdx]
 }

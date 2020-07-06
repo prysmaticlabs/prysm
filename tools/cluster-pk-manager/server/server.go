@@ -19,6 +19,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -188,7 +189,11 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 
 		// Make the validator deposit
 		// NOTE: This uses the validator key as the withdrawal key
-		di, dr, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/, new(big.Int).Div(s.depositAmount, big.NewInt(1e9)).Uint64())
+		di, dr, err := depositutil.DepositInput(
+			key.SecretKey, /*depositKey*/
+			key.SecretKey, /*withdrawalKey*/
+			new(big.Int).Div(s.depositAmount, big.NewInt(1e9)).Uint64(),
+		)
 		if err != nil {
 			return nil, err
 		}

@@ -18,6 +18,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const maxMemStatsBytes = 100000000 // 1 MB.
+
 // MetricsCheck performs a check on metrics to make sure caches are functioning, and
 // overall health is good. Not checking the first epoch so the sample size isn't too small.
 var MetricsCheck = types.Evaluator{
@@ -43,7 +45,7 @@ var metricLessThanTests = []equalityTest{
 	{
 		name:  "memory usage",
 		topic: "go_memstats_alloc_bytes",
-		value: 100000000, // 100 Mb
+		value: maxMemStatsBytes,
 	},
 }
 

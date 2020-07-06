@@ -6,9 +6,11 @@ go_library(
     srcs = [
         "aggregate.go",
         "attest.go",
+        "attest_protect.go",
         "log.go",
         "metrics.go",
         "propose.go",
+        "propose_protect.go",
         "runner.go",
         "service.go",
         "validator.go",
@@ -62,8 +64,10 @@ go_test(
     size = "small",
     srcs = [
         "aggregate_test.go",
+        "attest_protect_test.go",
         "attest_test.go",
         "fake_validator_test.go",
+        "propose_protect_test.go",
         "propose_test.go",
         "runner_test.go",
         "service_test.go",

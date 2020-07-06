@@ -144,6 +144,91 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	}
 }
 
+func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
+	eth1Data := &ethpb.Eth1Data{
+		DepositCount: 100,
+		DepositRoot:  []byte{2},
+	}
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1); err != nil {
+		t.Fatal(err)
+	}
+	e := beaconState.Eth1Data()
+	e.DepositCount = 100
+	if err := beaconState.SetEth1Data(e); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}); err != nil {
+		t.Fatal(err)
+	}
+	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
+		t.Fatal(err)
+	}
+
+	nextSlotState := beaconState.Copy()
+	if err := nextSlotState.SetSlot(beaconState.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	if err != nil {
+		t.Error(err)
+	}
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: proposerIdx,
+			Slot:          beaconState.Slot() + 1,
+			ParentRoot:    parentRoot[:],
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: randaoReveal,
+				Eth1Data:     eth1Data,
+			},
+		},
+	}
+
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block.Block.StateRoot = stateRoot[:]
+
+	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block.Signature = sig.Marshal()
+
+	set, beaconState, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+	if err != nil {
+		t.Error(err)
+	}
+	verified, err := set.Verify()
+	if err != nil {
+		t.Error(err)
+	}
+	if !verified {
+		t.Error("Could not verify signature set")
+	}
+
+}
+
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
@@ -347,7 +432,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 }
 
-func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
+func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
+	*ethpb.SignedBeaconBlock, []*ethpb.Attestation, []*ethpb.ProposerSlashing, []*ethpb.SignedVoluntaryExit) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
@@ -587,7 +673,14 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if beaconState.SetSlot(block.Block.Slot) != nil {
 		t.Fatal(err)
 	}
-	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block)
+	return beaconState, block, []*ethpb.Attestation{blockAtt}, proposerSlashings, []*ethpb.SignedVoluntaryExit{exit}
+}
+
+func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
+	beaconState, block, _, proposerSlashings, exits := createFullBlockWithOperations(t)
+	exit := exits[0]
+
+	beaconState, err := state.ProcessBlock(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatalf("Expected block to pass processing conditions: %v", err)
 	}
@@ -616,6 +709,23 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if received == wanted {
 		t.Errorf("Expected validator at index %d to be exiting, did not expect: %d", exit.Exit.ValidatorIndex, wanted)
 	}
+}
+
+func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
+	beaconState, block, _, _, _ := createFullBlockWithOperations(t)
+	set, _, err := state.ProcessBlockNoVerify(context.Background(), beaconState, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Test Signature set verifies.
+	verified, err := set.Verify()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verified {
+		t.Error("Could not verify signature set.")
+	}
+
 }
 
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {

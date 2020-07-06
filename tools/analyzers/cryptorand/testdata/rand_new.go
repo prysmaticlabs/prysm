@@ -15,6 +15,6 @@ func UseRandNew() {
 }
 
 func UseWithoutSeed() {
-	assignedIndex := rand.Intn(int(128))
+	assignedIndex := rand.Intn(128)
 	_ = assignedIndex
 }

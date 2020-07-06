@@ -28,6 +28,11 @@ func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 	return herumi.AggregateSignatures(sigs)
 }
 
+// VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
+func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
+	return herumi.VerifyMultipleSignatures(sigs, msgs, pubKeys)
+}
+
 // NewAggregateSignature creates a blank aggregate signature.
 func NewAggregateSignature() iface.Signature {
 	return herumi.NewAggregateSignature()
