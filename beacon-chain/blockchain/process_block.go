@@ -225,8 +225,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	// To invalidate cache for parent root because pre state will get mutated.
-	s.stateGen.DeleteHotStateInCache(bytesutil.ToBytes32(b.ParentRoot))
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
@@ -255,6 +253,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	return preState, fCheckpoints, jCheckpoints, nil
 }
 
+// handles the state post transition and saves the appropriate checkpoints and forkchoice
+// data.
 func (s *Service) handlePostStateInSync(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	blockRoot [32]byte, postState *stateTrie.BeaconState) error {
 
@@ -305,6 +305,8 @@ func (s *Service) handlePostStateInSync(ctx context.Context, signed *ethpb.Signe
 	return s.handleEpochBoundary(postState)
 }
 
+// handles a block after the block's batch has been verified, where we can save blocks
+// their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockInBatch(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	blockRoot [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
 	b := signed.Block
@@ -349,8 +351,8 @@ func (s *Service) handleBlockInBatch(ctx context.Context, signed *ethpb.SignedBe
 	return nil
 }
 
+// Epoch boundary bookkeeping such as logging epoch summaries.
 func (s *Service) handleEpochBoundary(postState *stateTrie.BeaconState) error {
-	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		reportEpochMetrics(postState)
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))

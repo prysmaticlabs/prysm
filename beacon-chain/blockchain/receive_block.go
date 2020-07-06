@@ -164,6 +164,9 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 	return nil
 }
 
+// ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
+// the state, performing batch verification of all collected signatures and then performing the appropriate
+// actions for a block post-transition.
 func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockBatch")
 	defer span.End()
@@ -228,7 +231,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 	}
 
 	return s.handleEpochBoundary(postState)
-
 }
 
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
