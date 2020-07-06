@@ -23,6 +23,8 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	return s.beaconDB.HasState(ctx, blockRoot)
 }
 
+// SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
+// state summary cache.
 func (s *State) SaveStateSummary(ctx context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
 	// Save State summary
 	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
