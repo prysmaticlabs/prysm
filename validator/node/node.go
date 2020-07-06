@@ -81,16 +81,19 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		return nil, err
 	}
 
-	pubKeys, err := keyManager.FetchValidatingKeys()
-	if err != nil {
-		log.WithError(err).Error("Failed to obtain public keys for validation")
-	} else {
-		if len(pubKeys) == 0 {
-			log.Warn("No keys found; nothing to validate")
+	var pubKeys [][48]byte
+	if featureconfig.Get().EnableAccountsV2 {
+		pubKeys, err := keyManager.FetchValidatingKeys()
+		if err != nil {
+			log.WithError(err).Error("Failed to obtain public keys for validation")
 		} else {
-			log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
-			for _, key := range pubKeys {
-				log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+			if len(pubKeys) == 0 {
+				log.Warn("No keys found; nothing to validate")
+			} else {
+				log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
+				for _, key := range pubKeys {
+					log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+				}
 			}
 		}
 	}
