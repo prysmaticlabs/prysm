@@ -75,7 +75,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 	var hook *logTest.Hook
 
 	for i, val := range responses {
-		if i == 2 { //check final log output
+		if i == len(responses)-1 { //check final log output
 			hook = logTest.NewGlobal()
 		}
 		v.UpdateLogAggregateStats(val, uint64(32*(i+1)))
