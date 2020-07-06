@@ -33,7 +33,10 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 	}
 
 	// Remove the saved bitlist.
-	if err := mb.Delete(savedStateSlotsKey); err != nil {
+	if err := tx.Bucket(slotsHasObjectBucket).Delete(savedStateSlotsKey); err != nil {
+		return err
+	}
+	if err := tx.Bucket(slotsHasObjectBucket).Delete(savedBlockSlotsKey); err != nil {
 		return err
 	}
 

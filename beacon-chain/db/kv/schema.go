@@ -24,7 +24,7 @@ var (
 	archivedIndexRootBucket              = []byte("archived-index-root")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
-	slotsHasObjectBucket                 = []byte("slots-has-objects")
+	slotsHasObjectBucket = []byte("slots-has-objects")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
@@ -44,10 +44,11 @@ var (
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
 	powchainDataKey           = []byte("powchain-data")
 	lastArchivedIndexKey      = []byte("last-archived")
-	savedBlockSlotsKey        = []byte("saved-block-slots")
 
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
-	savedStateSlotsKey        = []byte("saved-state-slots")
+	savedStateSlotsKey = []byte("saved-state-slots")
+	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
+	savedBlockSlotsKey = []byte("saved-block-slots")
 
 	// New state management service compatibility bucket.
 	newStateServiceCompatibleBucket = []byte("new-state-compatible")
