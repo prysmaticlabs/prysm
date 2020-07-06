@@ -67,6 +67,7 @@ go_test(
         "attest_protect_test.go",
         "attest_test.go",
         "fake_validator_test.go",
+        "metrics_test.go",
         "propose_protect_test.go",
         "propose_test.go",
         "runner_test.go",
