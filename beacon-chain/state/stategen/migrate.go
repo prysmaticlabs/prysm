@@ -44,18 +44,17 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 
 	// Start at previous finalized slot, stop at current finalized slot.
 	// If the slot is on archived point, save the state of that slot to the DB.
-	for i := oldFSlot; i < fSlot; i++ {
+	for slot := oldFSlot; slot < fSlot; slot++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
-		if i%s.slotsPerArchivedPoint == 0 && i != 0 {
-			cached, exists, err := s.epochBoundaryStateCache.getBySlot(i)
+		if slot%s.slotsPerArchivedPoint == 0 && slot != 0 {
+			cached, exists, err := s.epochBoundaryStateCache.getBySlot(slot)
 			if err != nil {
-				return fmt.Errorf("could not get epoch boundary state for slot %d", i)
+				return fmt.Errorf("could not get epoch boundary state for slot %d", slot)
 			}
 
-			aIndex := i / s.slotsPerArchivedPoint
 			var aRoot [32]byte
 			var aState *stateTrie.BeaconState
 
@@ -67,7 +66,7 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 				aRoot = cached.root
 				aState = cached.state
 			} else {
-				blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, i)
+				blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
 				if err != nil {
 					return err
 				}
@@ -94,13 +93,12 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
 				return err
 			}
-			if err := s.beaconDB.SaveArchivedPointRoot(ctx, aRoot, aIndex); err != nil {
+			if err := s.beaconDB.SaveArchivedPointRoot(ctx, aRoot, aState.Slot()); err != nil {
 				return err
 			}
 			log.WithFields(
 				logrus.Fields{
 					"slot":          aState.Slot(),
-					"archivedIndex": aIndex,
 					"root":          hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
 				}).Info("Saved state in DB")
 		}
