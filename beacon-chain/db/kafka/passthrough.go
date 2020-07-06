@@ -313,11 +313,6 @@ func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*e
 	return e.db.HighestSlotBlocksBelow(ctx, slot)
 }
 
-// HighestSlotStates -- passthrough
-func (e Exporter) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
-	return e.db.HighestSlotStates(ctx)
-}
-
 // HighestSlotStatesBelow -- passthrough
 func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
 	return e.db.HighestSlotStatesBelow(ctx, slot)

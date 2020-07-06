@@ -279,36 +279,6 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 	return stateSummary.Slot, nil
 }
 
-// HighestSlotStates returns the states with the highest slot from the db.
-// Ideally there should just be one state per slot, but given validator
-// can double propose, a single slot could have multiple block roots and
-// reuslts states. This returns a list of states.
-func (kv *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotState")
-	defer span.End()
-	var states []*state.BeaconState
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		slotBkt := tx.Bucket(slotsHasObjectBucket)
-		savedSlots := slotBkt.Get(savedStateSlotsKey)
-		highestIndex, err := bytesutil.HighestBitIndex(savedSlots)
-		if err != nil {
-			return err
-		}
-		states, err = kv.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
-
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(states) == 0 {
-		return nil, errors.New("could not get one state")
-	}
-
-	return states, nil
-}
-
 // HighestSlotStatesBelow returns the states with the highest slot below the input slot
 // from the db. Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
