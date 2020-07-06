@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime/debug"
@@ -24,6 +25,11 @@ import (
 )
 
 const pubsubMessageTimeout = 30 * time.Second
+
+var (
+	// TODO(6449): Replace this with pubsub.ErrSubscriptionCancelled.
+	errSubscriptionCancelled = errors.New("subscription cancelled by calling sub.Cancel()")
+)
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
@@ -147,7 +153,9 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 			msg, err := sub.Next(s.ctx)
 			if err != nil {
 				// This should only happen when the context is cancelled or subscription is cancelled.
-				log.WithError(err).Warn("Subscription next failed")
+				if err != errSubscriptionCancelled { // Only log a warning on unexpected errors.
+					log.WithError(err).Warn("Subscription next failed")
+				}
 				return
 			}
 
