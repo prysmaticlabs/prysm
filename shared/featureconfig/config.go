@@ -131,10 +131,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
 	}
-	if ctx.Bool(initSyncVerifyEverythingFlag.Name) {
-		log.Warn("Initial syncing with verifying all block's content signatures.")
-		cfg.InitSyncNoVerify = false
-	} else {
+	cfg.InitSyncNoVerify = false
+	if ctx.Bool(disableInitSyncVerifyEverythingFlag.Name) {
+		log.Warn("Initial syncing while verifying only the block proposer signatures.")
 		cfg.InitSyncNoVerify = true
 	}
 	if ctx.Bool(skipBLSVerifyFlag.Name) {
