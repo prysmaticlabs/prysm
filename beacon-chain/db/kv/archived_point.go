@@ -15,7 +15,7 @@ func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, 
 	defer span.End()
 
 	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
+		bucket := tx.Bucket(archivedRootBucket)
 		if err := bucket.Put(bytesutil.Uint64ToBytes(slot), blockRoot[:]); err != nil {
 			return err
 		}
@@ -34,7 +34,7 @@ func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
 	defer span.End()
 	var index uint64
 	err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
+		bucket := tx.Bucket(archivedRootBucket)
 		b := bucket.Get(lastArchivedIndexKey)
 		if b == nil {
 			return nil
@@ -53,7 +53,7 @@ func (kv *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
+		bucket := tx.Bucket(archivedRootBucket)
 		lastArchivedIndex := bucket.Get(lastArchivedIndexKey)
 		if lastArchivedIndex == nil {
 			return nil
@@ -75,7 +75,7 @@ func (kv *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
+		bucket := tx.Bucket(archivedRootBucket)
 		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(index))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
@@ -91,7 +91,7 @@ func (kv *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	defer span.End()
 	var exists bool
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		iBucket := tx.Bucket(archivedIndexRootBucket)
+		iBucket := tx.Bucket(archivedRootBucket)
 		exists = iBucket.Get(bytesutil.Uint64ToBytes(index)) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.

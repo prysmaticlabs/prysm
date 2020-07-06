@@ -104,7 +104,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			archivedValidatorParticipationBucket,
 			powchainBucket,
 			stateSummaryBucket,
-			archivedIndexRootBucket,
+			archivedRootBucket,
 			slotsHasObjectBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,

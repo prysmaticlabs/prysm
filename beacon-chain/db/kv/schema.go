@@ -21,7 +21,7 @@ var (
 	archivedBalancesBucket               = []byte("archived-balances")
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
 	powchainBucket                       = []byte("powchain")
-	archivedIndexRootBucket              = []byte("archived-index-root")
+	archivedRootBucket                   = []byte("archived-index-root")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket = []byte("slots-has-objects")

@@ -15,7 +15,7 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 	if b := mb.Get(migrationArchivedIndex0Key); bytes.Equal(b, migrationCompleted) {
 		return nil // Migration already completed.
 	}
-	bkt := tx.Bucket(archivedIndexRootBucket)
+	bkt := tx.Bucket(archivedRootBucket)
 
 	// Migration must be done in reverse order to prevent key collisions during migration.
 	c := bkt.Cursor()

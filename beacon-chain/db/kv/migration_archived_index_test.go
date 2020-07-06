@@ -20,7 +20,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			name: "only runs once",
 			setup: func(t *testing.T, db *bbolt.DB) {
 				if err := db.Update(func(tx *bbolt.Tx) error {
-					if err := tx.Bucket(archivedIndexRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo")); err != nil {
+					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo")); err != nil {
 						return err
 					}
 					return tx.Bucket(migrationsBucket).Put(migrationArchivedIndex0Key, migrationCompleted)
@@ -30,7 +30,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			},
 			eval: func(t *testing.T, db *bbolt.DB) {
 				if err := db.View(func(tx *bbolt.Tx) error {
-					v := tx.Bucket(archivedIndexRootBucket).Get(bytesutil.Uint64ToBytes(2048))
+					v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytes(2048))
 					if !bytes.Equal(v, []byte("foo")) {
 						return fmt.Errorf("did not receive correct data for key 2048, wanted 'foo' got %s", v)
 					}
@@ -44,7 +44,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			name: "migrates and deletes entries",
 			setup: func(t *testing.T, db *bbolt.DB) {
 				if err := db.Update(func(tx *bbolt.Tx) error {
-					return tx.Bucket(archivedIndexRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo"))
+					return tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo"))
 				}); err != nil {
 					t.Error(err)
 				}
@@ -53,10 +53,10 @@ func Test_migrateArchivedIndex(t *testing.T) {
 				if err := db.View(func(tx *bbolt.Tx) error {
 					original := uint64(2048)
 					k := original / params.BeaconConfig().SlotsPerArchivedPoint
-					if v := tx.Bucket(archivedIndexRootBucket).Get(bytesutil.Uint64ToBytes(k)); !bytes.Equal(v, []byte("foo")) {
+					if v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytes(k)); !bytes.Equal(v, []byte("foo")) {
 						return fmt.Errorf("did not receive correct data for key %d, wanted 'foo' got %s", k, v)
 					}
-					if v := tx.Bucket(archivedIndexRootBucket).Get(bytesutil.Uint64ToBytes(original)); v != nil {
+					if v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytes(original)); v != nil {
 						return fmt.Errorf("expected no data for key %d, got %s", original, v)
 					}
 					return nil
