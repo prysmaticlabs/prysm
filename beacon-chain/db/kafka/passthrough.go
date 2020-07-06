@@ -323,9 +323,9 @@ func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*s
 	return e.db.HighestSlotStatesBelow(ctx, slot)
 }
 
-// LastArchivedIndex -- passthrough
-func (e Exporter) LastArchivedIndex(ctx context.Context) (uint64, error) {
-	return e.db.LastArchivedIndex(ctx)
+// LastArchivedSlot -- passthrough
+func (e Exporter) LastArchivedSlot(ctx context.Context) (uint64, error) {
+	return e.db.LastArchivedSlot(ctx)
 }
 
 // HistoricalStatesDeleted -- passthrough

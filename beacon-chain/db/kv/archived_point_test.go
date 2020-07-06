@@ -27,7 +27,7 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	i, err := db.LastArchivedIndex(ctx)
+	i, err := db.LastArchivedSlot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 		t.Error("Did not get wanted root")
 	}
 
-	i, err = db.LastArchivedIndex(ctx)
+	i, err = db.LastArchivedSlot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

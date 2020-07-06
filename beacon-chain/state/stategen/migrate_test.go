@@ -67,7 +67,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	if gotRoot != fRoot {
 		t.Error("Did not save archived root")
 	}
-	lastIndex, err := service.beaconDB.LastArchivedIndex(ctx)
+	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	if gotRoot != fRoot {
 		t.Error("Did not save archived root")
 	}
-	lastIndex, err := service.beaconDB.LastArchivedIndex(ctx)
+	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

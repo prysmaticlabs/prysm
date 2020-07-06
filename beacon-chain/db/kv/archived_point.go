@@ -28,9 +28,9 @@ func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, 
 	})
 }
 
-// LastArchivedIndex from the db.
-func (kv *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndex")
+// LastArchivedSlot from the db.
+func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedSlot")
 	defer span.End()
 	var index uint64
 	err := kv.db.View(func(tx *bolt.Tx) error {

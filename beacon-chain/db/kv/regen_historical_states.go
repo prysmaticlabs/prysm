@@ -36,7 +36,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 	// Restore from last archived point if this process was previously interrupted.
 	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
-	lastArchivedIndex, err := kv.LastArchivedIndex(ctx)
+	lastArchivedIndex, err := kv.LastArchivedSlot(ctx)
 	if err != nil {
 		return err
 	}

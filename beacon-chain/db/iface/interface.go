@@ -58,7 +58,7 @@ type ReadOnlyDatabase interface {
 	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
 	HasArchivedPoint(ctx context.Context, index uint64) bool
 	LastArchivedIndexRoot(ctx context.Context) [32]byte
-	LastArchivedIndex(ctx context.Context) (uint64, error)
+	LastArchivedSlot(ctx context.Context) (uint64, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
