@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
@@ -844,4 +846,48 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSpanDetector_UpdateSpansCheckCacheSize(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableLookback: true})
+	defer resetCfg()
+
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Data: &ethpb.AttestationData{
+			CommitteeIndex: 0,
+			Source: &ethpb.Checkpoint{
+				Epoch: 150,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 152,
+			},
+		},
+		Signature: []byte{1, 2},
+	}
+
+	db := testDB.SetupSlasherDB(t, false)
+	ctx := context.Background()
+	defer func() {
+		if err := db.ClearDB(); err != nil {
+			t.Log(err)
+		}
+	}()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Log(err)
+		}
+	}()
+
+	sd := &SpanDetector{
+		slasherDB: db,
+	}
+	if err := sd.updateMinSpan(ctx, att); err != nil {
+		t.Fatal(err)
+	}
+
+	if len := db.CacheLength(ctx); len != epochLookback {
+		t.Fatalf("Expected cache length to be equal to epochLookback: %d got: %d", epochLookback, len)
+	}
+
 }

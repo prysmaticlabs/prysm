@@ -272,7 +272,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if epoch < lookbackEpoch && dbOrCache == dbTypes.UseCache {
+		if epoch <= lookbackEpoch && dbOrCache == dbTypes.UseCache {
 			dbOrCache = dbTypes.UseDB
 		}
 		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbOrCache); err != nil {

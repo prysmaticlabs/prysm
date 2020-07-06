@@ -100,3 +100,15 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 		return b.Put(bytesutil.Bytes8(epoch), es.Bytes())
 	})
 }
+
+// CacheLength returns the number of cached items
+// returns -1 if span cache is disabled.
+func (db *Store) CacheLength(ctx context.Context) int {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.CacheLength")
+	defer span.End()
+	len := -1
+	len = db.flatSpanCache.Length()
+	log.Debugf("Span cache length %d", len)
+
+	return len
+}
