@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -42,6 +43,7 @@ type ValidatorService struct {
 	withCert             string
 	dataDir              string
 	keyManager           keymanager.KeyManager
+	keyManagerV2         v2.IKeymanager
 	logValidatorBalances bool
 	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
@@ -57,6 +59,7 @@ type Config struct {
 	CertFlag                   string
 	GraffitiFlag               string
 	KeyManager                 keymanager.KeyManager
+	KeyManagerV2               v2.IKeymanager
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	GrpcMaxCallRecvMsgSizeFlag int
@@ -77,6 +80,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		dataDir:              cfg.DataDir,
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
+		keyManagerV2:         cfg.KeyManagerV2,
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,

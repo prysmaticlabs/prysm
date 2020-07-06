@@ -26,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -76,14 +78,37 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
 
+	// TODO: Enable keymanager properly.
 	keyManager, err := selectKeyManager(cliCtx)
 	if err != nil {
 		return nil, err
 	}
 
+	var keymanagerv2 v2.IKeymanager
+	if featureconfig.Get().EnableAccountsV2 {
+		keymanagerv2, err = direct.NewKeymanager(context.Background(), nil, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var pubKeys [][48]byte
 	if featureconfig.Get().EnableAccountsV2 {
-		pubKeys, err := keyManager.FetchValidatingKeys()
+		pubKeys, err = keymanagerv2.FetchValidatingPublicKeys(context.Background())
+		if err != nil {
+			log.WithError(err).Error("Failed to obtain public keys for validation")
+		} else {
+			if len(pubKeys) == 0 {
+				log.Warn("No keys found; nothing to validate")
+			} else {
+				log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
+				for _, key := range pubKeys {
+					log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+				}
+			}
+		}
+	} else {
+		pubKeys, err = keyManager.FetchValidatingKeys()
 		if err != nil {
 			log.WithError(err).Error("Failed to obtain public keys for validation")
 		} else {
@@ -102,10 +127,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if clearFlag || forceClearFlag {
-		pubkeys, err := keyManager.FetchValidatingKeys()
-		if err != nil {
-			return nil, err
-		}
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
 			if dataDir == "" {
@@ -116,7 +137,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			}
 
 		}
-		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
+		if err := clearDB(dataDir, pubKeys, forceClearFlag); err != nil {
 			return nil, err
 		}
 	}
@@ -130,7 +151,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
-	if err := ValidatorClient.registerClientService(keyManager); err != nil {
+	if err := ValidatorClient.registerClientService(keyManager, keymanagerv2); err != nil {
 		return nil, err
 	}
 
@@ -191,7 +212,7 @@ func (s *ValidatorClient) registerPrometheusService() error {
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager) error {
+func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager, keyManagerV2 v2.IKeymanager) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -209,6 +230,7 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
+		KeyManagerV2:               keyManagerV2,
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
