@@ -78,7 +78,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		if i == 2 { //check final log output
 			hook = logTest.NewGlobal()
 		}
-		v.UpdateLogAggregateStats(val, uint64(32 * (i+1)))
+		v.UpdateLogAggregateStats(val, uint64(32*(i+1)))
 	}
 
 	testutil.AssertLogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+
