@@ -464,7 +464,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	}
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := service.fillInForkChoiceMissingBlocks(context.Background(), b65.Block, beaconState); err != nil {
+	if err := service.fillInForkChoiceMissingBlocks(context.Background(), b65.Block, beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint()); err != nil {
 		t.Fatal(err)
 	}
 

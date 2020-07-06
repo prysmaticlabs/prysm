@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -364,6 +365,139 @@ func TestService_processBlock(t *testing.T) {
 		}
 
 		if s.chain.HeadSlot() != 2 {
+			t.Errorf("Unexpected head slot, want: %d, got: %d", 2, s.chain.HeadSlot())
+		}
+	})
+}
+
+func TestService_processBlockBatch(t *testing.T) {
+	beaconDB, _ := dbtest.SetupDB(t)
+	genesisBlk := &eth.BeaconBlock{
+		Slot: 0,
+	}
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: genesisBlk})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := NewInitialSync(&Config{
+		P2P: p2pt.NewTestP2P(t),
+		DB:  beaconDB,
+		Chain: &mock.ChainService{
+			State: st,
+			Root:  genesisBlkRoot[:],
+			DB:    beaconDB,
+		},
+	})
+	ctx := context.Background()
+	genesis := makeGenesisTime(32)
+
+	t.Run("process non-linear batch", func(t *testing.T) {
+		batch := []*eth.SignedBeaconBlock{}
+		currBlockRoot := genesisBlkRoot
+		for i := 1; i < 10; i++ {
+			parentRoot := currBlockRoot
+			blk1 := &eth.SignedBeaconBlock{
+				Block: &eth.BeaconBlock{
+					Slot:       uint64(i),
+					ParentRoot: parentRoot[:],
+				},
+			}
+			blk1Root, err := stateutil.BlockRoot(blk1.Block)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = beaconDB.SaveBlock(context.Background(), blk1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			batch = append(batch, blk1)
+			currBlockRoot = blk1Root
+		}
+
+		batch2 := []*eth.SignedBeaconBlock{}
+		for i := 10; i < 20; i++ {
+			parentRoot := currBlockRoot
+			blk1 := &eth.SignedBeaconBlock{
+				Block: &eth.BeaconBlock{
+					Slot:       uint64(i),
+					ParentRoot: parentRoot[:],
+				},
+			}
+			blk1Root, err := stateutil.BlockRoot(blk1.Block)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = beaconDB.SaveBlock(context.Background(), blk1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			batch2 = append(batch2, blk1)
+			currBlockRoot = blk1Root
+		}
+
+		// Process block normally.
+		err = s.processBatchedBlocks(ctx, genesis, batch, func(
+			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
+			if err := s.chain.ReceiveBlockBatch(ctx, blks, blockRoots); err != nil {
+				t.Error(err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Duplicate processing should trigger error.
+		err = s.processBatchedBlocks(ctx, genesis, batch, func(
+			ctx context.Context, blocks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
+			return nil
+		})
+		expectedErr := fmt.Errorf("no good blocks in batch")
+		if err == nil || err.Error() != expectedErr.Error() {
+			t.Errorf("Expected error not thrown, want: %v, got: %v", expectedErr, err)
+		}
+
+		badBatch2 := []*eth.SignedBeaconBlock{}
+
+		for i, b := range batch2 {
+			// create a non-linear batch
+			if i%3 == 0 && i != 0 {
+				continue
+			}
+			badBatch2 = append(badBatch2, b)
+		}
+
+		// Bad batch should fail because it is non linear
+		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
+			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
+			return nil
+		})
+		expectedSubErr := "expected linear block list"
+		if err == nil || !strings.Contains(err.Error(), expectedSubErr) {
+			t.Errorf("Expected error not thrown, wanted error to include: %v, got: %v", expectedSubErr, err)
+		}
+
+		// Continue normal processing, should proceed w/o errors.
+		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
+			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
+			if err := s.chain.ReceiveBlockBatch(ctx, blks, blockRoots); err != nil {
+				t.Error(err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		if s.chain.HeadSlot() != 19 {
 			t.Errorf("Unexpected head slot, want: %d, got: %d", 2, s.chain.HeadSlot())
 		}
 	})
