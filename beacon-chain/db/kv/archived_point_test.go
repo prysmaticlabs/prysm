@@ -39,7 +39,7 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if db.LastArchivedIndexRoot(ctx) != [32]byte{'A'} {
+	if db.LastArchivedRoot(ctx) != [32]byte{'A'} {
 		t.Error("Did not get wanted root")
 	}
 
@@ -47,7 +47,7 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if db.LastArchivedIndexRoot(ctx) != [32]byte{'B'} {
+	if db.LastArchivedRoot(ctx) != [32]byte{'B'} {
 		t.Error("Did not get wanted root")
 	}
 

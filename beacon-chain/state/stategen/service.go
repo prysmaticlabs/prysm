@@ -51,7 +51,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
-	lastArchivedRoot := s.beaconDB.LastArchivedIndexRoot(ctx)
+	lastArchivedRoot := s.beaconDB.LastArchivedRoot(ctx)
 	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
 	if err != nil {
 		return nil, err

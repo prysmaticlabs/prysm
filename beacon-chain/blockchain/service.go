@@ -423,7 +423,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	if !featureconfig.Get().SkipRegenHistoricalStates {
 		// Since historical states were skipped, the node should start from last finalized check point.
-		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+		finalizedRoot = s.beaconDB.LastArchivedRoot(ctx)
 		if finalizedRoot == params.BeaconConfig().ZeroHash {
 			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 		}

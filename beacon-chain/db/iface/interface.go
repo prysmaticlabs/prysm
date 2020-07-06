@@ -55,9 +55,9 @@ type ReadOnlyDatabase interface {
 	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error)
 	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
 	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error)
-	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
-	HasArchivedPoint(ctx context.Context, index uint64) bool
-	LastArchivedIndexRoot(ctx context.Context) [32]byte
+	ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte
+	HasArchivedPoint(ctx context.Context, slot uint64) bool
+	LastArchivedRoot(ctx context.Context) [32]byte
 	LastArchivedSlot(ctx context.Context) (uint64, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)

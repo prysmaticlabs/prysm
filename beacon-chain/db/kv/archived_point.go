@@ -46,9 +46,9 @@ func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
 	return index, err
 }
 
-// LastArchivedIndexRoot from the db.
-func (kv *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndexRoot")
+// LastArchivedRoot from the db.
+func (kv *Store) LastArchivedRoot(ctx context.Context) [32]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedRoot")
 	defer span.End()
 
 	var blockRoot []byte

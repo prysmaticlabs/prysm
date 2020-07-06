@@ -298,9 +298,9 @@ func (e Exporter) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	return e.db.HasArchivedPoint(ctx, index)
 }
 
-// LastArchivedIndexRoot -- passthrough
-func (e Exporter) LastArchivedIndexRoot(ctx context.Context) [32]byte {
-	return e.db.LastArchivedIndexRoot(ctx)
+// LastArchivedRoot -- passthrough
+func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
+	return e.db.LastArchivedRoot(ctx)
 }
 
 // HighestSlotBlocks -- passthrough
