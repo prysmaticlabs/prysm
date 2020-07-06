@@ -151,7 +151,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
-	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2); err != nil {
+	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2, pubKeys); err != nil {
 		return nil, err
 	}
 
@@ -212,7 +212,11 @@ func (s *ValidatorClient) registerPrometheusService() error {
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(keyManager v1.KeyManager, keyManagerV2 v2.IKeymanager) error {
+func (s *ValidatorClient) registerClientService(
+	keyManager v1.KeyManager,
+	keyManagerV2 v2.IKeymanager,
+	validatingPubKeys [][48]byte,
+) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -235,6 +239,7 @@ func (s *ValidatorClient) registerClientService(keyManager v1.KeyManager, keyMan
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
 		GraffitiFlag:               graffiti,
+		ValidatingPubKeys:          validatingPubKeys,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),

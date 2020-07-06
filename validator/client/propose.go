@@ -7,14 +7,17 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 )
 
 // ProposeBlock A new beacon block for a given slot. This method collects the
@@ -124,7 +127,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
 
-	randaoReveal, err := v.signObject(pubKey, epoch, domain.SignatureDomain)
+	randaoReveal, err := v.signObject(ctx, pubKey, epoch, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}
@@ -138,6 +141,21 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
 	var sig bls.Signature
+
+	if featureconfig.Get().EnableAccountsV2 {
+		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get signing root")
+		}
+		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey: pubKey[:],
+			Data:      blockRoot[:],
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "could not sign block proposal")
+		}
+		return sig.Marshal(), nil
+	}
 	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
 		bodyRoot, err := stateutil.BlockBodyRoot(b.Body)
 		if err != nil {
