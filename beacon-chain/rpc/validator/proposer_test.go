@@ -125,7 +125,6 @@ func TestGetBlock_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
 	block, err := proposerServer.GetBlock(ctx, req)
 	if err != nil {
 		t.Fatal(err)
@@ -248,7 +247,6 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		RandaoReveal: randaoReveal,
 		Graffiti:     graffiti[:],
 	}
-
 	block, err := proposerServer.GetBlock(ctx, req)
 	if err != nil {
 		t.Fatal(err)
@@ -360,7 +358,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
 		StateGen:          stategen.New(db, sc),
 	}
-
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: 21,
