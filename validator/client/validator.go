@@ -602,7 +602,7 @@ func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
 	return bytesutil.ToBytes64(append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...))
 }
 
-// This will keep track of all validators' voting status.
+// This tracks all validators' voting status.
 type voteStats struct {
 	startEpoch            uint64
 	includedAttestedCount uint64
