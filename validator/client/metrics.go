@@ -164,7 +164,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	prevEpoch := uint64(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
 		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
-		if v.voteStats.startEpoch == ^uint64(0) { //this stores the first reported epoch number
+		if v.voteStats.startEpoch == ^uint64(0) { // Handles unknown first epoch.
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
