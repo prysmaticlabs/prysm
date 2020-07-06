@@ -22,6 +22,8 @@ var (
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
 	powchainBucket                       = []byte("powchain")
 	archivedIndexRootBucket              = []byte("archived-index-root")
+
+	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket                 = []byte("slots-has-objects")
 
 	// Key indices buckets.
@@ -44,7 +46,7 @@ var (
 	lastArchivedIndexKey      = []byte("last-archived")
 	savedBlockSlotsKey        = []byte("saved-block-slots")
 
-	// Deprecated: This index was migrated in PR 6461. Do not use, except for migrations.
+	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	savedStateSlotsKey        = []byte("saved-state-slots")
 
 	// New state management service compatibility bucket.

@@ -76,7 +76,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			},
 			eval: func(t *testing.T, db *bbolt.DB) {
 				if err := db.View(func(tx *bbolt.Tx) error {
-					if val := tx.Bucket(archivedIndexRootBucket).Get(savedStateSlotsKey); val != nil {
+					if val := tx.Bucket(slotsHasObjectBucket).Get(savedStateSlotsKey); val != nil {
 						t.Errorf("Expected %v to be deleted but returned %v", savedStateSlotsKey, val)
 					}
 					return nil
