@@ -17,10 +17,10 @@ func (kv *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*
 	if err != nil {
 		return nil, err
 	}
-	proposerSlashing := &ethpb.ProposerSlashing{}
 	if len(enc) == 0 {
 		return nil, nil
 	}
+	proposerSlashing := &ethpb.ProposerSlashing{}
 	if err := decode(ctx, enc, proposerSlashing); err != nil {
 		return nil, err
 	}
@@ -86,10 +86,10 @@ func (kv *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*
 	if err != nil {
 		return nil, err
 	}
-	attSlashing := &ethpb.AttesterSlashing{}
 	if len(enc) == 0 {
 		return nil, nil
 	}
+	attSlashing := &ethpb.AttesterSlashing{}
 	if err := decode(ctx, enc, attSlashing); err != nil {
 		return nil, err
 	}
