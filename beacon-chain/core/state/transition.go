@@ -494,9 +494,6 @@ func ProcessBlockNoVerifyAnySig(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	// Empty signature set.
-	set := bls.NewSet()
-
 	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -529,12 +526,13 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block operation")
 	}
-	aSet, err := b.RetrieveAttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
+	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
 	}
 
-	// Merge all signature sets
+	// Merge beacon block, randao and attestations signatures into a set.
+	set := bls.NewSet()
 	set.Join(bSet).Join(rSet).Join(aSet)
 
 	return set, state, nil
