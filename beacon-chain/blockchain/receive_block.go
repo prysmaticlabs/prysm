@@ -181,7 +181,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 
 	for i, b := range blocks {
 		blockCopy := stateTrie.CopySignedBeaconBlock(b)
-		if err = s.handleBlockInBatch(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
