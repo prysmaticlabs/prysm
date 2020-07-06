@@ -130,7 +130,7 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 	return state, nil
 }
 
-// ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
+// ExecuteStateTransitionNoVerifyAnySig defines the procedure for a state transition function.
 // This does not validate any BLS signatures of attestations, block proposer signature, randao signature,
 // it is used for performing a state transition as quickly as possible. This function also returns a signature
 // set of all signatures not verified, so that they can be stored and verified later.
@@ -145,7 +145,7 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 //    process_block(state, block)
 //    # Return post-state
 //    return state
-func ExecuteStateTransitionNoVerify(
+func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
@@ -168,7 +168,7 @@ func ExecuteStateTransitionNoVerify(
 	}
 
 	// Execute per block transition.
-	set, state, err := ProcessBlockNoVerify(ctx, state, signed)
+	set, state, err := ProcessBlockNoVerifyAnySig(ctx, state, signed)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process block")
 	}
@@ -465,7 +465,7 @@ func ProcessBlockNoVerifyAttSigs(
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = ProcessOperationsNoVerify(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
@@ -474,7 +474,7 @@ func ProcessBlockNoVerifyAttSigs(
 	return state, nil
 }
 
-// ProcessBlockNoVerify creates a new, modified beacon state by applying block operation
+// ProcessBlockNoVerifyAnySig creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
 // any block signature except for deposit and slashing signatures. It also returns the relevant
 // signature set from all the respective methods.
@@ -486,7 +486,7 @@ func ProcessBlockNoVerifyAttSigs(
 //    process_randao(state, block.body)
 //    process_eth1_data(state, block.body)
 //    process_operations(state, block.body)
-func ProcessBlockNoVerify(
+func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
@@ -524,10 +524,14 @@ func ProcessBlockNoVerify(
 		return nil, nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	aSet, state, err := ProcessOperationsNoVerifySignatureSet(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block operation")
+	}
+	aSet, err := b.RetrieveAttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
 	}
 
 	// Merge all signature sets
@@ -596,10 +600,10 @@ func ProcessOperations(
 	return state, nil
 }
 
-// ProcessOperationsNoVerify processes the operations in the beacon block and updates beacon state
-// with the operations in block. It does not verify attestation signatures or voluntary exit signatures.
+// ProcessOperationsNoVerifyAttsSigs processes the operations in the beacon block and updates beacon state
+// with the operations in block. It does not verify attestation signatures.
 //
-// WARNING: This method does not verify attestation signatures or voluntary exit signatures.
+// WARNING: This method does not verify attestation signatures.
 // This is used to perform the block operations as fast as possible.
 //
 // Spec pseudocode definition:
@@ -621,7 +625,7 @@ func ProcessOperations(
 //    for operations, function in all_operations:
 //        for operation in operations:
 //            function(state, operation)
-func ProcessOperationsNoVerify(
+func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody) (*stateTrie.BeaconState, error) {
@@ -648,77 +652,12 @@ func ProcessOperationsNoVerify(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
+	state, err = b.ProcessVoluntaryExits(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
 
 	return state, nil
-}
-
-// ProcessOperationsNoVerifySignatureSet processes the operations in the beacon block and updates beacon state
-// with the operations in block. It does not verify attestation signatures. It instead
-// returns the relevant signature set for each of the operations
-//
-// WARNING: This method does not verify attestation signatures.
-// This is used to perform the block operations as fast as possible.
-//
-// Spec pseudocode definition:
-//
-//  def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
-//    # Verify that outstanding deposits are processed up to the maximum number of deposits
-//    assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
-//    # Verify that there are no duplicate transfers
-//    assert len(body.transfers) == len(set(body.transfers))
-//
-//    all_operations = (
-//        (body.proposer_slashings, process_proposer_slashing),
-//        (body.attester_slashings, process_attester_slashing),
-//        (body.attestations, process_attestation),
-//        (body.deposits, process_deposit),
-//        (body.voluntary_exits, process_voluntary_exit),
-//        (body.transfers, process_transfer),
-//    )  # type: Sequence[Tuple[List, Callable]]
-//    for operations, function in all_operations:
-//        for operation in operations:
-//            function(state, operation)
-func ProcessOperationsNoVerifySignatureSet(
-	ctx context.Context,
-	state *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
-	defer span.End()
-
-	if err := verifyOperationLengths(state, body); err != nil {
-		return nil, nil, errors.Wrap(err, "could not verify operation lengths")
-	}
-
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block proposer slashings")
-	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block attester slashings")
-	}
-	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block attestations")
-	}
-	aSet, err := b.RetrieveAttestationSignatureSet(ctx, state, body.Attestations)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
-	}
-	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process block validator deposits")
-	}
-	state, err = b.ProcessVoluntaryExits(ctx, state, body)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process validator exits")
-	}
-
-	return aSet, state, nil
 }
 
 func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBlockBody) error {
@@ -853,7 +792,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = ProcessOperationsNoVerify(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
