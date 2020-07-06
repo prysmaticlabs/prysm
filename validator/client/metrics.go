@@ -258,8 +258,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	log.WithFields(logrus.Fields{
-		//+1 to adjust for the original startEpoch calculation
-		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch+1),
+		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch+1), //+1 to include the original epoch
 		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
 		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount)),
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
