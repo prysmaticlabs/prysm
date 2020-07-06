@@ -725,7 +725,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	duties := &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				AttesterSlot:   slot,
 				ValidatorIndex: 200,

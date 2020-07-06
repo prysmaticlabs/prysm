@@ -42,6 +42,8 @@ const seenExitSize = 100
 const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
 
+const syncMetricsInterval = 10 * time.Second
+
 // Config to set up the regular sync service.
 type Config struct {
 	P2P                 p2p.P2P
@@ -158,7 +160,7 @@ func (s *Service) Start() {
 	s.resyncIfBehind()
 
 	// Update sync metrics.
-	runutil.RunEvery(s.ctx, time.Second*10, s.updateMetrics)
+	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
 }
 
 // Stop the regular sync service.

@@ -8,6 +8,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//contracts/deposit-contract:go_default_library",
+        "//shared/depositutil:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "//shared/version:go_default_library",
