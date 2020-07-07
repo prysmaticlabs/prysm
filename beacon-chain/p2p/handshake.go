@@ -26,9 +26,7 @@ func peerMultiaddrString(conn network.Conn) string {
 // AddConnectionHandler adds a callback function which handles the connection with a
 // newly added peer. It performs a handshake with that peer by sending a hello request
 // and validating the response from the peer.
-func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error,
-	goodbyeFunc func(ctx context.Context, id peer.ID) error) {
-
+func (s *Service) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error) {
 	// Peer map and lock to keep track of current connection attempts.
 	peerMap := make(map[peer.ID]bool)
 	peerLock := new(sync.Mutex)
