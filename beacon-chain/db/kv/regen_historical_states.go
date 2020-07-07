@@ -36,12 +36,12 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 	// Restore from last archived point if this process was previously interrupted.
 	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
-	lastArchivedIndex, err := kv.LastArchivedSlot(ctx)
+	lastArchivedSlot, err := kv.LastArchivedSlot(ctx)
 	if err != nil {
 		return err
 	}
-	if lastArchivedIndex > 0 {
-		archivedIndexStart := lastArchivedIndex - 1
+	if lastArchivedSlot > 0 {
+		archivedIndexStart := lastArchivedSlot - 1
 		archivedRoot := kv.ArchivedPointRoot(ctx, archivedIndexStart)
 		currentState, err := kv.State(ctx, archivedRoot)
 		if err != nil {
@@ -50,7 +50,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		startSlot = currentState.Slot()
 	}
 
-	lastSavedBlockArchivedIndex, err := kv.lastSavedBlockArchivedIndex(ctx)
+	lastSavedBlockArchivedIndex, err := kv.lastSavedBlockArchivedSlot(ctx)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for i := lastArchivedIndex; i <= lastSavedBlockArchivedIndex; i++ {
+	for slot := lastArchivedSlot; slot <= lastSavedBlockArchivedIndex; slot++ {
 		// This is an expensive operation, so we check if the context was canceled
 		// at any point in the iteration.
 		if err := ctx.Err(); err != nil {
@@ -119,7 +119,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 					return err
 				}
 				log.WithFields(log.Fields{
-					"currentArchivedIndex/totalArchivedIndices": fmt.Sprintf("%d/%d", i, lastSavedBlockArchivedIndex),
+					"currentArchivedIndex/totalArchivedIndices": fmt.Sprintf("%d/%d", slot, lastSavedBlockArchivedIndex),
 					"archivedStateSlot":                         currentState.Slot()}).Info("Saved historical state")
 			}
 		}
@@ -193,25 +193,19 @@ func regenHistoricalStateProcessSlots(ctx context.Context, state *stateTrie.Beac
 	return state, nil
 }
 
-// This retrieves the last saved block's archived index.
-func (kv *Store) lastSavedBlockArchivedIndex(ctx context.Context) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.lastSavedBlockArchivedIndex")
+// This retrieves the last saved block's archived slot.
+func (kv *Store) lastSavedBlockArchivedSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.lastSavedBlockArchivedSlot")
 	defer span.End()
-	b, err := kv.HighestSlotBlocks(ctx)
+	b, err := kv.HighestSlotBlock(ctx)
 	if err != nil {
 		return 0, err
 	}
-	if len(b) == 0 {
-		return 0, errors.New("blocks can't be empty")
-	}
-	if b[0] == nil {
+	if b == nil || b.Block == nil {
 		return 0, errors.New("nil last block")
 	}
-	lastSavedBlockSlot := b[0].Block.Slot
-	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
-	lastSavedBlockArchivedIndex := lastSavedBlockSlot/slotsPerArchivedPoint - 1
 
-	return lastSavedBlockArchivedIndex, nil
+	return b.Block.Slot, nil
 }
 
 // This saved archived info (state, root) into the db.

@@ -318,7 +318,7 @@ func Uint64ToBytes(i uint64) []byte {
 // BytesToUint64 little endian conversion. Returns 0 if empty bytes or byte slice with length less
 // than 8.
 func BytesToUint64(b []byte) uint64 {
-	if len(b) < 8 {
+	if len(b) < 8 { // This will panic otherwise.
 		return 0
 	}
 	return binary.LittleEndian.Uint64(b)

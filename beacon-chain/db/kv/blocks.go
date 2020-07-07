@@ -147,9 +147,6 @@ func (kv *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		kv.blockCache.Del(string(blockRoot[:]))
-		if err := kv.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
-			return err
-		}
 		return bkt.Delete(blockRoot[:])
 	})
 }
@@ -175,9 +172,6 @@ func (kv *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error 
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
 			kv.blockCache.Del(string(blockRoot[:]))
-			if err := kv.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
-				return err
-			}
 			if err := bkt.Delete(blockRoot[:]); err != nil {
 				return err
 			}
@@ -209,9 +203,6 @@ func (kv *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBlo
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		for _, block := range blocks {
-			if err := kv.setBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
-				return err
-			}
 			blockRoot, err := stateutil.BlockRoot(block.Block)
 			if err != nil {
 				return err
@@ -283,28 +274,36 @@ func (kv *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) e
 	})
 }
 
-// HighestSlotBlocks returns the blocks with the highest slot from the db.
-func (kv *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocks")
+// HighestSlotBlock returns the blocks with the highest slot from the db.
+func (kv *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlock")
 	defer span.End()
 
-	blocks := make([]*ethpb.SignedBeaconBlock, 0)
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		sBkt := tx.Bucket(slotsHasObjectBucket)
-		savedSlots := sBkt.Get(savedBlockSlotsKey)
-		highestIndex, err := bytesutil.HighestBitIndex(savedSlots)
-		if err != nil {
-			return err
-		}
-
-		blocks, err = kv.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
-		if err != nil {
-			return err
-		}
+	var blkRoot []byte
+	if err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blockSlotIndicesBucket)
+		// This index is sorted in byte order so accessing the last value would represent the
+		// highest slot stored in this index bucket.
+		_, blkRoot = bkt.Cursor().Last()
 		return nil
-	})
+	}); err != nil {
+		return nil, err
+	}
 
-	return blocks, err
+	var blk *ethpb.SignedBeaconBlock
+	if blkRoot != nil {
+		var err error
+		blk, err = kv.Block(ctx, bytesutil.ToBytes32(blkRoot))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if blk == nil {
+		return kv.GenesisBlock(ctx)
+	}
+
+	return blk, nil
 }
 
 // HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
@@ -312,107 +311,45 @@ func (kv *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*et
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
-	blocks := make([]*ethpb.SignedBeaconBlock, 0)
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		sBkt := tx.Bucket(slotsHasObjectBucket)
-		savedSlots := sBkt.Get(savedBlockSlotsKey)
-		if len(savedSlots) == 0 {
-			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
-		}
-		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
-		if err != nil {
-			return err
-		}
-		blocks, err = kv.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
-		if err != nil {
-			return err
+	var best []byte
+	if err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blockSlotIndicesBucket)
+		// Iterate through the index, which is in byte sorted order.
+		c := bkt.Cursor()
+		for s, root := c.First(); s != nil; s, root = c.Next() {
+			key, err := strconv.ParseUint(string(s), 10, 64)
+			if err != nil {
+				return err
+			}
+			if root == nil {
+				continue
+			}
+			if key >= slot {
+				break
+			}
+			best = root
 		}
 		return nil
-	})
-
-	return blocks, err
-}
-
-// blocksAtSlotBitfieldIndex retrieves the blocks in DB given the input index. The index represents
-// the position of the slot bitfield the saved block maps to.
-func (kv *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
-	defer span.End()
-
-	highestSlot := uint64(0)
-	if uint64(index) > highestSlot+1 {
-		highestSlot = uint64(index - 1)
-	}
-
-	if highestSlot == 0 {
-		gBlock, err := kv.GenesisBlock(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return []*ethpb.SignedBeaconBlock{gBlock}, nil
-	}
-
-	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
-
-	keys, err := getBlockRootsByFilter(ctx, tx, f)
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
-	blocks := make([]*ethpb.SignedBeaconBlock, 0, len(keys))
-	bBkt := tx.Bucket(blocksBucket)
-	for i := 0; i < len(keys); i++ {
-		encoded := bBkt.Get(keys[i])
-		block := &ethpb.SignedBeaconBlock{}
-		if err := decode(ctx, encoded, block); err != nil {
+	var blk *ethpb.SignedBeaconBlock
+	var err error
+	if best != nil {
+		blk, err = kv.Block(ctx, bytesutil.ToBytes32(best))
+		if err != nil {
 			return nil, err
 		}
-		blocks = append(blocks, block)
+	}
+	if blk == nil {
+		blk, err = kv.GenesisBlock(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return blocks, err
-}
-
-// setBlockSlotBitField sets the block slot bit in DB.
-// This helps to track which slot has a saved block in db.
-func (kv *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.setBlockSlotBitField")
-	defer span.End()
-
-	kv.blockSlotBitLock.Lock()
-	defer kv.blockSlotBitLock.Unlock()
-
-	bucket := tx.Bucket(slotsHasObjectBucket)
-	slotBitfields := bucket.Get(savedBlockSlotsKey)
-
-	// Copy is needed to avoid unsafe pointer conversions.
-	// See: https://github.com/etcd-io/bbolt/pull/201
-	tmp := make([]byte, len(slotBitfields))
-	copy(tmp, slotBitfields)
-
-	slotBitfields = bytesutil.SetBit(tmp, int(slot))
-	return bucket.Put(savedBlockSlotsKey, slotBitfields)
-}
-
-// clearBlockSlotBitField clears the block slot bit in DB.
-// This helps to track which slot has a saved block in db.
-func (kv *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearBlockSlotBitField")
-	defer span.End()
-
-	kv.blockSlotBitLock.Lock()
-	defer kv.blockSlotBitLock.Unlock()
-
-	bucket := tx.Bucket(slotsHasObjectBucket)
-	slotBitfields := bucket.Get(savedBlockSlotsKey)
-
-	// Copy is needed to avoid unsafe pointer conversions.
-	// See: https://github.com/etcd-io/bbolt/pull/201
-	tmp := make([]byte, len(slotBitfields))
-	copy(tmp, slotBitfields)
-
-	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
-	return bucket.Put(savedBlockSlotsKey, slotBitfields)
+	return []*ethpb.SignedBeaconBlock{blk}, nil
 }
 
 // getBlockRootsByFilter retrieves the block roots given the filter criteria.
