@@ -1010,6 +1010,20 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	if !b.HasInnerState() {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+}
+
+// currentJustifiedCheckpoint denoting an epoch and block root.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
+
 	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
@@ -1018,6 +1032,20 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	if !b.HasInnerState() {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
+}
+
+// finalizedCheckpoint denoting an epoch and block root.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
+
 	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
@@ -1033,16 +1061,6 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	defer b.lock.RUnlock()
 
 	return b.state.FinalizedCheckpoint.Epoch
-}
-
-// currentJustifiedCheckpoint denoting an epoch and block root.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
-	if !b.HasInnerState() {
-		return nil
-	}
-
-	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
@@ -1070,16 +1088,6 @@ func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, 
 	root := make([]byte, 32)
 	copy(root, input[idx])
 	return root, nil
-}
-
-// finalizedCheckpoint denoting an epoch and block root.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
-	if !b.HasInnerState() {
-		return nil
-	}
-
-	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAttestation) []*pbp2p.PendingAttestation {
