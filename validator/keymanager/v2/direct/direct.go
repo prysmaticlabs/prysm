@@ -25,9 +25,11 @@ import (
 var log = logrus.WithField("prefix", "keymanager-v2")
 
 const (
+	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
+	// for a validator account.
+	DepositTransactionFileName = "deposit_transaction.rlp"
 	keystoreFileName           = "keystore.json"
 	depositDataFileName        = "deposit_data.ssz"
-	depositTransactionFileName = "deposit_transaction.rlp"
 	eipVersion                 = "EIP-2335"
 )
 
@@ -140,8 +142,8 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	logDepositTransaction(tx)
 
 	// We write the raw deposit transaction as an .rlp encoded file.
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositTransactionFileName, tx.Data()); err != nil {
-		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, depositTransactionFileName)
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, DepositTransactionFileName, tx.Data()); err != nil {
+		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, DepositTransactionFileName)
 	}
 
 	// We write the ssz-encoded deposit data to disk as a .ssz file.

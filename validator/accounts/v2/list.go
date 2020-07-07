@@ -7,9 +7,11 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/urfave/cli/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 // ListAccounts displays all available validator accounts in a Prysm wallet.
@@ -37,10 +39,11 @@ func ListAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
 	}
+	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
-		if err := listDirectKeymanagerAccounts(cliCtx, wallet, keymanager); err != nil {
-
+		if err := listDirectKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
+			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
 		}
 	default:
 		log.Fatalf("Keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
@@ -48,7 +51,11 @@ func ListAccounts(cliCtx *cli.Context) error {
 	return nil
 }
 
-func listDirectKeymanagerAccounts(cliCtx *cli.Context, wallet *Wallet, keymanager v2keymanager.IKeymanager) error {
+func listDirectKeymanagerAccounts(
+	showDepositData bool,
+	wallet *Wallet,
+	keymanager v2keymanager.IKeymanager,
+) error {
 	// We initialize the wallet's keymanager.
 	accountNames, err := wallet.AccountNames()
 	if err != nil {
@@ -72,7 +79,6 @@ func listDirectKeymanagerAccounts(cliCtx *cli.Context, wallet *Wallet, keymanage
 	fmt.Printf("%s %s\n", dirPath, wallet.passwordsDir)
 	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 
-	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
@@ -85,14 +91,14 @@ func listDirectKeymanagerAccounts(cliCtx *cli.Context, wallet *Wallet, keymanage
 		if !showDepositData {
 			continue
 		}
-		enc, err := wallet.ReadFileForAccount(accountNames[i], "deposit_transaction.rlp")
+		enc, err := wallet.ReadFileForAccount(accountNames[i], direct.DepositTransactionFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", "depo")
+			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
 		}
 		fmt.Printf(
 			"%s %s\n",
 			"(deposit tx file)",
-			path.Join(wallet.AccountsDir(), accountNames[i], "deposit_transaction.rlp"),
+			path.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
 		)
 		fmt.Printf(`
 ======================Deposit Transaction Data=====================
@@ -106,4 +112,5 @@ func listDirectKeymanagerAccounts(cliCtx *cli.Context, wallet *Wallet, keymanage
 		)
 	}
 	fmt.Println("")
+	return nil
 }
