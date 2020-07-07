@@ -26,7 +26,7 @@ func (m *MockKeymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) 
 	return m.ConfigFileContents, nil
 }
 
-// FetchValidatingKeys --
+// FetchValidatingPublicKeys --
 func (m *MockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return m.PublicKeys, nil
 }
