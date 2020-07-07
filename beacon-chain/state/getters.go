@@ -935,8 +935,10 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	if b.state.CurrentEpochAttestations == nil {
 		return nil
 	}
+
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
 	return b.currentEpochAttestations()
 }
 
@@ -1010,11 +1012,14 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	if !b.HasInnerState() {
 		return nil
 	}
+	if b.state.CurrentJustifiedCheckpoint == nil {
+		return nil
+	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return b.currentJustifiedCheckpoint()
 }
 
 // currentJustifiedCheckpoint denoting an epoch and block root.
@@ -1032,11 +1037,14 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	if !b.HasInnerState() {
 		return nil
 	}
+	if b.state.FinalizedCheckpoint == nil {
+		return nil
+	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
+	return b.finalizedCheckpoint()
 }
 
 // finalizedCheckpoint denoting an epoch and block root.
