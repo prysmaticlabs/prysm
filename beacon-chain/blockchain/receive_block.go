@@ -21,6 +21,7 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
@@ -161,6 +162,70 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 	}).Debug("Finished applying state transition")
 
 	return nil
+}
+
+// ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
+// the state, performing batch verification of all collected signatures and then performing the appropriate
+// actions for a block post-transition.
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockBatch")
+	defer span.End()
+
+	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
+	postState, fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
+	if err != nil {
+		err := errors.Wrap(err, "could not process block")
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+
+	for i, b := range blocks {
+		blockCopy := stateTrie.CopySignedBeaconBlock(b)
+		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		// Send notification of the processed block to the state feed.
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{
+				Slot:      blockCopy.Block.Slot,
+				BlockRoot: blkRoots[i],
+				Verified:  false,
+			},
+		})
+
+		// Reports on blockCopy and fork choice metrics.
+		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+
+		// Log state transition data.
+		log.WithFields(logrus.Fields{
+			"slot":         blockCopy.Block.Slot,
+			"attestations": len(blockCopy.Block.Body.Attestations),
+			"deposits":     len(blockCopy.Block.Body.Deposits),
+		}).Debug("Finished applying state transition")
+	}
+	lastBlk := blocks[len(blocks)-1]
+	lastRoot := blkRoots[len(blkRoots)-1]
+
+	if err := s.stateGen.SaveState(ctx, lastRoot, postState); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
+
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+
+	if !bytes.Equal(lastRoot[:], cachedHeadRoot) {
+		if err := s.saveHeadNoDB(ctx, lastBlk, lastRoot); err != nil {
+			err := errors.Wrap(err, "could not save head")
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+	}
+
+	return s.handleEpochBoundary(postState)
 }
 
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.

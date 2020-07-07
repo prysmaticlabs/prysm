@@ -62,7 +62,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 		return s.beaconDB.GenesisState(ctx)
 	}
 
-	s.finalizedInfo = &finalizedInfo{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
+	s.finalizedInfo = &finalizedInfo{slot: lastArchivedState.Slot(), root: lastArchivedRoot, state: lastArchivedState.Copy()}
 
 	return lastArchivedState, nil
 }

@@ -42,4 +42,7 @@ func TestResume(t *testing.T) {
 	if root != service.finalizedInfo.root {
 		t.Errorf("Did not get wanted root")
 	}
+	if service.finalizedState() == nil {
+		t.Error("Wanted a non nil finalized state")
+	}
 }
