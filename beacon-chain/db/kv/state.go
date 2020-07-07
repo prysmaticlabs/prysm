@@ -25,15 +25,13 @@ func (kv *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSt
 		return nil, err
 	}
 
-	if enc != nil {
-		s, err = createState(ctx, enc)
-		if err != nil {
-			return nil, err
-		}
+	if len(enc) == 0 {
+		return nil, nil
 	}
 
-	if s == nil {
-		return nil, nil
+	s, err = createState(ctx, enc)
+	if err != nil {
+		return nil, err
 	}
 	return state.InitializeFromProtoUnsafe(s)
 }
