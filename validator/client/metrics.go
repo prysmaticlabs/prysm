@@ -168,13 +168,12 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 	}
 
-	included := 0
-	votedSource := 0
-	votedTarget := 0
-	votedHead := 0
 	prevEpoch := uint64(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
 		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
+		if v.voteStats.startEpoch == ^uint64(0) { // Handles unknown first epoch.
+			v.voteStats.startEpoch = prevEpoch
+		}
 	}
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
 	for i, pubKey := range resp.PublicKeys {
@@ -182,52 +181,95 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
+		if _, ok := v.startBalances[pubKeyBytes]; ok == false {
+			v.startBalances[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
+		}
 
 		fmtKey := fmt.Sprintf("%#x", pubKey)
 		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
+			startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
 			percentNet := (newBalance - prevBalance) / prevBalance
+			percentSinceStart := (newBalance - startBalance) / startBalance
 			log.WithFields(logrus.Fields{
-				"pubKey":               truncatedKey,
-				"epoch":                prevEpoch,
-				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
-				"correctlyVotedTarget": resp.CorrectlyVotedTarget[i],
-				"correctlyVotedHead":   resp.CorrectlyVotedHead[i],
-				"inclusionSlot":        resp.InclusionSlots[i],
-				"inclusionDistance":    resp.InclusionDistances[i],
-				"oldBalance":           prevBalance,
-				"newBalance":           newBalance,
-				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
+				"pubKey":                  truncatedKey,
+				"epoch":                   prevEpoch,
+				"correctlyVotedSource":    resp.CorrectlyVotedSource[i],
+				"correctlyVotedTarget":    resp.CorrectlyVotedTarget[i],
+				"correctlyVotedHead":      resp.CorrectlyVotedHead[i],
+				"inclusionSlot":           resp.InclusionSlots[i],
+				"inclusionDistance":       resp.InclusionDistances[i],
+				"startBalance":            startBalance,
+				"oldBalance":              prevBalance,
+				"newBalance":              newBalance,
+				"percentChange":           fmt.Sprintf("%.5f%%", percentNet*100),
+				"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
 			}
 		}
-
-		if resp.InclusionSlots[i] != ^uint64(0) {
-			included++
-		}
-		if resp.CorrectlyVotedSource[i] {
-			votedSource++
-		}
-		if resp.CorrectlyVotedTarget[i] {
-			votedTarget++
-		}
-		if resp.CorrectlyVotedHead[i] {
-			votedHead++
-		}
 		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
 	}
 
+	v.UpdateLogAggregateStats(resp, slot)
+	return nil
+}
+
+// UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
+func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
+	summary := &v.voteStats
+	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
+	var included, correctSource, correctTarget, correctHead int
+
+	for i := range resp.PublicKeys {
+		if resp.InclusionSlots[i] != ^uint64(0) {
+			included++
+			summary.includedAttestedCount++
+			summary.totalDistance += resp.InclusionDistances[i]
+		}
+		if resp.CorrectlyVotedSource[i] {
+			correctSource++
+			summary.correctSources++
+		}
+		if resp.CorrectlyVotedTarget[i] {
+			correctTarget++
+			summary.correctTargets++
+		}
+		if resp.CorrectlyVotedHead[i] {
+			correctHead++
+			summary.correctHeads++
+		}
+	}
+
+	summary.totalAttestedCount += uint64(len(resp.InclusionSlots))
+	summary.totalSources += uint64(included)
+	summary.totalTargets += uint64(included)
+	summary.totalHeads += uint64(included)
+
 	log.WithFields(logrus.Fields{
-		"epoch":                          prevEpoch,
-		"attestationInclusionPercentage": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
-		"correctlyVotedSourcePercentage": fmt.Sprintf("%.0f%%", (float64(votedSource)/float64(len(resp.CorrectlyVotedSource)))*100),
-		"correctlyVotedTargetPercentage": fmt.Sprintf("%.0f%%", (float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
-		"correctlyVotedHeadPercentage":   fmt.Sprintf("%.0f%%", (float64(votedHead)/float64(len(resp.CorrectlyVotedHead)))*100),
+		"epoch":                   currentEpoch - 1,
+		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
+		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(included))*100),
+		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(included))*100),
+		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(included))*100),
 	}).Info("Previous epoch aggregated voting summary")
 
-	return nil
+	var totalStartBal, totalPrevBal uint64
+	for i, val := range v.startBalances {
+		totalStartBal += val
+		totalPrevBal += v.prevBalance[i]
+	}
+
+	log.WithFields(logrus.Fields{
+		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch),
+		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
+		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount)),
+		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
+		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.correctTargets)/float64(summary.totalTargets))*100),
+		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.correctHeads)/float64(summary.totalHeads))*100),
+		"pctChangeCombinedBalance": fmt.Sprintf("%.5f%%", (float64(totalPrevBal)-float64(totalStartBal))/float64(totalStartBal)*100),
+	}).Info("Vote summary since launch")
 }
