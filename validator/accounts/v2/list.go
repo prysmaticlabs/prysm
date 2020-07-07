@@ -6,12 +6,13 @@ import (
 	"path"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/urfave/cli/v2"
-
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/urfave/cli/v2"
 )
 
-// ListAccounts --
+// ListAccounts displays all available validator accounts in a Prysm wallet.
 func ListAccounts(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if walletDir == flags.DefaultValidatorDir() {
@@ -28,22 +29,30 @@ func ListAccounts(cliCtx *cli.Context) error {
 		WalletDir:    walletDir,
 	})
 	if err == ErrNoWalletFound {
-		log.Fatal("No wallet found")
+		log.Fatal("No wallet nor accounts found, create a new account with `validator accounts-v2 new`")
 	} else if err != nil {
 		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
-	}
-	// We initialize the wallet's keymanager.
-	accountNames, err := wallet.AccountNames()
-	if err != nil {
-		log.Fatal(err)
 	}
 	keymanager, err := wallet.ExistingKeyManager(ctx)
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
 	}
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	switch wallet.KeymanagerKind() {
+	case v2keymanager.Direct:
+		if err := listDirectKeymanagerAccounts(cliCtx, wallet, keymanager); err != nil {
+
+		}
+	default:
+		log.Fatalf("Keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
+	}
+	return nil
+}
+
+func listDirectKeymanagerAccounts(cliCtx *cli.Context, wallet *Wallet, keymanager v2keymanager.IKeymanager) error {
+	// We initialize the wallet's keymanager.
+	accountNames, err := wallet.AccountNames()
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "could not fetch account names")
 	}
 	au := aurora.NewAurora(true)
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -55,7 +64,7 @@ func ListAccounts(cliCtx *cli.Context) error {
 	}
 	fmt.Println(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
-			"by running `validator accounts-v2 list --deposit-data"),
+			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
 	dirPath := au.BrightCyan("(wallet dir)")
 	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
@@ -64,19 +73,27 @@ func ListAccounts(cliCtx *cli.Context) error {
 	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), pubKeys[i])
 		fmt.Printf("%s %s\n", au.BrightCyan("[created at]").Bold(), "July 07, 2020 2:32 PM")
-		fmt.Printf("%s %s\n", "(eth1 tx data file)", "deposit_transaction.rlp")
 		if !showDepositData {
 			continue
 		}
 		enc, err := wallet.ReadFileForAccount(accountNames[i], "deposit_transaction.rlp")
 		if err != nil {
-			log.Fatal(err)
+			return errors.Wrapf(err, "could not read file for account: %s", "depo")
 		}
+		fmt.Printf(
+			"%s %s\n",
+			"(deposit tx file)",
+			path.Join(wallet.AccountsDir(), accountNames[i], "deposit_transaction.rlp"),
+		)
 		fmt.Printf(`
 ======================Deposit Transaction Data=====================
 
@@ -89,5 +106,4 @@ func ListAccounts(cliCtx *cli.Context) error {
 		)
 	}
 	fmt.Println("")
-	return nil
 }
