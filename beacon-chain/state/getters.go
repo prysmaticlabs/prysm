@@ -386,17 +386,7 @@ func (b *BeaconState) blockRoots() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.BlockRoots == nil {
-		return nil
-	}
-
-	roots := make([][]byte, len(b.state.BlockRoots))
-	for i, r := range b.state.BlockRoots {
-		tmpRt := make([]byte, len(r))
-		copy(tmpRt, r)
-		roots[i] = tmpRt
-	}
-	return roots
+	return b.safeCopy2DByteSlice(b.state.BlockRoots)
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
@@ -422,16 +412,7 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.BlockRoots == nil {
-		return nil, nil
-	}
-
-	if uint64(len(b.state.BlockRoots)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
-	root := make([]byte, 32)
-	copy(root, b.state.BlockRoots[idx])
-	return root, nil
+	return b.safeCopyBytesAtIndex(b.state.BlockRoots, idx)
 }
 
 // StateRoots kept track of in the beacon state.
@@ -455,17 +436,7 @@ func (b *BeaconState) stateRoots() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.StateRoots == nil {
-		return nil
-	}
-
-	roots := make([][]byte, len(b.state.StateRoots))
-	for i, r := range b.state.StateRoots {
-		tmpRt := make([]byte, len(r))
-		copy(tmpRt, r)
-		roots[i] = tmpRt
-	}
-	return roots
+	return b.safeCopy2DByteSlice(b.state.StateRoots)
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
@@ -489,17 +460,7 @@ func (b *BeaconState) historicalRoots() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.HistoricalRoots == nil {
-		return nil
-	}
-
-	roots := make([][]byte, len(b.state.HistoricalRoots))
-	for i, r := range b.state.HistoricalRoots {
-		tmpRt := make([]byte, len(r))
-		copy(tmpRt, r)
-		roots[i] = tmpRt
-	}
-	return roots
+	return b.safeCopy2DByteSlice(b.state.HistoricalRoots)
 }
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
@@ -854,17 +815,8 @@ func (b *BeaconState) randaoMixes() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.RandaoMixes == nil {
-		return nil
-	}
 
-	mixes := make([][]byte, len(b.state.RandaoMixes))
-	for i, r := range b.state.RandaoMixes {
-		tmpRt := make([]byte, len(r))
-		copy(tmpRt, r)
-		mixes[i] = tmpRt
-	}
-	return mixes
+	return b.safeCopy2DByteSlice(b.state.RandaoMixes)
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
@@ -890,16 +842,8 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.RandaoMixes == nil {
-		return nil, nil
-	}
 
-	if uint64(len(b.state.RandaoMixes)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
-	root := make([]byte, 32)
-	copy(root, b.state.RandaoMixes[idx])
-	return root, nil
+	return b.safeCopyBytesAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
@@ -981,15 +925,8 @@ func (b *BeaconState) previousEpochAttestations() []*pbp2p.PendingAttestation {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.PreviousEpochAttestations == nil {
-		return nil
-	}
 
-	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
-	for i := 0; i < len(res); i++ {
-		res[i] = CopyPendingAttestation(b.state.PreviousEpochAttestations[i])
-	}
-	return res
+	return b.safeCopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
@@ -1013,15 +950,8 @@ func (b *BeaconState) currentEpochAttestations() []*pbp2p.PendingAttestation {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.CurrentEpochAttestations == nil {
-		return nil
-	}
 
-	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
-	for i := 0; i < len(res); i++ {
-		res[i] = CopyPendingAttestation(b.state.CurrentEpochAttestations[i])
-	}
-	return res
+	return b.safeCopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
@@ -1075,11 +1005,8 @@ func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.PreviousJustifiedCheckpoint == nil {
-		return nil
-	}
 
-	return CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
+	return b.safeCopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -1103,11 +1030,8 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.CurrentJustifiedCheckpoint == nil {
-		return nil
-	}
 
-	return CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // FinalizedCheckpoint denoting an epoch and block root.
@@ -1131,11 +1055,8 @@ func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.FinalizedCheckpoint == nil {
-		return nil
-	}
 
-	return CopyCheckpoint(b.state.FinalizedCheckpoint)
+	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
@@ -1146,11 +1067,10 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	if b.state.FinalizedCheckpoint == nil {
 		return 0
 	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.finalizedCheckpointEpoch()
+	return b.state.FinalizedCheckpoint.Epoch
 }
 
 // finalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
@@ -1164,4 +1084,51 @@ func (b *BeaconState) finalizedCheckpointEpoch() uint64 {
 	}
 
 	return b.state.FinalizedCheckpoint.Epoch
+}
+
+func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
+	if input == nil {
+		return nil
+	}
+
+	dst := make([][]byte, len(input))
+	for i, r := range input {
+		tmp := make([]byte, len(r))
+		copy(tmp, r)
+		dst[i] = tmp
+	}
+	return dst
+}
+
+func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	if uint64(len(input)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	root := make([]byte, 32)
+	copy(root, input[idx])
+	return root, nil
+}
+
+func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAttestation) []*pbp2p.PendingAttestation {
+	if input == nil {
+		return nil
+	}
+
+	res := make([]*pbp2p.PendingAttestation, len(input))
+	for i := 0; i < len(res); i++ {
+		res[i] = CopyPendingAttestation(input[i])
+	}
+	return res
+}
+
+func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpoint {
+	if input == nil {
+		return nil
+	}
+
+	return CopyCheckpoint(input)
 }

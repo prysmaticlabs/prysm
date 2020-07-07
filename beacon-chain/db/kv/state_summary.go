@@ -40,32 +40,41 @@ func (kv *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSu
 func (kv *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.StateSummary")
 	defer span.End()
-
-	var summary *pb.StateSummary
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateSummaryBucket)
-		enc := bucket.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-		summary = &pb.StateSummary{}
-		return decode(ctx, enc, summary)
-	})
-
-	return summary, err
+	enc, err := kv.stateSummaryBytes(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if len(enc) == 0 {
+		return nil, nil
+	}
+	summary := &pb.StateSummary{}
+	if err := decode(ctx, enc, summary); err != nil {
+		return nil, err
+	}
+	return summary, nil
 }
 
 // HasStateSummary returns true if a state summary exists in DB.
 func (kv *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
-	var exists bool
-	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateSummaryBucket)
-		exists = bucket.Get(blockRoot[:]) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+	enc, err := kv.stateSummaryBytes(ctx, blockRoot)
+	if err != nil {
 		panic(err)
 	}
-	return exists
+	return len(enc) > 0
+}
+
+func (kv *Store) stateSummaryBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateSummaryBytes")
+	defer span.End()
+
+	var enc []byte
+	err := kv.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateSummaryBucket)
+		enc = bucket.Get(blockRoot[:])
+		return nil
+	})
+
+	return enc, err
 }

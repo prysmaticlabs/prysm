@@ -53,26 +53,13 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 func (dc *DepositCache) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
-	dc.depositsLock.RLock()
-	defer dc.depositsLock.RUnlock()
 
-	var depositCntrs []*dbpb.DepositContainer
-	for _, ctnr := range dc.pendingDeposits {
-		if beforeBlk == nil || beforeBlk.Uint64() >= ctnr.Eth1BlockHeight {
-			depositCntrs = append(depositCntrs, ctnr)
-		}
-	}
-	// Sort the deposits by Merkle index.
-	sort.SliceStable(depositCntrs, func(i, j int) bool {
-		return depositCntrs[i].Index < depositCntrs[j].Index
-	})
+	depositCntrs := dc.PendingContainers(ctx, beforeBlk)
 
 	var deposits []*ethpb.Deposit
 	for _, dep := range depositCntrs {
 		deposits = append(deposits, dep.Deposit)
 	}
-
-	span.AddAttributes(trace.Int64Attribute("count", int64(len(deposits))))
 
 	return deposits
 }
