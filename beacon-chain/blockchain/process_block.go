@@ -228,12 +228,16 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	b := blks[0].Block
 
 	// Retrieve incoming block's pre state.
-	preState, err := s.verifyBlkPreState(ctx, b)
+	if err := s.verifyBlkPreState(ctx, b); err != nil {
+		return nil, nil, nil, err
+	}
+	preState, err := s.stateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	// Perform a copy to preserve copy in cache.
-	preState = preState.Copy()
+	if preState == nil {
+		return nil, nil, nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))

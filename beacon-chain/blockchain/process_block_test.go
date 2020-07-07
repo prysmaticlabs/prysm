@@ -8,6 +8,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -363,7 +364,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
