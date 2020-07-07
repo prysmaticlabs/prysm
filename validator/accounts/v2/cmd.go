@@ -28,6 +28,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
+				flags.ShowDepositDataFlag,
 			},
 			Action: ListAccounts,
 		},
