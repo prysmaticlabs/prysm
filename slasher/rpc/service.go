@@ -146,10 +146,17 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status returns nil or credentialError
+// Status returns nil if slasher is ready to receive attestations and
+// blocks from clients for slashing detection.
 func (s *Service) Status() error {
 	if s.credentialError != nil {
 		return s.credentialError
+	}
+	if bs := s.beaconclient.Status(); bs != nil {
+		return bs
+	}
+	if ds := s.detector.Status(); ds != nil {
+		return ds
 	}
 	return nil
 }
