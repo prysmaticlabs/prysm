@@ -65,3 +65,8 @@ func (c *EpochFlatSpansCache) Purge() {
 	log.Info("Saving all cached data to DB, please wait for completion.")
 	c.cache.Purge()
 }
+
+// Length returns the number of cached items.
+func (c *EpochFlatSpansCache) Length() int {
+	return c.cache.Len()
+}
