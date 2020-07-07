@@ -88,9 +88,11 @@ func (ds *Service) Start() {
 	if featureconfig.Get().EnableHistoricalDetection {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
-		go ds.detectHistoricalChainData(ds.ctx)
+		ds.detectHistoricalChainData(ds.ctx)
 	}
-
+	// We listen to a stream of blocks and attestations from the beacon node.
+	go ds.beaconClient.ReceiveBlocks(ds.ctx)
+	go ds.beaconClient.ReceiveAttestations(ds.ctx)
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
 	go ds.detectIncomingBlocks(ds.ctx, ds.blocksChan)
