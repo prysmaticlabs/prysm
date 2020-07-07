@@ -70,7 +70,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		pubKeys[i] = bytesutil.ToBytes48(key.PublicKey().Marshal())
 	}
 	rescueStdout := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 	os.Stdout = w
 
 	keymanager := &mock.MockKeymanager{
@@ -88,7 +91,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
-	out, _ := ioutil.ReadAll(r)
+	out, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
 	os.Stdout = rescueStdout
 
 	// Assert the keymanager kind is printed to stdout.
