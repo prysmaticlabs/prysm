@@ -815,6 +815,7 @@ func (b *BeaconState) randaoMixes() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
+
 	return b.safeCopy2DByteSlice(b.state.RandaoMixes)
 }
 
@@ -841,6 +842,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
+
 	return b.safeCopyBytesAtIndex(b.state.RandaoMixes, idx)
 }
 
@@ -1071,6 +1073,19 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	return b.state.FinalizedCheckpoint.Epoch
 }
 
+// finalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) finalizedCheckpointEpoch() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
+	if b.state.FinalizedCheckpoint == nil {
+		return 0
+	}
+
+	return b.state.FinalizedCheckpoint.Epoch
+}
+
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
 	if input == nil {
 		return nil
@@ -1116,17 +1131,4 @@ func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpo
 	}
 
 	return CopyCheckpoint(input)
-}
-
-// finalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) finalizedCheckpointEpoch() uint64 {
-	if !b.HasInnerState() {
-		return 0
-	}
-	if b.state.FinalizedCheckpoint == nil {
-		return 0
-	}
-
-	return b.state.FinalizedCheckpoint.Epoch
 }
