@@ -8,21 +8,10 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// EpochAttestationsRoot computes the HashTreeRoot Merkleization of
-// a list of pending attestation values according to the eth2
-// Simple Serialize specification.
-func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
-		return cachedHasher.epochAttestationsRoot(atts)
-	}
-	return nocachedHasher.epochAttestationsRoot(atts)
-}
 
 // PendingAttestationRoot describes a method from which the hash tree root
 // of a pending attestation is returned.
