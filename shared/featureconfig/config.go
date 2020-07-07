@@ -56,6 +56,7 @@ type Flags struct {
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
+	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -229,6 +230,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(batchBlockVerify.Name) {
 		log.Warn("Performing batch block verification when syncing.")
 		cfg.BatchBlockVerify = true
+	}
+	if ctx.Bool(initSyncVerbose.Name) {
+		log.Warn("Logging every processed block during initial syncing.")
+		cfg.InitSyncVerbose = true
 	}
 	Init(cfg)
 }
