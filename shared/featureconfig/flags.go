@@ -45,10 +45,10 @@ var (
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
 	}
-	initSyncVerifyEverythingFlag = &cli.BoolFlag{
-		Name: "initial-sync-verify-all-signatures",
+	disableInitSyncVerifyEverythingFlag = &cli.BoolFlag{
+		Name: "disable-initial-sync-verify-all-signatures",
 		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
-			"and attestation's aggregated signatures. Without this flag, only the proposer " +
+			"and attestation's aggregated signatures. With this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
 	enableSlasherFlag = &cli.BoolFlag{
@@ -148,13 +148,17 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	batchBlockVerify = &cli.BoolFlag{
+		Name:  "batch-block-verify",
+		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	initSyncVerifyEverythingFlag,
 	forceMaxCoverAttestationAggregation,
 	newBeaconStateLocks,
+	batchBlockVerify,
 }
 
 // Deprecated flags list.
@@ -472,6 +476,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedInitSyncVerifyEverythingFlag = &cli.BoolFlag{
+		Name:   "initial-sync-verify-all-signatures",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -537,6 +546,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedArchiveAttestation,
 	deprecatedEnableProtectProposerFlag,
 	deprecatedEnableProtectAttesterFlag,
+	deprecatedInitSyncVerifyEverythingFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -567,7 +577,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,
 	disableSSZCache,
-	initSyncVerifyEverythingFlag,
+	disableInitSyncVerifyEverythingFlag,
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
@@ -589,6 +599,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
+	batchBlockVerify,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
