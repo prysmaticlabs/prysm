@@ -24,5 +24,16 @@ this command outputs a deposit data string which is required to become a validat
 				}...),
 			Action: NewAccount,
 		},
+		{
+			Name:        "export",
+			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
+			Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+				[]cli.Flag{
+					flags.WalletDirFlag,
+					flags.WalletPasswordsDirFlag,
+					flags.OutputPathFlag,
+				}...),
+			Action: NewAccount,
+		},
 	},
 }

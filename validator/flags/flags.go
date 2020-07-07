@@ -126,6 +126,12 @@ var (
 		Usage: "Path to a directory on-disk where wallet passwords are stored",
 		Value: DefaultValidatorDir(),
 	}
+	// OutputPathFlag defines the path for the zip backup of the wallet will be created.
+	OutputPathFlag = &cli.StringFlag{
+		Name:  "output-path",
+		Usage: "Path to a directory where accounts will be exported into a zip file",
+		Value: DefaultValidatorDir(),
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
