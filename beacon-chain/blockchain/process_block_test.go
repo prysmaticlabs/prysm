@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -253,12 +252,8 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	received, err := service.verifyBlkPreState(ctx, b)
-	if err != nil {
+	if err := service.verifyBlkPreState(ctx, b); err != nil {
 		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(s.InnerStateUnsafe(), received.InnerStateUnsafe()) {
-		t.Error("cached state not the same")
 	}
 }
 
@@ -282,7 +277,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	_, err = service.verifyBlkPreState(ctx, b)
+	err = service.verifyBlkPreState(ctx, b)
 	wanted := "could not reconstruct parent state"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
@@ -299,12 +294,8 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	received, err := service.verifyBlkPreState(ctx, b)
-	if err != nil {
+	if err := service.verifyBlkPreState(ctx, b); err != nil {
 		t.Fatal(err)
-	}
-	if s.Slot() != received.Slot() {
-		t.Error("cached state not the same")
 	}
 }
 
