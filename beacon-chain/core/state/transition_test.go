@@ -215,7 +215,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	}
 	block.Signature = sig.Marshal()
 
-	set, beaconState, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+	set, beaconState, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
 	if err != nil {
 		t.Error(err)
 	}
@@ -713,7 +713,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	beaconState, block, _, _, _ := createFullBlockWithOperations(t)
-	set, _, err := state.ProcessBlockNoVerify(context.Background(), beaconState, block)
+	set, _, err := state.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
