@@ -362,7 +362,7 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.insertBlockToForkChoiceStore(ctx, block.Block, r, state); err != nil {
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, state); err != nil {
 		t.Fatal(err)
 	}
 
@@ -416,7 +416,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	if err := s.insertBlockToForkChoiceStore(ctx, block.Block, r, state); err != nil {
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, state); err != nil {
 		b.Fatal(err)
 	}
 
