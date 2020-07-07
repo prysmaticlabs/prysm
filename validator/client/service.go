@@ -150,11 +150,13 @@ func (v *ValidatorService) Start() {
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
+		startBalances:                  make(map[[48]byte]uint64),
 		prevBalance:                    make(map[[48]byte]uint64),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
+		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 	}
 	go run(v.ctx, v.validator)
 }
