@@ -56,6 +56,7 @@ type Flags struct {
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
+	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -134,10 +135,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
 	}
-	if ctx.Bool(initSyncVerifyEverythingFlag.Name) {
-		log.Warn("Initial syncing with verifying all block's content signatures.")
-		cfg.InitSyncNoVerify = false
-	} else {
+	cfg.InitSyncNoVerify = false
+	if ctx.Bool(disableInitSyncVerifyEverythingFlag.Name) {
+		log.Warn("Initial syncing while verifying only the block proposer signatures.")
 		cfg.InitSyncNoVerify = true
 	}
 	if ctx.Bool(skipBLSVerifyFlag.Name) {
@@ -226,6 +226,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
 		log.Warn("Forcing max_cover strategy on attestation aggregation")
 		cfg.AttestationAggregationStrategy = "max_cover"
+	}
+	if ctx.Bool(batchBlockVerify.Name) {
+		log.Warn("Performing batch block verification when syncing.")
+		cfg.BatchBlockVerify = true
 	}
 	Init(cfg)
 }

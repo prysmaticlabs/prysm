@@ -295,7 +295,8 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
-func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock,
+	fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
 	pendingNodes := make([]*ethpb.BeaconBlock, 0)
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
@@ -326,8 +327,8 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 
 		if err := s.forkChoiceStore.ProcessBlock(ctx,
 			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot), bytesutil.ToBytes32(b.Body.Graffiti),
-			state.CurrentJustifiedCheckpoint().Epoch,
-			state.FinalizedCheckpointEpoch()); err != nil {
+			jCheckpoint.Epoch,
+			fCheckpoint.Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
 	}
