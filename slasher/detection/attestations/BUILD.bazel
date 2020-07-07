@@ -29,6 +29,7 @@ go_test(
     srcs = ["spanner_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//shared/featureconfig:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//slasher/db/testing:go_default_library",
         "//slasher/db/types:go_default_library",
