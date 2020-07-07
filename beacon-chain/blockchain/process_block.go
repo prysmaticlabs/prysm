@@ -234,7 +234,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	}
 	set := new(bls.SignatureSet)
 	for i, b := range blks {
-		set, preState, err = state.ExecuteStateTransitionNoVerify(ctx, preState, b)
+		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, nil, err
 		}
