@@ -185,11 +185,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-
-		if err = s.insertAttestationsToForkChoiceStore(ctx, b.Block, postState); err != nil {
-			traceutil.AnnotateError(span, err)
-			return err
-		}
 		// Send notification of the processed block to the state feed.
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,

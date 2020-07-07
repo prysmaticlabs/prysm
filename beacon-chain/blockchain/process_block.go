@@ -376,7 +376,16 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	return s.insertAttestationsToForkChoiceStore(ctx, blk, state)
+	// Feed in block's attestations to fork choice store.
+	for _, a := range blk.Body.Attestations {
+		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return err
+		}
+		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+	}
+	return nil
 }
 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock,
@@ -390,19 +399,6 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 		jCheckpoint.Epoch,
 		fCheckpoint.Epoch); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")
-	}
-	return nil
-}
-
-func (s *Service) insertAttestationsToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
-	// Feed in block's attestations to fork choice store.
-	for _, a := range blk.Body.Attestations {
-		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
-		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
 	return nil
 }
