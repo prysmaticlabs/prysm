@@ -3,8 +3,9 @@ package slashings
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"sort"
+
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"

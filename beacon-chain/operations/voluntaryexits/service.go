@@ -2,9 +2,10 @@ package voluntaryexits
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"sort"
 	"sync"
+
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
