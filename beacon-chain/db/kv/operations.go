@@ -13,32 +13,29 @@ import (
 func (kv *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.VoluntaryExit, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.VoluntaryExit")
 	defer span.End()
-	var exit *ethpb.VoluntaryExit
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(voluntaryExitsBucket)
-		enc := bkt.Get(exitRoot[:])
-		if enc == nil {
-			return nil
-		}
-		exit = &ethpb.VoluntaryExit{}
-		return decode(ctx, enc, exit)
-	})
-	return exit, err
+	enc, err := kv.voluntaryExitBytes(ctx, exitRoot)
+	if err != nil {
+		return nil, err
+	}
+	if len(enc) == 0 {
+		return nil, nil
+	}
+	exit := &ethpb.VoluntaryExit{}
+	if err := decode(ctx, enc, exit); err != nil {
+		return nil, err
+	}
+	return exit, nil
 }
 
 // HasVoluntaryExit verifies if a voluntary exit is stored in the db by its signing root.
 func (kv *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasVoluntaryExit")
 	defer span.End()
-	exists := false
-	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(voluntaryExitsBucket)
-		exists = bkt.Get(exitRoot[:]) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+	enc, err := kv.voluntaryExitBytes(ctx, exitRoot)
+	if err != nil {
 		panic(err)
 	}
-	return exists
+	return len(enc) > 0
 }
 
 // SaveVoluntaryExit to the db by its signing root.
@@ -57,6 +54,18 @@ func (kv *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExi
 		bucket := tx.Bucket(voluntaryExitsBucket)
 		return bucket.Put(exitRoot[:], enc)
 	})
+}
+
+func (kv *Store) voluntaryExitBytes(ctx context.Context, exitRoot [32]byte) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.voluntaryExitBytes")
+	defer span.End()
+	var dst []byte
+	err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(voluntaryExitsBucket)
+		dst = bkt.Get(exitRoot[:])
+		return nil
+	})
+	return dst, err
 }
 
 // deleteVoluntaryExit clears a voluntary exit from the db by its signing root.
