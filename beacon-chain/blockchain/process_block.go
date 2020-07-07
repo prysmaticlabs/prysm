@@ -224,6 +224,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	// Perform a copy to preserve copy in cache.
+	preState = preState.Copy()
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
