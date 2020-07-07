@@ -191,7 +191,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return err
 	}
 	if preState == nil {
-		return errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		return fmt.Errorf("nil pre state for slot %d", b.Slot)
 	}
 
 	// To invalidate cache for parent root because pre state will get mutated.
@@ -236,7 +236,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		return nil, nil, nil, err
 	}
 	if preState == nil {
-		return nil, nil, nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		return nil, nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot)
 	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
