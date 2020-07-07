@@ -52,7 +52,7 @@ type Service struct {
 	exitPool                  *voluntaryexits.Pool
 	genesisTime               time.Time
 	p2p                       p2p.Broadcaster
-	maxRoutines               int64
+	maxRoutines               int
 	head                      *head
 	headLock                  sync.RWMutex
 	stateNotifier             statefeed.Notifier
@@ -90,7 +90,7 @@ type Config struct {
 	ExitPool          *voluntaryexits.Pool
 	SlashingPool      *slashings.Pool
 	P2p               p2p.Broadcaster
-	MaxRoutines       int64
+	MaxRoutines       int
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
@@ -299,7 +299,7 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
-	if int64(runtime.NumGoroutine()) > s.maxRoutines {
+	if runtime.NumGoroutine() > s.maxRoutines {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
 	return nil
