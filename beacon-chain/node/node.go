@@ -406,7 +406,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	maxRoutines := b.cliCtx.Int64(cmd.MaxGoroutines.Name)
+	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,

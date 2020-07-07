@@ -90,19 +90,19 @@ func main() {
 			Usage:       "Address of the deposit contract",
 			Destination: &depositContractAddr,
 		},
-		&cli.Int64Flag{
+		&cli.IntFlag{
 			Name:        "numberOfDeposits",
 			Value:       1,
 			Usage:       "number of deposits to send to the contract",
 			Destination: &numberOfDeposits,
 		},
-		&cli.Int64Flag{
+		&cli.IntFlag{
 			Name:        "depositAmount",
 			Value:       int64(params.BeaconConfig().MaxEffectiveBalance),
 			Usage:       "Maximum deposit value allowed in contract(in gwei)",
 			Destination: &depositAmount,
 		},
-		&cli.Int64Flag{
+		&cli.IntFlag{
 			Name:        "depositDelay",
 			Value:       5,
 			Usage:       "The time delay between sending the deposits to the contract(in seconds)",
