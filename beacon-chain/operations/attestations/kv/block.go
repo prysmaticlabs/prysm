@@ -48,10 +48,10 @@ func (p *AttCaches) SaveBlockAttestations(atts []*ethpb.Attestation) error {
 
 // BlockAttestations returns the block attestations in cache.
 func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, 0)
-
 	p.blockAttLock.RLock()
 	defer p.blockAttLock.RUnlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(p.blockAtt))
 	for _, att := range p.blockAtt {
 		atts = append(atts, att...)
 	}

@@ -41,10 +41,10 @@ func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) erro
 
 // UnaggregatedAttestations returns all the unaggregated attestations in cache.
 func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, 0)
-
 	p.unAggregateAttLock.RLock()
 	defer p.unAggregateAttLock.RUnlock()
+	
+	atts := make([]*ethpb.Attestation, 0, len(p.unAggregatedAtt))
 	for _, att := range p.unAggregatedAtt {
 		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 	}

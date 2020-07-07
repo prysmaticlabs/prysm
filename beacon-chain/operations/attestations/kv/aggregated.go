@@ -15,8 +15,8 @@ import (
 // It tracks the unaggregated attestations that weren't able to aggregate to prevent
 // the deletion of unaggregated attestations in the pool.
 func (p *AttCaches) AggregateUnaggregatedAttestations() error {
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
 	unaggregatedAtts := p.UnaggregatedAttestations()
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 		if err != nil {
@@ -111,10 +111,10 @@ func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error 
 
 // AggregatedAttestations returns the aggregated attestations in cache.
 func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, 0)
-
 	p.aggregatedAttLock.RLock()
 	defer p.aggregatedAttLock.RUnlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(p.aggregatedAtt))
 	for _, a := range p.aggregatedAtt {
 		atts = append(atts, a...)
 	}

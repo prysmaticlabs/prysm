@@ -2,6 +2,7 @@ package voluntaryexits
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"sort"
 	"sync"
 
@@ -34,7 +35,10 @@ func NewPool() *Pool {
 func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
-	pending := make([]*ethpb.SignedVoluntaryExit, 0)
+
+	// Allocate pending slice with a capacity of min(len(p.pending), maxVoluntaryExits) since the
+	// array cannot exceed the max and is typically less than the max value.
+	pending := make([]*ethpb.SignedVoluntaryExit, 0, mathutil.Max(uint64(len(p.pending)), params.BeaconConfig().MaxVoluntaryExits))
 	for _, e := range p.pending {
 		if e.Exit.Epoch > helpers.SlotToEpoch(slot) {
 			continue
