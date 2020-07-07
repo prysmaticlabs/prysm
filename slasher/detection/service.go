@@ -23,10 +23,16 @@ var log = logrus.WithField("prefix", "detection")
 type Status int
 
 const (
+	// None slasher was not initialised.
 	None Status = iota
+	// Started service start has been called,
 	Started
+	// Syncing beacon client is still syncing.
 	Syncing
+	// HistoricalDetection slasher is replaying all attestations that
+	// were included in the canonical chain.
 	HistoricalDetection
+	// Ready slasher is ready to detect requests.
 	Ready
 )
 
