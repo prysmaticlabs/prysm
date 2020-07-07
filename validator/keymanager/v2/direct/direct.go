@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -28,9 +30,12 @@ const (
 	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
 	// for a validator account.
 	DepositTransactionFileName = "deposit_transaction.rlp"
-	keystoreFileName           = "keystore.json"
-	depositDataFileName        = "deposit_data.ssz"
-	eipVersion                 = "EIP-2335"
+	// TimestampFileName stores a timestamp for account creation as a
+	// file for a direct keymanager account.
+	TimestampFileName   = "created_at.txt"
+	keystoreFileName    = "keystore.json"
+	depositDataFileName = "deposit_data.ssz"
+	eipVersion          = "EIP-2335"
 )
 
 // Wallet defines a struct which has capabilities and knowledge of how
@@ -155,10 +160,18 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
 
-	// Finally, write the encoded keystore to disk.
+	// Write the encoded keystore to disk.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
+
+	// Finally, write the account creation timestamp as a file.
+	createdAt := roughtime.Now().Unix()
+	createdAtStr := strconv.FormatInt(createdAt, 10)
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, TimestampFileName, []byte(createdAtStr)); err != nil {
+		return "", errors.Wrapf(err, "could not write timestamp file for account %s", accountName)
+	}
+
 	log.WithFields(logrus.Fields{
 		"name": accountName,
 		"path": dr.wallet.AccountsDir(),

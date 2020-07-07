@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strconv"
+	"time"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/urfave/cli/v2"
 )
 
 // ListAccounts displays all available validator accounts in a Prysm wallet.
@@ -32,7 +33,8 @@ func ListAccounts(cliCtx *cli.Context) error {
 	})
 	if err == ErrNoWalletFound {
 		log.Fatal("No wallet nor accounts found, create a new account with `validator accounts-v2 new`")
-	} else if err != nil {
+	}
+	if err != nil {
 		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 	}
 	keymanager, err := wallet.ExistingKeyManager(ctx)
@@ -87,7 +89,18 @@ func listDirectKeymanagerAccounts(
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), pubKeys[i])
-		fmt.Printf("%s %s\n", au.BrightCyan("[created at]").Bold(), "July 07, 2020 2:32 PM")
+
+		// Retrieve the account creation timestamp.
+		createdAtBytes, err := wallet.ReadFileForAccount(accountNames[i], direct.TimestampFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not read file for account: %s", direct.TimestampFileName)
+		}
+		unixTimestamp, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
+		if err != nil {
+			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
+		}
+		unixTimestampStr := time.Unix(unixTimestamp, 0)
+		fmt.Printf("%s %v\n", au.BrightCyan("[created at]").Bold(), unixTimestampStr.String())
 		if !showDepositData {
 			continue
 		}

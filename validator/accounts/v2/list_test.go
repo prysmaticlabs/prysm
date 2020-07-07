@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -56,6 +57,11 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		depositData := []byte(strconv.Itoa(i))
 		depositDataForAccounts[i] = depositData
 		if err := wallet.WriteFileForAccount(ctx, name, direct.DepositTransactionFileName, depositData); err != nil {
+			t.Fatal(err)
+		}
+
+		// Write the creation timestamp for the account with unix timestamp 0.
+		if err := wallet.WriteFileForAccount(ctx, name, direct.TimestampFileName, []byte("0")); err != nil {
 			t.Fatal(err)
 		}
 
@@ -116,6 +122,11 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		// Assert the deposit data for the account is printed to stdout.
 		if !strings.Contains(stringOutput, fmt.Sprintf("%#x", depositData)) {
 			t.Errorf("Did not find deposit data %#x in output", depositData)
+		}
+
+		// Assert the account creation time is displayed
+		if !strings.Contains(stringOutput, fmt.Sprintf("%v", time.Unix(0, 0).String())) {
+			t.Error("Did not display account creation timestamp")
 		}
 	}
 }
