@@ -705,7 +705,7 @@ func ProcessOperationsNoVerifySignatureSet(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process block attestations")
 	}
-	aSet, err := b.RetrieveAttestationSignatureSet(ctx, state, body.Attestations)
+	aSet, err := b.AttestationSignatureSet(ctx, state, body.Attestations)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
 	}

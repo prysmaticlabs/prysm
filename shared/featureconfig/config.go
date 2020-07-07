@@ -30,6 +30,8 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	// State locks
+	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
 	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
@@ -217,6 +219,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
+	if ctx.Bool(newBeaconStateLocks.Name) {
+		log.Warn("Using new beacon state locks")
+		cfg.NewBeaconStateLocks = true
+	}
 	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
 		log.Warn("Forcing max_cover strategy on attestation aggregation")
 		cfg.AttestationAggregationStrategy = "max_cover"
