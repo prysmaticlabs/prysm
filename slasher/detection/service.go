@@ -2,6 +2,7 @@ package detection
 
 import (
 	"context"
+	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -18,6 +19,29 @@ import (
 
 var log = logrus.WithField("prefix", "detection")
 
+// Status detection statuses type.
+type Status int
+
+const (
+	None Status = iota
+	Started
+	Syncing
+	HistoricalDetection
+	Ready
+)
+
+// String returns the string value of the status
+func (s Status) String() string {
+	strings := [...]string{"None", "Started", "Syncing", "HistoricalDetection", "Ready"}
+
+	// prevent panicking in case of status is out-of-range
+	if s < None || s > Ready {
+		return "Unknown"
+	}
+
+	return strings[s]
+}
+
 // Service struct for the detection service of the slasher.
 type Service struct {
 	ctx                   context.Context
@@ -32,6 +56,7 @@ type Service struct {
 	proposerSlashingsFeed *event.Feed
 	minMaxSpanDetector    iface.SpanDetector
 	proposalsDetector     proposerIface.ProposalsDetector
+	status                Status
 }
 
 // Config options for the detection service.
@@ -60,6 +85,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
 		minMaxSpanDetector:    attestations.NewSpanDetector(cfg.SlasherDB),
 		proposalsDetector:     proposals.NewProposeDetector(cfg.SlasherDB),
+		status:                None,
 	}
 }
 
@@ -70,26 +96,32 @@ func (ds *Service) Stop() error {
 	return nil
 }
 
-// Status returns an error if there exists an error in
-// the notifier service.
+// Status returns an error if detection service is not ready yet.
 func (ds *Service) Status() error {
-	return nil
+	if ds.status == Ready {
+		return nil
+	}
+	return errors.New(ds.status.String())
 }
 
 // Start the detection service runtime.
 func (ds *Service) Start() {
 	// We wait for the gRPC beacon client to be ready and the beacon node
 	// to be fully synced before proceeding.
+	ds.status = Started
 	ch := make(chan bool)
 	sub := ds.notifier.ClientReadyFeed().Subscribe(ch)
+	ds.status = Syncing
 	<-ch
 	sub.Unsubscribe()
 
 	if featureconfig.Get().EnableHistoricalDetection {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
+		ds.status = HistoricalDetection
 		ds.detectHistoricalChainData(ds.ctx)
 	}
+	ds.status = Ready
 	// We listen to a stream of blocks and attestations from the beacon node.
 	go ds.beaconClient.ReceiveBlocks(ds.ctx)
 	go ds.beaconClient.ReceiveAttestations(ds.ctx)
