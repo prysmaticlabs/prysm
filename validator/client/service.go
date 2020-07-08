@@ -14,12 +14,15 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -42,9 +45,11 @@ type ValidatorService struct {
 	withCert             string
 	dataDir              string
 	keyManager           keymanager.KeyManager
+	keyManagerV2         v2.IKeymanager
 	logValidatorBalances bool
 	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
+	validatingPubKeys    [][48]byte
 	grpcRetries          uint
 	grpcHeaders          []string
 	protector            slashingprotection.Protector
@@ -56,7 +61,9 @@ type Config struct {
 	DataDir                    string
 	CertFlag                   string
 	GraffitiFlag               string
+	ValidatingPubKeys          [][48]byte
 	KeyManager                 keymanager.KeyManager
+	KeyManagerV2               v2.IKeymanager
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	GrpcMaxCallRecvMsgSizeFlag int
@@ -77,6 +84,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		dataDir:              cfg.DataDir,
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
+		keyManagerV2:         cfg.KeyManagerV2,
+		validatingPubKeys:    cfg.ValidatingPubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -113,13 +122,7 @@ func (v *ValidatorService) Start() {
 		log.Info("Established secure gRPC connection")
 	}
 
-	pubkeys, err := v.keyManager.FetchValidatingKeys()
-	if err != nil {
-		log.Errorf("Could not get validating keys: %v", err)
-		return
-	}
-
-	valDB, err := kv.NewKVStore(v.dataDir, pubkeys)
+	valDB, err := kv.NewKVStore(v.dataDir, v.validatingPubKeys)
 	if err != nil {
 		log.Errorf("Could not initialize db: %v", err)
 		return
@@ -147,14 +150,17 @@ func (v *ValidatorService) Start() {
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
 		keyManager:                     v.keyManager,
+		keyManagerV2:                   v.keyManagerV2,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
+		startBalances:                  make(map[[48]byte]uint64),
 		prevBalance:                    make(map[[48]byte]uint64),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
+		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 	}
 	go run(v.ctx, v.validator)
 }
@@ -180,7 +186,22 @@ func (v *ValidatorService) Status() error {
 }
 
 // signObject signs a generic object, with protection if available.
-func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byte) (bls.Signature, error) {
+func (v *validator) signObject(
+	ctx context.Context,
+	pubKey [48]byte,
+	object interface{},
+	domain []byte,
+) (bls.Signature, error) {
+	if featureconfig.Get().EnableAccountsV2 {
+		root, err := helpers.ComputeSigningRoot(object, domain)
+		if err != nil {
+			return nil, err
+		}
+		return v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey: pubKey[:],
+			Data:      root[:],
+		})
+	}
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 		root, err := ssz.HashTreeRoot(object)
 		if err != nil {

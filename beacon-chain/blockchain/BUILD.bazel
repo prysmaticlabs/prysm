@@ -43,6 +43,7 @@ go_library(
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
@@ -73,7 +74,6 @@ go_test(
     srcs = [
         "chain_info_test.go",
         "head_test.go",
-        "init_sync_process_block_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
         "receive_attestation_test.go",

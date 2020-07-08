@@ -30,6 +30,8 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	// State locks
+	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
 	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
@@ -51,10 +53,15 @@ type Flags struct {
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
-	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
+<<<<<<< HEAD
 	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
 
+=======
+	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
+	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
+	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
+>>>>>>> master
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -133,10 +140,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
 	}
-	if ctx.Bool(initSyncVerifyEverythingFlag.Name) {
-		log.Warn("Initial syncing with verifying all block's content signatures.")
-		cfg.InitSyncNoVerify = false
-	} else {
+	cfg.InitSyncNoVerify = false
+	if ctx.Bool(disableInitSyncVerifyEverythingFlag.Name) {
+		log.Warn("Initial syncing while verifying only the block proposer signatures.")
 		cfg.InitSyncNoVerify = true
 	}
 	if ctx.Bool(skipBLSVerifyFlag.Name) {
@@ -193,10 +199,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
 	}
-	if ctx.Bool(skipRegenHistoricalStates.Name) {
-		log.Warn("Enabling skipping of historical states regen")
-		cfg.SkipRegenHistoricalStates = true
-	}
 	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
 		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
 		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
@@ -218,13 +220,27 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
+	if ctx.Bool(newBeaconStateLocks.Name) {
+		log.Warn("Using new beacon state locks")
+		cfg.NewBeaconStateLocks = true
+	}
 	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
 		log.Warn("Forcing max_cover strategy on attestation aggregation")
 		cfg.AttestationAggregationStrategy = "max_cover"
 	}
+<<<<<<< HEAD
 	if ctx.Bool(enableFinalizedDepositsCache.Name) {
 		log.Warn("Enabling finalized deposits cache")
 		cfg.EnableFinalizedDepositsCache = true
+=======
+	if ctx.Bool(batchBlockVerify.Name) {
+		log.Warn("Performing batch block verification when syncing.")
+		cfg.BatchBlockVerify = true
+	}
+	if ctx.Bool(initSyncVerbose.Name) {
+		log.Warn("Logging every processed block during initial syncing.")
+		cfg.InitSyncVerbose = true
+>>>>>>> master
 	}
 	Init(cfg)
 }
@@ -259,6 +275,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		log.Warn("Enabled validator slashing protection.")
 		cfg.LocalProtection = true
+	}
+	if ctx.Bool(enableAccountsV2.Name) {
+		log.Warn("Enabling v2 of Prysm validator accounts")
+		cfg.EnableAccountsV2 = true
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")

@@ -36,7 +36,7 @@ func TestService_ReceiveBlocks(t *testing.T) {
 	).Do(func() {
 		cancel()
 	})
-	bs.receiveBlocks(ctx)
+	bs.ReceiveBlocks(ctx)
 }
 
 func TestService_ReceiveAttestations(t *testing.T) {
@@ -68,7 +68,7 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	).Do(func() {
 		cancel()
 	})
-	bs.receiveAttestations(ctx)
+	bs.ReceiveAttestations(ctx)
 }
 
 func TestService_ReceiveAttestations_Batched(t *testing.T) {
@@ -110,7 +110,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		cancel()
 	})
 
-	go bs.receiveAttestations(ctx)
+	go bs.ReceiveAttestations(ctx)
 	bs.receivedAttestationsBuffer <- att
 	att.Data.Target.Root = []byte("test root 2")
 	bs.receivedAttestationsBuffer <- att

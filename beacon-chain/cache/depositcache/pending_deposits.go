@@ -53,9 +53,8 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 func (dc *DepositCache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
-	dc.depositsLock.RLock()
-	defer dc.depositsLock.RUnlock()
 
+<<<<<<< HEAD
 	var depositCntrs []*dbpb.DepositContainer
 	for _, ctnr := range dc.pendingDeposits {
 		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
@@ -66,13 +65,14 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, untilBlk *big.Int) 
 	sort.SliceStable(depositCntrs, func(i, j int) bool {
 		return depositCntrs[i].Index < depositCntrs[j].Index
 	})
+=======
+	depositCntrs := dc.PendingContainers(ctx, beforeBlk)
+>>>>>>> master
 
 	var deposits []*ethpb.Deposit
 	for _, dep := range depositCntrs {
 		deposits = append(deposits, dep.Deposit)
 	}
-
-	span.AddAttributes(trace.Int64Attribute("count", int64(len(deposits))))
 
 	return deposits
 }

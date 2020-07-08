@@ -162,7 +162,7 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		s, err := ProcessOperationsNoVerify(ctx, state, bb)
+		s, err := ProcessOperationsNoVerifyAttsSigs(ctx, state, bb)
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for block body: %v", s, err, bb)
 		}
