@@ -20,6 +20,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/roughtime:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
