@@ -115,7 +115,10 @@ func (s *Service) startDiscoveryV5(
 	addr net.IP,
 	privKey *ecdsa.PrivateKey,
 ) (*discover.UDPv5, error) {
-	listener := s.createListener(addr, privKey)
+	listener, err := s.createListener(addr, privKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create listener")
+	}
 	record := listener.Self()
 	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil

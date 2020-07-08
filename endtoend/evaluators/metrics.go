@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -49,23 +51,28 @@ var metricLessThanTests = []equalityTest{
 	},
 }
 
+const (
+	p2pFailValidationTopic = "p2p_message_failed_validation_total{topic=\"%s/ssz_snappy\"}"
+	p2pReceivedTotalTopic  = "p2p_message_received_total{topic=\"%s/ssz_snappy\"}"
+)
+
 var metricComparisonTests = []comparisonTest{
 	{
 		name:               "beacon aggregate and proof",
-		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/beacon_aggregate_and_proof/ssz_snappy\"}",
-		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/beacon_aggregate_and_proof/ssz_snappy\"}",
+		topic1:             fmt.Sprintf(p2pFailValidationTopic, p2p.AggregateAndProofSubnetTopicFormat),
+		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, p2p.AggregateAndProofSubnetTopicFormat),
 		expectedComparison: 0.8,
 	},
 	{
 		name:               "committee index 0 beacon attestation",
-		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/beacon_attestation_0/ssz_snappy\"}",
-		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/beacon_attestation_0/ssz_snappy\"}",
+		topic1:             fmt.Sprintf(p2pFailValidationTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 0)),
+		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 0)),
 		expectedComparison: 0.15,
 	},
 	{
 		name:               "committee index 1 beacon attestation",
-		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/beacon_attestation_1/ssz_snappy\"}",
-		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/beacon_attestation_1/ssz_snappy\"}",
+		topic1:             fmt.Sprintf(p2pFailValidationTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 1)),
+		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 1)),
 		expectedComparison: 0.15,
 	},
 	{
@@ -206,4 +213,13 @@ func getValueOfTopic(pageContent string, topic string) (int, error) {
 		return -1, errors.Wrapf(err, "could not parse %s for int", metricValue)
 	}
 	return int(floatResult), nil
+}
+
+func formatTopic(topic string) string {
+	startIndex := strings.Index(topic, "%x")
+	if startIndex == -1 {
+		return topic
+	}
+	return topic[startIndex:] + "%" + topic[:startIndex]
+
 }
