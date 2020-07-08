@@ -10,13 +10,13 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/relaynode",
     visibility = ["//visibility:private"],
     deps = [
+        "//shared/maxprocs:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ipfs_go_log//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
         "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
         "@com_github_libp2p_go_libp2p_crypto//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
-        "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
 

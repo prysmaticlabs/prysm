@@ -21,7 +21,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	_ "go.uber.org/automaxprocs"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 )
 
 var appFlags = []cli.Flag{

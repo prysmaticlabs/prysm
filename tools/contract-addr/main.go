@@ -12,7 +12,7 @@ import (
 	"log"
 	"net/http"
 
-	_ "go.uber.org/automaxprocs"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 )
 
 var address = flag.String("address-path", "", "The file path to the plain text file with the contract address")

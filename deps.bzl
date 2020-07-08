@@ -2885,6 +2885,11 @@ def prysm_deps():
         importpath = "go.uber.org/automaxprocs",
         sum = "h1:II28aZoGdaglS5vVNnspf28lnZpXScxtIozx1lAjdb0=",
         version = "v1.3.0",
+        build_directives = [
+            # Do not use this library directly.
+            # Rather, load maxprocs from github.com/prysmaticlabs/shared/maxprocs.
+            "gazelle:go_visibility @prysm//shared/maxprocs:__pkg__",
+        ],
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_ssz",

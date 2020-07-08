@@ -14,6 +14,7 @@ SRCS = [
 DEPS = [
     "//proto/faucet:faucet_go_proto",
     "//shared/roughtime:go_default_library",
+    "//shared/maxprocs:go_default_library",
     "@org_golang_google_grpc//:go_default_library",
     "@org_golang_google_grpc//peer:go_default_library",
     "@org_golang_google_grpc//metadata:go_default_library",
@@ -24,7 +25,6 @@ DEPS = [
     "@com_github_ethereum_go_ethereum//params:go_default_library",
     "@com_github_ethereum_go_ethereum//crypto:go_default_library",
     "@com_github_ethereum_go_ethereum//core/types:go_default_library",
-    "@org_uber_go_automaxprocs//:go_default_library",
 ]
 
 go_library(
