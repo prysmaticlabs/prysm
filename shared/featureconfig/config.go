@@ -54,7 +54,9 @@ type Flags struct {
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
+	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
 	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
+	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -225,6 +227,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Performing batch block verification when syncing.")
 		cfg.BatchBlockVerify = true
 	}
+	if ctx.Bool(initSyncVerbose.Name) {
+		log.Warn("Logging every processed block during initial syncing.")
+		cfg.InitSyncVerbose = true
+	}
 	Init(cfg)
 }
 
@@ -258,6 +264,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		log.Warn("Enabled validator slashing protection.")
 		cfg.LocalProtection = true
+	}
+	if ctx.Bool(enableAccountsV2.Name) {
+		log.Warn("Enabling v2 of Prysm validator accounts")
+		cfg.EnableAccountsV2 = true
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")

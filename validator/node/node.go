@@ -9,14 +9,12 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"sync"
 	"syscall"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -25,18 +23,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
 
-// ValidatorClient defines an instance of a sharding validator that manages
-// the entire lifecycle of services attached to it participating in
-// Ethereum Serenity.
+// ValidatorClient defines an instance of an eth2 validator that manages
+// the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
 	cliCtx   *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
@@ -44,7 +45,7 @@ type ValidatorClient struct {
 	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
-// NewValidatorClient creates a new, Ethereum Serenity validator client.
+// NewValidatorClient creates a new, Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
@@ -77,23 +78,48 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
-
-	keyManager, err := selectKeyManager(cliCtx)
+	keyManagerV1, err := selectV1Keymanager(cliCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	pubKeys, err := keyManager.FetchValidatingKeys()
+	var keyManagerV2 v2.IKeymanager
+	if featureconfig.Get().EnableAccountsV2 {
+		walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+		if walletDir == flags.DefaultValidatorDir() {
+			walletDir = path.Join(walletDir, accountsv2.WalletDefaultDirName)
+		}
+		passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
+		if passwordsDir == flags.DefaultValidatorDir() {
+			passwordsDir = path.Join(passwordsDir, accountsv2.PasswordsDefaultDirName)
+		}
+		// Read the wallet from the specified path.
+		wallet, err := accountsv2.OpenWallet(context.Background(), &accountsv2.WalletConfig{
+			PasswordsDir: passwordsDir,
+			WalletDir:    walletDir,
+		})
+		if err == accountsv2.ErrNoWalletFound {
+			log.Fatal("No wallet found at path, please create a new wallet using `validator accounts-v2 new`")
+		}
+		if err != nil {
+			log.Fatalf("Could not open wallet: %v", err)
+		}
+		keyManagerV2, err = wallet.ExistingKeyManager(context.Background())
+		if err != nil {
+			log.Fatalf("Could not read existing keymanager for wallet: %v", err)
+		}
+	}
+
+	pubKeys, err := ExtractPublicKeysFromKeymanager(cliCtx, keyManagerV2)
 	if err != nil {
-		log.WithError(err).Error("Failed to obtain public keys for validation")
+		return nil, err
+	}
+	if len(pubKeys) == 0 {
+		log.Warn("No keys found; nothing to validate")
 	} else {
-		if len(pubKeys) == 0 {
-			log.Warn("No keys found; nothing to validate")
-		} else {
-			log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
-			for _, key := range pubKeys {
-				log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
-			}
+		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
+		for _, key := range pubKeys {
+			log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
 		}
 	}
 
@@ -101,10 +127,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if clearFlag || forceClearFlag {
-		pubkeys, err := keyManager.FetchValidatingKeys()
-		if err != nil {
-			return nil, err
-		}
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
 			if dataDir == "" {
@@ -115,7 +137,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			}
 
 		}
-		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
+		if err := clearDB(dataDir, pubKeys, forceClearFlag); err != nil {
 			return nil, err
 		}
 	}
@@ -129,7 +151,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
-	if err := ValidatorClient.registerClientService(keyManager); err != nil {
+	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2, pubKeys); err != nil {
 		return nil, err
 	}
 
@@ -176,7 +198,7 @@ func (s *ValidatorClient) Close() {
 	defer s.lock.Unlock()
 
 	s.services.StopAll()
-	log.Info("Stopping sharding validator")
+	log.Info("Stopping Prysm validator")
 
 	close(s.stop)
 }
@@ -190,7 +212,11 @@ func (s *ValidatorClient) registerPrometheusService() error {
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager) error {
+func (s *ValidatorClient) registerClientService(
+	keyManager v1.KeyManager,
+	keyManagerV2 v2.IKeymanager,
+	validatingPubKeys [][48]byte,
+) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -208,10 +234,12 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
+		KeyManagerV2:               keyManagerV2,
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
 		GraffitiFlag:               graffiti,
+		ValidatingPubKeys:          validatingPubKeys,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
@@ -245,8 +273,8 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	return s.services.RegisterService(sp)
 }
 
-// selectKeyManager selects the key manager depending on the options provided by the user.
-func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
+// Selects the key manager depending on the options provided by the user.
+func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
 	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
 	opts := ctx.String(flags.KeyManagerOpts.Name)
 	if opts == "" {
@@ -286,20 +314,20 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 		}
 	}
 
-	var km keymanager.KeyManager
+	var km v1.KeyManager
 	var help string
 	var err error
 	switch manager {
 	case "interop":
-		km, help, err = keymanager.NewInterop(opts)
+		km, help, err = v1.NewInterop(opts)
 	case "unencrypted":
-		km, help, err = keymanager.NewUnencrypted(opts)
+		km, help, err = v1.NewUnencrypted(opts)
 	case "keystore":
-		km, help, err = keymanager.NewKeystore(opts)
+		km, help, err = v1.NewKeystore(opts)
 	case "wallet":
-		km, help, err = keymanager.NewWallet(opts)
+		km, help, err = v1.NewWallet(opts)
 	case "remote":
-		km, help, err = keymanager.NewRemoteWallet(opts)
+		km, help, err = v1.NewRemoteWallet(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}
@@ -342,9 +370,18 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	return nil
 }
 
-// ExtractPublicKeysFromKeyManager extracts only the public keys from the specified key manager.
-func ExtractPublicKeysFromKeyManager(ctx *cli.Context) ([][48]byte, error) {
-	km, err := selectKeyManager(ctx)
+// ExtractPublicKeysFromKeymanager extracts only the public keys from the specified key manager.
+func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
+	var pubKeys [][48]byte
+	var err error
+	if featureconfig.Get().EnableAccountsV2 {
+		pubKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to obtain public keys for validation")
+		}
+		return pubKeys, nil
+	}
+	km, err := selectV1Keymanager(cliCtx)
 	if err != nil {
 		return nil, err
 	}

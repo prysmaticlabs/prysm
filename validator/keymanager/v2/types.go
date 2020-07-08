@@ -46,3 +46,17 @@ func (k Kind) String() string {
 		return fmt.Sprintf("%d", int(k))
 	}
 }
+
+// ParseKind from a raw string, returning a keymanager kind.
+func ParseKind(k string) (Kind, error) {
+	switch k {
+	case "direct":
+		return Direct, nil
+	case "derived":
+		return Derived, nil
+	case "remote":
+		return Remote, nil
+	default:
+		return 0, fmt.Errorf("%s is not an allowed keymanager", k)
+	}
+}
