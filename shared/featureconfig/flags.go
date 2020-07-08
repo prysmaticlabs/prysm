@@ -152,6 +152,10 @@ var (
 		Name:  "batch-block-verify",
 		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
 	}
+	initSyncVerbose = &cli.BoolFlag{
+		Name:  "init-sync-verbose",
+		Usage: "Enable logging every processed block during initial syncing. ",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -606,6 +610,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
 	batchBlockVerify,
+	initSyncVerbose,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
