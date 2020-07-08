@@ -2,21 +2,42 @@ syntax = "proto3";
 
 package ethereum.validator.accounts.v2;
 
-import "eth/v1alpha1/node.proto";
-import "proto/beacon/p2p/v1/messages.proto";
+// import "eth/v1alpha1/node.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
 // RemoteSigner service API.
 //
-// Defines a remote-signing
+// Defines a remote-signing keymanager which manages eth2
+// validator accounts and can sign respective messages.
 service RemoteSigner {
-    // Returns a beacon state by filter criteria from the beacon node.
-    rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
+    // ListAccounts managed by a remote signer.
+    rpc ListAccounts(google.protobuf.Empty) returns (ListAccountsResponse) {
         option (google.api.http) = {
             get: "/accounts/v2/remote/accounts"
         };
     }
+
+    // Sign a remote request via gRPC.
+    rpc Sign(SignRequest) returns (SignResponse) {
+        option (google.api.http) = {
+            post: "/accounts/v2/remote/sign"
+        };
+    }
+}
+
+// ListAccountsResponse contains metadata and public keys
+// for the validator secrets managed by the remote signer.
+message ListAccountsResponse {
+    // List of account names managed by the remote signer.
+    // These are meant to be human readable names such as
+    // personally-conscious-echidna which uniquely namespace
+    // a set of validator secrets.
+    repeated string account_names = 1;
+
+    // List of 48 byte, BLS12-381 validating public keys
+    // corresponding to account names returned in the response.
+    repeated bytes validating_public_keys = 2;
 }
 
 // SignRequest is a message type used by a keymanager
@@ -28,4 +49,10 @@ message SignRequest {
 
     // Raw bytes data the client is requesting to sign.
     bytes data = 2;
+}
+
+// SignResponse returned by a RemoteSigner gRPC service.
+message SignResponse {
+    // BLS12-381 signature for the data specified in the request.
+    bytes signature = 1;
 }

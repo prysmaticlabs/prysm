@@ -8,14 +8,18 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
+        "@com_google_protobuf//:empty_proto",
+        "@go_googleapis//google/api:annotations_proto",
     ],
 )
 
 go_proto_library(
     name = "ethereum_validator_account_go_proto",
+    compilers = ["@prysm//:grpc_proto_compiler"],
     importpath = "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2",
     proto = ":ethereum_validator_accounts_v2_proto",
     visibility = ["//visibility:public"],
+    deps = ["@go_googleapis//google/api:annotations_go_proto"],
 )
 
 go_library(
@@ -29,4 +33,8 @@ proto_library(
     name = "ethereum_validator_accounts_v2_proto",
     srcs = ["keymanager.proto"],
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_protobuf//:empty_proto",
+        "@go_googleapis//google/api:annotations_proto",
+    ],
 )

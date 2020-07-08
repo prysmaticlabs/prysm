@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -43,6 +44,7 @@ type Certificate struct {
 type Keymanager struct {
 	wallet Wallet
 	cfg    *Config
+	client validatorpb.RemoteSignerClient
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -95,10 +97,11 @@ func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager
 	if err != nil {
 		return nil, errors.New("failed to connect to remote wallet")
 	}
-	_ = conn
+	client := validatorpb.NewRemoteSignerClient(conn)
 	return &Keymanager{
 		wallet: wallet,
 		cfg:    cfg,
+		client: client,
 	}, nil
 }
 
@@ -131,7 +134,7 @@ func (k *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 	return nil, errors.New("unimplemented")
 }
 
-// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
+// FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
 func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return nil, errors.New("unimplemented")
 }
@@ -139,4 +142,9 @@ func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte,
 // Sign signs a message using a validator key.
 func (k *Keymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, errors.New("unimplemented")
+}
+
+// RefreshValidatingPublicKeys --
+func (k *Keymanager) RefreshValidatingPublicKeys(ctx context.Context) {
+	resp, err := k.client.ListAccounts(ctx, &ptypes.Empty{})
 }

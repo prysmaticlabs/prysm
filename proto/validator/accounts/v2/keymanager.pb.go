@@ -4,8 +4,14 @@
 package ethereum_validator_accounts_v2
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
+	empty "github.com/golang/protobuf/ptypes/empty"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -20,6 +26,53 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
+type ListAccountsResponse struct {
+	AccountNames         []string `protobuf:"bytes,1,rep,name=account_names,json=accountNames,proto3" json:"account_names,omitempty"`
+	ValidatingPublicKeys [][]byte `protobuf:"bytes,2,rep,name=validating_public_keys,json=validatingPublicKeys,proto3" json:"validating_public_keys,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListAccountsResponse) Reset()         { *m = ListAccountsResponse{} }
+func (m *ListAccountsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListAccountsResponse) ProtoMessage()    {}
+func (*ListAccountsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_795e98bd0a473d79, []int{0}
+}
+
+func (m *ListAccountsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListAccountsResponse.Unmarshal(m, b)
+}
+func (m *ListAccountsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListAccountsResponse.Marshal(b, m, deterministic)
+}
+func (m *ListAccountsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListAccountsResponse.Merge(m, src)
+}
+func (m *ListAccountsResponse) XXX_Size() int {
+	return xxx_messageInfo_ListAccountsResponse.Size(m)
+}
+func (m *ListAccountsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListAccountsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListAccountsResponse proto.InternalMessageInfo
+
+func (m *ListAccountsResponse) GetAccountNames() []string {
+	if m != nil {
+		return m.AccountNames
+	}
+	return nil
+}
+
+func (m *ListAccountsResponse) GetValidatingPublicKeys() [][]byte {
+	if m != nil {
+		return m.ValidatingPublicKeys
+	}
+	return nil
+}
+
 type SignRequest struct {
 	PublicKey            []byte   `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	Data                 []byte   `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
@@ -32,7 +85,7 @@ func (m *SignRequest) Reset()         { *m = SignRequest{} }
 func (m *SignRequest) String() string { return proto.CompactTextString(m) }
 func (*SignRequest) ProtoMessage()    {}
 func (*SignRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_795e98bd0a473d79, []int{0}
+	return fileDescriptor_795e98bd0a473d79, []int{1}
 }
 
 func (m *SignRequest) XXX_Unmarshal(b []byte) error {
@@ -67,8 +120,49 @@ func (m *SignRequest) GetData() []byte {
 	return nil
 }
 
+type SignResponse struct {
+	Signature            []byte   `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *SignResponse) Reset()         { *m = SignResponse{} }
+func (m *SignResponse) String() string { return proto.CompactTextString(m) }
+func (*SignResponse) ProtoMessage()    {}
+func (*SignResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_795e98bd0a473d79, []int{2}
+}
+
+func (m *SignResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignResponse.Unmarshal(m, b)
+}
+func (m *SignResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignResponse.Marshal(b, m, deterministic)
+}
+func (m *SignResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignResponse.Merge(m, src)
+}
+func (m *SignResponse) XXX_Size() int {
+	return xxx_messageInfo_SignResponse.Size(m)
+}
+func (m *SignResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignResponse proto.InternalMessageInfo
+
+func (m *SignResponse) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
 func init() {
+	proto.RegisterType((*ListAccountsResponse)(nil), "ethereum.validator.accounts.v2.ListAccountsResponse")
 	proto.RegisterType((*SignRequest)(nil), "ethereum.validator.accounts.v2.SignRequest")
+	proto.RegisterType((*SignResponse)(nil), "ethereum.validator.accounts.v2.SignResponse")
 }
 
 func init() {
@@ -76,15 +170,144 @@ func init() {
 }
 
 var fileDescriptor_795e98bd0a473d79 = []byte{
-	// 147 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0x29, 0x28, 0xca, 0x2f,
-	0xc9, 0xd7, 0x2f, 0x4b, 0xcc, 0xc9, 0x4c, 0x49, 0x2c, 0xc9, 0x2f, 0xd2, 0x4f, 0x4c, 0x4e, 0xce,
-	0x2f, 0xcd, 0x2b, 0x29, 0xd6, 0x2f, 0x33, 0xd2, 0xcf, 0x4e, 0xad, 0xcc, 0x4d, 0xcc, 0x4b, 0x4c,
-	0x4f, 0x2d, 0xd2, 0x03, 0x2b, 0x13, 0x92, 0x4b, 0x2d, 0xc9, 0x48, 0x2d, 0x4a, 0x2d, 0xcd, 0xd5,
-	0x83, 0x6b, 0xd0, 0x83, 0x69, 0xd0, 0x2b, 0x33, 0x52, 0x72, 0xe0, 0xe2, 0x0e, 0xce, 0x4c, 0xcf,
-	0x0b, 0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0x11, 0x92, 0xe5, 0xe2, 0x2a, 0x28, 0x4d, 0xca, 0xc9,
-	0x4c, 0x8e, 0xcf, 0x4e, 0xad, 0x94, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x09, 0xe2, 0x84, 0x88, 0x78,
-	0xa7, 0x56, 0x0a, 0x09, 0x71, 0xb1, 0xa4, 0x24, 0x96, 0x24, 0x4a, 0x30, 0x81, 0x25, 0xc0, 0xec,
-	0x24, 0x36, 0xb0, 0x45, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xec, 0x94, 0x24, 0x3b, 0x98,
-	0x00, 0x00, 0x00,
+	// 361 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x91, 0xd1, 0x4a, 0xfb, 0x30,
+	0x18, 0xc5, 0x69, 0x37, 0xfe, 0xb0, 0xfc, 0xeb, 0x4d, 0x18, 0xa3, 0xd4, 0x39, 0x4a, 0xf5, 0x62,
+	0xe0, 0x48, 0x61, 0xee, 0x01, 0xf4, 0xc2, 0x2b, 0x45, 0xa4, 0x3e, 0xc0, 0xc8, 0xb6, 0xcf, 0x1a,
+	0xb6, 0x26, 0x5d, 0x92, 0x0e, 0x7a, 0x3b, 0x1f, 0xc1, 0x2b, 0x9f, 0xcb, 0x57, 0xf0, 0x41, 0xa4,
+	0x69, 0xba, 0x4d, 0x18, 0xea, 0x5d, 0x7b, 0xce, 0x77, 0xbe, 0x9c, 0xfc, 0x82, 0x46, 0xb9, 0x14,
+	0x5a, 0xc4, 0x1b, 0xba, 0x62, 0x0b, 0xaa, 0x85, 0x8c, 0xe9, 0x7c, 0x2e, 0x0a, 0xae, 0x55, 0xbc,
+	0x19, 0xc7, 0x4b, 0x28, 0x33, 0xca, 0x69, 0x0a, 0x92, 0x98, 0x31, 0x3c, 0x00, 0xfd, 0x02, 0x12,
+	0x8a, 0x8c, 0xec, 0x02, 0xa4, 0x09, 0x90, 0xcd, 0x38, 0xe8, 0xa7, 0x42, 0xa4, 0x2b, 0x88, 0x69,
+	0xce, 0x62, 0xca, 0xb9, 0xd0, 0x54, 0x33, 0xc1, 0x55, 0x9d, 0x0e, 0x4e, 0xad, 0x6b, 0xfe, 0x66,
+	0xc5, 0x73, 0x0c, 0x59, 0xae, 0xcb, 0xda, 0x8c, 0xd6, 0xa8, 0x7b, 0xcf, 0x94, 0xbe, 0xb1, 0xdb,
+	0x12, 0x50, 0xb9, 0xe0, 0x0a, 0xf0, 0x39, 0x3a, 0xb1, 0x27, 0x4c, 0x39, 0xcd, 0x40, 0xf9, 0x4e,
+	0xd8, 0x1a, 0x76, 0x12, 0xcf, 0x8a, 0x0f, 0x95, 0x86, 0x27, 0xa8, 0x67, 0x0b, 0x31, 0x9e, 0x4e,
+	0xf3, 0x62, 0xb6, 0x62, 0xf3, 0xe9, 0x12, 0x4a, 0xe5, 0xbb, 0x61, 0x6b, 0xe8, 0x25, 0xdd, 0xbd,
+	0xfb, 0x68, 0xcc, 0x3b, 0x28, 0x55, 0x74, 0x8d, 0xfe, 0x3f, 0xb1, 0x94, 0x27, 0xb0, 0x2e, 0x40,
+	0x69, 0x7c, 0x86, 0xd0, 0x3e, 0xe9, 0x3b, 0xa1, 0x33, 0xf4, 0x92, 0x4e, 0xde, 0x8c, 0x63, 0x8c,
+	0xda, 0x0b, 0xaa, 0xa9, 0xef, 0x1a, 0xc3, 0x7c, 0x47, 0x23, 0xe4, 0xd5, 0x1b, 0x6c, 0xd9, 0x3e,
+	0xea, 0x28, 0x96, 0x72, 0xaa, 0x0b, 0x09, 0xcd, 0x86, 0x9d, 0x30, 0x7e, 0x77, 0x91, 0x97, 0x40,
+	0x26, 0x34, 0x54, 0x21, 0x90, 0x78, 0xeb, 0x20, 0xef, 0xf0, 0xd2, 0xb8, 0x47, 0x6a, 0x44, 0xa4,
+	0x41, 0x44, 0x6e, 0x2b, 0x44, 0xc1, 0x84, 0xfc, 0x0c, 0x9e, 0x1c, 0x43, 0x17, 0x5d, 0x6c, 0x3f,
+	0x3e, 0xdf, 0xdc, 0x01, 0xee, 0x7f, 0x7b, 0x54, 0x69, 0x1a, 0xec, 0x24, 0xfc, 0xea, 0xa0, 0x76,
+	0xd5, 0x07, 0x5f, 0xfe, 0x76, 0xc8, 0x01, 0xac, 0x60, 0xf4, 0xb7, 0x61, 0xdb, 0x24, 0x34, 0x4d,
+	0x82, 0xc8, 0x3f, 0xd6, 0xa4, 0x02, 0x34, 0xfb, 0x67, 0x6e, 0x7c, 0xf5, 0x15, 0x00, 0x00, 0xff,
+	0xff, 0x6f, 0xa8, 0x71, 0xa2, 0x90, 0x02, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConnInterface
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion6
+
+// RemoteSignerClient is the client API for RemoteSigner service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type RemoteSignerClient interface {
+	ListAccounts(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	Sign(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error)
+}
+
+type remoteSignerClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewRemoteSignerClient(cc grpc.ClientConnInterface) RemoteSignerClient {
+	return &remoteSignerClient{cc}
+}
+
+func (c *remoteSignerClient) ListAccounts(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ListAccountsResponse, error) {
+	out := new(ListAccountsResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.RemoteSigner/ListAccounts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *remoteSignerClient) Sign(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error) {
+	out := new(SignResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.RemoteSigner/Sign", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RemoteSignerServer is the server API for RemoteSigner service.
+type RemoteSignerServer interface {
+	ListAccounts(context.Context, *empty.Empty) (*ListAccountsResponse, error)
+	Sign(context.Context, *SignRequest) (*SignResponse, error)
+}
+
+// UnimplementedRemoteSignerServer can be embedded to have forward compatible implementations.
+type UnimplementedRemoteSignerServer struct {
+}
+
+func (*UnimplementedRemoteSignerServer) ListAccounts(ctx context.Context, req *empty.Empty) (*ListAccountsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (*UnimplementedRemoteSignerServer) Sign(ctx context.Context, req *SignRequest) (*SignResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Sign not implemented")
+}
+
+func RegisterRemoteSignerServer(s *grpc.Server, srv RemoteSignerServer) {
+	s.RegisterService(&_RemoteSigner_serviceDesc, srv)
+}
+
+func _RemoteSigner_ListAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RemoteSignerServer).ListAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.RemoteSigner/ListAccounts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RemoteSignerServer).ListAccounts(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RemoteSigner_Sign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RemoteSignerServer).Sign(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.RemoteSigner/Sign",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RemoteSignerServer).Sign(ctx, req.(*SignRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _RemoteSigner_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.validator.accounts.v2.RemoteSigner",
+	HandlerType: (*RemoteSignerServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListAccounts",
+			Handler:    _RemoteSigner_ListAccounts_Handler,
+		},
+		{
+			MethodName: "Sign",
+			Handler:    _RemoteSigner_Sign_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/validator/accounts/v2/keymanager.proto",
 }
