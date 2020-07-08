@@ -161,15 +161,17 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, blkRoot
 	if rate == 0 {
 		rate = 1
 	}
-	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
-	log.WithFields(logrus.Fields{
-		"peers":           len(s.p2p.Peers().Connected()),
-		"blocksPerSecond": fmt.Sprintf("%.1f", rate),
-	}).Infof(
-		"Processing block %s %d/%d - estimated time remaining %s",
-		fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
-		blk.Slot, helpers.SlotsSince(genesis), timeRemaining,
-	)
+	if featureconfig.Get().InitSyncVerbose || helpers.IsEpochStart(blk.Slot) {
+		timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
+		log.WithFields(logrus.Fields{
+			"peers":           len(s.p2p.Peers().Connected()),
+			"blocksPerSecond": fmt.Sprintf("%.1f", rate),
+		}).Infof(
+			"Processing block %s %d/%d - estimated time remaining %s",
+			fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
+			blk.Slot, helpers.SlotsSince(genesis), timeRemaining,
+		)
+	}
 }
 
 // logBatchSyncStatus and increments the block processing counter.
