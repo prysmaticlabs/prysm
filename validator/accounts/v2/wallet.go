@@ -138,6 +138,11 @@ func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
 }
 
+// PasswordsDir for the wallet.
+func (w *Wallet) PasswordsDir() string {
+	return w.passwordsDir
+}
+
 // AccountNames reads all account names at the wallet's path.
 func (w *Wallet) AccountNames() ([]string, error) {
 	accountsDir, err := os.Open(w.accountsPath)

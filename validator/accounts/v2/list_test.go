@@ -107,9 +107,6 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	if !strings.Contains(stringOutput, wallet.accountsPath) {
 		t.Errorf("Did not find accounts path %s in output", wallet.accountsPath)
 	}
-	if !strings.Contains(stringOutput, wallet.passwordsDir) {
-		t.Errorf("Did not find passwords path %s in output", wallet.passwordsDir)
-	}
 
 	for i := 0; i < numAccounts; i++ {
 		accountName := accountNames[i]

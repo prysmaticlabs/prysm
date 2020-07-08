@@ -31,6 +31,11 @@ func (m *Wallet) AccountsDir() string {
 	return ""
 }
 
+// PasswordsDir --
+func (m *Wallet) PasswordsDir() string {
+	return "passwords"
+}
+
 // WriteAccountToDisk --
 func (m *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
 	m.lock.Lock()
