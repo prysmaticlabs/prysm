@@ -88,7 +88,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	}
 
 	// Read the new account's password from user input.
-	password, err := inputAccountPassword(cliCtx)
+	password, err := inputNewAccountPassword(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not read password: %v", err)
 	}
@@ -133,7 +133,7 @@ func inputKeymanagerKind(_ *cli.Context) (v2keymanager.Kind, error) {
 	return v2keymanager.Kind(selection), nil
 }
 
-func inputAccountPassword(_ *cli.Context) (string, error) {
+func inputNewAccountPassword(_ *cli.Context) (string, error) {
 	var hasValidPassword bool
 	var walletPassword string
 	var err error
@@ -162,6 +162,20 @@ func inputAccountPassword(_ *cli.Context) (string, error) {
 			continue
 		}
 		hasValidPassword = true
+	}
+	return walletPassword, nil
+}
+
+func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error) {
+	prompt := promptui.Prompt{
+		Label:    fmt.Sprintf("Enter password for account %s", accountName),
+		Validate: validatePasswordInput,
+		Mask:     '*',
+	}
+
+	walletPassword, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
 	}
 	return walletPassword, nil
 }

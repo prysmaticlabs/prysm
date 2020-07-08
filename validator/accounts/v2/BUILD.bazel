@@ -6,6 +6,8 @@ go_library(
     srcs = [
         "cmd.go",
         "doc.go",
+        "export.go",
+        "import.go",
         "new.go",
         "wallet.go",
     ],
