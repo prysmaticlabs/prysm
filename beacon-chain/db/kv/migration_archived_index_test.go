@@ -69,6 +69,9 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			name: "deletes bitlist key/value for state",
 			setup: func(t *testing.T, db *bbolt.DB) {
 				if err := db.Update(func(tx *bbolt.Tx) error {
+					if _, err := tx.CreateBucketIfNotExists(slotsHasObjectBucket); err != nil {
+						t.Error(err)
+					}
 					return tx.Bucket(slotsHasObjectBucket).Put(savedStateSlotsKey, []byte("foo"))
 				}); err != nil {
 					t.Error(err)
@@ -89,6 +92,9 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			name: "deletes bitlist key/value for blocks",
 			setup: func(t *testing.T, db *bbolt.DB) {
 				if err := db.Update(func(tx *bbolt.Tx) error {
+					if _, err := tx.CreateBucketIfNotExists(slotsHasObjectBucket); err != nil {
+						t.Error(err)
+					}
 					return tx.Bucket(slotsHasObjectBucket).Put(savedBlockSlotsKey, []byte("foo"))
 				}); err != nil {
 					t.Error(err)

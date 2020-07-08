@@ -105,7 +105,6 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			powchainBucket,
 			stateSummaryBucket,
 			archivedRootBucket,
-			slotsHasObjectBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
@@ -113,6 +112,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			attestationTargetRootIndicesBucket,
 			attestationTargetEpochIndicesBucket,
 			blockSlotIndicesBucket,
+			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
 			// New State Management service bucket.

@@ -3,10 +3,11 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -127,11 +128,11 @@ func (kv *Store) SaveStates(ctx context.Context, states []*state.BeaconState, bl
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		for i, rt := range blockRoots {
-			if err := kv.setStateSlotBitField(ctx, tx, states[i].Slot()); err != nil {
-				return err
+			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
+			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
+				return errors.Wrap(err, "could not update DB indices")
 			}
-			err = bucket.Put(rt[:], multipleEncs[i])
-			if err != nil {
+			if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
 				return err
 			}
 		}
@@ -203,8 +204,9 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 			if err != nil {
 				return err
 			}
-			if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
-				return err
+			indicesByBucket := createStateIndicesFromStateSlot(ctx, slot)
+			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
+				return errors.Wrap(err, "could not delete root for DB indices")
 			}
 
 			if err := c.Delete(); err != nil {
@@ -286,124 +288,68 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 // HighestSlotStatesBelow returns the states with the highest slot below the input slot
 // from the db. Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
-// reuslts states. This returns a list of states.
+// results states. This returns a list of states.
 func (kv *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotStatesBelow")
 	defer span.End()
-	var states []*state.BeaconState
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		slotBkt := tx.Bucket(slotsHasObjectBucket)
-		savedSlots := slotBkt.Get(savedStateSlotsKey)
-		if len(savedSlots) == 0 {
-			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
-		}
-		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
-		if err != nil {
-			return err
-		}
 
-		states, err = kv.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
-
-		return err
-	})
-	if err != nil {
+	var best []byte
+	if err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(stateSlotIndicesBucket)
+		c := bkt.Cursor()
+		for s, root := c.First(); s != nil; s, root = c.Next() {
+			key, err := strconv.ParseUint(string(s), 10, 64)
+			if err != nil {
+				return err
+			}
+			if root == nil {
+				continue
+			}
+			if key >= slot {
+				break
+			}
+			best = root
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	if len(states) == 0 {
-		return nil, errors.New("could not get one state")
-	}
-
-	return states, nil
-}
-
-// statesAtSlotBitfieldIndex retrieves the states in DB given the input index. The index represents
-// the position of the slot bitfield the saved state maps to.
-func (kv *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.statesAtSlotBitfieldIndex")
-	defer span.End()
-
-	highestSlot := uint64(0)
-	if uint64(index) > highestSlot+1 {
-		highestSlot = uint64(index - 1)
-	}
-
-	if highestSlot == 0 {
-		gState, err := kv.GenesisState(ctx)
+	var st *state.BeaconState
+	var err error
+	if best != nil {
+		st, err = kv.State(ctx, bytesutil.ToBytes32(best))
 		if err != nil {
 			return nil, err
 		}
-		return []*state.BeaconState{gState}, nil
 	}
-
-	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
-
-	keys, err := getBlockRootsByFilter(ctx, tx, f)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(keys) == 0 {
-		return nil, errors.New("could not get one block root to get state")
-	}
-
-	stateBkt := tx.Bucket(stateBucket)
-	states := make([]*state.BeaconState, 0, len(keys))
-	for i := range keys {
-		enc := stateBkt.Get(keys[i][:])
-		if enc == nil {
-			continue
-		}
-		pbState, err := createState(ctx, enc)
+	if st == nil {
+		st, err = kv.GenesisState(ctx)
 		if err != nil {
 			return nil, err
 		}
-		s, err := state.InitializeFromProtoUnsafe(pbState)
-		if err != nil {
-			return nil, err
-		}
-		states = append(states, s)
 	}
 
-	return states, err
+	return []*state.BeaconState{st}, nil
 }
 
-// setStateSlotBitField sets the state slot bit in DB.
-// This helps to track which slot has a saved state in db.
-func (kv *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.setStateSlotBitField")
+// createBlockIndicesFromBlock takes in a beacon block and returns
+// a map of bolt DB index buckets corresponding to each particular key for indices for
+// data, such as (shard indices bucket -> shard 5).
+func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[string][]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
 	defer span.End()
-
-	kv.stateSlotBitLock.Lock()
-	defer kv.stateSlotBitLock.Unlock()
-
-	bucket := tx.Bucket(slotsHasObjectBucket)
-	slotBitfields := bucket.Get(savedStateSlotsKey)
-
-	// Copy is needed to avoid unsafe pointer conversions.
-	// See: https://github.com/etcd-io/bbolt/pull/201
-	tmp := make([]byte, len(slotBitfields))
-	copy(tmp, slotBitfields)
-	slotBitfields = bytesutil.SetBit(tmp, int(slot))
-	return bucket.Put(savedStateSlotsKey, slotBitfields)
-}
-
-// clearStateSlotBitField clears the state slot bit in DB.
-// This helps to track which slot has a saved state in db.
-func (kv *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearStateSlotBitField")
-	defer span.End()
-
-	kv.stateSlotBitLock.Lock()
-	defer kv.stateSlotBitLock.Unlock()
-
-	bucket := tx.Bucket(slotsHasObjectBucket)
-	slotBitfields := bucket.Get(savedStateSlotsKey)
-
-	// Copy is needed to avoid unsafe pointer conversions.
-	// See: https://github.com/etcd-io/bbolt/pull/201
-	tmp := make([]byte, len(slotBitfields))
-	copy(tmp, slotBitfields)
-	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
-	return bucket.Put(savedStateSlotsKey, slotBitfields)
+	indicesByBucket := make(map[string][]byte)
+	// Every index has a unique bucket for fast, binary-search
+	// range scans for filtering across keys.
+	buckets := [][]byte{
+		stateSlotIndicesBucket,
+	}
+	indices := [][]byte{
+		[]byte(fmt.Sprintf("%07d", slot)),
+	}
+	for i := 0; i < len(buckets); i++ {
+		indicesByBucket[string(buckets[i])] = indices[i]
+	}
+	return indicesByBucket
 }
