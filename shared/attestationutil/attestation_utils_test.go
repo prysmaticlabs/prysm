@@ -114,9 +114,10 @@ func TestIsValidAttestationIndices(t *testing.T) {
 }
 
 func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
-	bf := bitfield.Bitlist{0b11111111, 0b11111111, 0b11111111, 0b11111111, 0b100}
+	bf := bitfield.Bitlist{0b11111111, 0b11111111, 0b10000111, 0b11111111, 0b100}
 	committee := []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34}
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = attestationutil.AttestingIndices(bf, committee)
 	}
