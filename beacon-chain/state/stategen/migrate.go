@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -61,7 +61,7 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 				if len(blks) != 1 {
 					return errUnknownBlock
 				}
-				missingRoot, err := ssz.HashTreeRoot(blks[0].Block)
+				missingRoot, err := stateutil.BlockRoot(blks[0].Block)
 				if err != nil {
 					return err
 				}
