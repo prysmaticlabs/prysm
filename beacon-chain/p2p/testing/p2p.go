@@ -180,8 +180,7 @@ func (p *TestP2P) ENR() *enr.Record {
 }
 
 // AddConnectionHandler handles the connection with a newly connected peer.
-func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error,
-	g func(context.Context, peer.ID) error) {
+func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error) {
 	p.BHost.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
