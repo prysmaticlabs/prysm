@@ -24,6 +24,7 @@ go_library(
         "sender.go",
         "service.go",
         "subnets.go",
+        "topics.go",
         "utils.go",
         "watch_peers.go",
     ],
