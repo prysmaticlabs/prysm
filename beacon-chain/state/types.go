@@ -115,11 +115,10 @@ func (r *reference) AddRef() {
 
 func (r *reference) MinusRef() {
 	r.lock.Lock()
-	defer r.lock.Unlock()
 	// Do not reduce further if object
 	// already has 0 reference to prevent underflow.
-	if r.refs == 0 {
-		return
+	if r.refs > 0 {
+		r.refs--
 	}
-	r.refs--
+	r.lock.Unlock()
 }
