@@ -31,7 +31,7 @@ type Listener interface {
 func (s *Service) createListener(
 	ipAddr net.IP,
 	privKey *ecdsa.PrivateKey,
-) *discover.UDPv5 {
+) (*discover.UDPv5, error) {
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
 		Port: int(s.cfg.UDPPort),
@@ -45,7 +45,7 @@ func (s *Service) createListener(
 	}
 	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not listen to UDP")
 	}
 	localNode, err := s.createLocalNode(
 		privKey,
@@ -54,7 +54,7 @@ func (s *Service) createListener(
 		int(s.cfg.TCPPort),
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not create local node")
 	}
 	if s.cfg.HostAddress != "" {
 		hostIP := net.ParseIP(s.cfg.HostAddress)
@@ -72,16 +72,16 @@ func (s *Service) createListener(
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
-			log.Fatal(err)
+			return nil, errors.Wrap(err, "could not bootstrap addr")
 		}
 		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
 	}
 
 	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not listen to discV5")
 	}
-	return network
+	return network, nil
 }
 
 func (s *Service) createLocalNode(

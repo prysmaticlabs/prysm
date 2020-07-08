@@ -79,5 +79,5 @@ func (s *Service) broadcastObject(ctx context.Context, obj interface{}, topic st
 }
 
 func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
-	return fmt.Sprintf(attestationSubnetTopicFormat, forkDigest, subnet)
+	return fmt.Sprintf(AttestationSubnetTopicFormat, forkDigest, subnet)
 }
