@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -52,6 +53,7 @@ type validator struct {
 	graffiti                           []byte
 	node                               ethpb.NodeClient
 	keyManager                         keymanager.KeyManager
+	keyManagerV2                       v2keymanager.IKeymanager
 	startBalances                      map[[48]byte]uint64
 	prevBalance                        map[[48]byte]uint64
 	voteStats                          voteStats
@@ -180,7 +182,14 @@ func (v *validator) WaitForSynced(ctx context.Context) error {
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	validatingKeys, err := v.keyManager.FetchValidatingKeys()
+
+	var validatingKeys [][48]byte
+	var err error
+	if featureconfig.Get().EnableAccountsV2 {
+		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	} else {
+		validatingKeys, err = v.keyManager.FetchValidatingKeys()
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating keys")
 	}
@@ -314,7 +323,13 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
-	validatingKeys, err := v.keyManager.FetchValidatingKeys()
+	var validatingKeys [][48]byte
+	var err error
+	if featureconfig.Get().EnableAccountsV2 {
+		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	} else {
+		validatingKeys, err = v.keyManager.FetchValidatingKeys()
+	}
 	if err != nil {
 		return err
 	}

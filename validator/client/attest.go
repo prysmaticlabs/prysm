@@ -10,8 +10,10 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -175,10 +177,17 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 	}
 
 	var sig bls.Signature
-	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		sig, err = protectingKeymanager.SignAttestation(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), data)
+	if featureconfig.Get().EnableAccountsV2 {
+		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey: pubKey[:],
+			Data:      root[:],
+		})
 	} else {
-		sig, err = v.keyManager.Sign(pubKey, root)
+		if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+			sig, err = protectingKeymanager.SignAttestation(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), data)
+		} else {
+			sig, err = v.keyManager.Sign(pubKey, root)
+		}
 	}
 	if err != nil {
 		return nil, err
