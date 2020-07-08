@@ -10,9 +10,13 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -20,8 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/sirupsen/logrus"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "keymanager-v2")
@@ -62,6 +64,14 @@ type Keymanager struct {
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
 	lock              sync.RWMutex
+}
+
+type directKeystore struct {
+	Crypto  map[string]interface{} `json:"crypto"`
+	Id      string                 `json:"uuid"`
+	Pubkey  string                 `json:"pubkey"`
+	Version uint                   `json:"version"`
+	Name    string                 `json:"name"`
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -113,15 +123,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	}
 	// Generates a new EIP-2335 compliant keystore file
 	// from a BLS private key and marshals it as JSON.
-	encryptor := keystorev4.New()
 	validatingKey := bls.RandKey()
-	keystoreFile, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+	encoded, err := dr.generateKeystoreFile(validatingKey, password)
 	if err != nil {
-		return "", errors.Wrap(err, "could not encrypt validating key into keystore")
-	}
-	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
-	if err != nil {
-		return "", errors.Wrap(err, "could not json marshal keystore file")
+		return "", err
 	}
 
 	// Generate a withdrawal key and confirm user
@@ -214,15 +219,15 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreJSON := make(map[string]interface{})
-		if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+		keystoreFile := &directKeystore{}
+		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
 		// We extract the validator signing private key from the keystore
 		// by utilizing the password and initialize a new BLS secret key from
 		// its raw bytes.
 		decryptor := keystorev4.New()
-		rawSigningKey, err := decryptor.Decrypt(keystoreJSON, []byte(password))
+		rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
 		}
@@ -252,6 +257,25 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("no signing key found in keys cache")
 	}
 	return secretKey.Sign(req.Data), nil
+}
+
+func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password string) ([]byte, error) {
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
+	}
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	keystoreFile := &directKeystore{}
+	keystoreFile.Crypto = cryptoFields
+	keystoreFile.Id = id.String()
+	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
+	keystoreFile.Version = encryptor.Version()
+	keystoreFile.Name = encryptor.Name()
+	return json.MarshalIndent(keystoreFile, "", "\t")
 }
 
 func generateDepositTransaction(
