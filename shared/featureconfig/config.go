@@ -53,6 +53,8 @@ type Flags struct {
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
+	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
+
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -219,6 +221,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
 		log.Warn("Forcing max_cover strategy on attestation aggregation")
 		cfg.AttestationAggregationStrategy = "max_cover"
+	}
+	if ctx.Bool(enableFinalizedDepositsCache.Name) {
+		log.Warn("Enabling finalized deposits cache")
+		cfg.EnableFinalizedDepositsCache = true
 	}
 	Init(cfg)
 }

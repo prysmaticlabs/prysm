@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -346,7 +348,11 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
 	var depositTrie *trieutil.SparseMerkleTrie
 
-	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
+	var finalizedDeposits *depositcache.FinalizedDeposits
+	if featureconfig.Get().EnableFinalizedDepositsCache {
+		finalizedDeposits = vs.DepositFetcher.FinalizedDeposits(ctx)
+	}
+
 	if finalizedDeposits != nil {
 		depositTrie = finalizedDeposits.Deposits
 

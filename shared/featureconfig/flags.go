@@ -144,6 +144,10 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	enableFinalizedDepositsCache = &cli.BoolFlag{
+		Name: "enable-finalized-deposits-cache",
+		Usage: "Enables utilization of cached finalized deposits",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -592,4 +596,5 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
+	"--enable-finalized-deposits-cache",
 }
