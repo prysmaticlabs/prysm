@@ -141,7 +141,7 @@ var (
 		Value: "",
 	}
 	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
-	P2PMaxPeers = &cli.Int64Flag{
+	P2PMaxPeers = &cli.IntFlag{
 		Name:  "p2p-max-peers",
 		Usage: "The max number of p2p peers to maintain.",
 		Value: 30,
@@ -177,7 +177,7 @@ var (
 		Value: "text",
 	}
 	// MaxGoroutines specifies the maximum amount of goroutines tolerated, before a status check fails.
-	MaxGoroutines = &cli.Int64Flag{
+	MaxGoroutines = &cli.IntFlag{
 		Name:  "max-goroutines",
 		Usage: "Specifies the upper limit of goroutines running before a status check fails",
 		Value: 5000,
