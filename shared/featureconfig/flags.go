@@ -144,6 +144,10 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	enableAccountsV2 = &cli.BoolFlag{
+		Name:  "enable-accounts-v2",
+		Usage: "Enables usage of v2 for Prysm validator accounts",
+	}
 	batchBlockVerify = &cli.BoolFlag{
 		Name:  "batch-block-verify",
 		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
@@ -562,6 +566,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	altonaTestnet,
+	enableAccountsV2,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
