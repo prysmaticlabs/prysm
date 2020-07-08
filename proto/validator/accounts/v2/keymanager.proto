@@ -2,6 +2,23 @@ syntax = "proto3";
 
 package ethereum.validator.accounts.v2;
 
+import "eth/v1alpha1/node.proto";
+import "proto/beacon/p2p/v1/messages.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+// RemoteSigner service API.
+//
+// Defines a remote-signing
+service RemoteSigner {
+    // Returns a beacon state by filter criteria from the beacon node.
+    rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
+        option (google.api.http) = {
+            get: "/accounts/v2/remote/accounts"
+        };
+    }
+}
+
 // SignRequest is a message type used by a keymanager
 // as part of Prysm's accounts v2 implementation.
 message SignRequest {

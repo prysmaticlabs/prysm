@@ -24,7 +24,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-var log = logrus.WithField("prefix", "keymanager-v2")
+var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
 	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
