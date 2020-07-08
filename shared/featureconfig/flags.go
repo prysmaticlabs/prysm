@@ -119,10 +119,6 @@ var (
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
 	}
-	skipRegenHistoricalStates = &cli.BoolFlag{
-		Name:  "skip-regen-historical-states",
-		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
-	}
 	disableReduceAttesterStateCopy = &cli.BoolFlag{
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
@@ -485,6 +481,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedSkipRegenHistoricalStates = &cli.BoolFlag{
+		Name:   "skip-regen-historical-states",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -551,6 +552,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectProposerFlag,
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
+	deprecatedSkipRegenHistoricalStates,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -596,7 +598,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	skipRegenHistoricalStates,
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
