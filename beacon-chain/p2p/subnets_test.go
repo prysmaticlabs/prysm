@@ -24,7 +24,10 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()

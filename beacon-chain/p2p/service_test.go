@@ -161,7 +161,10 @@ func TestListenForNewNodes(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer bootListener.Close()
 
 	// Use shorter period for testing.
@@ -216,7 +219,7 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 
-	s, err := NewService(cfg)
+	s, err = NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
