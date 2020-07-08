@@ -31,6 +31,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//endtoend/evaluators:__pkg__",
         "//fuzz:__pkg__",
         "//tools:__subpackages__",
     ],
