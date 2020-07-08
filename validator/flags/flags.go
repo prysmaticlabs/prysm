@@ -126,6 +126,12 @@ var (
 		Usage: "Path to a directory on-disk where wallet passwords are stored",
 		Value: DefaultValidatorDir(),
 	}
+	// ShowDepositDataFlag for accounts-v2.
+	ShowDepositDataFlag = &cli.BoolFlag{
+		Name:  "show-deposit-data",
+		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
+		Value: false,
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
