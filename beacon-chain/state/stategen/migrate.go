@@ -98,8 +98,8 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 			}
 			log.WithFields(
 				logrus.Fields{
-					"slot":          aState.Slot(),
-					"root":          hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
+					"slot": aState.Slot(),
+					"root": hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
 				}).Info("Saved state in DB")
 		}
 	}

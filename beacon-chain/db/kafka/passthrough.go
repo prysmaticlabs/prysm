@@ -303,7 +303,7 @@ func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
 	return e.db.LastArchivedRoot(ctx)
 }
 
-// HighestSlotBlock -- passthrough
+// HighestSlotBlocks -- passthrough
 func (e Exporter) HighestSlotBlocks(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
 	return e.db.HighestSlotBlock(ctx)
 }
