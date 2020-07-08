@@ -69,14 +69,14 @@ func (kv *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 
 // ArchivedPointRoot returns the block root of an archived point from the DB.
 // This is essential for cold state management and to restore a cold state.
-func (kv *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
+func (kv *Store) ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointRoot")
 	defer span.End()
 
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedRootBucket)
-		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(index))
+		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(slot))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
@@ -86,13 +86,13 @@ func (kv *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 }
 
 // HasArchivedPoint returns true if an archived point exists in DB.
-func (kv *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
+func (kv *Store) HasArchivedPoint(ctx context.Context, slot uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
 	defer span.End()
 	var exists bool
 	if err := kv.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(archivedRootBucket)
-		exists = iBucket.Get(bytesutil.Uint64ToBytes(index)) != nil
+		exists = iBucket.Get(bytesutil.Uint64ToBytes(slot)) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)

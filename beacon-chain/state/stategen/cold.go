@@ -63,16 +63,9 @@ func (s *State) loadColdStateBySlot(ctx context.Context, slot uint64) (*state.Be
 		return nil, err
 	}
 	if archivedState == nil {
-		archivedRoot, err := s.archivedRoot(ctx, slot)
+		archivedState, err = s.beaconDB.GenesisState(ctx)
 		if err != nil {
 			return nil, err
-		}
-		archivedState, err = s.recoverStateByRoot(ctx, archivedRoot)
-		if err != nil {
-			return nil, err
-		}
-		if archivedState == nil {
-			return nil, errUnknownState
 		}
 	}
 
