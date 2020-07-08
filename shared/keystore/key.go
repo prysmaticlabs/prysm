@@ -25,10 +25,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const (
