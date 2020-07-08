@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
@@ -421,31 +420,14 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
-	if !featureconfig.Get().SkipRegenHistoricalStates {
-		// Since historical states were skipped, the node should start from last finalized check point.
-		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
-		if finalizedRoot == params.BeaconConfig().ZeroHash {
-			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
-		}
+	finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+	if finalizedRoot == params.BeaconConfig().ZeroHash {
+		finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 	}
 
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block from db")
-	}
-
-	// To skip the regeneration of historical state, the node has to generate the parent of the last finalized state.
-	// We don't need to do this for genesis.
-	atGenesis := s.CurrentSlot() == 0
-	if featureconfig.Get().SkipRegenHistoricalStates && !atGenesis {
-		parentRoot := bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)
-		parentState, err := s.generateState(ctx, finalizedRoot, parentRoot)
-		if err != nil {
-			return err
-		}
-		if s.beaconDB.SaveState(ctx, parentState, parentRoot) != nil {
-			return err
-		}
 	}
 
 	if finalizedState == nil || finalizedBlock == nil {
