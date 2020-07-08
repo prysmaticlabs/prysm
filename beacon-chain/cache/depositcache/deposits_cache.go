@@ -248,7 +248,10 @@ func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposit
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	return dc.finalizedDeposits
+	return &FinalizedDeposits{
+		Deposits:        dc.finalizedDeposits.Deposits.Copy(),
+		MerkleTrieIndex: dc.finalizedDeposits.MerkleTrieIndex,
+	}
 }
 
 // NonFinalizedDeposits returns the list of non-finalized deposits until the given block number (inclusive).

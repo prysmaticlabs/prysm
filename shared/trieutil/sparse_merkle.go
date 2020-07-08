@@ -194,3 +194,30 @@ func VerifyMerkleBranch(root []byte, item []byte, merkleIndex int, proof [][]byt
 	}
 	return bytes.Equal(root, node[:])
 }
+
+// Copy performs a deep copy of the trie.
+func (m *SparseMerkleTrie) Copy() *SparseMerkleTrie {
+	dstBranches := make([][][]byte, len(m.branches))
+	for i1, srcB1 := range m.branches {
+		dstB1 := make([][]byte, len(srcB1))
+		for i2, srcB2 := range srcB1 {
+			dstB2 := make([]byte, len(srcB2))
+			copy(dstB2, srcB2)
+			dstB1[i2] = dstB2
+		}
+		dstBranches[i1] = dstB1
+	}
+
+	dstOriginalItems := make([][]byte, len(m.originalItems))
+	for i, srcItems := range m.originalItems {
+		dstItems := make([]byte, len(srcItems))
+		copy(dstItems, srcItems)
+		dstOriginalItems[i] = dstItems
+	}
+
+	return &SparseMerkleTrie{
+		depth:         m.depth,
+		branches:      dstBranches,
+		originalItems: dstOriginalItems,
+	}
+}
