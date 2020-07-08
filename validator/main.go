@@ -70,6 +70,8 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
+	flags.WalletPasswordsDirFlag,
+	flags.WalletDirFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -174,7 +176,10 @@ contract in order to activate the validator client`,
 						var err error
 						var pubKeys [][]byte
 						if cliCtx.String(flags.KeyManager.Name) != "" {
-							pubKeysBytes48, success := node.ExtractPublicKeysFromKeyManager(cliCtx)
+							pubKeysBytes48, success := node.ExtractPublicKeysFromKeymanager(
+								cliCtx,
+								nil, /* nil v2 keymanager */
+							)
 							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success
 						} else {
 							keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
