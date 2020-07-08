@@ -53,7 +53,7 @@ func (s *Service) registerSubscribers() {
 		s.beaconBlockSubscriber,
 	)
 	s.subscribe(
-		p2p.BlockSubnetTopicFormat,
+		p2p.AggregateAndProofSubnetTopicFormat,
 		s.validateAggregateAndProof,
 		s.beaconAggregateProofSubscriber,
 	)
