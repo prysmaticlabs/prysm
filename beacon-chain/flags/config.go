@@ -50,7 +50,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 
 func configureMinimumPeers(ctx *cli.Context, cfg *GlobalFlags) {
 	cfg.MinimumSyncPeers = ctx.Int(MinSyncPeers.Name)
-	maxPeers := int(ctx.Int64(cmd.P2PMaxPeers.Name))
+	maxPeers := int(ctx.Int(cmd.P2PMaxPeers.Name))
 	if cfg.MinimumSyncPeers > maxPeers {
 		log.Warnf("Changing Minimum Sync Peers to %d", maxPeers)
 		cfg.MinimumSyncPeers = maxPeers
