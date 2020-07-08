@@ -16,7 +16,6 @@ go_library(
     visibility = ["//endtoend:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/p2p:go_default_library",
         "//endtoend/params:go_default_library",
         "//endtoend/types:go_default_library",
         "//shared/bytesutil:go_default_library",
