@@ -17,14 +17,11 @@ import (
 
 // ListAccounts displays all available validator accounts in a Prysm wallet.
 func ListAccounts(cliCtx *cli.Context) error {
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if walletDir == flags.DefaultValidatorDir() {
-		walletDir = path.Join(walletDir, WalletDefaultDirName)
+	walletDir, err := inputWalletDir(cliCtx)
+	if err != nil {
+		log.Fatal(err)
 	}
-	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
-	if passwordsDir == flags.DefaultValidatorDir() {
-		passwordsDir = path.Join(passwordsDir, PasswordsDefaultDirName)
-	}
+	passwordsDir := inputPasswordsDirectory(cliCtx)
 	// Read the wallet from the specified path.
 	ctx := context.Background()
 	wallet, err := OpenWallet(ctx, &WalletConfig{
