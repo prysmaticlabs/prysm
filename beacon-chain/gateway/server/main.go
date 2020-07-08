@@ -11,8 +11,8 @@ import (
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
-	"github.com/sirupsen/logrus"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	"github.com/sirupsen/logrus"
 )
 
 var (
