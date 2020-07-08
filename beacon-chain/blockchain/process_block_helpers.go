@@ -36,12 +36,11 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 	defer span.End()
 
 	// Verify incoming block has a valid pre state.
-	preState, err := s.verifyBlkPreState(ctx, b)
-	if err != nil {
+	if err := s.verifyBlkPreState(ctx, b); err != nil {
 		return nil, err
 	}
 
-	preState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 	}
@@ -68,7 +67,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
+func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
 	defer span.End()
 
@@ -77,23 +76,15 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
 	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
-		return nil, errors.New("could not reconstruct parent state")
+		return errors.New("could not reconstruct parent state")
 	}
 	if !s.stateGen.HasState(ctx, parentRoot) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return nil, errors.Wrap(err, "could not save initial sync blocks")
+			return errors.Wrap(err, "could not save initial sync blocks")
 		}
 		s.clearInitSyncBlocks()
 	}
-	preState, err := s.stateGen.StateByRootInitialSync(ctx, parentRoot)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-	}
-	if preState == nil {
-		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
-	}
-
-	return preState, nil // No copy needed from newly hydrated state gen object.
+	return nil
 }
 
 // verifyBlkDescendant validates input block root is a descendant of the
