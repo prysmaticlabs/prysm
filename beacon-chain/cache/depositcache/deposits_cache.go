@@ -241,7 +241,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 	return deposit, blockNum
 }
 
-// FinalizedDeposits returns the list of finalized deposits.
+// FinalizedDeposits returns the finalized deposits trie.
 func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
 	defer span.End()

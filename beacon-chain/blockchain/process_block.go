@@ -246,9 +246,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
 			return errors.Wrap(err, "could not migrate to cold")
 		}
-
-		// Update deposit cache.
-		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
