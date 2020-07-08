@@ -220,6 +220,5 @@ func formatTopic(topic string) string {
 	if startIndex == -1 {
 		return topic
 	}
-	return topic[startIndex:] + "%" + topic[:startIndex]
-
+	return topic[:startIndex] + "%" + topic[startIndex:]
 }
