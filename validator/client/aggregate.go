@@ -111,7 +111,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 		return nil, err
 	}
 
-	sig, err := v.signObject(pubKey, slot, domain.SignatureDomain)
+	sig, err := v.signObject(ctx, pubKey, slot, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to sign slot")
 	}
@@ -142,7 +142,7 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, a
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.signObject(pubKey, agg, d.SignatureDomain)
+	sig, err := v.signObject(ctx, pubKey, agg, d.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}

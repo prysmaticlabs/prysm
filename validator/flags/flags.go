@@ -81,7 +81,7 @@ var (
 		Usage: "Path to the desired keystore directory",
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
-	MonitoringPortFlag = &cli.Int64Flag{
+	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8081,

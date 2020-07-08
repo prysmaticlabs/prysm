@@ -22,8 +22,6 @@ func WrapFlags(flags []cli.Flag) []cli.Flag {
 			f = altsrc.NewFloat64Flag(f.(*cli.Float64Flag))
 		case *cli.IntFlag:
 			f = altsrc.NewIntFlag(f.(*cli.IntFlag))
-		case *cli.Int64Flag:
-			f = altsrc.NewInt64Flag(f.(*cli.Int64Flag))
 		case *cli.StringFlag:
 			f = altsrc.NewStringFlag(f.(*cli.StringFlag))
 		case *cli.StringSliceFlag:
@@ -32,6 +30,9 @@ func WrapFlags(flags []cli.Flag) []cli.Flag {
 			f = altsrc.NewUint64Flag(f.(*cli.Uint64Flag))
 		case *cli.UintFlag:
 			f = altsrc.NewUintFlag(f.(*cli.UintFlag))
+		case *cli.Int64Flag:
+			// Int64Flag does not work. See https://github.com/prysmaticlabs/prysm/issues/6478
+			panic(fmt.Sprintf("unsupported flag type type %T", f))
 		default:
 			panic(fmt.Sprintf("cannot convert type %T", f))
 		}
