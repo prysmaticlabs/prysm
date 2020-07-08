@@ -75,7 +75,7 @@ go_image(
         "@com_github_urfave_cli_v2//altsrc:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
-        "@org_uber_go_automaxprocs//:go_default_library",
+        "//shared/maxprocs:go_default_library",
     ],
 )
 
