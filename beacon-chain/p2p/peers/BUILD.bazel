@@ -22,7 +22,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["status_test.go"],
+    srcs = [
+        "benchmark_test.go",
+        "status_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
