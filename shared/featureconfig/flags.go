@@ -144,11 +144,6 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
-<<<<<<< HEAD
-	enableFinalizedDepositsCache = &cli.BoolFlag{
-		Name: "enable-finalized-deposits-cache",
-		Usage: "Enables utilization of cached finalized deposits",
-=======
 	enableAccountsV2 = &cli.BoolFlag{
 		Name:  "enable-accounts-v2",
 		Usage: "Enables usage of v2 for Prysm validator accounts",
@@ -160,7 +155,10 @@ var (
 	initSyncVerbose = &cli.BoolFlag{
 		Name:  "init-sync-verbose",
 		Usage: "Enable logging every processed block during initial syncing. ",
->>>>>>> master
+	}
+	enableFinalizedDepositsCache = &cli.BoolFlag{
+		Name:  "enable-finalized-deposits-cache",
+		Usage: "Enables utilization of cached finalized deposits",
 	}
 )
 

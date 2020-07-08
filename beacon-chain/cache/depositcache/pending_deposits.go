@@ -54,20 +54,7 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, untilBlk *big.Int) 
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
 
-<<<<<<< HEAD
-	var depositCntrs []*dbpb.DepositContainer
-	for _, ctnr := range dc.pendingDeposits {
-		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
-			depositCntrs = append(depositCntrs, ctnr)
-		}
-	}
-	// Sort the deposits by Merkle index.
-	sort.SliceStable(depositCntrs, func(i, j int) bool {
-		return depositCntrs[i].Index < depositCntrs[j].Index
-	})
-=======
-	depositCntrs := dc.PendingContainers(ctx, beforeBlk)
->>>>>>> master
+	depositCntrs := dc.PendingContainers(ctx, untilBlk)
 
 	var deposits []*ethpb.Deposit
 	for _, dep := range depositCntrs {
