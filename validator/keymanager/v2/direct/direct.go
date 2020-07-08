@@ -70,7 +70,7 @@ type Keymanager struct {
 // Direct keystore json file representation as a Go struct.
 type directKeystore struct {
 	Crypto  map[string]interface{} `json:"crypto"`
-	Id      string                 `json:"uuid"`
+	ID      string                 `json:"uuid"`
 	Pubkey  string                 `json:"pubkey"`
 	Version uint                   `json:"version"`
 	Name    string                 `json:"name"`
@@ -302,7 +302,7 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	}
 	keystoreFile := &directKeystore{}
 	keystoreFile.Crypto = cryptoFields
-	keystoreFile.Id = id.String()
+	keystoreFile.ID = id.String()
 	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
 	keystoreFile.Version = encryptor.Version()
 	keystoreFile.Name = encryptor.Name()
