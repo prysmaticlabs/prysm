@@ -2,13 +2,13 @@ package blockchain
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -313,12 +313,8 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	received, err := service.verifyBlkPreState(ctx, b)
-	if err != nil {
+	if err := service.verifyBlkPreState(ctx, b); err != nil {
 		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(s.InnerStateUnsafe(), received.InnerStateUnsafe()) {
-		t.Error("cached state not the same")
 	}
 }
 
@@ -342,7 +338,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	_, err = service.verifyBlkPreState(ctx, b)
+	err = service.verifyBlkPreState(ctx, b)
 	wanted := "could not reconstruct parent state"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
@@ -359,12 +355,8 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	received, err := service.verifyBlkPreState(ctx, b)
-	if err != nil {
+	if err := service.verifyBlkPreState(ctx, b); err != nil {
 		t.Fatal(err)
-	}
-	if s.Slot() != received.Slot() {
-		t.Error("cached state not the same")
 	}
 }
 
@@ -372,7 +364,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
