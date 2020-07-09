@@ -3,9 +3,13 @@ package v2
 import (
 	"archive/zip"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 
 	"github.com/pkg/errors"
 
@@ -24,14 +28,14 @@ func ImportAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not parse output directory: %v", err)
 	}
 
-	if err := unzipFolder(outputDir, walletDir); err != nil {
-		log.Fatal(err)
+	if err := unzipArchiveToTarget(outputDir, walletDir); err != nil {
+		log.WithError(err).Fatal("Could not unzip archive")
 	}
 
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 
-	wallet, err := OpenWallet(context.Background(), &WalletConfig{
+	wallet, err := CreateWallet(context.Background(), &WalletConfig{
 		PasswordsDir: passwordsDirPath,
 		WalletDir:    walletDir,
 	})
@@ -47,36 +51,59 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return err
 	}
 	for _, accountName := range accounts {
-		// Read the new account's password from user input.
-		password, err := inputPasswordForAccount(cliCtx, accountName)
-		if err != nil {
-			log.Fatalf("Could not read password: %v", err)
-		}
+		attemptingPassword := true
+		// Loop asking for the password until the user enters it correctly.
+		for attemptingPassword {
+			// Ask the user for the password to their account.
+			password, err := inputPasswordForAccount(cliCtx, accountName)
+			if err != nil {
+				log.Fatalf("Could not read password: %v", err)
+			}
+			if err := wallet.writePasswordToFile(accountName, password); err != nil {
+				return errors.Wrap(err, "could not write password to disk")
+			}
 
-		if err := wallet.writePasswordToFile(accountName, password); err != nil {
-			return errors.Wrap(err, "could not write password to disk")
+			km, err := wallet.ExistingKeyManager(context.Background())
+			if err != nil {
+				log.Fatal(err)
+			}
+			_, err = km.GetSigningKeyForAccount(context.Background(), accountName)
+			if err != nil && strings.Contains(err.Error(), direct.ErrCouldNotDecryptSigningKey) {
+				fmt.Println("Incorrect password entered, please try again")
+				continue
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+			attemptingPassword = false
 		}
 	}
 	return nil
 }
 
-func unzipFolder(archive string, target string) error {
+func unzipArchiveToTarget(archive string, target string) error {
 	reader, err := zip.OpenReader(archive)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not open reader for archive")
 	}
 
-	if err := os.MkdirAll(target, 0755); err != nil {
-		return err
+	perms := os.FileMode(0700)
+	if err := os.MkdirAll(target, perms); err != nil {
+		return errors.Wrap(err, "could not parent path for folder")
 	}
 
 	for _, file := range reader.File {
 		path := filepath.Join(target, file.Name)
+		parentFolder := filepath.Dir(path)
 		if file.FileInfo().IsDir() {
-			if err := os.MkdirAll(path, file.Mode()); err != nil {
-				return err
+			if err := os.MkdirAll(path, perms); err != nil {
+				return errors.Wrap(err, "could not make path for file")
 			}
 			continue
+		} else {
+			if err := os.MkdirAll(parentFolder, perms); err != nil {
+				return errors.Wrap(err, "could not make path for file")
+			}
 		}
 
 		fileReader, err := file.Open()
@@ -89,9 +116,9 @@ func unzipFolder(archive string, target string) error {
 			}
 		}()
 
-		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		targetFile, err := os.Create(path)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not open file")
 		}
 		defer func() {
 			if err := targetFile.Close(); err != nil {
@@ -100,7 +127,7 @@ func unzipFolder(archive string, target string) error {
 		}()
 
 		if _, err := io.Copy(targetFile, fileReader); err != nil {
-			return err
+			return errors.Wrap(err, "could not copy file")
 		}
 	}
 

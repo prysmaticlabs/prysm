@@ -191,37 +191,44 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 
 	for i, name := range accountNames {
-		password, err := dr.wallet.ReadPasswordForAccount(name)
+		validatorSigningKey, err := dr.GetSigningKeyForAccount(ctx, name)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not read password for account %s", name)
-		}
-		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
-		}
-		keystoreJSON := make(map[string]interface{})
-		if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
-			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
-		}
-		// We extract the validator signing private key from the keystore
-		// by utilizing the password and initialize a new BLS secret key from
-		// its raw bytes.
-		decryptor := keystorev4.New()
-		rawSigningKey, err := decryptor.Decrypt(keystoreJSON, []byte(password))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
-		}
-		validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not instantiate bls secret key from bytes for account: %s", name)
+			return nil, errors.Wrapf(err, "could not get validator signing key for %s", name)
 		}
 		publicKeys[i] = bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())
-
 		// Update a simple cache of public key -> secret key utilized
 		// for fast signing access in the direct keymanager.
 		dr.keysCache[publicKeys[i]] = validatorSigningKey
 	}
 	return publicKeys, nil
+}
+
+func (dr *Keymanager) GetSigningKeyForAccount(ctx context.Context, accountName string) (bls.SecretKey, error) {
+	password, err := dr.wallet.ReadPasswordForAccount(accountName)
+	if err != nil {
+		return nil, errors.Wrap(err, ErrCouldNotReadPassword)
+	}
+	encoded, err := dr.wallet.ReadFileForAccount(accountName, keystoreFileName)
+	if err != nil {
+		return nil, errors.Wrapf(err, ErrCouldNotReadKeystore)
+	}
+	keystoreJSON := make(map[string]interface{})
+	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+		return nil, errors.Wrap(err, ErrCouldNotDecodeJSON)
+	}
+	// We extract the validator signing private key from the keystore
+	// by utilizing the password and initialize a new BLS secret key from
+	// its raw bytes.
+	decryptor := keystorev4.New()
+	rawSigningKey, err := decryptor.Decrypt(keystoreJSON, []byte(password))
+	if err != nil {
+		return nil, errors.Wrap(err, ErrCouldNotDecryptSigningKey)
+	}
+	validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
+	if err != nil {
+		return nil, errors.Wrap(err, ErrCouldNotInstantiateBLSSecretKey)
+	}
+	return validatorSigningKey, nil
 }
 
 // Sign signs a message using a validator key.

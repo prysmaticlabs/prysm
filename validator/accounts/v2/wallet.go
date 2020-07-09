@@ -362,7 +362,13 @@ func (w *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte
 // Writes the password file for an account namespace in the wallet's passwords directory.
 func (w *Wallet) writePasswordToFile(accountName string, password string) error {
 	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
-	passwordFile, err := os.OpenFile(passwordFilePath, accountFilePermissions, directoryPermissions)
+	// Removing any file that exists to make sure the existing is overwritten.
+	if _, err := os.Stat(passwordFilePath); os.IsExist(err) {
+		if err := os.Remove(passwordFilePath); err != nil {
+			return errors.Wrap(err, "could not rewrite password file")
+		}
+	}
+	passwordFile, err := os.Create(passwordFilePath)
 	if err != nil {
 		return errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
 	}

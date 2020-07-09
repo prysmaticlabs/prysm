@@ -168,9 +168,8 @@ func inputNewAccountPassword(_ *cli.Context) (string, error) {
 
 func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error) {
 	prompt := promptui.Prompt{
-		Label:    fmt.Sprintf("Enter password for account %s", accountName),
-		Validate: validatePasswordInput,
-		Mask:     '*',
+		Label: fmt.Sprintf("Enter password for account %s", accountName),
+		Mask:  '*',
 	}
 
 	walletPassword, err := prompt.Run()
