@@ -429,7 +429,7 @@ func (p *Status) Decay() {
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
-	pidEpoch := make(map[peer.ID]uint64)
+	pidEpoch := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)

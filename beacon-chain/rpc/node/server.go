@@ -164,8 +164,12 @@ func (ns *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*eth
 
 // ListPeers lists the peers connected to this node.
 func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers, error) {
-	res := make([]*ethpb.Peer, 0)
-	for _, pid := range ns.PeersFetcher.Peers().Connected() {
+	peers := ns.PeersFetcher.Peers().Connected()
+	res := make([]*ethpb.Peer, 0, len(peers))
+	for _, pid := range peers {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		multiaddr, err := ns.PeersFetcher.Peers().Address(pid)
 		if err != nil {
 			continue

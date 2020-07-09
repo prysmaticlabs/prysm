@@ -44,13 +44,13 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	_, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
-
 	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
 		return err
 	}
 	atts := append(s.pool.AggregatedAttestations(), s.pool.BlockAttestations()...)
 	atts = append(atts, s.pool.ForkchoiceAttestations()...)
+
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
