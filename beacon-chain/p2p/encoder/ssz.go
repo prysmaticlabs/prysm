@@ -151,6 +151,10 @@ func writeSnappyBuffer(w io.Writer, b []byte) (int, error) {
 	defer bufWriterPool.Put(bufWriter)
 	num, err := bufWriter.Write(b)
 	if err != nil {
+		// Close buf writer in the event of an error.
+		if err := bufWriter.Close(); err != nil {
+			return 0, err
+		}
 		return 0, err
 	}
 	return num, bufWriter.Close()
