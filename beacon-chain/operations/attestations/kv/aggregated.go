@@ -114,7 +114,8 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	p.aggregatedAttLock.RLock()
 	defer p.aggregatedAttLock.RUnlock()
 
-	atts := make([]*ethpb.Attestation, 0, len(p.aggregatedAtt))
+	atts := make([]*ethpb.Attestation, 0)
+
 	for _, a := range p.aggregatedAtt {
 		atts = append(atts, a...)
 	}
