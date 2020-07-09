@@ -94,9 +94,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	// Initialize all committee related data.
-	committeeAssignments := map[uint64]*helpers.CommitteeAssignmentContainer{}
-	proposerIndexToSlots := make(map[uint64][]uint64)
-	committeeAssignments, proposerIndexToSlots, err = helpers.CommitteeAssignments(requestedState, requestedEpoch)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(requestedState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}

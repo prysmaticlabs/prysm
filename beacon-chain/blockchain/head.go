@@ -290,14 +290,17 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 	}
 
 	epoch := helpers.CurrentEpoch(justifiedState)
-	validators := justifiedState.Validators()
-	justifiedBalances := make([]uint64, len(validators))
-	for i, validator := range validators {
-		if helpers.IsActiveValidator(validator, epoch) {
-			justifiedBalances[i] = validator.EffectiveBalance
+
+	justifiedBalances := make([]uint64, justifiedState.NumValidators())
+	if err := justifiedState.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
+			justifiedBalances[idx] = val.EffectiveBalance()
 		} else {
-			justifiedBalances[i] = 0
+			justifiedBalances[idx] = 0
 		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	s.justifiedBalancesLock.Lock()
