@@ -252,7 +252,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
-	return secretKey.Sign(req.Data), nil
+	return secretKey.Sign(req.SigningRoot), nil
 }
 
 func (dr *Keymanager) initializeSecretKeysCache() error {

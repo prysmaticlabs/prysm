@@ -10,12 +10,10 @@ import (
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/sirupsen/logrus"
+
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -187,9 +185,9 @@ func (w *Wallet) AccountNames() ([]string, error) {
 // ExistingKeyManager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) ExistingKeyManager(
-	cliCtx *cli.Context,
+	ctx context.Context,
 ) (v2keymanager.IKeymanager, error) {
-	configFile, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
+	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager config")
 	}
@@ -200,22 +198,14 @@ func (w *Wallet) ExistingKeyManager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = direct.NewKeymanager(cliCtx.Context, w, cfg)
+		keymanager, err = direct.NewKeymanager(ctx, w, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize keymanager")
 		}
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:
-		cfg, err := remote.UnmarshalConfigFile(configFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
-		}
-		maxCallRecvMsgSize := cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-		keymanager, err = remote.NewKeymanager(cliCtx.Context, w, maxCallRecvMsgSize, cfg)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize keymanager")
-		}
+		return nil, errors.New("remote keymanager is unimplemented, work in progress")
 	default:
 		return nil, errors.New("keymanager kind must be specified")
 	}
@@ -238,10 +228,7 @@ func (w *Wallet) CreateKeymanager(ctx context.Context) (v2keymanager.IKeymanager
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:
-		keymanager, err = remote.NewKeymanager(ctx, w, &remote.Config{})
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read keymanager")
-		}
+		return nil, errors.New("remote keymanager is unimplemented, work in progress")
 	default:
 		return nil, errors.New("keymanager type must be specified")
 	}

@@ -186,8 +186,8 @@ func TestKeymanager_Sign(t *testing.T) {
 	// We prepare naive data to sign.
 	data := []byte("hello world")
 	signRequest := &validatorpb.SignRequest{
-		PublicKey: publicKeys[0][:],
-		Data:      data,
+		PublicKey:   publicKeys[0][:],
+		SigningRoot: data,
 	}
 	sig, err := dr.Sign(ctx, signRequest)
 	if err != nil {
