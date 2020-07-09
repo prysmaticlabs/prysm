@@ -333,7 +333,7 @@ func TestService_processBlock(t *testing.T) {
 		// Process block normally.
 		err = s.processBlock(ctx, genesis, blk1, func(
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
-			if err := s.chain.ReceiveBlockNoPubsub(ctx, block, blockRoot); err != nil {
+			if err := s.chain.ReceiveBlock(ctx, block, blockRoot); err != nil {
 				t.Error(err)
 			}
 			return nil
@@ -355,7 +355,7 @@ func TestService_processBlock(t *testing.T) {
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBlock(ctx, genesis, blk2, func(
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
-			if err := s.chain.ReceiveBlockNoPubsub(ctx, block, blockRoot); err != nil {
+			if err := s.chain.ReceiveBlock(ctx, block, blockRoot); err != nil {
 				t.Error(err)
 			}
 			return nil

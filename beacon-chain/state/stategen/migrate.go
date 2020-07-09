@@ -15,7 +15,7 @@ import (
 // MigrateToCold advances the finalized info in between the cold and hot state sections.
 // It moves the recent finalized states from the hot section to the cold section and
 // only preserve the ones that's on archived point.
-func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte) error {
+func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
 
@@ -23,6 +23,11 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 	oldFSlot := s.finalizedInfo.slot
 	s.finalizedInfo.lock.RUnlock()
 
+	fBlock, err := s.beaconDB.Block(ctx, fRoot)
+	if err != nil {
+		return err
+	}
+	fSlot := fBlock.Block.Slot
 	if oldFSlot > fSlot {
 		return nil
 	}

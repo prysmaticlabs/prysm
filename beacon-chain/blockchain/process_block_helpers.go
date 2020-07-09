@@ -32,7 +32,7 @@ func (s *Service) CurrentSlot() uint64 {
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
 func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.getBlockPreState")
+	ctx, span := trace.StartSpan(ctx, "forkChoice.getBlockPreState")
 	defer span.End()
 
 	// Verify incoming block has a valid pre state.
@@ -90,7 +90,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 // verifyBlkDescendant validates input block root is a descendant of the
 // current finalized block root.
 func (s *Service) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.verifyBlkDescendant")
+	ctx, span := trace.StartSpan(ctx, "forkChoice.verifyBlkDescendant")
 	defer span.End()
 
 	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
@@ -199,6 +199,12 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
+func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
+	s.prevFinalizedCheckpt = s.finalizedCheckpt
+	s.finalizedCheckpt = cp
+	return s.beaconDB.SaveFinalizedCheckpoint(ctx, cp)
+}
+
 // ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
@@ -212,7 +218,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 //        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
 //        return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
+	ctx, span := trace.StartSpan(ctx, "forkChoice.ancestor")
 	defer span.End()
 
 	// Stop recursive ancestry lookup if context is cancelled.
