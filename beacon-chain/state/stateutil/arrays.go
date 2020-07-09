@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	leavesCache = make(map[string][][32]byte)
-	layersCache = make(map[string][][][32]byte)
+	leavesCache = make(map[string][][32]byte, fieldCount)
+	layersCache = make(map[string][][][32]byte, fieldCount)
 	lock        sync.RWMutex
 )
 
