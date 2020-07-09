@@ -126,7 +126,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			return nil
 		}
 		for _, blk := range resp {
-			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlockNoPubsub)
+			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlock)
 			if err != nil {
 				log.WithError(err).Error("Failed to process block, exiting init sync")
 				return nil
