@@ -36,10 +36,10 @@ func (p *AttCaches) SaveForkchoiceAttestations(atts []*ethpb.Attestation) error 
 
 // ForkchoiceAttestations returns the forkchoice attestations in cache.
 func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, 0)
-
 	p.forkchoiceAttLock.RLock()
 	defer p.forkchoiceAttLock.RUnlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(p.forkchoiceAtt))
 	for _, att := range p.forkchoiceAtt {
 		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 	}

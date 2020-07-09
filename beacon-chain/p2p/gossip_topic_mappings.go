@@ -20,7 +20,7 @@ var GossipTopicMappings = map[string]proto.Message{
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message
 // can be mapped to a protocol ID string.
-var GossipTypeMapping = make(map[reflect.Type]string)
+var GossipTypeMapping = make(map[reflect.Type]string, len(GossipTopicMappings))
 
 func init() {
 	for k, v := range GossipTopicMappings {
