@@ -56,7 +56,10 @@ func TestCreateListener(t *testing.T) {
 		genesisValidatorsRoot: []byte{'A'},
 		cfg:                   &Config{UDPPort: uint(port)},
 	}
-	listener := s.createListener(ipAddr, pkey)
+	listener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer listener.Close()
 
 	if !listener.Self().IP().Equal(ipAddr) {
@@ -85,7 +88,10 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -155,7 +161,10 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
 	}
-	listener := s.createListener(ipAddr, pkey)
+	listener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer listener.Close()
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
