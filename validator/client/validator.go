@@ -54,7 +54,9 @@ type validator struct {
 	node                               ethpb.NodeClient
 	keyManager                         keymanager.KeyManager
 	keyManagerV2                       v2keymanager.IKeymanager
+	startBalances                      map[[48]byte]uint64
 	prevBalance                        map[[48]byte]uint64
+	voteStats                          voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
 	attLogs                            map[[32]byte]*attSubmitted
@@ -613,4 +615,18 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 // which subnet has already been pending requested.
 func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
 	return bytesutil.ToBytes64(append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...))
+}
+
+// This tracks all validators' voting status.
+type voteStats struct {
+	startEpoch            uint64
+	includedAttestedCount uint64
+	totalAttestedCount    uint64
+	totalDistance         uint64
+	correctSources        uint64
+	totalSources          uint64
+	correctTargets        uint64
+	totalTargets          uint64
+	correctHeads          uint64
+	totalHeads            uint64
 }

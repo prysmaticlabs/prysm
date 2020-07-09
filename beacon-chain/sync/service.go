@@ -148,7 +148,7 @@ func (s *Service) Start() {
 		panic(err)
 	}
 
-	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGenericGoodbyeMessage)
+	s.p2p.AddConnectionHandler(s.reValidatePeer)
 	s.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
 		return nil

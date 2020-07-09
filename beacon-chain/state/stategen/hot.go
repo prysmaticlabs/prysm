@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -19,6 +20,16 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	}
 
 	return s.beaconDB.HasState(ctx, blockRoot)
+}
+
+// SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
+// state summary cache.
+func (s *State) SaveStateSummary(ctx context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
+	// Save State summary
+	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
+		Slot: blk.Block.Slot,
+		Root: blockRoot[:],
+	})
 }
 
 // This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,

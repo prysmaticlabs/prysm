@@ -29,7 +29,7 @@ var (
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
-	MonitoringPortFlag = &cli.Int64Flag{
+	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8082,
