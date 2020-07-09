@@ -115,7 +115,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			return err
 		}
 
-		if err := s.chain.ReceiveBlockNoPubsub(ctx, b, blkRoot); err != nil {
+		if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 			log.Errorf("Could not process block from slot %d: %v", b.Block.Slot, err)
 			traceutil.AnnotateError(span, err)
 		}
