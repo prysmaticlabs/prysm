@@ -8,12 +8,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 
 	"github.com/pkg/errors"
 
@@ -55,31 +52,8 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return err
 	}
 	for _, accountName := range accounts {
-		attemptingPassword := true
-		// Loop asking for the password until the user enters it correctly.
-		for attemptingPassword {
-			// Ask the user for the password to their account.
-			password, err := inputPasswordForAccount(cliCtx, accountName)
-			if err != nil {
-				log.Fatalf("Could not read password: %v", err)
-			}
-			if err := wallet.writePasswordToFile(accountName, password); err != nil {
-				return errors.Wrap(err, "could not write password to disk")
-			}
-
-			km, err := wallet.ExistingKeyManager(context.Background())
-			if err != nil {
-				log.Fatal(err)
-			}
-			_, err = km.GetSigningKeyForAccount(context.Background(), accountName)
-			if err != nil && strings.Contains(err.Error(), direct.ErrCouldNotDecryptSigningKey) {
-				fmt.Println("Incorrect password entered, please try again")
-				continue
-			}
-			if err != nil {
-				log.Fatal(err)
-			}
-			attemptingPassword = false
+		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
+			return nil
 		}
 	}
 	return nil
@@ -127,30 +101,36 @@ func unzipArchiveToTarget(archive string, target string) error {
 			}
 		}
 
-		fileReader, err := file.Open()
-		if err != nil {
+		if err := copyFileFromZipToPath(file, path); err != nil {
 			return err
 		}
-		defer func() {
-			if err := fileReader.Close(); err != nil {
-				log.WithError(err).Error("Could not close file")
-			}
-		}()
-
-		targetFile, err := os.Create(path)
-		if err != nil {
-			return errors.Wrap(err, "could not open file")
-		}
-		defer func() {
-			if err := targetFile.Close(); err != nil {
-				log.WithError(err).Error("Could not close target")
-			}
-		}()
-
-		if _, err := io.Copy(targetFile, fileReader); err != nil {
-			return errors.Wrap(err, "could not copy file")
-		}
 	}
+	return nil
+}
 
+func copyFileFromZipToPath(file *zip.File, path string) error {
+	fileReader, err := file.Open()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := fileReader.Close(); err != nil {
+			log.WithError(err).Error("Could not close file")
+		}
+	}()
+
+	targetFile, err := os.Create(path)
+	if err != nil {
+		return errors.Wrap(err, "could not open file")
+	}
+	defer func() {
+		if err := targetFile.Close(); err != nil {
+			log.WithError(err).Error("Could not close target")
+		}
+	}()
+
+	if _, err := io.Copy(targetFile, fileReader); err != nil {
+		return errors.Wrap(err, "could not copy file")
+	}
 	return nil
 }

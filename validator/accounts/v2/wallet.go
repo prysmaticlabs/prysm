@@ -7,6 +7,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
+
+	"github.com/urfave/cli/v2"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
@@ -334,6 +337,35 @@ func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 		return "", errors.Wrapf(err, "could not read data from password file: %s", passwordFilePath)
 	}
 	return string(password), nil
+}
+
+func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
+	attemptingPassword := true
+	// Loop asking for the password until the user enters it correctly.
+	for attemptingPassword {
+		// Ask the user for the password to their account.
+		password, err := inputPasswordForAccount(cliCtx, accountName)
+		if err != nil {
+			return errors.Wrap(err, "could not input password")
+		}
+		if err := w.writePasswordToFile(accountName, password); err != nil {
+			return errors.Wrap(err, "could not write password to disk")
+		}
+		km, err := w.ExistingKeyManager(context.Background())
+		if err != nil {
+			return errors.Wrap(err, "could not get existing keymanager")
+		}
+		_, err = km.GetSigningKeyForAccount(context.Background(), accountName)
+		if err != nil && strings.Contains(err.Error(), direct.ErrCouldNotDecryptSigningKey) {
+			fmt.Println("Incorrect password entered, please try again")
+			continue
+		}
+		if err != nil {
+			return errors.Wrapf(err, "could not get signing key for account %s", accountName)
+		}
+		attemptingPassword = false
+	}
+	return nil
 }
 
 // ReadFileForAccount from the wallet's accounts directory.
