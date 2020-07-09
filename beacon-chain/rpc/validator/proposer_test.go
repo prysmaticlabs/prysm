@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -1005,7 +1006,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
+func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -1109,6 +1110,129 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 			len(deposits),
 			3,
 		)
+	}
+}
+
+func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
+	ctx := context.Background()
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableFinalizedDepositsCache: true})
+	defer resetCfg()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	p := &mockPOW.POWChain{
+		LatestBlockNumber: height,
+		HashesByHeight: map[int][]byte{
+			int(height.Int64()): []byte("0x0"),
+		},
+	}
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Eth1Data: &ethpb.Eth1Data{
+			BlockHash:    []byte("0x0"),
+			DepositCount: 4,
+		},
+		Eth1DepositIndex: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blk := &ethpb.BeaconBlock{
+		Slot: beaconState.Slot(),
+	}
+
+	blkRoot, err := ssz.HashTreeRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mockSig [96]byte
+	var mockCreds [32]byte
+
+	// Using the merkleTreeIndex as the block number for this test...
+	finalizedDeposits := []*dbpb.DepositContainer{
+		{
+			Index:           0,
+			Eth1BlockHeight: 10,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index:           1,
+			Eth1BlockHeight: 10,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	recentDeposits := []*dbpb.DepositContainer{
+		{
+			Index:           2,
+			Eth1BlockHeight: 11,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("c"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index:           3,
+			Eth1BlockHeight: 11,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("d"),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	depositCache := depositcache.NewDepositCache()
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("could not setup deposit trie: %v", err)
+	}
+	for _, dp := range append(finalizedDeposits, recentDeposits...) {
+		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		if err != nil {
+			t.Fatalf("Unable to determine hashed value of deposit %v", err)
+		}
+
+		depositTrie.Insert(depositHash[:], int(dp.Index))
+		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+	}
+	depositCache.InsertFinalizedDeposits(ctx, 2)
+	for _, dp := range recentDeposits {
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+	}
+
+	bs := &Server{
+		ChainStartFetcher:      p,
+		Eth1InfoFetcher:        p,
+		Eth1BlockFetcher:       p,
+		DepositFetcher:         depositCache,
+		PendingDepositsFetcher: depositCache,
+		BlockReceiver:          &mock.ChainService{State: beaconState, Root: blkRoot[:]},
+		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
+	}
+
+	trie, err := bs.depositTrie(ctx, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualRoot := trie.HashTreeRoot()
+	expectedRoot := depositTrie.HashTreeRoot()
+	if actualRoot != expectedRoot {
+		t.Errorf("Incorrect deposit trie root (%x) vs expected %x", actualRoot, expectedRoot)
 	}
 }
 
