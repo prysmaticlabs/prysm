@@ -20,6 +20,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// There are 21 fields in the beacon state.
+const fieldCount = 21
+
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
@@ -34,15 +37,15 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, 21),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
+		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		rebuildTrie:           make(map[fieldIndex]bool, 21),
+		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
-	for i := 0; i < 21; i++ {
+	for i := 0; i < fieldCount; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
 		b.rebuildTrie[fieldIndex(i)] = true
 		b.dirtyIndices[fieldIndex(i)] = []uint64{}
@@ -108,11 +111,11 @@ func (b *BeaconState) Copy() *BeaconState {
 				FinalizedCheckpoint:         b.finalizedCheckpoint(),
 				GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 			},
-			dirtyFields:           make(map[fieldIndex]interface{}, 21),
-			dirtyIndices:          make(map[fieldIndex][]uint64, 21),
-			rebuildTrie:           make(map[fieldIndex]bool, 21),
+			dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+			dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
+			rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
 			sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
+			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 			// Copy on write validator index map.
 			valIdxMap: b.valIdxMap,
@@ -149,11 +152,11 @@ func (b *BeaconState) Copy() *BeaconState {
 				FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 				GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 			},
-			dirtyFields:           make(map[fieldIndex]interface{}, 21),
-			dirtyIndices:          make(map[fieldIndex][]uint64, 21),
-			rebuildTrie:           make(map[fieldIndex]bool, 21),
+			dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+			dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
+			rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
 			sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
+			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 			// Copy on write validator index map.
 			valIdxMap: b.valIdxMap,
@@ -228,7 +231,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, 21)
+		b.dirtyFields = make(map[fieldIndex]interface{}, fieldCount)
 	}
 
 	for field := range b.dirtyFields {
