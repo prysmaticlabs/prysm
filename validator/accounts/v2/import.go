@@ -17,6 +17,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// ImportAccount uses the archived account made from ExportAccount to import an account and
+// asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)

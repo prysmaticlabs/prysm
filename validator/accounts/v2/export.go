@@ -19,6 +19,7 @@ import (
 
 const allAccountsText = "All accounts"
 
+// ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
@@ -90,9 +91,8 @@ func selectAccounts(accounts []string) ([]string, error) {
 
 	if result == allAccountsText {
 		return accounts, nil
-	} else {
-		return []string{result}, nil
 	}
+	return []string{result}, nil
 }
 
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
