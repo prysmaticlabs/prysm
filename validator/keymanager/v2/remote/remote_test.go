@@ -93,14 +93,14 @@ func TestNewRemoteKeymanager(t *testing.T) {
 		{
 			name: "NoClientCertificate",
 			opts: &Config{
-				RemoteCertificate: &Certificate{},
+				RemoteCertificate: &CertificateConfig{},
 			},
 			err: "client certificate is required",
 		},
 		{
 			name: "NoClientKey",
 			opts: &Config{
-				RemoteCertificate: &Certificate{
+				RemoteCertificate: &CertificateConfig{
 					ClientCertPath: "/foo/client.crt",
 					ClientKeyPath:  "",
 				},
@@ -110,7 +110,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 		{
 			name: "MissingClientKey",
 			opts: &Config{
-				RemoteCertificate: &Certificate{
+				RemoteCertificate: &CertificateConfig{
 					ClientCertPath: "/foo/client.crt",
 					ClientKeyPath:  "/foo/client.key",
 					CACertPath:     "",
@@ -123,7 +123,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			clientCert: `bad`,
 			clientKey:  validClientKey,
 			opts: &Config{
-				RemoteCertificate: &Certificate{},
+				RemoteCertificate: &CertificateConfig{},
 			},
 			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in certificate input",
 		},
@@ -132,7 +132,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			clientCert: validClientCert,
 			clientKey:  `bad`,
 			opts: &Config{
-				RemoteCertificate: &Certificate{},
+				RemoteCertificate: &CertificateConfig{},
 			},
 			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in key input",
 		},
@@ -141,7 +141,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			clientCert: validClientCert,
 			clientKey:  validClientKey,
 			opts: &Config{
-				RemoteCertificate: &Certificate{
+				RemoteCertificate: &CertificateConfig{
 					CACertPath: `bad`,
 				},
 			},

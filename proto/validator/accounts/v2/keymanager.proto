@@ -39,7 +39,10 @@ message SignRequest {
     // being requested to sign data.
     bytes public_key = 1;
 
-    // Raw bytes data the client is requesting to sign.
+    // Raw bytes signing root the client is requesting to sign. The client is
+    // expected to determine these raw bytes from the appropriate BLS
+    // signing domain as well as the signing root of the data structure
+    // the bytes represent.
     bytes signing_root = 2;
 }
 

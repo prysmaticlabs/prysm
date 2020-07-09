@@ -1,5 +1,5 @@
 /*
-Package direct defines an implementation of an on-disk, EIP-2335 keystore.json
+Package remote defines an implementation of an on-disk, EIP-2335 keystore.json
 approach towards defining validator accounts in Prysm. A validating private key is
 encrypted using a passphrase and its resulting encrypted file is stored as a
 keystore.json file under a unique, human-readable, account namespace. This direct keymanager approach
@@ -21,11 +21,11 @@ Remote sign requests are defined by the following protobuf schema:
      // being requested to sign data.
      bytes public_key = 1;
 
-     // Raw bytes data the client is requesting to sign. The client is
+     // Raw bytes signing root the client is requesting to sign. The client is
 	 // expected to determine these raw bytes from the appropriate BLS
      // signing domain as well as the signing root of the data structure
 	 // the bytes represent.
-     bytes data = 2;
+     bytes signing_root = 2;
  }
 
 Remote signing responses will contain a BLS12-381 signature along with the

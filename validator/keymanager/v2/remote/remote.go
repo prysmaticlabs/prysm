@@ -30,11 +30,14 @@ var (
 
 // Config for a remote keymanager.
 type Config struct {
-	RemoteCertificate *Certificate `json:"remote_cert"`
-	RemoteAddr        string       `json:"remote_address"`
+	RemoteCertificate *CertificateConfig `json:"remote_cert"`
+	RemoteAddr        string             `json:"remote_address"`
 }
 
-type Certificate struct {
+// CertificateConfig defines configuration options for
+// certificate authority certs, client certs, and client keys
+// for TLS gRPC connections.
+type CertificateConfig struct {
 	ClientCertPath string `json:"crt_path"`
 	ClientKeyPath  string `json:"key_path"`
 	CACertPath     string `json:"ca_crt_path"`
