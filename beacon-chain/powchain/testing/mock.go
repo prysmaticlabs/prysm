@@ -48,7 +48,7 @@ func (m *POWChain) DepositTrie() *trieutil.SparseMerkleTrie {
 // BlockExists --
 func (m *POWChain) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
 	// Reverse the map of heights by hash.
-	heightsByHash := make(map[[32]byte]int)
+	heightsByHash := make(map[[32]byte]int, len(m.HashesByHeight))
 	for k, v := range m.HashesByHeight {
 		h := bytesutil.ToBytes32(v)
 		heightsByHash[h] = k
