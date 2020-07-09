@@ -261,3 +261,26 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
 	testutil.AssertLogsDoNotContain(t, hook, "Failed to unregister topic validator")
 }
+
+func TestStaticSubnets(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	r := Service{
+		ctx: ctx,
+		chain: &mockChain.ChainService{
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		},
+		p2p: p,
+	}
+	defaultTopic := "/eth2/%x/beacon_attestation_%d"
+	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+		// no-op
+		return nil
+	})
+	topics := r.p2p.PubSub().GetTopics()
+	if uint64(len(topics)) != params.BeaconNetworkConfig().AttestationSubnetCount {
+		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
+	}
+	cancel()
+}
