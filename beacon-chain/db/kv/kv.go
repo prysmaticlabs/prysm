@@ -49,7 +49,7 @@ type Store struct {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
-	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return nil, err
 	}
 	datafile := path.Join(dirPath, databaseFileName)
