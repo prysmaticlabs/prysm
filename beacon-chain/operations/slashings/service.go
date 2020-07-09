@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
@@ -36,7 +37,9 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.
 	numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
 
 	included := make(map[uint64]bool)
-	pending := make([]*ethpb.AttesterSlashing, 0, params.BeaconConfig().MaxAttesterSlashings)
+	// Allocate pending slice with a capacity of min(len(p.pendingAttesterSlashing), maxAttesterSlashings)
+	// since the array cannot exceed the max and is typically less than the max value.
+	pending := make([]*ethpb.AttesterSlashing, 0, mathutil.Min(uint64(len(p.pendingAttesterSlashing)), params.BeaconConfig().MaxAttesterSlashings))
 	for i := 0; i < len(p.pendingAttesterSlashing); i++ {
 		slashing := p.pendingAttesterSlashing[i]
 		if uint64(len(pending)) >= params.BeaconConfig().MaxAttesterSlashings {
@@ -75,7 +78,9 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, state *beaconstate.
 	// Update prom metric.
 	numPendingProposerSlashings.Set(float64(len(p.pendingProposerSlashing)))
 
-	pending := make([]*ethpb.ProposerSlashing, 0, params.BeaconConfig().MaxProposerSlashings)
+	// Allocate pending slice with a capacity of min(len(p.pendingProposerSlashing), maxProposerSlashings)
+	// since the array cannot exceed the max and is typically less than the max value.
+	pending := make([]*ethpb.ProposerSlashing, 0, mathutil.Min(uint64(len(p.pendingProposerSlashing)), params.BeaconConfig().MaxProposerSlashings))
 	for i := 0; i < len(p.pendingProposerSlashing); i++ {
 		slashing := p.pendingProposerSlashing[i]
 		if uint64(len(pending)) >= params.BeaconConfig().MaxProposerSlashings {
