@@ -10,7 +10,6 @@ proto_library(
     deps = [
         "@com_google_protobuf//:empty_proto",
         "@go_googleapis//google/api:annotations_proto",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
     ],
 )
 
@@ -22,7 +21,6 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "@go_googleapis//google/api:annotations_go_proto",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
 
