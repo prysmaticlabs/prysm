@@ -56,8 +56,12 @@ cc_library(
 )
 
 cc_library(
-    name = "elf_x86",
-    hdrs = glob(["build/elf/*-x86_64.s"]),
+    name = "asm_hdrs",
+    hdrs = glob([
+        # TODO: This could be more clever based on target OS.
+        "build/**/*.s",
+        "build/**/*.S",
+    ], exclude = ["build/assembly.s"]),
 )
 
 cc_library(
@@ -73,8 +77,7 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    hdrs = [":elf_x86"],
-    deps = [":elf_x86"],
+    deps = [":asm_hdrs"],
     linkstatic = True,
 )
 
