@@ -10,10 +10,12 @@ import (
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -173,9 +175,9 @@ func (w *Wallet) AccountNames() ([]string, error) {
 // ExistingKeyManager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) ExistingKeyManager(
-	ctx context.Context,
+	cliCtx *cli.Context,
 ) (v2keymanager.IKeymanager, error) {
-	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+	configFile, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager config")
 	}
@@ -186,7 +188,7 @@ func (w *Wallet) ExistingKeyManager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = direct.NewKeymanager(ctx, w, cfg)
+		keymanager, err = direct.NewKeymanager(cliCtx.Context, w, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize keymanager")
 		}
@@ -197,7 +199,8 @@ func (w *Wallet) ExistingKeyManager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = remote.NewKeymanager(ctx, w, cfg)
+		maxCallRecvMsgSize := cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+		keymanager, err = remote.NewKeymanager(cliCtx.Context, w, maxCallRecvMsgSize, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize keymanager")
 		}

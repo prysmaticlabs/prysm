@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -20,15 +21,6 @@ import (
 
 var log = logrus.WithField("prefix", "remote-keymanager-v2")
 
-const maxMessageSize = 8 * 1024 * 1024
-
-// Wallet defines a struct which has capabilities and knowledge of how
-// to read and write important accounts-related files to the filesystem.
-// Useful for keymanager to have persistent capabilities for accounts on-disk.
-type Wallet interface {
-	AccountNames() ([]string, error)
-}
-
 // Config for a remote keymanager.
 type Config struct {
 	RemoteCertificate *Certificate `json:"remote_cert"`
@@ -43,14 +35,13 @@ type Certificate struct {
 
 // Keymanager implementation using remote signing keys via gRPC.
 type Keymanager struct {
-	wallet           Wallet
 	cfg              *Config
 	client           validatorpb.RemoteSignerClient
 	accountsByPubkey map[[48]byte]string
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, maxMessageSize int, cfg *Config) (*Keymanager, error) {
 	// Load the client certificates.
 	if cfg.RemoteCertificate == nil {
 		return nil, errors.New("certificates are required")
@@ -96,13 +87,9 @@ func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager
 	}
 	client := validatorpb.NewRemoteSignerClient(conn)
 	k := &Keymanager{
-		wallet:           wallet,
 		cfg:              cfg,
 		client:           client,
 		accountsByPubkey: make(map[[48]byte]string),
-	}
-	if err := k.RefreshValidatingPublicKeys(ctx); err != nil {
-		return nil, errors.Wrap(err, "could not initialize validating public keys")
 	}
 	return k, nil
 }
@@ -138,11 +125,22 @@ func (k *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
 func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	resp := make([][48]byte, 0, len(k.accountsByPubkey))
-	for pubKey := range k.accountsByPubkey {
-		resp = append(resp, pubKey)
+	resp, err := k.client.ListAccounts(ctx, &ptypes.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not list accounts from remote server")
 	}
-	return resp, nil
+	if len(resp.AccountNames) != len(resp.ValidatingPublicKeys) {
+		return nil, fmt.Errorf(
+			"mismatched number of accounts %d and validating public keys %d",
+			len(resp.AccountNames),
+			len(resp.ValidatingPublicKeys),
+		)
+	}
+	pubKeys := make([][48]byte, len(resp.ValidatingPublicKeys))
+	for i := range resp.AccountNames {
+		pubKeys[i] = bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])
+	}
+	return pubKeys, nil
 }
 
 // Sign signs a message for a validator key via a gRPC request.
@@ -151,22 +149,11 @@ func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bl
 	if err != nil {
 		return nil, err
 	}
+	switch resp.Status {
+	case validatorpb.SignResponse_DENIED:
+		return nil, errors.Wrap(err, "signing request denied by remote server")
+	case validatorpb.SignResponse_FAILED:
+		return nil, errors.Wrap(err, "signing request failed")
+	}
 	return bls.SignatureFromBytes(resp.Signature)
-}
-
-// RefreshValidatingPublicKeys --
-func (k *Keymanager) RefreshValidatingPublicKeys(ctx context.Context) error {
-	resp, err := k.client.ListAccounts(ctx, &ptypes.Empty{})
-	if err != nil {
-		return err
-	}
-	if len(resp.AccountNames) != len(resp.ValidatingPublicKeys) {
-		return errors.New("err")
-	}
-	accountsByPubkey := make(map[[48]byte]string, len(resp.AccountNames))
-	for i, account := range resp.AccountNames {
-		accountsByPubkey[bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])] = account
-	}
-	k.accountsByPubkey = accountsByPubkey
-	return nil
 }

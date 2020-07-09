@@ -8,6 +8,7 @@ import (
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
+	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -27,6 +28,37 @@ var _ = math.Inf
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
+
+type SignResponse_Status int32
+
+const (
+	SignResponse_UNKNOWN   SignResponse_Status = 0
+	SignResponse_SUCCEEDED SignResponse_Status = 1
+	SignResponse_DENIED    SignResponse_Status = 2
+	SignResponse_FAILED    SignResponse_Status = 3
+)
+
+var SignResponse_Status_name = map[int32]string{
+	0: "UNKNOWN",
+	1: "SUCCEEDED",
+	2: "DENIED",
+	3: "FAILED",
+}
+
+var SignResponse_Status_value = map[string]int32{
+	"UNKNOWN":   0,
+	"SUCCEEDED": 1,
+	"DENIED":    2,
+	"FAILED":    3,
+}
+
+func (x SignResponse_Status) String() string {
+	return proto.EnumName(SignResponse_Status_name, int32(x))
+}
+
+func (SignResponse_Status) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_795e98bd0a473d79, []int{2, 0}
+}
 
 type ListAccountsResponse struct {
 	AccountNames         []string `protobuf:"bytes,1,rep,name=account_names,json=accountNames,proto3" json:"account_names,omitempty"`
@@ -84,11 +116,19 @@ func (m *ListAccountsResponse) GetValidatingPublicKeys() [][]byte {
 }
 
 type SignRequest struct {
-	PublicKey            []byte   `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	Data                 []byte   `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	PublicKey       []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	Data            []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	SignatureDomain []byte `protobuf:"bytes,3,opt,name=signature_domain,json=signatureDomain,proto3" json:"signature_domain,omitempty"`
+	// Types that are valid to be assigned to Object:
+	//	*SignRequest_Block
+	//	*SignRequest_AttestationData
+	//	*SignRequest_AggregateAttestationAndProof
+	//	*SignRequest_Exit
+	//	*SignRequest_Slot
+	Object               isSignRequest_Object `protobuf_oneof:"object"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
 func (m *SignRequest) Reset()         { *m = SignRequest{} }
@@ -124,6 +164,41 @@ func (m *SignRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SignRequest proto.InternalMessageInfo
 
+type isSignRequest_Object interface {
+	isSignRequest_Object()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type SignRequest_Block struct {
+	Block *v1alpha1.BeaconBlock `protobuf:"bytes,4,opt,name=block,proto3,oneof" json:"block,omitempty"`
+}
+type SignRequest_AttestationData struct {
+	AttestationData *v1alpha1.AttestationData `protobuf:"bytes,5,opt,name=attestation_data,json=attestationData,proto3,oneof" json:"attestation_data,omitempty"`
+}
+type SignRequest_AggregateAttestationAndProof struct {
+	AggregateAttestationAndProof *v1alpha1.AggregateAttestationAndProof `protobuf:"bytes,6,opt,name=aggregate_attestation_and_proof,json=aggregateAttestationAndProof,proto3,oneof" json:"aggregate_attestation_and_proof,omitempty"`
+}
+type SignRequest_Exit struct {
+	Exit *v1alpha1.VoluntaryExit `protobuf:"bytes,7,opt,name=exit,proto3,oneof" json:"exit,omitempty"`
+}
+type SignRequest_Slot struct {
+	Slot uint64 `protobuf:"varint,8,opt,name=slot,proto3,oneof" json:"slot,omitempty"`
+}
+
+func (*SignRequest_Block) isSignRequest_Object()                        {}
+func (*SignRequest_AttestationData) isSignRequest_Object()              {}
+func (*SignRequest_AggregateAttestationAndProof) isSignRequest_Object() {}
+func (*SignRequest_Exit) isSignRequest_Object()                         {}
+func (*SignRequest_Slot) isSignRequest_Object()                         {}
+
+func (m *SignRequest) GetObject() isSignRequest_Object {
+	if m != nil {
+		return m.Object
+	}
+	return nil
+}
+
 func (m *SignRequest) GetPublicKey() []byte {
 	if m != nil {
 		return m.PublicKey
@@ -138,11 +213,65 @@ func (m *SignRequest) GetData() []byte {
 	return nil
 }
 
+func (m *SignRequest) GetSignatureDomain() []byte {
+	if m != nil {
+		return m.SignatureDomain
+	}
+	return nil
+}
+
+func (m *SignRequest) GetBlock() *v1alpha1.BeaconBlock {
+	if x, ok := m.GetObject().(*SignRequest_Block); ok {
+		return x.Block
+	}
+	return nil
+}
+
+func (m *SignRequest) GetAttestationData() *v1alpha1.AttestationData {
+	if x, ok := m.GetObject().(*SignRequest_AttestationData); ok {
+		return x.AttestationData
+	}
+	return nil
+}
+
+func (m *SignRequest) GetAggregateAttestationAndProof() *v1alpha1.AggregateAttestationAndProof {
+	if x, ok := m.GetObject().(*SignRequest_AggregateAttestationAndProof); ok {
+		return x.AggregateAttestationAndProof
+	}
+	return nil
+}
+
+func (m *SignRequest) GetExit() *v1alpha1.VoluntaryExit {
+	if x, ok := m.GetObject().(*SignRequest_Exit); ok {
+		return x.Exit
+	}
+	return nil
+}
+
+func (m *SignRequest) GetSlot() uint64 {
+	if x, ok := m.GetObject().(*SignRequest_Slot); ok {
+		return x.Slot
+	}
+	return 0
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*SignRequest) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*SignRequest_Block)(nil),
+		(*SignRequest_AttestationData)(nil),
+		(*SignRequest_AggregateAttestationAndProof)(nil),
+		(*SignRequest_Exit)(nil),
+		(*SignRequest_Slot)(nil),
+	}
+}
+
 type SignResponse struct {
-	Signature            []byte   `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Signature            []byte              `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+	Status               SignResponse_Status `protobuf:"varint,2,opt,name=status,proto3,enum=ethereum.validator.accounts.v2.SignResponse_Status" json:"status,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
 func (m *SignResponse) Reset()         { *m = SignResponse{} }
@@ -185,7 +314,15 @@ func (m *SignResponse) GetSignature() []byte {
 	return nil
 }
 
+func (m *SignResponse) GetStatus() SignResponse_Status {
+	if m != nil {
+		return m.Status
+	}
+	return SignResponse_UNKNOWN
+}
+
 func init() {
+	proto.RegisterEnum("ethereum.validator.accounts.v2.SignResponse_Status", SignResponse_Status_name, SignResponse_Status_value)
 	proto.RegisterType((*ListAccountsResponse)(nil), "ethereum.validator.accounts.v2.ListAccountsResponse")
 	proto.RegisterType((*SignRequest)(nil), "ethereum.validator.accounts.v2.SignRequest")
 	proto.RegisterType((*SignResponse)(nil), "ethereum.validator.accounts.v2.SignResponse")
@@ -196,31 +333,49 @@ func init() {
 }
 
 var fileDescriptor_795e98bd0a473d79 = []byte{
-	// 380 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x91, 0x41, 0x6a, 0xe3, 0x30,
-	0x18, 0x85, 0x91, 0x13, 0x06, 0xa2, 0xf1, 0x6c, 0x44, 0x08, 0xc6, 0x93, 0x31, 0xc6, 0x33, 0x8b,
-	0xc0, 0x04, 0x19, 0x32, 0x39, 0xc0, 0xb4, 0xd0, 0x55, 0x4b, 0x29, 0xee, 0x01, 0x82, 0x92, 0xfc,
-	0x75, 0x45, 0x62, 0xc9, 0xb1, 0xe4, 0x80, 0xb7, 0xe9, 0x11, 0xba, 0xea, 0x8d, 0xba, 0x2c, 0xf4,
-	0x02, 0x25, 0xf4, 0x20, 0xc5, 0xb2, 0x9d, 0xa4, 0x10, 0xda, 0xee, 0xec, 0xf7, 0xfe, 0xf7, 0xeb,
-	0xe9, 0x13, 0x1e, 0xa6, 0x99, 0xd4, 0x32, 0x5c, 0xb3, 0x25, 0x9f, 0x33, 0x2d, 0xb3, 0x90, 0xcd,
-	0x66, 0x32, 0x17, 0x5a, 0x85, 0xeb, 0x51, 0xb8, 0x80, 0x22, 0x61, 0x82, 0xc5, 0x90, 0x51, 0x33,
-	0x46, 0x3c, 0xd0, 0xb7, 0x90, 0x41, 0x9e, 0xd0, 0x5d, 0x80, 0x36, 0x01, 0xba, 0x1e, 0xb9, 0xfd,
-	0x58, 0xca, 0x78, 0x09, 0x21, 0x4b, 0x79, 0xc8, 0x84, 0x90, 0x9a, 0x69, 0x2e, 0x85, 0xaa, 0xd2,
-	0xee, 0xcf, 0xda, 0x35, 0x7f, 0xd3, 0xfc, 0x26, 0x84, 0x24, 0xd5, 0x45, 0x65, 0x06, 0x2b, 0xdc,
-	0xbd, 0xe0, 0x4a, 0x9f, 0xd4, 0xdb, 0x22, 0x50, 0xa9, 0x14, 0x0a, 0xc8, 0x6f, 0xfc, 0xa3, 0x3e,
-	0x61, 0x22, 0x58, 0x02, 0xca, 0x41, 0x7e, 0x6b, 0xd0, 0x89, 0xec, 0x5a, 0xbc, 0x2c, 0x35, 0x32,
-	0xc6, 0xbd, 0xba, 0x10, 0x17, 0xf1, 0x24, 0xcd, 0xa7, 0x4b, 0x3e, 0x9b, 0x2c, 0xa0, 0x50, 0x8e,
-	0xe5, 0xb7, 0x06, 0x76, 0xd4, 0xdd, 0xbb, 0x57, 0xc6, 0x3c, 0x87, 0x42, 0x05, 0xff, 0xf1, 0xf7,
-	0x6b, 0x1e, 0x8b, 0x08, 0x56, 0x39, 0x28, 0x4d, 0x7e, 0x61, 0xbc, 0x4f, 0x3a, 0xc8, 0x47, 0x03,
-	0x3b, 0xea, 0xa4, 0xcd, 0x38, 0x21, 0xb8, 0x3d, 0x67, 0x9a, 0x39, 0x96, 0x31, 0xcc, 0x77, 0x30,
-	0xc4, 0x76, 0xb5, 0xa1, 0x2e, 0xdb, 0xc7, 0x1d, 0xc5, 0x63, 0xc1, 0x74, 0x9e, 0x41, 0xb3, 0x61,
-	0x27, 0x8c, 0x1e, 0x2c, 0x6c, 0x47, 0x90, 0x48, 0x0d, 0x65, 0x08, 0x32, 0xb2, 0x41, 0xd8, 0x3e,
-	0xbc, 0x34, 0xe9, 0xd1, 0x0a, 0x11, 0x6d, 0x10, 0xd1, 0xb3, 0x12, 0x91, 0x3b, 0xa6, 0x1f, 0x83,
-	0xa7, 0xc7, 0xd0, 0x05, 0x7f, 0x36, 0xcf, 0xaf, 0xf7, 0x96, 0x47, 0xfa, 0xef, 0x1e, 0x35, 0x33,
-	0x0d, 0x76, 0x12, 0xb9, 0x43, 0xb8, 0x5d, 0xf6, 0x21, 0x7f, 0x3f, 0x3b, 0xe4, 0x00, 0x96, 0x3b,
-	0xfc, 0xda, 0x70, 0xdd, 0xc4, 0x37, 0x4d, 0xdc, 0xc0, 0x39, 0xd6, 0xa4, 0x04, 0x74, 0x6a, 0x3f,
-	0x6e, 0x3d, 0xf4, 0xb4, 0xf5, 0xd0, 0xcb, 0xd6, 0x43, 0xd3, 0x6f, 0xe6, 0xfe, 0xff, 0xde, 0x02,
-	0x00, 0x00, 0xff, 0xff, 0x77, 0x34, 0x72, 0x09, 0x9e, 0x02, 0x00, 0x00,
+	// 669 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xcd, 0x4e, 0xdb, 0x4a,
+	0x14, 0x8e, 0x93, 0x10, 0xc8, 0x60, 0x2e, 0xd1, 0x08, 0x21, 0x2b, 0x37, 0x37, 0x44, 0xbe, 0xe8,
+	0x2a, 0x57, 0x45, 0xb6, 0x08, 0xac, 0x50, 0x37, 0x09, 0x76, 0x15, 0x04, 0x4a, 0x91, 0x23, 0xda,
+	0xa5, 0x35, 0x49, 0x0e, 0x8e, 0x8b, 0x33, 0x63, 0x3c, 0xe3, 0x88, 0x48, 0x5d, 0xd1, 0x47, 0xe8,
+	0xaa, 0x4f, 0xd2, 0x57, 0xe8, 0xb2, 0x52, 0xa5, 0xae, 0x2b, 0xd4, 0x07, 0xa9, 0x3c, 0x76, 0x42,
+	0x90, 0xa0, 0x3f, 0xbb, 0x99, 0xef, 0x3b, 0xdf, 0x39, 0xdf, 0x9c, 0xe3, 0x63, 0xb4, 0x17, 0x46,
+	0x4c, 0x30, 0x73, 0x4a, 0x02, 0x7f, 0x44, 0x04, 0x8b, 0x4c, 0x32, 0x1c, 0xb2, 0x98, 0x0a, 0x6e,
+	0x4e, 0x5b, 0xe6, 0x15, 0xcc, 0x26, 0x84, 0x12, 0x0f, 0x22, 0x43, 0x86, 0xe1, 0x3a, 0x88, 0x31,
+	0x44, 0x10, 0x4f, 0x8c, 0x85, 0xc0, 0x98, 0x0b, 0x8c, 0x69, 0xab, 0xba, 0x03, 0x62, 0x6c, 0x4e,
+	0xf7, 0x49, 0x10, 0x8e, 0xc9, 0xbe, 0x39, 0x00, 0x32, 0x64, 0xd4, 0x1d, 0x04, 0x6c, 0x78, 0x95,
+	0x26, 0xa8, 0xd6, 0x1f, 0x04, 0x10, 0x21, 0x80, 0x0b, 0x22, 0x7c, 0x46, 0x33, 0xbe, 0xe6, 0x31,
+	0xe6, 0x05, 0x60, 0x92, 0xd0, 0x37, 0x09, 0xa5, 0x2c, 0x25, 0x79, 0xc6, 0xfe, 0x9d, 0xb1, 0xf2,
+	0x36, 0x88, 0x2f, 0x4d, 0x98, 0x84, 0x62, 0x96, 0x92, 0xfa, 0x35, 0xda, 0x3a, 0xf3, 0xb9, 0x68,
+	0x67, 0x76, 0x1c, 0xe0, 0x21, 0xa3, 0x1c, 0xf0, 0xbf, 0x68, 0x23, 0xb3, 0xe8, 0x52, 0x32, 0x01,
+	0xae, 0x29, 0x8d, 0x42, 0xb3, 0xec, 0xa8, 0x19, 0xd8, 0x4b, 0x30, 0x7c, 0x88, 0xb6, 0xb3, 0x17,
+	0xf9, 0xd4, 0x73, 0xc3, 0x78, 0x10, 0xf8, 0x43, 0xf7, 0x0a, 0x66, 0x5c, 0xcb, 0x37, 0x0a, 0x4d,
+	0xd5, 0xd9, 0xba, 0x67, 0xcf, 0x25, 0x79, 0x0a, 0x33, 0xae, 0x7f, 0x2d, 0xa0, 0xf5, 0xbe, 0xef,
+	0x51, 0x07, 0xae, 0x63, 0xe0, 0x02, 0xff, 0x83, 0xd0, 0xbd, 0x54, 0x53, 0x1a, 0x4a, 0x53, 0x75,
+	0xca, 0xe1, 0x3c, 0x1e, 0x63, 0x54, 0x1c, 0x11, 0x41, 0xb4, 0xbc, 0x24, 0xe4, 0x19, 0xff, 0x8f,
+	0x2a, 0xdc, 0xf7, 0x28, 0x11, 0x71, 0x04, 0xee, 0x88, 0x4d, 0x88, 0x4f, 0xb5, 0x82, 0xe4, 0x37,
+	0x17, 0xb8, 0x25, 0x61, 0x7c, 0x84, 0x56, 0x64, 0x2b, 0xb5, 0x62, 0x43, 0x69, 0xae, 0xb7, 0x74,
+	0x63, 0x31, 0x0c, 0x10, 0x63, 0x63, 0xde, 0x54, 0xa3, 0x23, 0xbb, 0xde, 0x49, 0x22, 0xbb, 0x39,
+	0x27, 0x95, 0xe0, 0x3e, 0xaa, 0x2c, 0x35, 0xdb, 0x95, 0x36, 0x56, 0x64, 0x9a, 0xff, 0x9e, 0x48,
+	0xd3, 0xbe, 0x0f, 0xb7, 0x88, 0x20, 0xdd, 0x9c, 0xb3, 0x49, 0x1e, 0x42, 0xf8, 0x2d, 0xda, 0x21,
+	0x9e, 0x17, 0x81, 0x47, 0x04, 0xb8, 0xcb, 0xe9, 0x09, 0x1d, 0xb9, 0x61, 0xc4, 0xd8, 0xa5, 0x56,
+	0x92, 0x35, 0x0e, 0x9e, 0xaa, 0x31, 0x57, 0x2f, 0x15, 0x6b, 0xd3, 0xd1, 0x79, 0x22, 0xed, 0xe6,
+	0x9c, 0x1a, 0xf9, 0x09, 0x8f, 0x8f, 0x50, 0x11, 0x6e, 0x7c, 0xa1, 0xad, 0xca, 0x12, 0xbb, 0x4f,
+	0x94, 0x78, 0xc5, 0x82, 0x98, 0x0a, 0x12, 0xcd, 0xec, 0x1b, 0x5f, 0x74, 0x73, 0x8e, 0xd4, 0xe0,
+	0x2d, 0x54, 0xe4, 0x01, 0x13, 0xda, 0x5a, 0x43, 0x69, 0x16, 0x13, 0x34, 0xb9, 0x75, 0xd6, 0x50,
+	0x89, 0x0d, 0xde, 0xc0, 0x50, 0xe8, 0x1f, 0x15, 0xa4, 0xa6, 0x83, 0xcd, 0x3e, 0xa2, 0x1a, 0x2a,
+	0x2f, 0xc6, 0x31, 0x1f, 0xec, 0x02, 0xc0, 0xa7, 0xa8, 0x94, 0xb8, 0x8b, 0xb9, 0x1c, 0xed, 0x5f,
+	0xcb, 0xef, 0x7d, 0x74, 0x4f, 0x8c, 0xe5, 0xdc, 0x46, 0x5f, 0x4a, 0x9d, 0x2c, 0x85, 0xfe, 0x1c,
+	0x95, 0x52, 0x04, 0xaf, 0xa3, 0xd5, 0x8b, 0xde, 0x69, 0xef, 0xe5, 0xeb, 0x5e, 0x25, 0x87, 0x37,
+	0x50, 0xb9, 0x7f, 0x71, 0x7c, 0x6c, 0xdb, 0x96, 0x6d, 0x55, 0x14, 0x8c, 0x50, 0xc9, 0xb2, 0x7b,
+	0x27, 0xb6, 0x55, 0xc9, 0x27, 0xe7, 0x17, 0xed, 0x93, 0x33, 0xdb, 0xaa, 0x14, 0x5a, 0x1f, 0xf2,
+	0x48, 0x75, 0x60, 0xc2, 0x04, 0x24, 0x35, 0x20, 0xc2, 0xb7, 0x0a, 0x52, 0x97, 0xf7, 0x02, 0x6f,
+	0x1b, 0xe9, 0x16, 0x19, 0xf3, 0x2d, 0x32, 0xec, 0x64, 0x8b, 0xaa, 0x87, 0xbf, 0x32, 0xfd, 0xd8,
+	0x76, 0xe9, 0xbb, 0xb7, 0x5f, 0xbe, 0xbf, 0xcf, 0xd7, 0x71, 0xed, 0xc1, 0x8f, 0x23, 0x92, 0x0e,
+	0x16, 0x10, 0x7e, 0xa7, 0xa0, 0x62, 0xe2, 0x07, 0x3f, 0xfb, 0xbd, 0xce, 0xc8, 0x75, 0xaa, 0xee,
+	0xfd, 0x49, 0x1b, 0xf5, 0x86, 0x74, 0x52, 0xd5, 0xb5, 0xc7, 0x9c, 0x24, 0xb3, 0xea, 0xa8, 0x9f,
+	0xee, 0xea, 0xca, 0xe7, 0xbb, 0xba, 0xf2, 0xed, 0xae, 0xae, 0x0c, 0x4a, 0xf2, 0xfd, 0x07, 0x3f,
+	0x02, 0x00, 0x00, 0xff, 0xff, 0x1f, 0x6f, 0xff, 0x74, 0x02, 0x05, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -408,6 +563,22 @@ func (m *SignRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
+	if m.Object != nil {
+		{
+			size := m.Object.Size()
+			i -= size
+			if _, err := m.Object.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	if len(m.SignatureDomain) > 0 {
+		i -= len(m.SignatureDomain)
+		copy(dAtA[i:], m.SignatureDomain)
+		i = encodeVarintKeymanager(dAtA, i, uint64(len(m.SignatureDomain)))
+		i--
+		dAtA[i] = 0x1a
+	}
 	if len(m.Data) > 0 {
 		i -= len(m.Data)
 		copy(dAtA[i:], m.Data)
@@ -425,6 +596,102 @@ func (m *SignRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *SignRequest_Block) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SignRequest_Block) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Block != nil {
+		{
+			size, err := m.Block.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintKeymanager(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	return len(dAtA) - i, nil
+}
+func (m *SignRequest_AttestationData) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SignRequest_AttestationData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.AttestationData != nil {
+		{
+			size, err := m.AttestationData.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintKeymanager(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *SignRequest_AggregateAttestationAndProof) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SignRequest_AggregateAttestationAndProof) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.AggregateAttestationAndProof != nil {
+		{
+			size, err := m.AggregateAttestationAndProof.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintKeymanager(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	return len(dAtA) - i, nil
+}
+func (m *SignRequest_Exit) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SignRequest_Exit) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Exit != nil {
+		{
+			size, err := m.Exit.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintKeymanager(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *SignRequest_Slot) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SignRequest_Slot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	i = encodeVarintKeymanager(dAtA, i, uint64(m.Slot))
+	i--
+	dAtA[i] = 0x40
+	return len(dAtA) - i, nil
+}
 func (m *SignResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -448,6 +715,11 @@ func (m *SignResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.XXX_unrecognized != nil {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Status != 0 {
+		i = encodeVarintKeymanager(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x10
 	}
 	if len(m.Signature) > 0 {
 		i -= len(m.Signature)
@@ -508,12 +780,76 @@ func (m *SignRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovKeymanager(uint64(l))
 	}
+	l = len(m.SignatureDomain)
+	if l > 0 {
+		n += 1 + l + sovKeymanager(uint64(l))
+	}
+	if m.Object != nil {
+		n += m.Object.Size()
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
 
+func (m *SignRequest_Block) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Block != nil {
+		l = m.Block.Size()
+		n += 1 + l + sovKeymanager(uint64(l))
+	}
+	return n
+}
+func (m *SignRequest_AttestationData) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.AttestationData != nil {
+		l = m.AttestationData.Size()
+		n += 1 + l + sovKeymanager(uint64(l))
+	}
+	return n
+}
+func (m *SignRequest_AggregateAttestationAndProof) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.AggregateAttestationAndProof != nil {
+		l = m.AggregateAttestationAndProof.Size()
+		n += 1 + l + sovKeymanager(uint64(l))
+	}
+	return n
+}
+func (m *SignRequest_Exit) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Exit != nil {
+		l = m.Exit.Size()
+		n += 1 + l + sovKeymanager(uint64(l))
+	}
+	return n
+}
+func (m *SignRequest_Slot) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	n += 1 + sovKeymanager(uint64(m.Slot))
+	return n
+}
 func (m *SignResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -523,6 +859,9 @@ func (m *SignResponse) Size() (n int) {
 	l = len(m.Signature)
 	if l > 0 {
 		n += 1 + l + sovKeymanager(uint64(l))
+	}
+	if m.Status != 0 {
+		n += 1 + sovKeymanager(uint64(m.Status))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -751,6 +1090,200 @@ func (m *SignRequest) Unmarshal(dAtA []byte) error {
 				m.Data = []byte{}
 			}
 			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SignatureDomain", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKeymanager
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SignatureDomain = append(m.SignatureDomain[:0], dAtA[iNdEx:postIndex]...)
+			if m.SignatureDomain == nil {
+				m.SignatureDomain = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Block", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKeymanager
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &v1alpha1.BeaconBlock{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Object = &SignRequest_Block{v}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AttestationData", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKeymanager
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &v1alpha1.AttestationData{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Object = &SignRequest_AttestationData{v}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AggregateAttestationAndProof", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKeymanager
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &v1alpha1.AggregateAttestationAndProof{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Object = &SignRequest_AggregateAttestationAndProof{v}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Exit", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKeymanager
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthKeymanager
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &v1alpha1.VoluntaryExit{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Object = &SignRequest_Exit{v}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Slot", wireType)
+			}
+			var v uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKeymanager
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Object = &SignRequest_Slot{v}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipKeymanager(dAtA[iNdEx:])
@@ -839,6 +1372,25 @@ func (m *SignResponse) Unmarshal(dAtA []byte) error {
 				m.Signature = []byte{}
 			}
 			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			m.Status = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowKeymanager
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Status |= SignResponse_Status(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipKeymanager(dAtA[iNdEx:])
