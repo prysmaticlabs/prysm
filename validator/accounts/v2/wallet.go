@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/sirupsen/logrus"
 )
 
@@ -174,13 +175,13 @@ func (w *Wallet) AccountNames() ([]string, error) {
 func (w *Wallet) ExistingKeyManager(
 	ctx context.Context,
 ) (v2keymanager.IKeymanager, error) {
+	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keymanager config")
+	}
 	var keymanager v2keymanager.IKeymanager
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
-		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read keymanager config")
-		}
 		cfg, err := direct.UnmarshalConfigFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
@@ -192,7 +193,14 @@ func (w *Wallet) ExistingKeyManager(
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:
-		return nil, errors.New("remote keymanager is unimplemented, work in progress")
+		cfg, err := remote.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
+		}
+		keymanager, err = remote.NewKeymanager(ctx, w, cfg)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize keymanager")
+		}
 	default:
 		return nil, errors.New("keymanager kind must be specified")
 	}
@@ -215,7 +223,10 @@ func (w *Wallet) CreateKeymanager(ctx context.Context) (v2keymanager.IKeymanager
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:
-		return nil, errors.New("remote keymanager is unimplemented, work in progress")
+		keymanager, err = remote.NewKeymanager(ctx, w, &remote.Config{})
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read keymanager")
+		}
 	default:
 		return nil, errors.New("keymanager type must be specified")
 	}

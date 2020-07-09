@@ -1,4 +1,4 @@
-package direct
+package remote
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -42,14 +43,10 @@ type Certificate struct {
 
 // Keymanager implementation using remote signing keys via gRPC.
 type Keymanager struct {
-	wallet Wallet
-	cfg    *Config
-	client validatorpb.RemoteSignerClient
-}
-
-// DefaultConfig for a direct keymanager implementation.
-func DefaultConfig() *Config {
-	return &Config{}
+	wallet           Wallet
+	cfg              *Config
+	client           validatorpb.RemoteSignerClient
+	accountsByPubkey map[[48]byte]string
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
@@ -98,11 +95,16 @@ func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager
 		return nil, errors.New("failed to connect to remote wallet")
 	}
 	client := validatorpb.NewRemoteSignerClient(conn)
-	return &Keymanager{
-		wallet: wallet,
-		cfg:    cfg,
-		client: client,
-	}, nil
+	k := &Keymanager{
+		wallet:           wallet,
+		cfg:              cfg,
+		client:           client,
+		accountsByPubkey: make(map[[48]byte]string),
+	}
+	if err := k.RefreshValidatingPublicKeys(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not initialize validating public keys")
+	}
+	return k, nil
 }
 
 // UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
@@ -126,25 +128,45 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 
 // CreateAccount based on the keymanager's logic. Returns the account name.
 func (k *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
-	return "", errors.New("unimplemented")
+	return "", errors.New("a remote validator account cannot be created from the client")
 }
 
 // MarshalConfigFile for the keymanager's options.
 func (k *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return nil, errors.New("unimplemented")
+	return json.MarshalIndent(k.cfg, "", "\t")
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
 func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return nil, errors.New("unimplemented")
+	resp := make([][48]byte, 0, len(k.accountsByPubkey))
+	for pubKey := range k.accountsByPubkey {
+		resp = append(resp, pubKey)
+	}
+	return resp, nil
 }
 
-// Sign signs a message using a validator key.
-func (k *Keymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
-	return nil, errors.New("unimplemented")
+// Sign signs a message for a validator key via a gRPC request.
+func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	resp, err := k.client.Sign(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return bls.SignatureFromBytes(resp.Signature)
 }
 
 // RefreshValidatingPublicKeys --
-func (k *Keymanager) RefreshValidatingPublicKeys(ctx context.Context) {
+func (k *Keymanager) RefreshValidatingPublicKeys(ctx context.Context) error {
 	resp, err := k.client.ListAccounts(ctx, &ptypes.Empty{})
+	if err != nil {
+		return err
+	}
+	if len(resp.AccountNames) != len(resp.ValidatingPublicKeys) {
+		return errors.New("err")
+	}
+	accountsByPubkey := make(map[[48]byte]string, len(resp.AccountNames))
+	for i, account := range resp.AccountNames {
+		accountsByPubkey[bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])] = account
+	}
+	k.accountsByPubkey = accountsByPubkey
+	return nil
 }
