@@ -45,7 +45,7 @@ const (
 // Useful for keymanager to have persistent capabilities for accounts on-disk.
 type Wallet interface {
 	AccountsDir() string
-	PasswordsDir() string
+	CanUnlockAccounts() bool
 	AccountNames() ([]string, error)
 	ReadPasswordForAccount(accountName string) (string, error)
 	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
@@ -91,7 +91,11 @@ func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager
 		mnemonicGenerator: &EnglishMnemonicGenerator{},
 		keysCache:         make(map[[48]byte]bls.SecretKey),
 	}
-	if wallet.PasswordsDir() != "" {
+	// If the wallet has the capability of unlocking accounts using
+	// passphrases, then we initialize a cache of public key -> secret keys
+	// used to retrieve secrets keys for the accounts via password unlock.
+	// This cache is needed to process Sign requests using a public key.
+	if wallet.CanUnlockAccounts() {
 		if err := k.initializeSecretKeysCache(); err != nil {
 			return nil, errors.Wrap(err, "could not initialize keys cache")
 		}
