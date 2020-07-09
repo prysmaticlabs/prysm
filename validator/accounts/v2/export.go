@@ -17,6 +17,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const allAccountsText = "All accounts"
+
 func ExportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
@@ -24,7 +26,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
 
-	outputDir, err := inputZipDir(cliCtx)
+	outputDir, err := inputExportDir(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
@@ -55,7 +57,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	return nil
 }
 
-func inputZipDir(cliCtx *cli.Context) (string, error) {
+func inputExportDir(cliCtx *cli.Context) (string, error) {
 	outputDir := cliCtx.String(flags.OutputPathFlag.Name)
 	if outputDir == flags.DefaultValidatorDir() {
 		outputDir = path.Join(outputDir, WalletDefaultDirName[1:])
@@ -72,13 +74,13 @@ func inputZipDir(cliCtx *cli.Context) (string, error) {
 	return outputPath, nil
 }
 
-func selectAccounts(allAccounts []string) ([]string, error) {
-	if len(allAccounts) == 1 {
-		return allAccounts, nil
+func selectAccounts(accounts []string) ([]string, error) {
+	if len(accounts) == 1 {
+		return accounts, nil
 	}
 	prompt := promptui.SelectWithAdd{
 		Label: "Select accounts to backup",
-		Items: append(allAccounts, "All accounts"),
+		Items: append(accounts, allAccountsText),
 	}
 
 	_, result, err := prompt.Run()
@@ -86,8 +88,11 @@ func selectAccounts(allAccounts []string) ([]string, error) {
 		return nil, err
 	}
 
-	fmt.Printf("You choose %q\n", result)
-	return []string{result}, nil
+	if result == allAccountsText {
+		return accounts, nil
+	} else {
+		return []string{result}, nil
+	}
 }
 
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {

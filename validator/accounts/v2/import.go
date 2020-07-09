@@ -6,8 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/manifoldco/promptui"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 
@@ -23,7 +27,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not parse wallet directory: %v", err)
 	}
 
-	outputDir, err := inputZipDir(cliCtx)
+	outputDir, err := inputImportDir(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not parse output directory: %v", err)
 	}
@@ -79,6 +83,23 @@ func ImportAccount(cliCtx *cli.Context) error {
 		}
 	}
 	return nil
+}
+
+func inputImportDir(cliCtx *cli.Context) (string, error) {
+	outputDir := cliCtx.String(flags.OutputPathFlag.Name)
+	if outputDir == flags.DefaultValidatorDir() {
+		outputDir = path.Join(outputDir, WalletDefaultDirName[1:])
+	}
+	prompt := promptui.Prompt{
+		Label:    "Enter the file location of the exported wallet to import",
+		Validate: validateDirectoryPath,
+		Default:  outputDir,
+	}
+	outputPath, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not determine import directory: %v", formatPromptError(err))
+	}
+	return outputPath, nil
 }
 
 func unzipArchiveToTarget(archive string, target string) error {
