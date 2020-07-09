@@ -21,12 +21,11 @@ func ListAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	passwordsDir := inputPasswordsDirectory(cliCtx)
 	// Read the wallet from the specified path.
 	ctx := context.Background()
 	wallet, err := OpenWallet(ctx, &WalletConfig{
-		PasswordsDir: passwordsDir,
-		WalletDir:    walletDir,
+		WalletDir:         walletDir,
+		CanUnlockAccounts: false,
 	})
 	if err == ErrNoWalletFound {
 		log.Fatal("No wallet nor accounts found, create a new account with `validator accounts-v2 new`")
@@ -74,8 +73,6 @@ func listDirectKeymanagerAccounts(
 	)
 	dirPath := au.BrightCyan("(wallet dir)")
 	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
-	dirPath = au.BrightCyan("(passwords dir)")
-	fmt.Printf("%s %s\n", dirPath, wallet.passwordsDir)
 	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(context.Background())
@@ -117,9 +114,6 @@ func listDirectKeymanagerAccounts(
 
 ===================================================================`, enc)
 		fmt.Println("")
-		fmt.Println(
-			au.BrightRed("Enter the above deposit data into step 3 on https://prylabs.net/participate").Bold(),
-		)
 	}
 	fmt.Println("")
 	return nil

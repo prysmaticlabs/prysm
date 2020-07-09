@@ -52,8 +52,9 @@ func NewAccount(cliCtx *cli.Context) error {
 	var isNewWallet bool
 	// Read the wallet from the specified path.
 	wallet, err = OpenWallet(ctx, &WalletConfig{
-		PasswordsDir: passwordsDirPath,
-		WalletDir:    walletDir,
+		PasswordsDir:      passwordsDirPath,
+		WalletDir:         walletDir,
+		CanUnlockAccounts: true,
 	})
 	if err == ErrNoWalletFound {
 		// Determine the desired keymanager kind for the wallet from user input.
@@ -63,9 +64,10 @@ func NewAccount(cliCtx *cli.Context) error {
 		}
 
 		walletConfig := &WalletConfig{
-			PasswordsDir:   passwordsDirPath,
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanagerKind,
+			PasswordsDir:      passwordsDirPath,
+			WalletDir:         walletDir,
+			KeymanagerKind:    keymanagerKind,
+			CanUnlockAccounts: true,
 		}
 		wallet, err = CreateWallet(ctx, walletConfig)
 		if err != nil {

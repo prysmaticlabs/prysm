@@ -2,6 +2,7 @@ package direct
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -43,6 +45,7 @@ const (
 // Useful for keymanager to have persistent capabilities for accounts on-disk.
 type Wallet interface {
 	AccountsDir() string
+	CanUnlockAccounts() bool
 	AccountNames() ([]string, error)
 	ReadPasswordForAccount(accountName string) (string, error)
 	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
@@ -64,6 +67,15 @@ type Keymanager struct {
 	lock              sync.RWMutex
 }
 
+// Direct keystore json file representation as a Go struct.
+type directKeystore struct {
+	Crypto  map[string]interface{} `json:"crypto"`
+	ID      string                 `json:"uuid"`
+	Pubkey  string                 `json:"pubkey"`
+	Version uint                   `json:"version"`
+	Name    string                 `json:"name"`
+}
+
 // DefaultConfig for a direct keymanager implementation.
 func DefaultConfig() *Config {
 	return &Config{
@@ -73,12 +85,22 @@ func DefaultConfig() *Config {
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager, error) {
-	return &Keymanager{
+	k := &Keymanager{
 		wallet:            wallet,
 		cfg:               cfg,
 		mnemonicGenerator: &EnglishMnemonicGenerator{},
 		keysCache:         make(map[[48]byte]bls.SecretKey),
-	}, nil
+	}
+	// If the wallet has the capability of unlocking accounts using
+	// passphrases, then we initialize a cache of public key -> secret keys
+	// used to retrieve secrets keys for the accounts via password unlock.
+	// This cache is needed to process Sign requests using a public key.
+	if wallet.CanUnlockAccounts() {
+		if err := k.initializeSecretKeysCache(); err != nil {
+			return nil, errors.Wrap(err, "could not initialize keys cache")
+		}
+	}
+	return k, nil
 }
 
 // UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
@@ -113,15 +135,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	}
 	// Generates a new EIP-2335 compliant keystore file
 	// from a BLS private key and marshals it as JSON.
-	encryptor := keystorev4.New()
 	validatingKey := bls.RandKey()
-	keystoreFile, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+	encoded, err := dr.generateKeystoreFile(validatingKey, password)
 	if err != nil {
-		return "", errors.Wrap(err, "could not encrypt validating key into keystore")
-	}
-	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
-	if err != nil {
-		return "", errors.Wrap(err, "could not json marshal keystore file")
+		return "", err
 	}
 
 	// Generate a withdrawal key and confirm user
@@ -206,14 +223,19 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 
 	for i, name := range accountNames {
-		validatorSigningKey, err := dr.GetSigningKeyForAccount(ctx, name)
+		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get validator signing key for %s", name)
+			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		publicKeys[i] = bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())
-		// Update a simple cache of public key -> secret key utilized
-		// for fast signing access in the direct keymanager.
-		dr.keysCache[publicKeys[i]] = validatorSigningKey
+		keystoreFile := &directKeystore{}
+		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
+			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
+		}
+		pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode pubkey bytes: %#x", keystoreFile.Pubkey)
+		}
+		publicKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
 	}
 	return publicKeys, nil
 }
@@ -259,6 +281,64 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("no signing key found in keys cache")
 	}
 	return secretKey.Sign(req.Data), nil
+}
+
+func (dr *Keymanager) initializeSecretKeysCache() error {
+	accountNames, err := dr.wallet.AccountNames()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range accountNames {
+		password, err := dr.wallet.ReadPasswordForAccount(name)
+		if err != nil {
+			return errors.Wrapf(err, "could not read password for account %s", name)
+		}
+		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not read keystore file for account %s", name)
+		}
+		keystoreFile := &directKeystore{}
+		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
+			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
+		}
+		// We extract the validator signing private key from the keystore
+		// by utilizing the password and initialize a new BLS secret key from
+		// its raw bytes.
+		decryptor := keystorev4.New()
+		rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+		if err != nil {
+			return errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
+		}
+		validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
+		if err != nil {
+			return errors.Wrapf(err, "could not instantiate bls secret key from bytes for account: %s", name)
+		}
+
+		// Update a simple cache of public key -> secret key utilized
+		// for fast signing access in the direct keymanager.
+		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
+	}
+	return nil
+}
+
+func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password string) ([]byte, error) {
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
+	}
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	keystoreFile := &directKeystore{}
+	keystoreFile.Crypto = cryptoFields
+	keystoreFile.ID = id.String()
+	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
+	keystoreFile.Version = encryptor.Version()
+	keystoreFile.Name = encryptor.Name()
+	return json.MarshalIndent(keystoreFile, "", "\t")
 }
 
 func generateDepositTransaction(

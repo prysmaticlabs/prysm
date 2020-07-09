@@ -202,6 +202,30 @@ func TestRoundtripProto_OK(t *testing.T) {
 	}
 }
 
+func TestCopy_OK(t *testing.T) {
+	items := [][]byte{
+		{1},
+		{2},
+		{3},
+		{4},
+	}
+	source, err := GenerateTrieFromItems(items, 33)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+
+	copy := source.Copy()
+
+	if copy == source {
+		t.Errorf("Original trie returned.")
+	}
+	sourceHash := source.HashTreeRoot()
+	copyHash := copy.HashTreeRoot()
+	if sourceHash != copyHash {
+		t.Errorf("Trie not copied correctly. Got root hash %x vs expected %x", copyHash, sourceHash)
+	}
+}
+
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	items := [][]byte{
 		[]byte("A"),
