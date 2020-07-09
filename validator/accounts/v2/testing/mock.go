@@ -12,6 +12,7 @@ import (
 type Wallet struct {
 	Files            map[string]map[string][]byte
 	AccountPasswords map[string]string
+	UnlockAccounts   bool
 	lock             sync.RWMutex
 }
 
@@ -29,6 +30,11 @@ func (m *Wallet) AccountNames() ([]string, error) {
 // AccountsDir --
 func (m *Wallet) AccountsDir() string {
 	return ""
+}
+
+// CanUnlockAccounts --
+func (m *Wallet) CanUnlockAccounts() bool {
+	return m.UnlockAccounts
 }
 
 // WriteAccountToDisk --
