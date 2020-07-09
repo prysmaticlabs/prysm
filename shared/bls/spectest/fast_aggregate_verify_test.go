@@ -2,6 +2,7 @@ package spectest
 
 import (
 	"encoding/hex"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"path"
 	"testing"
 
@@ -13,6 +14,18 @@ import (
 )
 
 func TestFastAggregateVerifyYaml(t *testing.T) {
+	flags := &featureconfig.Flags{}
+	reset := featureconfig.InitWithReset(flags)
+	t.Run("herumi", testFastAggregateVerifyYaml)
+	reset()
+
+	flags.EnableBlst = true
+	reset = featureconfig.InitWithReset(flags)
+	t.Run("blst", testFastAggregateVerifyYaml)
+	reset()
+}
+
+func testFastAggregateVerifyYaml(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/fast_aggregate_verify/small")
 
 	for i, folder := range testFolders {
