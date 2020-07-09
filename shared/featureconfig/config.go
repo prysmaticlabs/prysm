@@ -57,6 +57,8 @@ type Flags struct {
 	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
 	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
 	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
+	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
+
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -230,6 +232,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(initSyncVerbose.Name) {
 		log.Warn("Logging every processed block during initial syncing.")
 		cfg.InitSyncVerbose = true
+	}
+	if ctx.Bool(enableFinalizedDepositsCache.Name) {
+		log.Warn("Enabling finalized deposits cache")
+		cfg.EnableFinalizedDepositsCache = true
 	}
 	Init(cfg)
 }
