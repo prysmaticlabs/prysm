@@ -39,7 +39,7 @@ func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64) []*ethp
 
 	// Allocate pending slice with a capacity of min(len(p.pending), maxVoluntaryExits) since the
 	// array cannot exceed the max and is typically less than the max value.
-	pending := make([]*ethpb.SignedVoluntaryExit, 0, mathutil.Max(uint64(len(p.pending)), params.BeaconConfig().MaxVoluntaryExits))
+	pending := make([]*ethpb.SignedVoluntaryExit, 0, mathutil.Min(uint64(len(p.pending)), params.BeaconConfig().MaxVoluntaryExits))
 	for _, e := range p.pending {
 		if e.Exit.Epoch > helpers.SlotToEpoch(slot) {
 			continue
