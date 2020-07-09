@@ -96,8 +96,8 @@ func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 }
 
 func TestService_Attestation_Subnet(t *testing.T) {
-	if gtm := GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]; gtm != attestationSubnetTopicFormat {
-		t.Errorf("Constant is out of date. Wanted %s, got %s", attestationSubnetTopicFormat, gtm)
+	if gtm := GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]; gtm != AttestationSubnetTopicFormat {
+		t.Errorf("Constant is out of date. Wanted %s, got %s", AttestationSubnetTopicFormat, gtm)
 	}
 
 	tests := []struct {

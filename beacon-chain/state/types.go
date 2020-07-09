@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	fieldMap = make(map[fieldIndex]dataType)
+	fieldMap = make(map[fieldIndex]dataType, fieldCount)
 
 	// Initialize the fixed sized arrays.
 	fieldMap[blockRoots] = basicArray

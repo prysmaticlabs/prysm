@@ -351,14 +351,12 @@ func unslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 		}
 		attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 		// Create a set for attesting indices
-		set := make([]uint64, 0, len(attestingIndices))
 		for _, index := range attestingIndices {
 			if !seen[index] {
-				set = append(set, index)
+				setIndices = append(setIndices, index)
 			}
 			seen[index] = true
 		}
-		setIndices = append(setIndices, set...)
 	}
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })

@@ -24,7 +24,10 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -77,7 +80,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 	cfg.StateNotifier = &mock.MockStateNotifier{}
-	s, err := NewService(cfg)
+	s, err = NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

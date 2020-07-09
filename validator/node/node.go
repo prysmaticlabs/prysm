@@ -95,8 +95,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		// Read the wallet from the specified path.
 		wallet, err := accountsv2.OpenWallet(context.Background(), &accountsv2.WalletConfig{
-			PasswordsDir: passwordsDir,
-			WalletDir:    walletDir,
+			PasswordsDir:      passwordsDir,
+			WalletDir:         walletDir,
+			CanUnlockAccounts: true,
 		})
 		if err == accountsv2.ErrNoWalletFound {
 			log.Fatal("No wallet found at path, please create a new wallet using `validator accounts-v2 new`")
