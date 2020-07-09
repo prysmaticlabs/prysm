@@ -344,7 +344,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 
 	if currentState != nil && currentState.Eth1DepositIndex() > 0 {
-		s.depositCache.PrunePendingDeposits(ctx, int(currentState.Eth1DepositIndex()))
+		s.depositCache.PrunePendingDeposits(ctx, int64(currentState.Eth1DepositIndex()))
 	}
 
 	return nil
