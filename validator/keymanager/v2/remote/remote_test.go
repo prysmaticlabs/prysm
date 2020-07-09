@@ -1,13 +1,22 @@
 package remote
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -199,4 +208,130 @@ func TestNewRemoteKeymanager(t *testing.T) {
 }
 
 func TestRemoteKeymanager_Sign(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := mock.NewMockRemoteSignerClient(ctrl)
+	k := &Keymanager{
+		client: m,
+	}
+
+	// Expect error handling to work.
+	m.EXPECT().Sign(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(nil, errors.New("could not sign"))
+	_, err := k.Sign(context.Background(), nil)
+	if err == nil {
+		t.Fatal("Expected error, received nil")
+	}
+	if !strings.Contains(err.Error(), "could not sign") {
+		t.Errorf("Unexpected error %v", err)
+	}
+
+	// Expected proper error handling for signing response statuses.
+	m.EXPECT().Sign(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.SignResponse{
+		Status: validatorpb.SignResponse_FAILED,
+	}, nil /*err*/)
+	_, err = k.Sign(context.Background(), nil)
+	if err == nil {
+		t.Fatal(err)
+	}
+	if err != ErrSigningFailed {
+		t.Errorf("Expected %v, received %v", ErrSigningFailed, err)
+	}
+	m.EXPECT().Sign(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.SignResponse{
+		Status: validatorpb.SignResponse_DENIED,
+	}, nil /*err*/)
+	_, err = k.Sign(context.Background(), nil)
+	if err == nil {
+		t.Fatal(err)
+	}
+	if err != ErrSigningDenied {
+		t.Errorf("Expected %v, received %v", ErrSigningDenied, err)
+	}
+
+	// Expected signing success.
+	randKey := bls.RandKey()
+	data := []byte("hello-world")
+	sig := randKey.Sign(data)
+	m.EXPECT().Sign(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.SignResponse{
+		Status:    validatorpb.SignResponse_SUCCEEDED,
+		Signature: sig.Marshal(),
+	}, nil /*err*/)
+	resp, err := k.Sign(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(sig.Marshal(), resp.Marshal()) {
+		t.Errorf("Expected %#x, received %#x", sig.Marshal(), resp.Marshal())
+	}
+}
+
+func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := mock.NewMockRemoteSignerClient(ctrl)
+	k := &Keymanager{
+		client: m,
+	}
+
+	// Expect error handling to work.
+	m.EXPECT().ListValidatingPublicKeys(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(nil, errors.New("could not fetch keys"))
+	_, err := k.FetchValidatingPublicKeys(context.Background())
+	if err == nil {
+		t.Fatal("Expected error, received nil")
+	}
+	if !strings.Contains(err.Error(), "could not fetch keys") {
+		t.Errorf("Unexpected error %v", err)
+	}
+
+	// Expect an empty response to return empty keys.
+	m.EXPECT().ListValidatingPublicKeys(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.ListPublicKeysResponse{
+		ValidatingPublicKeys: make([][]byte, 0),
+	}, nil /*err*/)
+	keys, err := k.FetchValidatingPublicKeys(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 0 {
+		t.Errorf("Expected empty response, received %v", keys)
+	}
+
+	numKeys := 10
+	pubKeys := make([][]byte, numKeys)
+	for i := 0; i < numKeys; i++ {
+		key := make([]byte, 48)
+		copy(key, strconv.Itoa(i))
+		pubKeys[i] = key
+	}
+	m.EXPECT().ListValidatingPublicKeys(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.ListPublicKeysResponse{
+		ValidatingPublicKeys: pubKeys,
+	}, nil /*err*/)
+	keys, err = k.FetchValidatingPublicKeys(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rawKeys := make([][]byte, len(keys))
+	for i := 0; i < len(rawKeys); i++ {
+		rawKeys[i] = keys[i][:]
+	}
+	if !reflect.DeepEqual(pubKeys, rawKeys) {
+		t.Errorf("Wanted %v, received %v", pubKeys, rawKeys)
+	}
 }

@@ -26,7 +26,10 @@ go_test(
     srcs = ["remote_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//proto/validator/accounts/v2:go_default_library",
+        "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_golang_mock//gomock:go_default_library",
     ],
 )

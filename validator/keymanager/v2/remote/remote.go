@@ -18,7 +18,15 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-var log = logrus.WithField("prefix", "remote-keymanager-v2")
+var (
+	log = logrus.WithField("prefix", "remote-keymanager-v2")
+	// ErrSigningFailed defines a failure from the remote server
+	// when performing a signing operation.
+	ErrSigningFailed = errors.New("signing failed in the remote server")
+	// ErrSigningDenied defines a failure from the remote server when
+	// performing a signing operation was denied by a remote server.
+	ErrSigningDenied = errors.New("signing request was denied by remote server")
+)
 
 // Config for a remote keymanager.
 type Config struct {
@@ -143,9 +151,9 @@ func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bl
 	}
 	switch resp.Status {
 	case validatorpb.SignResponse_DENIED:
-		return nil, errors.Wrap(err, "signing request denied by remote server")
+		return nil, ErrSigningDenied
 	case validatorpb.SignResponse_FAILED:
-		return nil, errors.Wrap(err, "signing request failed")
+		return nil, ErrSigningFailed
 	}
 	return bls.SignatureFromBytes(resp.Signature)
 }
