@@ -133,6 +133,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
 			return nil, errors.Wrap(err, "could not migrate to cold")
 		}
+
+		// Update deposit cache.
+		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.

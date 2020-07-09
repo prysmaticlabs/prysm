@@ -48,27 +48,27 @@ func (s *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Mess
 // Register PubSub subscribers
 func (s *Service) registerSubscribers() {
 	s.subscribe(
-		"/eth2/%x/beacon_block",
+		p2p.BlockSubnetTopicFormat,
 		s.validateBeaconBlockPubSub,
 		s.beaconBlockSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/beacon_aggregate_and_proof",
+		p2p.AggregateAndProofSubnetTopicFormat,
 		s.validateAggregateAndProof,
 		s.beaconAggregateProofSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/voluntary_exit",
+		p2p.ExitSubnetTopicFormat,
 		s.validateVoluntaryExit,
 		s.voluntaryExitSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/proposer_slashing",
+		p2p.ProposerSlashingSubnetTopicFormat,
 		s.validateProposerSlashing,
 		s.proposerSlashingSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/attester_slashing",
+		p2p.AttesterSlashingSubnetTopicFormat,
 		s.validateAttesterSlashing,
 		s.attesterSlashingSubscriber,
 	)

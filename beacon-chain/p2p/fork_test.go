@@ -32,7 +32,10 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -85,7 +88,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err := NewService(cfg)
+	s, err = NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +128,10 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -182,7 +188,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err := NewService(cfg)
+	s, err = NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
