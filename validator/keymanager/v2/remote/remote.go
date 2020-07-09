@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -125,19 +124,12 @@ func (k *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
 func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	resp, err := k.client.ListAccounts(ctx, &ptypes.Empty{})
+	resp, err := k.client.ListValidatingPublicKeys(ctx, &ptypes.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not list accounts from remote server")
 	}
-	if len(resp.AccountNames) != len(resp.ValidatingPublicKeys) {
-		return nil, fmt.Errorf(
-			"mismatched number of accounts %d and validating public keys %d",
-			len(resp.AccountNames),
-			len(resp.ValidatingPublicKeys),
-		)
-	}
 	pubKeys := make([][48]byte, len(resp.ValidatingPublicKeys))
-	for i := range resp.AccountNames {
+	for i := range resp.ValidatingPublicKeys {
 		pubKeys[i] = bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])
 	}
 	return pubKeys, nil

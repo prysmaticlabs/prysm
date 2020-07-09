@@ -12,8 +12,8 @@ import "google/protobuf/empty.proto";
 // Defines a remote-signing keymanager which manages eth2
 // validator accounts and can sign respective messages.
 service RemoteSigner {
-    // ListAccounts managed by a remote signer.
-    rpc ListAccounts(google.protobuf.Empty) returns (ListAccountsResponse) {
+    // ListPublicKeysResponse managed by a remote signer.
+    rpc ListValidatingPublicKeys(google.protobuf.Empty) returns (ListPublicKeysResponse) {
         option (google.api.http) = {
             get: "/accounts/v2/remote/accounts"
         };
@@ -27,17 +27,10 @@ service RemoteSigner {
     }
 }
 
-// ListAccountsResponse contains metadata and public keys
+// ListPublicKeysResponse contains public keys
 // for the validator secrets managed by the remote signer.
-message ListAccountsResponse {
-    // List of account names managed by the remote signer.
-    // These are meant to be human readable names such as
-    // personally-conscious-echidna which uniquely namespace
-    // a set of validator secrets.
-    repeated string account_names = 1;
-
-    // List of 48 byte, BLS12-381 validating public keys
-    // corresponding to account names returned in the response.
+message ListPublicKeysResponse {
+    // List of 48 byte, BLS12-381 validating public keys.
     repeated bytes validating_public_keys = 2;
 }
 
