@@ -1,4 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_repository", "maybe")  # gazelle:keep
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # Prysm's third party / external dependencies.
@@ -3538,4 +3539,12 @@ def prysm_deps():
         importpath = "github.com/dustinkirkland/golang-petname",
         sum = "h1:90Ly+6UfUypEF6vvvW5rQIv9opIL8CbmW9FT20LDQoY=",
         version = "v0.0.0-20191129215211-8e5a1ed0cff0",
+    )
+    http_archive(
+        name = "com_github_supranational_blst",
+        urls = [
+            "https://github.com/supranational/blst/archive/v0.1.1.tar.gz",
+        ],
+        strip_prefix = "blst-0.1.1",
+        build_file = "//third_party:blst/blst.BUILD",
     )
