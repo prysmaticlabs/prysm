@@ -238,6 +238,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling finalized deposits cache")
 		cfg.EnableFinalizedDepositsCache = true
 	}
+	if ctx.Bool(enableBlst.Name) {
+		log.Warn("Enabling new BLS library blst")
+		cfg.EnableBlst = true
+	}
 	Init(cfg)
 }
 
