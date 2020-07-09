@@ -141,7 +141,7 @@ func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, erro
 // If the head is nil from service struct,
 // it will attempt to get the head state from DB.
 func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "blockchain.HeadState")
+	ctx, span := trace.StartSpan(ctx, "blockChain.HeadState")
 	defer span.End()
 
 	ok := s.hasHeadState()
