@@ -240,6 +240,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	return publicKeys, nil
 }
 
+// GetSigningKeyForAccount uses the stored password to decrypt the stored keystore for the given account.
 func (dr *Keymanager) GetSigningKeyForAccount(ctx context.Context, accountName string) (bls.SecretKey, error) {
 	password, err := dr.wallet.ReadPasswordForAccount(accountName)
 	if err != nil {

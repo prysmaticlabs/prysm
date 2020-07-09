@@ -31,7 +31,7 @@ func (m *MockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]b
 	return m.PublicKeys, nil
 }
 
-// FetchValidatingPublicKeys --
+// GetSigningKeyForAccount --
 func (m *MockKeymanager) GetSigningKeyForAccount(ctx context.Context, accountName string) (bls.SecretKey, error) {
 	secretKey, err := bls.SecretKeyFromBytes(m.PublicKeys[0][:])
 	if err != nil {

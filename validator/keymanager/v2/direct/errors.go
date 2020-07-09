@@ -1,7 +1,7 @@
 package direct
 
 const (
-	// CouldNotReadPassword returns when the inputted password could not be read.
+	// ErrCouldNotReadPassword returns when the inputted password could not be read.
 	ErrCouldNotReadPassword = "could not read password"
 	// ErrCouldNotReadKeystore returns when the given keystore file cannot not be read.
 	ErrCouldNotReadKeystore = "could not read keystore file"
