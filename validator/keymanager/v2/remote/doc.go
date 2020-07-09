@@ -21,21 +21,11 @@ Remote sign requests are defined by the following protobuf schema:
      // being requested to sign data.
      bytes public_key = 1;
 
-     // Raw bytes data the client is requesting to sign.
+     // Raw bytes data the client is requesting to sign. The client is
+	 // expected to determine these raw bytes from the appropriate BLS
+     // signing domain as well as the signing root of the data structure
+	 // the bytes represent.
      bytes data = 2;
-
-     // Signature domain required for BLS signing.
-     bytes signature_domain = 3;
-
-     // The raw object being signed by the request.
-     oneof object {
-         ethereum.eth.v1alpha1.BeaconBlock block = 4;
-         ethereum.eth.v1alpha1.AttestationData attestation_data = 5;
-         ethereum.eth.v1alpha1.AggregateAttestationAndProof
-            aggregate_attestation_and_proof = 6;
-         ethereum.eth.v1alpha1.VoluntaryExit exit = 7;
-         uint64 slot = 8;
-     }
  }
 
 Remote signing responses will contain a BLS12-381 signature along with the
