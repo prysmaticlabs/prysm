@@ -170,7 +170,7 @@ func storeNewRandomKey(ks keyStore, password string) error {
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
-	if err := os.MkdirAll(filepath.Dir(file), params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return err
 	}
 	// Atomic write: create a temporary hidden file first
