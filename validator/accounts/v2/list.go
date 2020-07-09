@@ -24,7 +24,8 @@ func ListAccounts(cliCtx *cli.Context) error {
 	// Read the wallet from the specified path.
 	ctx := context.Background()
 	wallet, err := OpenWallet(ctx, &WalletConfig{
-		WalletDir: walletDir,
+		WalletDir:         walletDir,
+		CanUnlockAccounts: false,
 	})
 	if err == ErrNoWalletFound {
 		log.Fatal("No wallet nor accounts found, create a new account with `validator accounts-v2 new`")
