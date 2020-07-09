@@ -117,9 +117,6 @@ func listDirectKeymanagerAccounts(
 
 ===================================================================`, enc)
 		fmt.Println("")
-		fmt.Println(
-			au.BrightRed("Enter the above deposit data into step 3 on https://prylabs.net/participate").Bold(),
-		)
 	}
 	fmt.Println("")
 	return nil
