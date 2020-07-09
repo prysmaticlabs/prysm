@@ -3,12 +3,12 @@ package blst
 import (
 	"fmt"
 
-	blst "github.com/supranational/blst/bindings/go"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	blst "github.com/supranational/blst/bindings/go"
 )
 
 // bls12SecretKey used in the BLS signature scheme.

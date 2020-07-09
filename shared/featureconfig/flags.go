@@ -156,6 +156,10 @@ var (
 		Name:  "init-sync-verbose",
 		Usage: "Enable logging every processed block during initial syncing. ",
 	}
+	enableBlst = &cli.BoolFlag{
+		Name:  "blst",
+		Usage: "Enable new BLS library, blst, from Supranational",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -567,6 +571,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	altonaTestnet,
 	enableAccountsV2,
+	enableBlst,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -611,6 +616,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	altonaTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
+	enableBlst,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
