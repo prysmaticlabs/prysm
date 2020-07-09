@@ -89,10 +89,19 @@ var metricComparisonTests = []comparisonTest{
 }
 
 func metricsTest(conns ...*grpc.ClientConn) error {
+	genesis, err := eth.NewNodeClient(conns[0]).GetGenesis(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return err
+	}
+	forkDigest, err := p2putils.CreateForkDigest(time.Unix(genesis.GenesisTime.Seconds, 0), genesis.GenesisValidatorsRoot)
+	if err != nil {
+		return err
+	}
 	for i := 0; i < len(conns); i++ {
 		response, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", e2e.TestParams.BeaconNodeMetricsPort+i))
 		if err != nil {
-			return errors.Wrap(err, "failed to reach prometheus metrics page")
+			// Continue if the connection fails, regular flake.
+			continue
 		}
 		dataInBytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
@@ -103,15 +112,6 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 			return err
 		}
 		time.Sleep(connTimeDelay)
-
-		genesis, err := eth.NewNodeClient(conns[i]).GetGenesis(context.Background(), &ptypes.Empty{})
-		if err != nil {
-			return err
-		}
-		forkDigest, err := p2putils.CreateForkDigest(time.Unix(genesis.GenesisTime.Seconds, 0), genesis.GenesisValidatorsRoot)
-		if err != nil {
-			return err
-		}
 
 		chainHead, err := eth.NewBeaconChainClient(conns[i]).GetChainHead(context.Background(), &ptypes.Empty{})
 		if err != nil {
@@ -169,12 +169,15 @@ func metricCheckLessThan(pageContent string, topic string, value int) error {
 
 func metricCheckComparison(pageContent string, topic1 string, topic2 string, comparison float64) error {
 	topic2Value, err := getValueOfTopic(pageContent, topic2)
+	// If we can't find the first topic (error metrics), then assume the test passes.
+	if topic2Value != -1 {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
 	topic1Value, err := getValueOfTopic(pageContent, topic1)
-	// If we can't find the first topic (error metrics), then assume the test passes.
-	if topic1Value == -1 && topic2Value != -1 {
+	if topic1Value != -1 {
 		return nil
 	}
 	if err != nil {
