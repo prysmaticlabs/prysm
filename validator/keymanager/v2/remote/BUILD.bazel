@@ -8,7 +8,10 @@ go_library(
         "remote.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote",
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//validator:__pkg__",
+        "//validator:__subpackages__",
+    ],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
