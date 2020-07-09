@@ -61,7 +61,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
-	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return nil, err
 	}
 	datafile := filepath.Join(dirPath, databaseFileName)
