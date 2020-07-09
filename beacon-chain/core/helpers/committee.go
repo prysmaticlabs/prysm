@@ -174,7 +174,7 @@ func CommitteeAssignments(
 	// Some validators may need to propose multiple times per epoch, so
 	// we use a map of proposer idx -> []slot to keep track of this possibility.
 	startSlot := StartSlot(epoch)
-	proposerIndexToSlots := make(map[uint64][]uint64)
+	proposerIndexToSlots := make(map[uint64][]uint64, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
@@ -197,7 +197,7 @@ func CommitteeAssignments(
 	// Each slot in an epoch has a different set of committees. This value is derived from the
 	// active validator set, which does not change.
 	numCommitteesPerSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
-	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer)
+	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer, numCommitteesPerSlot*params.BeaconConfig().SlotsPerEpoch)
 
 	// Compute all committees for all slots.
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {

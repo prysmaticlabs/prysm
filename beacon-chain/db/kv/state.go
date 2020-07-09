@@ -167,7 +167,7 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
 
-	rootMap := make(map[[32]byte]bool)
+	rootMap := make(map[[32]byte]bool, len(blockRoots))
 	for _, blockRoot := range blockRoots {
 		rootMap[blockRoot] = true
 	}

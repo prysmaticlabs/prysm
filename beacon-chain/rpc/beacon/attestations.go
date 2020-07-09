@@ -38,7 +38,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 }
 
 func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
-	attsMap := make(map[[32]byte][]*ethpb.Attestation)
+	attsMap := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 	if len(atts) == 0 {
 		return attsMap
 	}

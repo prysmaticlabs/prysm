@@ -62,7 +62,7 @@ func (s *ServiceRegistry) StopAll() {
 // Statuses returns a map of Service type -> error. The map will be populated
 // with the results of each service.Status() method call.
 func (s *ServiceRegistry) Statuses() map[reflect.Type]error {
-	m := make(map[reflect.Type]error)
+	m := make(map[reflect.Type]error, len(s.serviceTypes))
 	for _, kind := range s.serviceTypes {
 		m[kind] = s.services[kind].Status()
 	}
