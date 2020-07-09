@@ -46,7 +46,7 @@ func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
 
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
-	return p.p.Serialize()
+	return p.p.Compress()
 }
 
 // Copy the public key to a new pointer reference.
