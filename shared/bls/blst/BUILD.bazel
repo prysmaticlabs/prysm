@@ -8,6 +8,7 @@ go_library(
     srcs = [
         "aliases.go",
         "docs.go",
+        "init.go",
         "public_key.go",
         "secret_key.go",
         "signature.go",
@@ -18,7 +19,6 @@ go_library(
     ],
     deps = [
         "//shared/bls/iface:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
