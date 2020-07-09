@@ -16,6 +16,7 @@ go_library(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

@@ -28,7 +28,7 @@ func (ds *Server) GetProtoArrayForkChoice(ctx context.Context, _ *ptypes.Empty) 
 		}
 	}
 
-	indices := make(map[string]uint64)
+	indices := make(map[string]uint64, len(store.NodeIndices))
 	for k, v := range store.NodeIndices {
 		indices[hex.EncodeToString(k[:])] = v
 	}
