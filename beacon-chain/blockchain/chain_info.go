@@ -58,6 +58,7 @@ type ForkFetcher interface {
 // CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
+	VerifyBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
