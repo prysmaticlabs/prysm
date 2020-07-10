@@ -812,7 +812,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		err         string
 	}{
 		{
-			name: "could not get finalized block",
+			name: "could not get finalized block in block service cache",
 			args: args{
 				finalizedRoot: [32]byte{'a'},
 			},
@@ -820,7 +820,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 			err:         "nil finalized block",
 		},
 		{
-			name: "could not get finalized block root",
+			name: "could not get finalized block root in DB",
 			args: args{
 				finalizedRoot: r,
 				parentRoot:    [32]byte{'a'},
