@@ -27,11 +27,6 @@ const (
 	directoryPermissions     = os.ModePerm
 )
 
-var (
-	// ErrNoWalletFound signifies there is no data at the given wallet path.
-	ErrNoWalletFound = errors.New("no wallet found at path")
-)
-
 // WalletConfig for a wallet struct, containing important information
 // such as the passwords directory, the wallet's directory, and keymanager.
 type WalletConfig struct {
@@ -84,42 +79,11 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	ok, err := hasDir(cfg.WalletDir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not check if wallet exists at %s", cfg.WalletDir)
-	}
-	if !ok {
-		return nil, ErrNoWalletFound
-	}
 	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
-	walletDir, err := os.Open(cfg.WalletDir)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := walletDir.Close(); err != nil {
-			log.WithField(
-				"path", walletPath,
-			).Errorf("Could not close wallet directory: %v", err)
-		}
-	}()
-	// Retrieve the type of keymanager the wallet uses by looking at
-	// directories in its directory path.
-	list, err := walletDir.Readdirnames(0) // 0 to read all files and folders.
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read files in directory: %s", walletPath)
-	}
-	if len(list) != 1 {
-		return nil, fmt.Errorf("expected a single directory in the wallet path: %s", walletPath)
-	}
-	keymanagerKind, err := v2keymanager.ParseKind(list[0])
-	if err != nil {
-		return nil, errors.Wrap(err, "could not parse keymanager kind from wallet path")
-	}
 	return &Wallet{
 		accountsPath:      walletPath,
 		passwordsDir:      cfg.PasswordsDir,
-		keymanagerKind:    keymanagerKind,
+		keymanagerKind:    cfg.KeymanagerKind,
 		canUnlockAccounts: cfg.CanUnlockAccounts,
 	}, nil
 }
@@ -411,6 +375,28 @@ func (w *Wallet) generateAccountName() (string, error) {
 		}
 	}
 	return accountName, nil
+}
+
+func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, error) {
+	walletItem, err := os.Open(walletPath)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err := walletItem.Close(); err != nil {
+			log.WithField(
+				"path", walletPath,
+			).Errorf("Could not close wallet directory: %v", err)
+		}
+	}()
+	list, err := walletItem.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		return 0, fmt.Errorf("could not read files in directory: %s", walletPath)
+	}
+	if len(list) != 1 {
+		return 0, fmt.Errorf("wanted 1 directory in wallet dir, received %d", len(list))
+	}
+	return v2keymanager.ParseKind(list[0])
 }
 
 // Returns true if a file is not a directory and exists
