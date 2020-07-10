@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
