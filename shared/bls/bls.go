@@ -67,3 +67,18 @@ func RandKey() iface.SecretKey {
 	}
 	return herumi.RandKey()
 }
+
+func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
+	if featureconfig.Get().EnableBlst {
+		return blst.VerifyCompressed(signature, pub, msg)
+	}
+	sig, err := SignatureFromBytes(signature)
+	if err != nil {
+		return false
+	}
+	pk, err := PublicKeyFromBytes(pub)
+	if err != nil {
+		return false
+	}
+	return sig.Verify(pk, msg)
+}
