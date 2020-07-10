@@ -189,7 +189,7 @@ func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys [
 		scalar.FromBEndian(rbytes[:])
 	}
 	dummySig := new(blst.P2Affine)
-	return dummySig.MultipleAggregateVerify(mulP2Aff, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
+	return dummySig.MultipleAggregateVerify(mulP2Aff, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy, false /* useHash*/), nil
 }
 
 // Marshal a signature into a LittleEndian byte slice.
