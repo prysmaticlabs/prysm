@@ -198,8 +198,8 @@ func (v *validator) signObject(
 			return nil, err
 		}
 		return v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
-			PublicKey: pubKey[:],
-			Data:      root[:],
+			PublicKey:   pubKey[:],
+			SigningRoot: root[:],
 		})
 	}
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
