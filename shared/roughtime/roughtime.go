@@ -3,6 +3,7 @@ package roughtime
 
 import (
 	"context"
+	"math"
 	"time"
 
 	rt "github.com/cloudflare/roughtime"
@@ -24,6 +25,7 @@ var log = logrus.WithField("prefix", "roughtime")
 
 var offsetHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name: "roughtime_offset_nsec",
+	Help:  "The absolute value delta between roughtime computed clock time and the system clock time.",
 	Buckets: []float64{
 		float64(50 * time.Millisecond),
 		float64(100 * time.Millisecond),
@@ -50,7 +52,7 @@ func recalibrateRoughtime() {
 	if err != nil {
 		log.WithError(err).Error("Failed to calculate roughtime offset")
 	}
-	offsetHistogram.Observe(float64(offset))
+	offsetHistogram.Observe(math.Abs(float64(offset)))
 	if offset > 2*time.Second {
 		log.WithField("offset", offset).Warn("Roughtime reports your clock is off by more than 2 seconds")
 	}
