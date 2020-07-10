@@ -221,10 +221,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		Messages:   [][32]byte{},
 	}
 	set := new(bls.SignatureSet)
+	boundaries := make(map[[32]byte]*stateTrie.BeaconState)
 	for i, b := range blks {
 		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, nil, err
+		}
+		// Save potential boundary states.
+		if helpers.IsEpochStart(preState.Slot()) {
+			boundaries[blockRoots[i]] = preState.Copy()
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
@@ -236,6 +241,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	}
 	if !verify {
 		return nil, nil, nil, errors.New("batch block signature verification failed")
+	}
+	for r, st := range boundaries {
+		if err := s.stateGen.SaveState(ctx, r, st); err != nil {
+			return nil, nil, nil, err
+		}
 	}
 	return preState, fCheckpoints, jCheckpoints, nil
 }
