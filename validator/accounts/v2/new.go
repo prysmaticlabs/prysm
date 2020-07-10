@@ -3,17 +3,18 @@ package v2
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -41,58 +42,57 @@ func NewAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Could not parse wallet directory: %v", err)
 	}
-	ok, err := hasDir(walletDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if !ok {
-		log.Fatal("not ok")
-	}
-	walletItem, err := os.Open(walletDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		if err := walletItem.Close(); err != nil {
-			log.WithField(
-				"path", walletDir,
-			).Errorf("Could not close wallet directory: %v", err)
-		}
-	}()
-	list, err := walletItem.Readdirnames(0) // 0 to read all files and folders.
-	if err != nil {
-		log.Fatalf("Could not read files in directory: %s", walletDir)
-	}
-	if len(list) != 1 {
-		log.Fatal("neq")
-	}
-	keymanagerKind, err := v2keymanager.ParseKind(list[0])
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Read the directory for password storage from user input.
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-
-	ctx := context.Background()
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
+	walletExists, err := hasDir(walletDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ctx := context.Background()
 	var wallet *Wallet
-	var isNewWallet bool
-	// Read the wallet from the specified path.
-	wallet, err = OpenWallet(ctx, &WalletConfig{
-		PasswordsDir:      passwordsDirPath,
-		WalletDir:         walletDir,
-		CanUnlockAccounts: true,
-	})
-	if err == ErrNoWalletFound {
+	if walletExists {
+		keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if keymanagerKind == v2keymanager.Remote {
+			log.Fatal("Cannot create an account for a remote keymanager")
+		}
+		// Read the directory for password storage from user input.
+		passwordsDirPath := inputPasswordsDirectory(cliCtx)
+		wallet, err = OpenWallet(ctx, &WalletConfig{
+			PasswordsDir:      passwordsDirPath,
+			WalletDir:         walletDir,
+			CanUnlockAccounts: true,
+			KeymanagerKind:    keymanagerKind,
+		})
+	} else {
 		// Determine the desired keymanager kind for the wallet from user input.
 		keymanagerKind, err := inputKeymanagerKind(cliCtx)
 		if err != nil {
 			log.Fatalf("Could not select keymanager kind: %v", err)
 		}
-
+		if keymanagerKind == v2keymanager.Remote {
+			conf, err := inputRemoteKeymanagerConfig(cliCtx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			keymanager, err := remote.NewKeymanager(ctx, 1, conf)
+			if err != nil {
+				log.Fatal(err)
+			}
+			keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+				log.Fatal("Could not write keymanager config file to disk")
+			}
+			return nil
+		}
+		// Read the directory for password storage from user input.
+		passwordsDirPath := inputPasswordsDirectory(cliCtx)
 		walletConfig := &WalletConfig{
 			PasswordsDir:      passwordsDirPath,
 			WalletDir:         walletDir,
@@ -103,17 +103,14 @@ func NewAccount(cliCtx *cli.Context) error {
 		if err != nil {
 			log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
 		}
-		isNewWallet = true
-	} else if err != nil {
-		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 	}
 
 	// We initialize a new keymanager depending on the user's selected keymanager kind.
 	var keymanager v2keymanager.IKeymanager
-	if isNewWallet {
-		keymanager, err = wallet.CreateKeymanager(ctx)
-	} else {
+	if walletExists {
 		keymanager, err = wallet.ExistingKeyManager(ctx)
+	} else {
+		keymanager, err = wallet.CreateKeymanager(ctx)
 	}
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
@@ -213,6 +210,28 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
 	}
 	return passwordsPath
+}
+
+func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
+	prompt := promptui.Prompt{
+		Label: "Remote gRPC address (such as host.example.com:4000)",
+		Validate: func(input string) error {
+			// TODO: Validate if it is a valid address.
+			if input == "" {
+				return errors.New("cannot be empty")
+			}
+			return nil
+		},
+	}
+	remoteAddr, err := prompt.Run()
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Get path to ca certs, client certs, and key certs.
+	return &remote.Config{
+		RemoteCertificate: nil,
+		RemoteAddr:        remoteAddr,
+	}, nil
 }
 
 // Validate a strong password input for new accounts,
