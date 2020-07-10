@@ -47,7 +47,6 @@ type HeadFetcher interface {
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	ProtoArrayStore() *protoarray.Store
-	VerifyBlkDescendant(ctx context.Context, root [32]byte, slot uint64) error
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
