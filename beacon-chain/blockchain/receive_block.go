@@ -157,10 +157,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 	lastBlk := blocks[len(blocks)-1]
 	lastRoot := blkRoots[len(blkRoots)-1]
 
-	if err := s.stateGen.SaveState(ctx, lastRoot, postState); err != nil {
-		return errors.Wrap(err, "could not save state")
-	}
-
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
