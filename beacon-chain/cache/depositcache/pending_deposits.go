@@ -24,7 +24,7 @@ var (
 // PendingDepositsFetcher specifically outlines a struct that can retrieve deposits
 // which have not yet been included in the chain.
 type PendingDepositsFetcher interface {
-	PendingContainers(ctx context.Context, beforeBlk *big.Int) []*dbpb.DepositContainer
+	PendingContainers(ctx context.Context, untilBlk *big.Int) []*dbpb.DepositContainer
 }
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
@@ -50,11 +50,11 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 // PendingDeposits returns a list of deposits until the given block number
 // (inclusive). If no block is specified then this method returns all pending
 // deposits.
-func (dc *DepositCache) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
+func (dc *DepositCache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
 
-	depositCntrs := dc.PendingContainers(ctx, beforeBlk)
+	depositCntrs := dc.PendingContainers(ctx, untilBlk)
 
 	var deposits []*ethpb.Deposit
 	for _, dep := range depositCntrs {
@@ -66,7 +66,7 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, beforeBlk *big.Int)
 
 // PendingContainers returns a list of deposit containers until the given block number
 // (inclusive).
-func (dc *DepositCache) PendingContainers(ctx context.Context, beforeBlk *big.Int) []*dbpb.DepositContainer {
+func (dc *DepositCache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*dbpb.DepositContainer {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
@@ -74,7 +74,7 @@ func (dc *DepositCache) PendingContainers(ctx context.Context, beforeBlk *big.In
 
 	var depositCntrs []*dbpb.DepositContainer
 	for _, ctnr := range dc.pendingDeposits {
-		if beforeBlk == nil || beforeBlk.Uint64() >= ctnr.Eth1BlockHeight {
+		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
@@ -128,7 +128,7 @@ func (dc *DepositCache) RemovePendingDeposit(ctx context.Context, d *ethpb.Depos
 }
 
 // PrunePendingDeposits removes any deposit which is older than the given deposit merkle tree index.
-func (dc *DepositCache) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int) {
+func (dc *DepositCache) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PrunePendingDeposits")
 	defer span.End()
 
@@ -142,7 +142,7 @@ func (dc *DepositCache) PrunePendingDeposits(ctx context.Context, merkleTreeInde
 
 	var cleanDeposits []*dbpb.DepositContainer
 	for _, dp := range dc.pendingDeposits {
-		if dp.Index >= int64(merkleTreeIndex) {
+		if dp.Index >= merkleTreeIndex {
 			cleanDeposits = append(cleanDeposits, dp)
 		}
 	}

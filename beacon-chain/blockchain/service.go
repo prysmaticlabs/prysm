@@ -160,7 +160,11 @@ func (s *Service) Start() {
 		}
 
 		// We start a counter to genesis, if needed.
-		go slotutil.CountdownToGenesis(ctx, s.genesisTime, uint64(beaconState.NumValidators()))
+		gState, err := s.beaconDB.GenesisState(ctx)
+		if err != nil {
+			log.Fatalf("Could not retrieve genesis state: %v", err)
+		}
+		go slotutil.CountdownToGenesis(ctx, s.genesisTime, uint64(gState.NumValidators()))
 
 		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(ctx)
 		if err != nil {

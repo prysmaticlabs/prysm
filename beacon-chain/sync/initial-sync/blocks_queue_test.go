@@ -279,7 +279,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				if err := mc.ReceiveBlockNoPubsub(ctx, block, root); err != nil {
+				if err := mc.ReceiveBlock(ctx, block, root); err != nil {
 					return err
 				}
 

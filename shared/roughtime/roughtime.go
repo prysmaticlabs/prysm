@@ -3,9 +3,12 @@ package roughtime
 
 import (
 	"context"
+	"math"
 	"time"
 
 	rt "github.com/cloudflare/roughtime"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/sirupsen/logrus"
 )
@@ -19,6 +22,19 @@ const RecalibrationInterval = time.Hour
 var offset time.Duration
 
 var log = logrus.WithField("prefix", "roughtime")
+
+var offsetHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+	Name: "roughtime_offset_nsec",
+	Help: "The absolute value delta between roughtime computed clock time and the system clock time.",
+	Buckets: []float64{
+		float64(50 * time.Millisecond),
+		float64(100 * time.Millisecond),
+		float64(500 * time.Millisecond),
+		float64(1 * time.Second),
+		float64(2 * time.Second),
+		float64(10 * time.Second),
+	},
+})
 
 func init() {
 	recalibrateRoughtime()
@@ -35,6 +51,10 @@ func recalibrateRoughtime() {
 	offset, err = rt.AvgDeltaWithRadiusThresh(results, t0, 2*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Failed to calculate roughtime offset")
+	}
+	offsetHistogram.Observe(math.Abs(float64(offset)))
+	if offset > 2*time.Second {
+		log.WithField("offset", offset).Warn("Roughtime reports your clock is off by more than 2 seconds")
 	}
 }
 

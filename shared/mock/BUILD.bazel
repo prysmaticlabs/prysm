@@ -9,11 +9,13 @@ go_library(
         "beacon_service_mock.go",
         "beacon_validator_client_mock.go",
         "beacon_validator_server_mock.go",
+        "keymanager_mock.go",
         "node_service_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/mock",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/validator/accounts/v2:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",

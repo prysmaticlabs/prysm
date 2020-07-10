@@ -156,6 +156,10 @@ var (
 		Name:  "init-sync-verbose",
 		Usage: "Enable logging every processed block during initial syncing. ",
 	}
+	enableFinalizedDepositsCache = &cli.BoolFlag{
+		Name:  "enable-finalized-deposits-cache",
+		Usage: "Enables utilization of cached finalized deposits",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -611,6 +615,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	altonaTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
+	enableFinalizedDepositsCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -620,4 +625,5 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
+	"--enable-finalized-deposits-cache",
 }
