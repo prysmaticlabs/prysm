@@ -141,6 +141,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Incorrect proposer index")
 		return pubsub.ValidationReject
 	}
+	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot), parentState.Slot()); err != nil {
+		log.WithError(err).Warn("Rejecting block")
+		return pubsub.ValidationReject
+	}
 
 	msg.ValidatorData = blk // Used in downstream subscriber
 	return pubsub.ValidationAccept

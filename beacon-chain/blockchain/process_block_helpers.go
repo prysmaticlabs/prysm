@@ -54,7 +54,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 	}
 
 	// Verify block is a descendent of a finalized block.
-	if err := s.verifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot), b.Slot); err != nil {
+	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot), b.Slot); err != nil {
 		return nil, err
 	}
 
@@ -87,10 +87,10 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	return nil
 }
 
-// verifyBlkDescendant validates input block root is a descendant of the
+// VerifyBlkDescendant validates input block root is a descendant of the
 // current finalized block root.
-func (s *Service) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "forkChoice.verifyBlkDescendant")
+func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte, slot uint64) error {
+	ctx, span := trace.StartSpan(ctx, "forkChoice.VerifyBlkDescendant")
 	defer span.End()
 
 	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
