@@ -3,11 +3,11 @@ package roughtime
 
 import (
 	"context"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
 
 	rt "github.com/cloudflare/roughtime"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/sirupsen/logrus"
 )
