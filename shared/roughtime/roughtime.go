@@ -42,13 +42,12 @@ func init() {
 }
 
 func recalibrateRoughtime() {
-	t0 := time.Now()
 	results := rt.Do(rt.Ecosystem, rt.DefaultQueryAttempts, rt.DefaultQueryTimeout, nil)
 	// Compute the average difference between the system's time and the
 	// Roughtime responses from the servers, rejecting responses whose radii
 	// are larger than 2 seconds.
 	var err error
-	offset, err = rt.AvgDeltaWithRadiusThresh(results, t0, 2*time.Second)
+	offset, err = rt.AvgDeltaWithRadiusThresh(results, time.Now(), 2*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Failed to calculate roughtime offset")
 	}
