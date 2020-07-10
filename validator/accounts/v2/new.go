@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"unicode"
 
@@ -39,6 +40,35 @@ func NewAccount(cliCtx *cli.Context) error {
 	walletDir, err := inputWalletDir(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not parse wallet directory: %v", err)
+	}
+	ok, err := hasDir(walletDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !ok {
+		log.Fatal("not ok")
+	}
+	walletItem, err := os.Open(walletDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := walletItem.Close(); err != nil {
+			log.WithField(
+				"path", walletDir,
+			).Errorf("Could not close wallet directory: %v", err)
+		}
+	}()
+	list, err := walletItem.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		log.Fatalf("Could not read files in directory: %s", walletDir)
+	}
+	if len(list) != 1 {
+		log.Fatal("neq")
+	}
+	keymanagerKind, err := v2keymanager.ParseKind(list[0])
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Read the directory for password storage from user input.
