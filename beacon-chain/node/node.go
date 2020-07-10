@@ -418,6 +418,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		ForkChoiceStore:   b.forkChoiceStore,
 		OpsService:        opsService,
 		StateGen:          b.stateGen,
+		WsPath:            b.cliCtx.String(flags.WsStateFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")

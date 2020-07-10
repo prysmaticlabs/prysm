@@ -134,4 +134,10 @@ var (
 		Name:  "enable-debug-rpc-endpoints",
 		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state. Requires --new-state-mgmt",
 	}
+	// WsStateFlag defines a flag for weak subjectivity state.
+	WsStateFlag = &cli.StringFlag{
+		Name:  "start-state",
+		Usage: "Weak subjectivity state state to bootstrap the node",
+		Value: "",
+	}
 )

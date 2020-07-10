@@ -6,6 +6,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"runtime"
 	"sync"
 	"time"
@@ -77,6 +78,7 @@ type Service struct {
 	recentCanonicalBlocksLock sync.RWMutex
 	justifiedBalances         []uint64
 	justifiedBalancesLock     sync.RWMutex
+	wsPath                    string
 }
 
 // Config options for the service.
@@ -94,6 +96,7 @@ type Config struct {
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
+	WsPath            string
 }
 
 // NewService instantiates a new block service instance that will
@@ -121,6 +124,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		initSyncBlocks:        make(map[[32]byte]*ethpb.SignedBeaconBlock),
 		recentCanonicalBlocks: make(map[[32]byte]bool),
 		justifiedBalances:     make([]uint64, 0),
+		wsPath:                cfg.WsPath,
 	}, nil
 }
 
@@ -147,6 +151,23 @@ func (s *Service) Start() {
 		}
 	}
 
+	// Use weak subjectivity state.
+	if s.wsPath != "" {
+		fmt.Println("Using ws state")
+		data, err := ioutil.ReadFile(s.wsPath)
+		if err != nil {
+			log.Fatalf("Could not read pre-loaded state: %v", err)
+		}
+		wsState := &pb.BeaconState{}
+		if err := wsState.UnmarshalSSZ(data); err != nil {
+			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
+		}
+		beaconState, err = stateTrie.InitializeFromProto(wsState)
+		if err != nil {
+			log.Fatalf("Could not get state trie: %v", err)
+		}
+	}
+	fmt.Println(beaconState.Slot())
 	// Make sure that attestation processor is subscribed and ready for state initializing event.
 	attestationProcessorSubscribed := make(chan struct{}, 1)
 
