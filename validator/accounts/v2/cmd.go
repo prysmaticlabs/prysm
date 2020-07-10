@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -36,23 +35,21 @@ this command outputs a deposit data string which is required to become a validat
 		{
 			Name:        "export",
 			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
-			Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
-				[]cli.Flag{
-					flags.WalletDirFlag,
-					flags.WalletPasswordsDirFlag,
-					flags.OutputPathFlag,
-				}...),
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordsDirFlag,
+				flags.BackupPathFlag,
+			},
 			Action: ExportAccount,
 		},
 		{
 			Name:        "import",
 			Description: `imports the accounts from a given zip file to the provided wallet path. This zip can be created using the export command`,
-			Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
-				[]cli.Flag{
-					flags.WalletDirFlag,
-					flags.WalletPasswordsDirFlag,
-					flags.OutputPathFlag,
-				}...),
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordsDirFlag,
+				flags.BackupPathFlag,
+			},
 			Action: ImportAccount,
 		},
 	},

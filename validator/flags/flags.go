@@ -132,9 +132,9 @@ var (
 		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
 		Value: false,
 	}
-	// OutputPathFlag defines the path for the zip backup of the wallet will be created.
-	OutputPathFlag = &cli.StringFlag{
-		Name:  "output-path",
+	// BackupPathFlag defines the path for the zip backup of the wallet will be created.
+	BackupPathFlag = &cli.StringFlag{
+		Name:  "backup-path",
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
 	}

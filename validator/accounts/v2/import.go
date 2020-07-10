@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -26,12 +27,12 @@ func ImportAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not parse wallet directory: %v", err)
 	}
 
-	outputDir, err := inputImportDir(cliCtx)
+	backupDir, err := inputImportDir(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not parse output directory: %v", err)
 	}
 
-	if err := unzipArchiveToTarget(outputDir, walletDir); err != nil {
+	if err := unzipArchiveToTarget(backupDir, walletDir); err != nil {
 		log.WithError(err).Fatal("Could not unzip archive")
 	}
 
@@ -58,16 +59,22 @@ func ImportAccount(cliCtx *cli.Context) error {
 			return nil
 		}
 	}
+
+	accountsBackedUp := accounts[0]
+	if len(accounts) > 1 {
+		accountsBackedUp = strings.Join(accounts, ", ")
+	}
+	log.WithField("walletPath", walletDir).Infof("Successfully imported account(s) %s", accountsBackedUp)
 	return nil
 }
 
 func inputImportDir(cliCtx *cli.Context) (string, error) {
-	outputDir := cliCtx.String(flags.OutputPathFlag.Name)
+	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
 	if outputDir == flags.DefaultValidatorDir() {
-		outputDir = path.Join(outputDir, WalletDefaultDirName[1:])
+		outputDir = path.Join(outputDir)
 	}
 	prompt := promptui.Prompt{
-		Label:    "Enter the file location of the exported wallet to import",
+		Label:    "Enter the file location of the exported wallet zip to import",
 		Validate: validateDirectoryPath,
 		Default:  outputDir,
 	}
@@ -78,8 +85,9 @@ func inputImportDir(cliCtx *cli.Context) (string, error) {
 	return outputPath, nil
 }
 
-func unzipArchiveToTarget(archive string, target string) error {
-	reader, err := zip.OpenReader(archive)
+func unzipArchiveToTarget(archiveDir string, target string) error {
+	archiveFile := filepath.Join(archiveDir, archiveFilename)
+	reader, err := zip.OpenReader(archiveFile)
 	if err != nil {
 		return errors.Wrap(err, "could not open reader for archive")
 	}

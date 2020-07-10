@@ -18,6 +18,7 @@ import (
 )
 
 const allAccountsText = "All accounts"
+const archiveFilename = "backup.zip"
 
 // ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
@@ -53,15 +54,22 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 
 	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
-		return err
+		return errors.Wrap(err, "could not zip accounts")
 	}
+
+	accountsBackedUp := accounts[0]
+	if len(accounts) > 1 {
+		accountsBackedUp = strings.Join(accounts, ", ")
+	}
+	backupFile := filepath.Join(outputDir, archiveFilename)
+	log.WithField("exportPath", backupFile).Infof("Successfully exported account(s) %s", accountsBackedUp)
 	return nil
 }
 
 func inputExportDir(cliCtx *cli.Context) (string, error) {
-	outputDir := cliCtx.String(flags.OutputPathFlag.Name)
+	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
 	if outputDir == flags.DefaultValidatorDir() {
-		outputDir = path.Join(outputDir, WalletDefaultDirName[1:])
+		outputDir = path.Join(outputDir)
 	}
 	prompt := promptui.Prompt{
 		Label:    "Enter a file location to write the exported wallet to",
@@ -97,9 +105,10 @@ func selectAccounts(accounts []string) ([]string, error) {
 
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 	sourcePath := w.accountsPath
-	zipfile, err := os.Create(targetPath)
+	archivePath := filepath.Join(targetPath, archiveFilename)
+	zipfile, err := os.Create(archivePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not create zip file")
 	}
 	defer func() {
 		if err := zipfile.Close(); err != nil {
@@ -114,19 +123,11 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 		}
 	}()
 
-	info, err := os.Stat(sourcePath)
-	if err != nil {
-		return nil
-	}
-
-	var baseDir string
-	if info.IsDir() {
-		baseDir = filepath.Base(sourcePath)
-	}
+	baseDir := filepath.Base(sourcePath)
 
 	err = filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not walk")
 		}
 
 		var isAccount bool
@@ -145,13 +146,11 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 
 		header, err := zip.FileInfoHeader(info)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not get zip file info header")
 		}
-
 		if baseDir != "" {
 			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, sourcePath))
 		}
-
 		if info.IsDir() {
 			header.Name += "/"
 		} else {
@@ -160,7 +159,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 
 		writer, err := archive.CreateHeader(header)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not create header")
 		}
 
 		if info.IsDir() {
@@ -180,8 +179,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 		return err
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not walk files")
 	}
-
-	return err
+	return nil
 }
