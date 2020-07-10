@@ -218,14 +218,6 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
 func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain []byte) error {
-	publicKey, err := bls.PublicKeyFromBytes(pub)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
-	}
-	sig, err := bls.SignatureFromBytes(signature)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
-	}
 	root, err := ssz.SigningRoot(obj)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
@@ -238,7 +230,7 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	if err != nil {
 		return errors.Wrap(err, "could not get container root")
 	}
-	if !sig.Verify(publicKey, ctrRoot[:]) {
+	if !bls.VerifyCompressed(signature, pub, ctrRoot[:]) {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil

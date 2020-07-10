@@ -213,3 +213,8 @@ func (s *Signature) Marshal() []byte {
 func (s *Signature) Copy() iface.Signature {
 	return &Signature{s: &*s.s}
 }
+
+// TODO: Add tests...
+func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
+	return new(blstSignature).VerifyCompressed(signature, pub, msg, dst)
+}
