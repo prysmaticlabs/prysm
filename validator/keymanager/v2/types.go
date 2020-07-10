@@ -16,8 +16,6 @@ type IKeymanager interface {
 	MarshalConfigFile(ctx context.Context) ([]byte, error)
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
-	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
-	GetSigningKeyForAccount(ctx context.Context, accountName string) (bls.SecretKey, error)
 	// Sign signs a message using a validator key.
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }

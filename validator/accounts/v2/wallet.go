@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,13 +10,14 @@ import (
 	"path"
 	"strings"
 
-	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -363,20 +365,26 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		if err != nil {
 			return errors.Wrap(err, "could not input password")
 		}
-		if err := w.writePasswordToFile(accountName, password); err != nil {
-			return errors.Wrap(err, "could not write password to disk")
-		}
-		km, err := w.ExistingKeyManager(context.Background())
+		encoded, err := w.ReadFileForAccount(accountName, direct.KeystoreFileName)
 		if err != nil {
-			return errors.Wrap(err, "could not get existing keymanager")
+			return errors.Wrap(err, "could not read keystore file")
 		}
-		_, err = km.GetSigningKeyForAccount(context.Background(), accountName)
-		if err != nil && strings.Contains(err.Error(), direct.ErrCouldNotDecryptSigningKey) {
+		keystoreJSON := &direct.DirectKeystore{}
+		if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+			return errors.Wrap(err, "could not decode json")
+		}
+		decryptor := keystorev4.New()
+		_, err = decryptor.Decrypt(keystoreJSON.Crypto, []byte(password))
+		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 			fmt.Println("Incorrect password entered, please try again")
 			continue
 		}
 		if err != nil {
-			return errors.Wrapf(err, "could not get signing key for account %s", accountName)
+			return errors.Wrap(err, "could not decrypt keystore")
+		}
+
+		if err := w.writePasswordToFile(accountName, password); err != nil {
+			return errors.Wrap(err, "could not write password to disk")
 		}
 		attemptingPassword = false
 	}

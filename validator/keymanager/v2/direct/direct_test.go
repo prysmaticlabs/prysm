@@ -60,9 +60,9 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
-	encodedKeystore, ok := wallet.Files[accountName][keystoreFileName]
+	encodedKeystore, ok := wallet.Files[accountName][KeystoreFileName]
 	if !ok {
-		t.Fatalf("Expected to have stored %s in wallet", keystoreFileName)
+		t.Fatalf("Expected to have stored %s in wallet", KeystoreFileName)
 	}
 	keystoreFile := &directKeystore{}
 	if err := json.Unmarshal(encodedKeystore, keystoreFile); err != nil {
@@ -275,7 +275,7 @@ func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte 
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
+		if err := dr.wallet.WriteFileForAccount(ctx, accountName, KeystoreFileName, encoded); err != nil {
 			t.Fatal(err)
 		}
 	}
