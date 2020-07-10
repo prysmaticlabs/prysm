@@ -253,6 +253,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		if err != nil {
 			return nil, nil, nil, err
 		}
+		// Save potential boundary states.
 		if helpers.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 		}
@@ -268,7 +269,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		return nil, nil, nil, errors.New("batch block signature verification failed")
 	}
 	for r, st := range boundaries {
-		if err := s.stateGen.PutEpochBoundaryState(r, st); err != nil {
+		if err := s.stateGen.SaveState(ctx, r, st); err != nil {
 			return nil, nil, nil, err
 		}
 	}

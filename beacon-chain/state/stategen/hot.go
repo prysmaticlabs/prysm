@@ -32,10 +32,6 @@ func (s *State) SaveStateSummary(ctx context.Context, blk *ethpb.SignedBeaconBlo
 	})
 }
 
-func (s *State) PutEpochBoundaryState(root [32]byte, st *state.BeaconState) error {
-	return s.epochBoundaryStateCache.put(root, st)
-}
-
 // This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
