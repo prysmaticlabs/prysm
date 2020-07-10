@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	metadata "google.golang.org/grpc/metadata"
 )
 
@@ -65,7 +65,7 @@ func (mr *MockBeaconChain_StreamChainHeadServerMockRecorder) RecvMsg(arg0 interf
 }
 
 // Send mocks base method
-func (m *MockBeaconChain_StreamChainHeadServer) Send(arg0 *v1alpha1.ChainHead) error {
+func (m *MockBeaconChain_StreamChainHeadServer) Send(arg0 *eth.ChainHead) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -184,7 +184,7 @@ func (mr *MockBeaconChain_StreamAttestationsServerMockRecorder) RecvMsg(arg0 int
 }
 
 // Send mocks base method
-func (m *MockBeaconChain_StreamAttestationsServer) Send(arg0 *v1alpha1.Attestation) error {
+func (m *MockBeaconChain_StreamAttestationsServer) Send(arg0 *eth.Attestation) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -303,7 +303,7 @@ func (mr *MockBeaconChain_StreamBlocksServerMockRecorder) RecvMsg(arg0 interface
 }
 
 // Send mocks base method
-func (m *MockBeaconChain_StreamBlocksServer) Send(arg0 *v1alpha1.SignedBeaconBlock) error {
+func (m *MockBeaconChain_StreamBlocksServer) Send(arg0 *eth.SignedBeaconBlock) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -408,10 +408,10 @@ func (mr *MockBeaconChain_StreamValidatorsInfoServerMockRecorder) Context() *gom
 }
 
 // Recv mocks base method
-func (m *MockBeaconChain_StreamValidatorsInfoServer) Recv() (*v1alpha1.ValidatorChangeSet, error) {
+func (m *MockBeaconChain_StreamValidatorsInfoServer) Recv() (*eth.ValidatorChangeSet, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1alpha1.ValidatorChangeSet)
+	ret0, _ := ret[0].(*eth.ValidatorChangeSet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -437,7 +437,7 @@ func (mr *MockBeaconChain_StreamValidatorsInfoServerMockRecorder) RecvMsg(arg0 i
 }
 
 // Send mocks base method
-func (m *MockBeaconChain_StreamValidatorsInfoServer) Send(arg0 *v1alpha1.ValidatorInfo) error {
+func (m *MockBeaconChain_StreamValidatorsInfoServer) Send(arg0 *eth.ValidatorInfo) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -556,7 +556,7 @@ func (mr *MockBeaconChain_StreamIndexedAttestationsServerMockRecorder) RecvMsg(a
 }
 
 // Send mocks base method
-func (m *MockBeaconChain_StreamIndexedAttestationsServer) Send(arg0 *v1alpha1.IndexedAttestation) error {
+func (m *MockBeaconChain_StreamIndexedAttestationsServer) Send(arg0 *eth.IndexedAttestation) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)

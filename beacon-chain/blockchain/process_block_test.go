@@ -122,7 +122,7 @@ func TestStore_OnBlock(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			_, err = service.onBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk}, root)
+			err = service.onBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk}, root)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErrString) {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
 			}
