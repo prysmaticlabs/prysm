@@ -34,6 +34,14 @@ func SignatureFromBytes(sig []byte) (Signature, error) {
 	return herumi.SignatureFromBytes(sig)
 }
 
+// AggregatePublicKeys aggregates the provided raw public keys into a single key.
+func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
+	if featureconfig.Get().EnableBlst {
+		return blst.AggregatePublicKeys(pubs)
+	}
+	return herumi.AggregatePublicKeys(pubs)
+}
+
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 	if featureconfig.Get().EnableBlst {

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	blst "github.com/supranational/blst/bindings/go"
 )
 
 var maxKeys = int64(100000)
@@ -42,6 +43,33 @@ func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
 	copiedKey := pubKeyObj.Copy()
 	pubkeyCache.Set(string(pubKey), copiedKey, 48)
 	return pubKeyObj, nil
+}
+
+// AggregatePublicKeys aggregates the provided raw public keys into a single key.
+func AggregatePublicKeys(pubs [][]byte) (iface.PublicKey, error) {
+	if featureconfig.Get().SkipBLSVerify {
+		return &PublicKey{}, nil
+	}
+	agg := new(blst.P1Aggregate)
+	mulP1 := make([]*blst.P1Affine, 0, len(pubs))
+	for _, pubkey := range pubs {
+		if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
+			return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
+		}
+		if cv, ok := pubkeyCache.Get(string(pubkey)); ok {
+			mulP1 = append(mulP1, cv.(*PublicKey).Copy().(*PublicKey).p)
+			continue
+		}
+		p := new(blstPublicKey).Uncompress(pubkey)
+		if p == nil {
+			return nil, errors.New("could not unmarshal bytes into public key")
+		}
+		pubKeyObj := &PublicKey{p: p}
+		pubkeyCache.Set(string(pubkey), pubKeyObj.Copy(), 48)
+		mulP1 = append(mulP1, p)
+	}
+	agg.Aggregate(mulP1)
+	return &PublicKey{p: agg.ToAffine()}, nil
 }
 
 // Marshal a public key into a LittleEndian byte slice.

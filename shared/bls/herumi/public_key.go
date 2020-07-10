@@ -44,6 +44,25 @@ func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
 	return pubKeyObj, nil
 }
 
+// AggregatePublicKeys aggregates the provided raw public keys into a single key.
+func AggregatePublicKeys(pubs [][]byte) (iface.PublicKey, error) {
+	if len(pubs) == 0 {
+		return &PublicKey{}, nil
+	}
+	p, err := PublicKeyFromBytes(pubs[0])
+	if err != nil {
+		return nil, err
+	}
+	for _, k := range pubs[1:] {
+		pubkey, err := PublicKeyFromBytes(k)
+		if err != nil {
+			return nil, err
+		}
+		p.Aggregate(pubkey)
+	}
+	return p, nil
+}
+
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
 	return p.p.Serialize()
