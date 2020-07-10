@@ -188,7 +188,7 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer p.aggregatedAttLock.RUnlock()
 	if atts, ok := p.aggregatedAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Contains(att.AggregationBits) {
+			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
 				return true, nil
 			}
 		}
@@ -198,7 +198,7 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer p.blockAttLock.RUnlock()
 	if atts, ok := p.blockAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Contains(att.AggregationBits) {
+			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
 				return true, nil
 			}
 		}
