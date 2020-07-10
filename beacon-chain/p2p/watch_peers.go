@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	host "github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-core/host"
 )
 
 const timeoutMax = 30 * time.Second
