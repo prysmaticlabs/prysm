@@ -34,8 +34,8 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 
 	wallet, err := OpenWallet(context.Background(), &WalletConfig{
-		PasswordsDir: "", // Not needed for exporting.
-		WalletDir:    walletDir,
+		CanUnlockAccounts: false,
+		WalletDir:         walletDir,
 	})
 	if err == ErrNoWalletFound {
 		return errors.New("no wallet found at path, please create a new wallet using `validator accounts-v2 new`")

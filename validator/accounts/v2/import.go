@@ -40,8 +40,9 @@ func ImportAccount(cliCtx *cli.Context) error {
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 
 	wallet, err := CreateWallet(context.Background(), &WalletConfig{
-		PasswordsDir: passwordsDirPath,
-		WalletDir:    walletDir,
+		CanUnlockAccounts: true,
+		PasswordsDir:      passwordsDirPath,
+		WalletDir:         walletDir,
 	})
 	if err == ErrNoWalletFound {
 		log.Fatal("No wallet found at path, please create a new wallet using `validator accounts-v2 new`")
@@ -56,7 +57,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 	for _, accountName := range accounts {
 		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-			return nil
+			return err
 		}
 	}
 
