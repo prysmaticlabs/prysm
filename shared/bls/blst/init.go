@@ -1,14 +1,14 @@
 package blst
 
 import (
-	"math"
 	"runtime"
 
 	blst "github.com/supranational/blst/bindings/go"
 )
 
 func init() {
-	maxProcs := int(math.Ceil(float64(runtime.GOMAXPROCS(0)) * 0.75))
+	// Reserve 1 core for general application work
+	maxProcs := runtime.GOMAXPROCS(0) - 1
 	if maxProcs <= 0 {
 		maxProcs = 1
 	}
