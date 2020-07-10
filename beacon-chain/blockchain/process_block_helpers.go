@@ -94,8 +94,11 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 	defer span.End()
 
 	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
-		return errors.Wrap(err, "could not get finalized block")
+	if err != nil {
+		return err
+	}
+	if finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+		return errors.New("nil finalized block")
 	}
 	finalizedBlk := finalizedBlkSigned.Block
 
