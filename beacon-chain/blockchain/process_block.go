@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -15,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -55,84 +53,70 @@ var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
-func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, blockRoot [32]byte) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
+func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 
 	if signed == nil || signed.Block == nil {
-		return nil, errors.New("nil block")
+		return errors.New("nil block")
 	}
-
 	b := signed.Block
 
-	// Retrieve incoming block's pre state.
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	log.WithFields(logrus.Fields{
-		"slot": b.Slot,
-		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
-	}).Debug("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not execute state transition")
+		return errors.Wrap(err, "could not execute state transition")
 	}
 
 	if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
-		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
-		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
+		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
 	if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
-		return nil, errors.Wrap(err, "could not save state")
+		return errors.Wrap(err, "could not save state")
 	}
 
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
+	// Update finalized check point.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return nil, err
+			return err
 		}
 		s.clearInitSyncBlocks()
 
-		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
-			return nil, errors.Wrap(err, "could not save finalized checkpoint")
+		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
+			return err
 		}
 
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-
-		// Prune proto array fork choice nodes, all nodes before finalized check point will
-		// be pruned.
 		if err := s.forkChoiceStore.Prune(ctx, fRoot); err != nil {
-			return nil, errors.Wrap(err, "could not prune proto array fork choice nodes")
+			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
-
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 
 		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return nil, errors.Wrap(err, "could not save new justified")
+			return errors.Wrap(err, "could not save new justified")
 		}
 
-		fBlock, err := s.beaconDB.Block(ctx, fRoot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get finalized block to migrate")
+		if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
+			return errors.Wrap(err, "could not migrate to cold")
 		}
-		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
-			return nil, errors.Wrap(err, "could not migrate to cold")
-		}
+
+		// Update deposit cache.
+		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -140,30 +124,20 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		logEpochData(postState)
 		reportEpochMetrics(postState)
 
-		// Update committees cache at epoch boundary slot.
+		// Update caches at epoch boundary slot.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
-			return nil, err
+			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.CurrentEpoch(postState)); err != nil {
-			return nil, err
+			return err
 		}
 
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
-	// Delete the processed block attestations from attestation pool.
-	if err := s.deletePoolAtts(b.Body.Attestations); err != nil {
-		return nil, err
-	}
-
-	// Delete the processed block attester slashings from slashings pool.
-	for i := 0; i < len(b.Body.AttesterSlashings); i++ {
-		s.slashingPool.MarkIncludedAttesterSlashing(b.Body.AttesterSlashings[i])
-	}
-
 	defer reportAttestationInclusion(b)
 
-	return postState, nil
+	return nil
 }
 
 // onBlockInitialSyncStateTransition is called when an initial sync block is received.
@@ -172,7 +146,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 // The block's signing root should be computed before calling this method to avoid redundant
 // computation in this method and methods it calls into.
 func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
+	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 
 	if signed == nil || signed.Block == nil {
@@ -216,7 +190,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock,
 	blockRoots [][32]byte) (*stateTrie.BeaconState, []*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
-	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
+	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 
 	if len(blks) == 0 || len(blockRoots) == 0 {
@@ -308,19 +282,12 @@ func (s *Service) handlePostStateInSync(ctx context.Context, signed *ethpb.Signe
 		}
 		s.clearInitSyncBlocks()
 
-		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
+		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
+			return err
 		}
-
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-		fBlock, err := s.beaconDB.Block(ctx, fRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized block to migrate")
-		}
-		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
+		if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not migrate to cold")
 		}
 	}
@@ -355,19 +322,12 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 		}
 		s.clearInitSyncBlocks()
 
-		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, fCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
+		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
+			return err
 		}
-
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = fCheckpoint
 
 		fRoot := bytesutil.ToBytes32(fCheckpoint.Root)
-		fBlock, err := s.beaconDB.Block(ctx, fRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized block to migrate")
-		}
-		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
+		if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not migrate to cold")
 		}
 	}

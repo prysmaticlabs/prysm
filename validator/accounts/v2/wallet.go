@@ -35,9 +35,10 @@ var (
 // WalletConfig for a wallet struct, containing important information
 // such as the passwords directory, the wallet's directory, and keymanager.
 type WalletConfig struct {
-	PasswordsDir   string
-	WalletDir      string
-	KeymanagerKind v2keymanager.Kind
+	PasswordsDir      string
+	WalletDir         string
+	KeymanagerKind    v2keymanager.Kind
+	CanUnlockAccounts bool
 }
 
 // Wallet is a primitive in Prysm's v2 account management which
@@ -45,9 +46,10 @@ type WalletConfig struct {
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
-	accountsPath   string
-	passwordsDir   string
-	keymanagerKind v2keymanager.Kind
+	accountsPath      string
+	passwordsDir      string
+	canUnlockAccounts bool
+	keymanagerKind    v2keymanager.Kind
 }
 
 func init() {
@@ -57,20 +59,23 @@ func init() {
 // CreateWallet given a set of configuration options, will leverage
 // a keymanager to create and write a new wallet to disk for a Prysm validator.
 func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	if cfg.WalletDir == "" || cfg.PasswordsDir == "" {
+	if cfg.WalletDir == "" || (cfg.CanUnlockAccounts && cfg.PasswordsDir == "") {
 		return nil, errors.New("wallet dir and passwords dir cannot be nil")
 	}
 	accountsPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	if err := os.MkdirAll(accountsPath, directoryPermissions); err != nil {
 		return nil, errors.Wrap(err, "could not create wallet directory")
 	}
-	if err := os.MkdirAll(cfg.PasswordsDir, directoryPermissions); err != nil {
-		return nil, errors.Wrap(err, "could not create passwords directory")
+	if cfg.PasswordsDir != "" {
+		if err := os.MkdirAll(cfg.PasswordsDir, directoryPermissions); err != nil {
+			return nil, errors.Wrap(err, "could not create passwords directory")
+		}
 	}
 	w := &Wallet{
-		accountsPath:   accountsPath,
-		passwordsDir:   cfg.PasswordsDir,
-		keymanagerKind: cfg.KeymanagerKind,
+		accountsPath:      accountsPath,
+		passwordsDir:      cfg.PasswordsDir,
+		keymanagerKind:    cfg.KeymanagerKind,
+		canUnlockAccounts: cfg.CanUnlockAccounts,
 	}
 	return w, nil
 }
@@ -112,9 +117,10 @@ func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 		return nil, errors.Wrap(err, "could not parse keymanager kind from wallet path")
 	}
 	return &Wallet{
-		accountsPath:   walletPath,
-		passwordsDir:   cfg.PasswordsDir,
-		keymanagerKind: keymanagerKind,
+		accountsPath:      walletPath,
+		passwordsDir:      cfg.PasswordsDir,
+		keymanagerKind:    keymanagerKind,
+		canUnlockAccounts: cfg.CanUnlockAccounts,
 	}, nil
 }
 
@@ -136,6 +142,12 @@ func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 // AccountsDir for the wallet.
 func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
+}
+
+// CanUnlockAccounts determines whether a wallet has capabilities
+// of unlocking validator accounts using passphrases.
+func (w *Wallet) CanUnlockAccounts() bool {
+	return w.canUnlockAccounts
 }
 
 // AccountNames reads all account names at the wallet's path.
@@ -174,13 +186,13 @@ func (w *Wallet) AccountNames() ([]string, error) {
 func (w *Wallet) ExistingKeyManager(
 	ctx context.Context,
 ) (v2keymanager.IKeymanager, error) {
+	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keymanager config")
+	}
 	var keymanager v2keymanager.IKeymanager
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
-		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read keymanager config")
-		}
 		cfg, err := direct.UnmarshalConfigFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
@@ -319,6 +331,9 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 
 // ReadPasswordForAccount when given an account name from the wallet's passwords' path.
 func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
+	if !w.canUnlockAccounts {
+		return "", errors.New("wallet has no permission to read account passwords")
+	}
 	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
 	passwordFile, err := os.Open(passwordFilePath)
 	if err != nil {

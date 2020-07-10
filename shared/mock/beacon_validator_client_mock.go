@@ -10,7 +10,7 @@ import (
 
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
-	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 )
@@ -39,14 +39,14 @@ func (m *MockBeaconNodeValidatorClient) EXPECT() *MockBeaconNodeValidatorClientM
 }
 
 // DomainData mocks base method
-func (m *MockBeaconNodeValidatorClient) DomainData(arg0 context.Context, arg1 *v1alpha1.DomainRequest, arg2 ...grpc.CallOption) (*v1alpha1.DomainResponse, error) {
+func (m *MockBeaconNodeValidatorClient) DomainData(arg0 context.Context, arg1 *eth.DomainRequest, arg2 ...grpc.CallOption) (*eth.DomainResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DomainData", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.DomainResponse)
+	ret0, _ := ret[0].(*eth.DomainResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -59,14 +59,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) DomainData(arg0, arg1 inter
 }
 
 // GetAttestationData mocks base method
-func (m *MockBeaconNodeValidatorClient) GetAttestationData(arg0 context.Context, arg1 *v1alpha1.AttestationDataRequest, arg2 ...grpc.CallOption) (*v1alpha1.AttestationData, error) {
+func (m *MockBeaconNodeValidatorClient) GetAttestationData(arg0 context.Context, arg1 *eth.AttestationDataRequest, arg2 ...grpc.CallOption) (*eth.AttestationData, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetAttestationData", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.AttestationData)
+	ret0, _ := ret[0].(*eth.AttestationData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -79,14 +79,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) GetAttestationData(arg0, ar
 }
 
 // GetBlock mocks base method
-func (m *MockBeaconNodeValidatorClient) GetBlock(arg0 context.Context, arg1 *v1alpha1.BlockRequest, arg2 ...grpc.CallOption) (*v1alpha1.BeaconBlock, error) {
+func (m *MockBeaconNodeValidatorClient) GetBlock(arg0 context.Context, arg1 *eth.BlockRequest, arg2 ...grpc.CallOption) (*eth.BeaconBlock, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetBlock", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.BeaconBlock)
+	ret0, _ := ret[0].(*eth.BeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -99,14 +99,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) GetBlock(arg0, arg1 interfa
 }
 
 // GetDuties mocks base method
-func (m *MockBeaconNodeValidatorClient) GetDuties(arg0 context.Context, arg1 *v1alpha1.DutiesRequest, arg2 ...grpc.CallOption) (*v1alpha1.DutiesResponse, error) {
+func (m *MockBeaconNodeValidatorClient) GetDuties(arg0 context.Context, arg1 *eth.DutiesRequest, arg2 ...grpc.CallOption) (*eth.DutiesResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetDuties", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.DutiesResponse)
+	ret0, _ := ret[0].(*eth.DutiesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -119,14 +119,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) GetDuties(arg0, arg1 interf
 }
 
 // MultipleValidatorStatus mocks base method
-func (m *MockBeaconNodeValidatorClient) MultipleValidatorStatus(arg0 context.Context, arg1 *v1alpha1.MultipleValidatorStatusRequest, arg2 ...grpc.CallOption) (*v1alpha1.MultipleValidatorStatusResponse, error) {
+func (m *MockBeaconNodeValidatorClient) MultipleValidatorStatus(arg0 context.Context, arg1 *eth.MultipleValidatorStatusRequest, arg2 ...grpc.CallOption) (*eth.MultipleValidatorStatusResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "MultipleValidatorStatus", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.MultipleValidatorStatusResponse)
+	ret0, _ := ret[0].(*eth.MultipleValidatorStatusResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -139,14 +139,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) MultipleValidatorStatus(arg
 }
 
 // ProposeAttestation mocks base method
-func (m *MockBeaconNodeValidatorClient) ProposeAttestation(arg0 context.Context, arg1 *v1alpha1.Attestation, arg2 ...grpc.CallOption) (*v1alpha1.AttestResponse, error) {
+func (m *MockBeaconNodeValidatorClient) ProposeAttestation(arg0 context.Context, arg1 *eth.Attestation, arg2 ...grpc.CallOption) (*eth.AttestResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ProposeAttestation", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.AttestResponse)
+	ret0, _ := ret[0].(*eth.AttestResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -159,14 +159,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeAttestation(arg0, ar
 }
 
 // ProposeBlock mocks base method
-func (m *MockBeaconNodeValidatorClient) ProposeBlock(arg0 context.Context, arg1 *v1alpha1.SignedBeaconBlock, arg2 ...grpc.CallOption) (*v1alpha1.ProposeResponse, error) {
+func (m *MockBeaconNodeValidatorClient) ProposeBlock(arg0 context.Context, arg1 *eth.SignedBeaconBlock, arg2 ...grpc.CallOption) (*eth.ProposeResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ProposeBlock", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.ProposeResponse)
+	ret0, _ := ret[0].(*eth.ProposeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -179,7 +179,7 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeBlock(arg0, arg1 int
 }
 
 // ProposeExit mocks base method
-func (m *MockBeaconNodeValidatorClient) ProposeExit(arg0 context.Context, arg1 *v1alpha1.SignedVoluntaryExit, arg2 ...grpc.CallOption) (*types.Empty, error) {
+func (m *MockBeaconNodeValidatorClient) ProposeExit(arg0 context.Context, arg1 *eth.SignedVoluntaryExit, arg2 ...grpc.CallOption) (*types.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -199,14 +199,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeExit(arg0, arg1 inte
 }
 
 // StreamDuties mocks base method
-func (m *MockBeaconNodeValidatorClient) StreamDuties(arg0 context.Context, arg1 *v1alpha1.DutiesRequest, arg2 ...grpc.CallOption) (v1alpha1.BeaconNodeValidator_StreamDutiesClient, error) {
+func (m *MockBeaconNodeValidatorClient) StreamDuties(arg0 context.Context, arg1 *eth.DutiesRequest, arg2 ...grpc.CallOption) (eth.BeaconNodeValidator_StreamDutiesClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "StreamDuties", varargs...)
-	ret0, _ := ret[0].(v1alpha1.BeaconNodeValidator_StreamDutiesClient)
+	ret0, _ := ret[0].(eth.BeaconNodeValidator_StreamDutiesClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -219,14 +219,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) StreamDuties(arg0, arg1 int
 }
 
 // SubmitAggregateSelectionProof mocks base method
-func (m *MockBeaconNodeValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context, arg1 *v1alpha1.AggregateSelectionRequest, arg2 ...grpc.CallOption) (*v1alpha1.AggregateSelectionResponse, error) {
+func (m *MockBeaconNodeValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context, arg1 *eth.AggregateSelectionRequest, arg2 ...grpc.CallOption) (*eth.AggregateSelectionResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "SubmitAggregateSelectionProof", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.AggregateSelectionResponse)
+	ret0, _ := ret[0].(*eth.AggregateSelectionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -239,14 +239,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitAggregateSelectionPro
 }
 
 // SubmitSignedAggregateSelectionProof mocks base method
-func (m *MockBeaconNodeValidatorClient) SubmitSignedAggregateSelectionProof(arg0 context.Context, arg1 *v1alpha1.SignedAggregateSubmitRequest, arg2 ...grpc.CallOption) (*v1alpha1.SignedAggregateSubmitResponse, error) {
+func (m *MockBeaconNodeValidatorClient) SubmitSignedAggregateSelectionProof(arg0 context.Context, arg1 *eth.SignedAggregateSubmitRequest, arg2 ...grpc.CallOption) (*eth.SignedAggregateSubmitResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "SubmitSignedAggregateSelectionProof", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.SignedAggregateSubmitResponse)
+	ret0, _ := ret[0].(*eth.SignedAggregateSubmitResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -259,7 +259,7 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitSignedAggregateSelect
 }
 
 // SubscribeCommitteeSubnets mocks base method
-func (m *MockBeaconNodeValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *v1alpha1.CommitteeSubnetsSubscribeRequest, arg2 ...grpc.CallOption) (*types.Empty, error) {
+func (m *MockBeaconNodeValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest, arg2 ...grpc.CallOption) (*types.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -279,14 +279,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubscribeCommitteeSubnets(a
 }
 
 // ValidatorIndex mocks base method
-func (m *MockBeaconNodeValidatorClient) ValidatorIndex(arg0 context.Context, arg1 *v1alpha1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1alpha1.ValidatorIndexResponse, error) {
+func (m *MockBeaconNodeValidatorClient) ValidatorIndex(arg0 context.Context, arg1 *eth.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*eth.ValidatorIndexResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ValidatorIndex", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.ValidatorIndexResponse)
+	ret0, _ := ret[0].(*eth.ValidatorIndexResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -299,14 +299,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ValidatorIndex(arg0, arg1 i
 }
 
 // ValidatorStatus mocks base method
-func (m *MockBeaconNodeValidatorClient) ValidatorStatus(arg0 context.Context, arg1 *v1alpha1.ValidatorStatusRequest, arg2 ...grpc.CallOption) (*v1alpha1.ValidatorStatusResponse, error) {
+func (m *MockBeaconNodeValidatorClient) ValidatorStatus(arg0 context.Context, arg1 *eth.ValidatorStatusRequest, arg2 ...grpc.CallOption) (*eth.ValidatorStatusResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ValidatorStatus", varargs...)
-	ret0, _ := ret[0].(*v1alpha1.ValidatorStatusResponse)
+	ret0, _ := ret[0].(*eth.ValidatorStatusResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -319,14 +319,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ValidatorStatus(arg0, arg1 
 }
 
 // WaitForActivation mocks base method
-func (m *MockBeaconNodeValidatorClient) WaitForActivation(arg0 context.Context, arg1 *v1alpha1.ValidatorActivationRequest, arg2 ...grpc.CallOption) (v1alpha1.BeaconNodeValidator_WaitForActivationClient, error) {
+func (m *MockBeaconNodeValidatorClient) WaitForActivation(arg0 context.Context, arg1 *eth.ValidatorActivationRequest, arg2 ...grpc.CallOption) (eth.BeaconNodeValidator_WaitForActivationClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "WaitForActivation", varargs...)
-	ret0, _ := ret[0].(v1alpha1.BeaconNodeValidator_WaitForActivationClient)
+	ret0, _ := ret[0].(eth.BeaconNodeValidator_WaitForActivationClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -339,14 +339,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) WaitForActivation(arg0, arg
 }
 
 // WaitForChainStart mocks base method
-func (m *MockBeaconNodeValidatorClient) WaitForChainStart(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v1alpha1.BeaconNodeValidator_WaitForChainStartClient, error) {
+func (m *MockBeaconNodeValidatorClient) WaitForChainStart(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconNodeValidator_WaitForChainStartClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "WaitForChainStart", varargs...)
-	ret0, _ := ret[0].(v1alpha1.BeaconNodeValidator_WaitForChainStartClient)
+	ret0, _ := ret[0].(eth.BeaconNodeValidator_WaitForChainStartClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -359,14 +359,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) WaitForChainStart(arg0, arg
 }
 
 // WaitForSynced mocks base method
-func (m *MockBeaconNodeValidatorClient) WaitForSynced(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (v1alpha1.BeaconNodeValidator_WaitForSyncedClient, error) {
+func (m *MockBeaconNodeValidatorClient) WaitForSynced(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconNodeValidator_WaitForSyncedClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "WaitForSynced", varargs...)
-	ret0, _ := ret[0].(v1alpha1.BeaconNodeValidator_WaitForSyncedClient)
+	ret0, _ := ret[0].(eth.BeaconNodeValidator_WaitForSyncedClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -445,10 +445,10 @@ func (mr *MockBeaconNodeValidator_WaitForSyncedClientMockRecorder) Header() *gom
 }
 
 // Recv mocks base method
-func (m *MockBeaconNodeValidator_WaitForSyncedClient) Recv() (*v1alpha1.SyncedResponse, error) {
+func (m *MockBeaconNodeValidator_WaitForSyncedClient) Recv() (*eth.SyncedResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1alpha1.SyncedResponse)
+	ret0, _ := ret[0].(*eth.SyncedResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -568,10 +568,10 @@ func (mr *MockBeaconNodeValidator_WaitForChainStartClientMockRecorder) Header() 
 }
 
 // Recv mocks base method
-func (m *MockBeaconNodeValidator_WaitForChainStartClient) Recv() (*v1alpha1.ChainStartResponse, error) {
+func (m *MockBeaconNodeValidator_WaitForChainStartClient) Recv() (*eth.ChainStartResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1alpha1.ChainStartResponse)
+	ret0, _ := ret[0].(*eth.ChainStartResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -691,10 +691,10 @@ func (mr *MockBeaconNodeValidator_WaitForActivationClientMockRecorder) Header() 
 }
 
 // Recv mocks base method
-func (m *MockBeaconNodeValidator_WaitForActivationClient) Recv() (*v1alpha1.ValidatorActivationResponse, error) {
+func (m *MockBeaconNodeValidator_WaitForActivationClient) Recv() (*eth.ValidatorActivationResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1alpha1.ValidatorActivationResponse)
+	ret0, _ := ret[0].(*eth.ValidatorActivationResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -814,10 +814,10 @@ func (mr *MockBeaconNodeValidator_StreamDutiesClientMockRecorder) Header() *gomo
 }
 
 // Recv mocks base method
-func (m *MockBeaconNodeValidator_StreamDutiesClient) Recv() (*v1alpha1.DutiesResponse, error) {
+func (m *MockBeaconNodeValidator_StreamDutiesClient) Recv() (*eth.DutiesResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1alpha1.DutiesResponse)
+	ret0, _ := ret[0].(*eth.DutiesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -64,8 +64,8 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected to have stored %s in wallet", keystoreFileName)
 	}
-	keystoreJSON := make(map[string]interface{})
-	if err := json.Unmarshal(encodedKeystore, &keystoreJSON); err != nil {
+	keystoreFile := &directKeystore{}
+	if err := json.Unmarshal(encodedKeystore, keystoreFile); err != nil {
 		t.Fatalf("Could not decode keystore json: %v", err)
 	}
 
@@ -73,7 +73,7 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	rawSigningKey, err := decryptor.Decrypt(keystoreJSON, []byte(password))
+	rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
 	if err != nil {
 		t.Fatalf("Could not decrypt validator signing key: %v", err)
 	}
@@ -175,6 +175,9 @@ func TestKeymanager_Sign(t *testing.T) {
 	numAccounts := 2
 	generateAccounts(t, numAccounts, dr)
 	ctx := context.Background()
+	if err := dr.initializeSecretKeysCache(); err != nil {
+		t.Fatal(err)
+	}
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -183,8 +186,8 @@ func TestKeymanager_Sign(t *testing.T) {
 	// We prepare naive data to sign.
 	data := []byte("hello world")
 	signRequest := &validatorpb.SignRequest{
-		PublicKey: publicKeys[0][:],
-		Data:      data,
+		PublicKey:   publicKeys[0][:],
+		SigningRoot: data,
 	}
 	sig, err := dr.Sign(ctx, signRequest)
 	if err != nil {
@@ -261,15 +264,10 @@ func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte 
 	ctx := context.Background()
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		encryptor := keystorev4.New()
 		validatingKey := bls.RandKey()
 		wantedPublicKeys[i] = bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())
 		password := strconv.Itoa(i)
-		keystoreFile, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
-		if err != nil {
-			t.Fatal(err)
-		}
-		encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
+		encoded, err := dr.generateKeystoreFile(validatingKey, password)
 		if err != nil {
 			t.Fatal(err)
 		}
