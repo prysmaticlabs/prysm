@@ -25,7 +25,7 @@ var log = logrus.WithField("prefix", "roughtime")
 
 var offsetHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name: "roughtime_offset_nsec",
-	Help:  "The absolute value delta between roughtime computed clock time and the system clock time.",
+	Help: "The absolute value delta between roughtime computed clock time and the system clock time.",
 	Buckets: []float64{
 		float64(50 * time.Millisecond),
 		float64(100 * time.Millisecond),
