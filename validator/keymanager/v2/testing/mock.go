@@ -38,5 +38,5 @@ func (m *MockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest)
 	if !ok {
 		return nil, errors.New("no secret key found")
 	}
-	return secretKey.Sign(req.Data), nil
+	return secretKey.Sign(req.SigningRoot), nil
 }

@@ -2,6 +2,36 @@ syntax = "proto3";
 
 package ethereum.validator.accounts.v2;
 
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+// RemoteSigner service API.
+//
+// Defines a remote-signing keymanager which manages eth2
+// validator accounts and can sign respective messages.
+service RemoteSigner {
+    // ListPublicKeysResponse managed by a remote signer.
+    rpc ListValidatingPublicKeys(google.protobuf.Empty) returns (ListPublicKeysResponse) {
+        option (google.api.http) = {
+            get: "/accounts/v2/remote/accounts"
+        };
+    }
+
+    // Sign a remote request via gRPC.
+    rpc Sign(SignRequest) returns (SignResponse) {
+        option (google.api.http) = {
+            post: "/accounts/v2/remote/sign"
+        };
+    }
+}
+
+// ListPublicKeysResponse contains public keys
+// for the validator secrets managed by the remote signer.
+message ListPublicKeysResponse {
+    // List of 48 byte, BLS12-381 validating public keys.
+    repeated bytes validating_public_keys = 2;
+}
+
 // SignRequest is a message type used by a keymanager
 // as part of Prysm's accounts v2 implementation.
 message SignRequest {
@@ -9,6 +39,27 @@ message SignRequest {
     // being requested to sign data.
     bytes public_key = 1;
 
-    // Raw bytes data the client is requesting to sign.
-    bytes data = 2;
+    // Raw bytes signing root the client is requesting to sign. The client is
+    // expected to determine these raw bytes from the appropriate BLS
+    // signing domain as well as the signing root of the data structure
+    // the bytes represent.
+    bytes signing_root = 2;
+}
+
+// SignResponse returned by a RemoteSigner gRPC service.
+message SignResponse {
+    enum Status {
+        UNKNOWN = 0;
+        SUCCEEDED = 1;
+        DENIED = 2;
+        FAILED = 3;
+    }
+
+    // BLS12-381 signature for the data specified in the request.
+    bytes signature = 1;
+
+    // Status of the signing response, standardized as an enum
+    // to ensure different remote signing servers follow the
+    // same conventions.
+    Status status = 2;
 }
