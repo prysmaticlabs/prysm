@@ -7,10 +7,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	blst "github.com/supranational/blst/bindings/go"
 )
 
 var dst = []byte("BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_")
+
+const scalarBytes = 32
+const randBitsEntropy = 64
 
 // Signature used in the BLS signature scheme.
 type Signature struct {
@@ -155,50 +159,38 @@ func Aggregate(sigs []iface.Signature) iface.Signature {
 // P'_{i,j} = P_{i,j} * r_i
 // e(S*, G) = \prod_{i=1}^n \prod_{j=1}^{m_i} e(P'_{i,j}, M_{i,j})
 // Using this we can verify multiple signatures safely.
-//func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
-//	if featureconfig.Get().SkipBLSVerify {
-//		return true, nil
-//	}
-//	if len(sigs) == 0 || len(pubKeys) == 0 {
-//		return false, nil
-//	}
-//	length := len(sigs)
-//	if length != len(pubKeys) || length != len(msgs) {
-//		return false, errors.Errorf("provided signatures, pubkeys and messages have differing lengths. S: %d, P: %d,M %d",
-//			length, len(pubKeys), len(msgs))
-//	}
-//	// Use a secure source of RNG.
-//	newGen := rand.NewGenerator()
-//	randNums := make([]bls12.Fr, length)
-//	signatures := make([]bls12.G2, length)
-//	msgSlices := make([]byte, 0, 32*len(msgs))
-//	for i := 0; i < len(sigs); i++ {
-//		rNum := newGen.Uint64()
-//		if err := randNums[i].SetLittleEndian(bytesutil.Bytes8(rNum)); err != nil {
-//			return false, err
-//		}
-//		// Cast signature to a G2 value
-//		signatures[i] = *bls12.CastFromSign(sigs[i].(*Signature).s)
-//
-//		// Flatten message to single byte slice to make it compatible with herumi.
-//		msgSlices = append(msgSlices, msgs[i][:]...)
-//	}
-//	// Perform multi scalar multiplication on all the relevant G2 points
-//	// with our generated random numbers.
-//	finalSig := new(bls12.G2)
-//	bls12.G2MulVec(finalSig, signatures, randNums)
-//
-//	multiKeys := make([]blstPublicKey, length)
-//	for i := 0; i < len(pubKeys); i++ {
-//		// Perform scalar multiplication for the corresponding g1 points.
-//		g1 := new(bls12.G1)
-//		bls12.G1Mul(g1, bls12.CastFromPublicKey(pubKeys[i].(*PublicKey).p), &randNums[i])
-//		multiKeys[i] = *bls12.CastToPublicKey(g1)
-//	}
-//	aggSig := bls12.CastToSign(finalSig)
-//
-//	return aggSig.AggregateVerifyNoCheck(multiKeys, msgSlices), nil
-//}
+func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
+	if featureconfig.Get().SkipBLSVerify {
+		return true, nil
+	}
+	if len(sigs) == 0 || len(pubKeys) == 0 {
+		return false, nil
+	}
+	length := len(sigs)
+	if length != len(pubKeys) || length != len(msgs) {
+		return false, errors.Errorf("provided signatures, pubkeys and messages have differing lengths. S: %d, P: %d,M %d",
+			length, len(pubKeys), len(msgs))
+	}
+	mulP2Aff := make([]*blst.P2Affine, length)
+	mulP1Aff := make([]*blst.P1Affine, length)
+	rawMsgs := make([]blst.Message, length)
+
+	for i := 0; i < length; i++ {
+		mulP2Aff[i] = sigs[i].(*Signature).s
+		mulP1Aff[i] = pubKeys[i].(*PublicKey).p
+		rawMsgs[i] = msgs[i][:]
+	}
+	// Secure source of RNG
+	randGen := rand.NewGenerator()
+
+	randFunc := func(scalar *blst.Scalar) {
+		var rbytes [scalarBytes]byte
+		randGen.Read(rbytes[:])
+		scalar.FromBEndian(rbytes[:])
+	}
+	dummySig := new(blst.P2Affine)
+	return dummySig.MultipleAggregateVerify(mulP2Aff, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
+}
 
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {

@@ -53,9 +53,7 @@ func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
 func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
 	if featureconfig.Get().EnableBlst {
-		// TODO: Add blst method.
-		sig := AggregateSignatures(sigs)
-		return sig.AggregateVerify(pubKeys, msgs), nil
+		return blst.VerifyMultipleSignatures(sigs, msgs, pubKeys)
 	}
 	return herumi.VerifyMultipleSignatures(sigs, msgs, pubKeys)
 }

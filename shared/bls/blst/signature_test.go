@@ -55,7 +55,6 @@ func TestFastAggregateVerify(t *testing.T) {
 	}
 }
 
-/*
 func TestMultipleSignatureVerification(t *testing.T) {
 	pubkeys := make([]iface.PublicKey, 0, 100)
 	sigs := make([]iface.Signature, 0, 100)
@@ -74,6 +73,7 @@ func TestMultipleSignatureVerification(t *testing.T) {
 	}
 }
 
+/*
 func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 	pubkeys := make([]iface.PublicKey, 0, 100)
 	sigs := make([]iface.Signature, 0, 100)
