@@ -237,34 +237,3 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 		}
 	}
 }
-
-func TestDeleteProposalHistory_OK(t *testing.T) {
-	pubkey := [48]byte{2}
-	db := setupDB(t, [][48]byte{pubkey})
-
-	slotBits := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x02}
-
-	if err := db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], 0, slotBits); err != nil {
-		t.Fatalf("Save proposal history failed: %v", err)
-	}
-	// Making sure everything is saved.
-	savedHistory, err := db.ProposalHistoryForEpoch(context.Background(), pubkey[:], 0)
-	if err != nil {
-		t.Fatalf("Failed to get proposal history: %v", err)
-	}
-	if savedHistory == nil || !bytes.Equal(savedHistory, slotBits) {
-		t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", savedHistory, slotBits)
-	}
-	if err := db.DeleteProposalHistory(context.Background(), pubkey[:]); err != nil {
-		t.Fatal(err)
-	}
-
-	// Check after deleting from DB.
-	_, err = db.ProposalHistoryForEpoch(context.Background(), pubkey[:], 0)
-	if err == nil {
-		t.Fatalf("Unexpected success in deleting history: %v", err)
-	}
-	if !strings.Contains(err.Error(), "validator history empty for public key ") {
-		t.Fatalf("Unexpected error, received %v", err)
-	}
-}
