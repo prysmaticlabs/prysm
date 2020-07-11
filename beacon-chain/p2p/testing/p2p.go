@@ -163,12 +163,6 @@ func (p *TestP2P) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topi
 	return p.joinedTopics[topic], nil
 }
 
-// JoinedTopic returns pointer to previously joined topic.
-func (p *TestP2P) JoinedTopic(topic string) (t *pubsub.Topic, ok bool) {
-	t, ok = p.joinedTopics[topic]
-	return
-}
-
 // PublishToTopic publishes message to previously joined topic.
 func (p *TestP2P) PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error {
 	joinedTopic, err := p.JoinTopic(topic)

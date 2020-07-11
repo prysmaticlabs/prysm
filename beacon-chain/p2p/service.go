@@ -299,12 +299,6 @@ func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topi
 	return s.joinedTopics[topic], nil
 }
 
-// JoinedTopic returns pointer to previously joined topic.
-func (s *Service) JoinedTopic(topic string) (t *pubsub.Topic, ok bool) {
-	t, ok = s.joinedTopics[topic]
-	return
-}
-
 // LeaveTopic closes topic and removes corresponding handler from list of joined topics.
 // This method will return error if there are outstanding event handlers or subscriptions.
 func (s *Service) LeaveTopic(topic string) error {

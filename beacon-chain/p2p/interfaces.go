@@ -44,7 +44,6 @@ type SetStreamHandler interface {
 // PubSubTopicUser provides way to join, use and leave PubSub topics.
 type PubSubTopicUser interface {
 	JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error)
-	JoinedTopic(topic string) (t *pubsub.Topic, ok bool)
 	LeaveTopic(topic string) error
 	PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error
 	SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error)
