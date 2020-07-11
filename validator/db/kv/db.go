@@ -4,7 +4,6 @@ package kv
 import (
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -65,7 +64,7 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 		return nil, err
 	}
 	datafile := filepath.Join(dirPath, databaseFileName)
-	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		if err == bolt.ErrTimeout {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
@@ -99,7 +98,7 @@ func GetKVStore(directory string) (*Store, error) {
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		return nil, nil
 	}
-	boltDb, err := bolt.Open(fileName, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second})
+	boltDb, err := bolt.Open(fileName, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		if err == bolt.ErrTimeout {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
