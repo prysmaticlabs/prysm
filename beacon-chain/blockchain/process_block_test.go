@@ -100,7 +100,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "could not get finalized block",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:]},
 			s:             st.Copy(),
-			wantErrString: "block from slot 0 is not a descendent of the current finalized block",
+			wantErrString: "is not a descendent of the current finalized block",
 		},
 		{
 			name:          "same slot as finalized block",
