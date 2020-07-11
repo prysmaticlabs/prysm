@@ -75,7 +75,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			args: args{
 				msg: &ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
-						// An empty block will return an err in mocked chainService.ReceiveBlockNoPubsub.
+						// An empty block will return an err in mocked chainService.ReceiveBlock.
 						Body: &ethpb.BeaconBlockBody{Attestations: pooledAttestations},
 					},
 				},

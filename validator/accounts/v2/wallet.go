@@ -186,13 +186,13 @@ func (w *Wallet) AccountNames() ([]string, error) {
 func (w *Wallet) ExistingKeyManager(
 	ctx context.Context,
 ) (v2keymanager.IKeymanager, error) {
+	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keymanager config")
+	}
 	var keymanager v2keymanager.IKeymanager
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
-		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read keymanager config")
-		}
 		cfg, err := direct.UnmarshalConfigFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")

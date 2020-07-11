@@ -68,7 +68,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
 // TODO(#6072): This code path is highly untested. Requires comprehensive tests and simpler refactoring.
 func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "blockchain.onAttestation")
+	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
 	if a == nil {

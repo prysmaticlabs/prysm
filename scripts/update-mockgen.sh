@@ -10,6 +10,7 @@ mocks=(
       "$mock_path/beacon_validator_server_mock.go BeaconNodeValidatorServer,BeaconNodeValidator_WaitForSyncedServer,BeaconNodeValidator_WaitForActivationServer,BeaconNodeValidator_WaitForChainStartServer,BeaconNodeValidator_StreamDutiesServer"
       "$mock_path/beacon_validator_client_mock.go BeaconNodeValidatorClient,BeaconNodeValidator_WaitForSyncedClient,BeaconNodeValidator_WaitForChainStartClient,BeaconNodeValidator_WaitForActivationClient,BeaconNodeValidator_StreamDutiesClient"
       "$mock_path/node_service_mock.go NodeClient"
+      "$mock_path/keymanager_mock.go RemoteSignerClient"
 )
 
 for ((i = 0; i < ${#mocks[@]}; i++)); do
@@ -17,6 +18,7 @@ for ((i = 0; i < ${#mocks[@]}; i++)); do
     interfaces=${mocks[i]#* };
     echo "generating $file for interfaces: $interfaces";
     GO11MODULE=on mockgen -package=mock -destination=$file github.com/prysmaticlabs/ethereumapis/eth/v1alpha1 $interfaces
+    GO11MODULE=on mockgen -package=mock -destination=$file github.com/prysmaticlabs/prysm/proto/validator/accounts/v2 $interfaces
 done
 
 goimports -w "$mock_path/."

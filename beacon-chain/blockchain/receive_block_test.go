@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestService_ReceiveBlockNoPubsub(t *testing.T) {
+func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
@@ -146,8 +146,8 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			if err := s.ReceiveBlockNoPubsub(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlockNoPubsub() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.ReceiveBlock(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
+				t.Errorf("ReceiveBlock() error = %v, wantErr %v", err, tt.wantErr)
 			} else {
 				tt.check(t, s)
 			}

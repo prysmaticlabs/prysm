@@ -29,7 +29,7 @@ type head struct {
 // Determined the head from the fork choice service and saves its new data
 // (head root, head block, and head state) to the local service cache.
 func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
-	ctx, span := trace.StartSpan(ctx, "blockchain.updateHead")
+	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
 
 	// To get the proper head update, a node first checks its best justified
@@ -67,7 +67,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
 func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockchain.saveHead")
+	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
 	// Do nothing if head hasn't changed.
@@ -211,7 +211,7 @@ func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
 // This returns the head state.
 // It does a full copy on head state for immutability.
 func (s *Service) headState(ctx context.Context) *stateTrie.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "blockchain.headState")
+	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 
 	s.headLock.RLock()
@@ -239,7 +239,7 @@ func (s *Service) hasHeadState() bool {
 // This updates recent canonical block mapping. It uses input head root and retrieves
 // all the canonical block roots that are ancestor of the input head block root.
 func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockchain.updateRecentCanonicalBlocks")
+	ctx, span := trace.StartSpan(ctx, "blockChain.updateRecentCanonicalBlocks")
 	defer span.End()
 
 	s.recentCanonicalBlocksLock.Lock()

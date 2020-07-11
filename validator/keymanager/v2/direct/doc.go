@@ -40,7 +40,7 @@ This direct keymanager can be customized via a keymanageropts.json file, which h
 JSON schema as its options:
 
  {
-   direct_eip_version: string
+   "direct_eip_version": "EIP-2335"
  }
 
 Currently, the only supported value for `direct_eip_version` is "EIP-2335".

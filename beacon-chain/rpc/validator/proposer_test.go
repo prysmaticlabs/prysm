@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -293,7 +294,10 @@ func TestProposeBlock_OK(t *testing.T) {
 
 	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
-
+	bsRoot, err := beaconState.HashTreeRoot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -302,7 +306,7 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	c := &mock.ChainService{}
+	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	proposerServer := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
@@ -311,10 +315,11 @@ func TestProposeBlock_OK(t *testing.T) {
 		BlockReceiver:     c,
 		HeadFetcher:       c,
 		BlockNotifier:     c.BlockNotifier(),
+		P2P:               mockp2p.NewTestP2P(t),
 	}
 	req := testutil.NewBeaconBlock()
 	req.Block.Slot = 5
-	req.Block.ParentRoot = bytesutil.PadTo([]byte("parent-hash"), 32)
+	req.Block.ParentRoot = bsRoot[:]
 	if err := db.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
 	}
