@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -631,4 +632,97 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 
 	r.validateBeaconBlockPubSub(context.Background(), "", m)
 	testutil.AssertLogsDoNotContain(t, hook, "Block slot older/equal than last finalized epoch start slot, rejecting itt")
+}
+
+func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db, stateSummaryCache := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	parentBlock := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 0,
+			Slot:          0,
+		},
+	}
+	if err := db.SaveBlock(ctx, parentBlock); err != nil {
+		t.Fatal(err)
+	}
+	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
+	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: bRoot[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	copied := beaconState.Copy()
+	if err := copied.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
+	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: proposerIdx,
+			Slot:          1,
+			ParentRoot:    bRoot[:],
+		},
+	}
+
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
+	msg.Signature = blockSig[:]
+
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateGen := stategen.New(db, stateSummaryCache)
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+		VerifyBlkDescendantErr: errors.New("not part of finalized chain"),
+	}
+	r := &Service{
+		db:                  db,
+		p2p:                 p,
+		initialSync:         &mockSync.Sync{IsSyncing: false},
+		chain:               chainService,
+		blockNotifier:       chainService.BlockNotifier(),
+		seenBlockCache:      c,
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		stateSummaryCache:   stateSummaryCache,
+		stateGen:            stateGen,
+	}
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
+		t.Fatal(err)
+	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	if res := r.validateBeaconBlockPubSub(ctx, "", m); res != pubsub.ValidationReject {
+		t.Error("Wrong validation result returned")
+	}
+	testutil.AssertLogsContain(t, hook, "not part of finalized chain")
 }
