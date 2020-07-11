@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
+	multiplex "github.com/libp2p/go-mplex"
+	"github.com/libp2p/go-yamux"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -26,7 +28,9 @@ func SetRPCStreamDeadlines(stream network.Stream) {
 // issues being able to properly close streams, leading to unexpected failures and possible
 // memory leaks.
 func SetStreamReadDeadline(stream network.Stream, duration time.Duration) {
-	if err := stream.SetReadDeadline(time.Now().Add(duration)); err != nil {
+	if err := stream.SetReadDeadline(time.Now().Add(duration)); err != nil &&
+		err.Error() != multiplex.ErrStreamClosed.Error() ||
+		err.Error() != yamux.ErrStreamClosed.Error() {
 		log.WithError(err).WithFields(logrus.Fields{
 			"peer":      stream.Conn().RemotePeer(),
 			"protocol":  stream.Protocol(),
