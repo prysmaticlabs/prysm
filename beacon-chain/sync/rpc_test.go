@@ -10,6 +10,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	prysmP2P "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
@@ -65,7 +66,12 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 
 		return nil
 	}
-	r.registerRPC(topic, &pb.TestSimpleMessage{}, handler)
+	prysmP2P.RPCTopicMappings[topic] = new(pb.TestMessage)
+	// Cleanup Topic mappings
+	defer func() {
+		delete(prysmP2P.RPCTopicMappings, topic)
+	}()
+	r.registerRPC(topic, handler)
 
 	p2p.ReceiveRPC(topic, &pb.TestSimpleMessage{Foo: []byte("foo")})
 
