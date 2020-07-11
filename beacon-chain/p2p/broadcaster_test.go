@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"fmt"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"reflect"
 	"sync"
 	"testing"
@@ -27,6 +28,7 @@ func TestService_Broadcast(t *testing.T) {
 	p := &Service{
 		host:                  p1.BHost,
 		pubsub:                p1.PubSub(),
+		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
@@ -47,7 +49,7 @@ func TestService_Broadcast(t *testing.T) {
 
 	// External peer subscribes to the topic.
 	topic += p.Encoding().ProtocolSuffix()
-	sub, err := p2.PubSub().Subscribe(topic)
+	sub, err := p2.SubscribeToTopic(topic)
 	if err != nil {
 		t.Fatal(err)
 	}

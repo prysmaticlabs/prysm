@@ -33,6 +33,7 @@ type TestP2P struct {
 	t               *testing.T
 	BHost           host.Host
 	pubsub          *pubsub.PubSub
+	joinedTopics    map[string]*pubsub.Topic
 	BroadcastCalled bool
 	DelaySend       bool
 	Digest          [4]byte
@@ -53,10 +54,11 @@ func NewTestP2P(t *testing.T) *TestP2P {
 	}
 
 	return &TestP2P{
-		t:      t,
-		BHost:  h,
-		pubsub: ps,
-		peers:  peers.NewStatus(5 /* maxBadResponses */),
+		t:            t,
+		BHost:        h,
+		pubsub:       ps,
+		joinedTopics: map[string]*pubsub.Topic{},
+		peers:        peers.NewStatus(5 /* maxBadResponses */),
 	}
 }
 
@@ -122,10 +124,11 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	if err != nil {
 		p.t.Fatal(err)
 	}
-	topic = fmt.Sprintf(topic, digest)
-	topic = topic + p.Encoding().ProtocolSuffix()
-
-	if err := ps.Publish(topic, buf.Bytes()); err != nil {
+	topicHandle, err := ps.Join(fmt.Sprintf(topic, digest) + p.Encoding().ProtocolSuffix())
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	if err := topicHandle.Publish(context.TODO(), buf.Bytes()); err != nil {
 		p.t.Fatalf("Failed to publish message; %v", err)
 	}
 }
@@ -145,6 +148,55 @@ func (p *TestP2P) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 // SetStreamHandler for RPC.
 func (p *TestP2P) SetStreamHandler(topic string, handler network.StreamHandler) {
 	p.BHost.SetStreamHandler(protocol.ID(topic), handler)
+}
+
+// JoinTopic will join PubSub topic, if not already joined.
+func (p *TestP2P) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
+	if _, ok := p.joinedTopics[topic]; !ok {
+		joinedTopic, err := p.pubsub.Join(topic, opts...)
+		if err != nil {
+			return nil, err
+		}
+		p.joinedTopics[topic] = joinedTopic
+	}
+
+	return p.joinedTopics[topic], nil
+}
+
+// JoinedTopic returns pointer to previously joined topic.
+func (p *TestP2P) JoinedTopic(topic string) (t *pubsub.Topic, ok bool) {
+	t, ok = p.joinedTopics[topic]
+	return
+}
+
+// PublishToTopic publishes message to previously joined topic.
+func (p *TestP2P) PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error {
+	joinedTopic, err := p.JoinTopic(topic)
+	if err != nil {
+		return  err
+	}
+	return joinedTopic.Publish(ctx, data, opts...)
+}
+
+// SubscribeToTopic joins (if necessary) and subscribes to PubSub topic.
+func (p *TestP2P) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error) {
+	joinedTopic, err := p.JoinTopic(topic)
+	if err != nil {
+		return nil, err
+	}
+	return joinedTopic.Subscribe(opts...)
+}
+
+// LeaveTopic closes topic and removes corresponding handler from list of joined topics.
+// This method will return error if there are outstanding event handlers or subscriptions.
+func (p *TestP2P) LeaveTopic(topic string) error {
+	if t, ok := p.joinedTopics[topic]; ok {
+		if err := t.Close(); err != nil {
+			return err
+		}
+		delete(p.joinedTopics, topic)
+	}
+	return nil
 }
 
 // Encoding returns ssz encoding.
