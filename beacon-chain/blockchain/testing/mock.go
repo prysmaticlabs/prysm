@@ -347,3 +347,8 @@ func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
 func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
 	return [32]byte{}
 }
+
+// VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
+func (ms *ChainService) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
+	return nil
+}
