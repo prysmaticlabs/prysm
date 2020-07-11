@@ -8,7 +8,7 @@ import (
 
 	"github.com/bazelbuild/buildtools/file"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
-	_ "go.uber.org/automaxprocs"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"google.golang.org/grpc"
 )
 

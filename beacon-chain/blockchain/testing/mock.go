@@ -46,6 +46,7 @@ type ChainService struct {
 	opNotifier                  opfeed.Notifier
 	ValidAttestation            bool
 	ForkChoiceStore             *protoarray.Store
+	VerifyBlkDescendantErr      error
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -346,4 +347,9 @@ func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
 // HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
 func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
 	return [32]byte{}
+}
+
+// VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
+func (ms *ChainService) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
+	return ms.VerifyBlkDescendantErr
 }

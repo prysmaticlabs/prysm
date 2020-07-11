@@ -25,6 +25,7 @@ func dialRelayNode(ctx context.Context, h host.Host, relayAddr string) error {
 	if err != nil {
 		return err
 	}
-
+	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
+	defer cancel()
 	return h.Connect(ctx, *p)
 }

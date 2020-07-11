@@ -36,6 +36,11 @@ var offsetHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 	},
 })
 
+var offsetsRejected = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "roughtime_offsets_rejected",
+	Help: "The number of times that roughtime results could not be verified and the returned offset was rejected",
+})
+
 func init() {
 	recalibrateRoughtime()
 	runutil.RunEvery(context.Background(), RecalibrationInterval, recalibrateRoughtime)
@@ -47,15 +52,23 @@ func recalibrateRoughtime() {
 	// Compute the average difference between the system's time and the
 	// Roughtime responses from the servers, rejecting responses whose radii
 	// are larger than 2 seconds.
-	var err error
-	offset, err = rt.AvgDeltaWithRadiusThresh(results, t0, 2*time.Second)
+	newOffset, err := rt.AvgDeltaWithRadiusThresh(results, t0, 2*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Failed to calculate roughtime offset")
 	}
-	offsetHistogram.Observe(math.Abs(float64(offset)))
-	if offset > 2*time.Second {
-		log.WithField("offset", offset).Warn("Roughtime reports your clock is off by more than 2 seconds")
+	offsetHistogram.Observe(math.Abs(float64(newOffset)))
+	if newOffset > 2*time.Second {
+		log.WithField("offset", newOffset).Warn("Roughtime reports your clock is off by more than 2 seconds")
 	}
+
+	chain := rt.NewChain(results)
+	ok, err := chain.Verify(nil)
+	if err != nil || !ok {
+		log.WithError(err).WithField("offset", newOffset).Error("Could not verify roughtime responses, not accepting roughtime offset")
+		offsetsRejected.Inc()
+		return
+	}
+	offset = newOffset
 }
 
 // Since returns the duration since t, based on the roughtime response

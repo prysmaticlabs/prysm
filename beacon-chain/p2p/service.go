@@ -57,6 +57,9 @@ const maxBadResponses = 5
 // Exclusion list cache config values.
 const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
+// maxDialTimeout is the timeout for a single peer dial.
+const maxDialTimeout = 30 * time.Second
+
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
 	started               bool
@@ -547,7 +550,9 @@ func (s *Service) connectWithPeer(info peer.AddrInfo) error {
 	if s.Peers().IsBad(info.ID) {
 		return nil
 	}
-	if err := s.host.Connect(s.ctx, info); err != nil {
+	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
+	defer cancel()
+	if err := s.host.Connect(ctx, info); err != nil {
 		s.Peers().IncrementBadResponses(info.ID)
 		return err
 	}
