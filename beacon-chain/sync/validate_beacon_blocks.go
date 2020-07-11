@@ -110,6 +110,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
+	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)); err != nil {
+		log.WithError(err).Warn("Rejecting block")
+		return pubsub.ValidationReject
+	}
+
 	hasStateSummaryDB := s.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	hasStateSummaryCache := s.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if !hasStateSummaryDB && !hasStateSummaryCache {
@@ -139,10 +144,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	if blk.Block.ProposerIndex != idx {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Incorrect proposer index")
-		return pubsub.ValidationReject
-	}
-	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)); err != nil {
-		log.WithError(err).Warn("Rejecting block")
 		return pubsub.ValidationReject
 	}
 
