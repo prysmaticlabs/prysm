@@ -17,8 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/sirupsen/logrus"
-	_ "go.uber.org/automaxprocs"
 )
 
 var (
