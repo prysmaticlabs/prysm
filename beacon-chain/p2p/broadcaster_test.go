@@ -3,13 +3,13 @@ package p2p
 import (
 	"context"
 	"fmt"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
