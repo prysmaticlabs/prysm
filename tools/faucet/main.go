@@ -7,7 +7,7 @@ import (
 
 	"github.com/prestonvanloon/go-recaptcha"
 	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
-	_ "go.uber.org/automaxprocs"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
