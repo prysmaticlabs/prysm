@@ -173,7 +173,7 @@ func (p *TestP2P) JoinedTopic(topic string) (t *pubsub.Topic, ok bool) {
 func (p *TestP2P) PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error {
 	joinedTopic, err := p.JoinTopic(topic)
 	if err != nil {
-		return  err
+		return err
 	}
 	return joinedTopic.Publish(ctx, data, opts...)
 }
