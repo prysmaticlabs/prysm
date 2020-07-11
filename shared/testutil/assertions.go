@@ -70,13 +70,14 @@ func parseMsg(defaultMsg string, msg ...string) string {
 }
 
 type AssertionsTBMock struct {
-	ErrMsg string
+	ErrorfMsg string
+	FatalfMsg string
 }
 
 func (tb *AssertionsTBMock) Errorf(format string, args ...interface{}) {
-	tb.ErrMsg = fmt.Sprintf(format, args...)
+	tb.ErrorfMsg = fmt.Sprintf(format, args...)
 }
 
 func (tb *AssertionsTBMock) Fatalf(format string, args ...interface{}) {
-	panic("implement me")
+	tb.FatalfMsg = fmt.Sprintf(format, args...)
 }

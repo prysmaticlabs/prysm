@@ -51,8 +51,8 @@ func TestAssert_Equal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			Equal(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msg...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
-				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			if !strings.Contains(tt.args.tb.FatalfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.FatalfMsg, tt.expectedErr)
 			}
 		})
 	}
@@ -101,8 +101,8 @@ func TestAssert_DeepEqual(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			DeepEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msg...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
-				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			if !strings.Contains(tt.args.tb.FatalfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.FatalfMsg, tt.expectedErr)
 			}
 		})
 	}
@@ -146,8 +146,8 @@ func TestAssert_NoError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			NoError(tt.args.tb, tt.args.err, tt.args.msg...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
-				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			if !strings.Contains(tt.args.tb.FatalfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.FatalfMsg, tt.expectedErr)
 			}
 		})
 	}
@@ -215,8 +215,8 @@ func TestAssert_ErrorContains(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ErrorContains(tt.args.tb, tt.args.want, tt.args.err, tt.args.msg...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
-				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			if !strings.Contains(tt.args.tb.FatalfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.FatalfMsg, tt.expectedErr)
 			}
 		})
 	}
@@ -260,8 +260,8 @@ func TestAssert_NotNil(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			NotNil(tt.args.tb, tt.args.obj, tt.args.msg...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
-				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			if !strings.Contains(tt.args.tb.FatalfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.FatalfMsg, tt.expectedErr)
 			}
 		})
 	}
