@@ -66,7 +66,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 
 		return nil
 	}
-	prysmP2P.RPCTopicMappings[topic] = new(pb.TestMessage)
+	prysmP2P.RPCTopicMappings[topic] = new(pb.TestSimpleMessage)
 	// Cleanup Topic mappings
 	defer func() {
 		delete(prysmP2P.RPCTopicMappings, topic)
