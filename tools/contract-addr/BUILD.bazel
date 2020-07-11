@@ -9,7 +9,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/prysmaticlabs/prysm/tools/contract-addr",
     visibility = ["//visibility:private"],
-    deps = ["@org_uber_go_automaxprocs//:go_default_library"],
+    deps = ["//shared/maxprocs:go_default_library"],
 )
 
 go_binary(
@@ -29,7 +29,7 @@ go_image(
     race = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
-    deps = ["@org_uber_go_automaxprocs//:go_default_library"],
+    deps = ["//shared/maxprocs:go_default_library"],
 )
 
 container_bundle(
