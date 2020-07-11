@@ -10,9 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -123,8 +122,6 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 		}
 	}()
 
-	baseDir := filepath.Base(sourcePath)
-
 	err = filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return errors.Wrap(err, "could not walk")
@@ -144,42 +141,47 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 			return nil
 		}
 
-		header, err := zip.FileInfoHeader(info)
-		if err != nil {
-			return errors.Wrap(err, "could not get zip file info header")
-		}
-		if baseDir != "" {
-			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, sourcePath))
-		}
-		if info.IsDir() {
-			header.Name += "/"
-		} else {
-			header.Method = zip.Deflate
-		}
-
-		writer, err := archive.CreateHeader(header)
-		if err != nil {
-			return errors.Wrap(err, "could not create header")
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err := file.Close(); err != nil {
-				log.WithError(err).Error("Could not close file")
-			}
-		}()
-		_, err = io.Copy(writer, file)
-		return err
+		return copyFileFromZip(archive, sourcePath, info, path)
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not walk files")
 	}
 	return nil
+}
+
+func copyFileFromZip(archive *zip.Writer, sourcePath string, info os.FileInfo, path string) error {
+	sourceDir := filepath.Base(sourcePath)
+	header, err := zip.FileInfoHeader(info)
+	if err != nil {
+		return errors.Wrap(err, "could not get zip file info header")
+	}
+	if sourceDir != "" {
+		header.Name = filepath.Join(sourceDir, strings.TrimPrefix(path, sourcePath))
+	}
+	if info.IsDir() {
+		header.Name += "/"
+	} else {
+		header.Method = zip.Deflate
+	}
+
+	writer, err := archive.CreateHeader(header)
+	if err != nil {
+		return errors.Wrap(err, "could not create header")
+	}
+
+	if info.IsDir() {
+		return nil
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.WithError(err).Error("Could not close file")
+		}
+	}()
+	_, err = io.Copy(writer, file)
+	return err
 }

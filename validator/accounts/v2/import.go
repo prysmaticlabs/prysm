@@ -8,13 +8,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
+
+	"github.com/logrusorgru/aurora"
 
 	"github.com/manifoldco/promptui"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-
 	"github.com/pkg/errors"
-
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,19 +52,18 @@ func ImportAccount(cliCtx *cli.Context) error {
 
 	accounts, err := wallet.AccountNames()
 	if err != nil {
-		return err
+		log.WithError(err).Fatal("Could not get accounts")
 	}
 	for _, accountName := range accounts {
 		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-			return err
+			log.WithError(err).Fatal("Could not set account password")
 		}
 	}
 
-	accountsBackedUp := accounts[0]
-	if len(accounts) > 1 {
-		accountsBackedUp = strings.Join(accounts, ", ")
+	if err := logAccountsImported(accounts, wallet); err != nil {
+		log.WithError(err).Fatal("Could not log accounts imported")
 	}
-	log.WithField("walletPath", walletDir).Infof("Successfully imported account(s) %s", accountsBackedUp)
+
 	return nil
 }
 
@@ -142,6 +140,32 @@ func copyFileFromZipToPath(file *zip.File, path string) error {
 
 	if _, err := io.Copy(targetFile, fileReader); err != nil {
 		return errors.Wrap(err, "could not copy file")
+	}
+	return nil
+}
+
+func logAccountsImported(accountNames []string, wallet *Wallet) error {
+	au := aurora.NewAurora(true)
+
+	numAccounts := au.BrightYellow(len(accountNames))
+	fmt.Println("")
+	if len(accountNames) == 1 {
+		fmt.Printf("Imported %d validator account\n", numAccounts)
+	} else {
+		fmt.Printf("Imported %d validator accounts\n", numAccounts)
+	}
+	for _, accountName := range accountNames {
+		fmt.Println("")
+		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
+
+		publicKey, err := wallet.publicKeyForAccount(accountName)
+		if err != nil {
+			return errors.Wrap(err, "could not get public key")
+		}
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), publicKey)
+
+		dirPath := au.BrightCyan("(wallet dir)")
+		fmt.Printf("%s %s\n", dirPath, filepath.Join(wallet.AccountsDir(), accountName))
 	}
 	return nil
 }

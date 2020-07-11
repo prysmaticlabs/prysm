@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 const (
@@ -365,16 +367,12 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		if err != nil {
 			return errors.Wrap(err, "could not input password")
 		}
-		encoded, err := w.ReadFileForAccount(accountName, direct.KeystoreFileName)
+		accountKeystore, err := w.keystoreForAccount(accountName)
 		if err != nil {
-			return errors.Wrap(err, "could not read keystore file")
-		}
-		keystoreJSON := &direct.DirectKeystore{}
-		if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
-			return errors.Wrap(err, "could not decode json")
+			return errors.Wrap(err, "could not get keystore")
 		}
 		decryptor := keystorev4.New()
-		_, err = decryptor.Decrypt(keystoreJSON.Crypto, []byte(password))
+		_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 			fmt.Println("Incorrect password entered, please try again")
 			continue
@@ -389,6 +387,30 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		attemptingPassword = false
 	}
 	return nil
+}
+
+func (w *Wallet) publicKeyForAccount(accountName string) ([48]byte, error) {
+	accountKeystore, err := w.keystoreForAccount(accountName)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could not get keystore")
+	}
+	pubKey, err := hex.DecodeString(accountKeystore.Pubkey)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could decode pubkey string")
+	}
+	return bytesutil.ToBytes48(pubKey), nil
+}
+
+func (w *Wallet) keystoreForAccount(accountName string) (*direct.DirectKeystore, error) {
+	encoded, err := w.ReadFileForAccount(accountName, direct.KeystoreFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keystore file")
+	}
+	keystoreJSON := &direct.DirectKeystore{}
+	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+		return nil, errors.Wrap(err, "could not decode json")
+	}
+	return keystoreJSON, nil
 }
 
 // ReadFileForAccount from the wallet's accounts directory.
