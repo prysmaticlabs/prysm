@@ -68,8 +68,8 @@ type Keymanager struct {
 	lock              sync.RWMutex
 }
 
-// DirectKeystore json file representation as a Go struct.
-type DirectKeystore struct {
+// Keystore json file representation as a Go struct.
+type Keystore struct {
 	Crypto  map[string]interface{} `json:"crypto"`
 	ID      string                 `json:"uuid"`
 	Pubkey  string                 `json:"pubkey"`
@@ -228,7 +228,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &DirectKeystore{}
+		keystoreFile := &Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -271,7 +271,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		if err != nil {
 			return errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &DirectKeystore{}
+		keystoreFile := &Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -305,7 +305,7 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	if err != nil {
 		return nil, err
 	}
-	keystoreFile := &DirectKeystore{}
+	keystoreFile := &Keystore{}
 	keystoreFile.Crypto = cryptoFields
 	keystoreFile.ID = id.String()
 	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/logrusorgru/aurora"
 
@@ -31,9 +32,17 @@ func ImportAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not parse output directory: %v", err)
 	}
 
-	if err := unzipArchiveToTarget(backupDir, walletDir); err != nil {
+	accountsImported, err := unzipArchiveToTarget(backupDir, walletDir)
+	if err != nil {
 		log.WithError(err).Fatal("Could not unzip archive")
 	}
+
+	au := aurora.NewAurora(true)
+	var loggedAccounts []string
+	for _, accountName := range accountsImported {
+		loggedAccounts = append(loggedAccounts, fmt.Sprintf("%s", au.BrightGreen(accountName).Bold()))
+	}
+	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
 
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
@@ -50,17 +59,12 @@ func ImportAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not open wallet: %v", err)
 	}
 
-	accounts, err := wallet.AccountNames()
-	if err != nil {
-		log.WithError(err).Fatal("Could not get accounts")
-	}
-	for _, accountName := range accounts {
+	for _, accountName := range accountsImported {
 		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
 			log.WithError(err).Fatal("Could not set account password")
 		}
 	}
-
-	if err := logAccountsImported(accounts, wallet); err != nil {
+	if err := logAccountsImported(accountsImported, wallet); err != nil {
 		log.WithError(err).Fatal("Could not log accounts imported")
 	}
 
@@ -84,37 +88,39 @@ func inputImportDir(cliCtx *cli.Context) (string, error) {
 	return outputPath, nil
 }
 
-func unzipArchiveToTarget(archiveDir string, target string) error {
+func unzipArchiveToTarget(archiveDir string, target string) ([]string, error) {
 	archiveFile := filepath.Join(archiveDir, archiveFilename)
 	reader, err := zip.OpenReader(archiveFile)
 	if err != nil {
-		return errors.Wrap(err, "could not open reader for archive")
+		return nil, errors.Wrap(err, "could not open reader for archive")
 	}
 
 	perms := os.FileMode(0700)
 	if err := os.MkdirAll(target, perms); err != nil {
-		return errors.Wrap(err, "could not parent path for folder")
+		return nil, errors.Wrap(err, "could not parent path for folder")
 	}
 
+	var accounts []string
 	for _, file := range reader.File {
 		path := filepath.Join(target, file.Name)
 		parentFolder := filepath.Dir(path)
 		if file.FileInfo().IsDir() {
+			accounts = append(accounts, file.FileInfo().Name())
 			if err := os.MkdirAll(path, perms); err != nil {
-				return errors.Wrap(err, "could not make path for file")
+				return nil, errors.Wrap(err, "could not make path for file")
 			}
 			continue
 		} else {
 			if err := os.MkdirAll(parentFolder, perms); err != nil {
-				return errors.Wrap(err, "could not make path for file")
+				return nil, errors.Wrap(err, "could not make path for file")
 			}
 		}
 
 		if err := copyFileFromZipToPath(file, path); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return accounts, nil
 }
 
 func copyFileFromZipToPath(file *zip.File, path string) error {

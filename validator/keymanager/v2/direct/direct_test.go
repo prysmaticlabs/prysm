@@ -64,7 +64,7 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected to have stored %s in wallet", KeystoreFileName)
 	}
-	keystoreFile := &DirectKeystore{}
+	keystoreFile := &Keystore{}
 	if err := json.Unmarshal(encodedKeystore, keystoreFile); err != nil {
 		t.Fatalf("Could not decode keystore json: %v", err)
 	}

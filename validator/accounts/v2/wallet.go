@@ -401,12 +401,12 @@ func (w *Wallet) publicKeyForAccount(accountName string) ([48]byte, error) {
 	return bytesutil.ToBytes48(pubKey), nil
 }
 
-func (w *Wallet) keystoreForAccount(accountName string) (*direct.DirectKeystore, error) {
+func (w *Wallet) keystoreForAccount(accountName string) (*direct.Keystore, error) {
 	encoded, err := w.ReadFileForAccount(accountName, direct.KeystoreFileName)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keystore file")
 	}
-	keystoreJSON := &direct.DirectKeystore{}
+	keystoreJSON := &direct.Keystore{}
 	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
 		return nil, errors.Wrap(err, "could not decode json")
 	}
