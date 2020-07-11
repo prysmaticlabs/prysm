@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["assertions.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/testutil/assert",
+    visibility = ["//visibility:public"],
+    deps = ["//shared/testutil:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["assertions_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//shared/testutil:go_default_library"],
+)
