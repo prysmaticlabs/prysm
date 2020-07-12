@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
-	_ "go.uber.org/automaxprocs"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 )
 
 func TestBootnode_OK(t *testing.T) {

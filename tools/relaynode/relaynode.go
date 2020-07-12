@@ -18,8 +18,8 @@ import (
 	circuit "github.com/libp2p/go-libp2p-circuit"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	"github.com/multiformats/go-multiaddr"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	_ "go.uber.org/automaxprocs"
 )
 
 var (
