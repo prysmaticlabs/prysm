@@ -93,7 +93,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 	ctx, span := trace.StartSpan(ctx, "forkChoice.VerifyBlkDescendant")
 	defer span.End()
 
-	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	finalizedBlkSigned, err := s.beaconDB.Block(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root)))
 	if err != nil {
 		return err
 	}
