@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"reflect"
 	"strings"
 	"testing"
@@ -328,4 +329,72 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
 	return att, nil
+}
+
+func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	c := params.MinimalSpecConfig()
+	c.TargetAggregatorsPerCommittee = 16
+	params.OverrideBeaconConfig(c)
+
+	db, _ := dbutil.SetupDB(t)
+	ctx := context.Background()
+
+	// This test creates 3 attestations. 0 and 2 have the same attestation data and can be
+	// aggregated. 1 has the validator's signature making this request and that is the expected
+	// attestation to sign, even though the aggregated 0&2 would have more aggregated bits.
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	att0, err := generateAtt(beaconState, 0, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att1, err := generateAtt(beaconState, 1, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att2, err := generateAtt(beaconState, 2, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+
+	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatorServer := &Server{
+		HeadFetcher: &mock.ChainService{State: beaconState},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		P2P:         &mockp2p.MockBroadcaster{},
+	}
+
+	priv := bls.RandKey()
+	sig := priv.Sign([]byte{'B'})
+	v, err := beaconState.ValidatorAtIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := v.PublicKey
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+
+	if err := aggregatorServer.AttPool.SaveAggregatedAttestations([]*ethpb.Attestation{
+		att0,
+		att1,
+		att2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
+	if reflect.DeepEqual(aggregatedAtts, att1) {
+		t.Error("Did not receive wanted attestation")
+	}
 }
