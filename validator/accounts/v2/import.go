@@ -64,7 +64,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 			log.WithError(err).Fatal("Could not set account password")
 		}
 	}
-	if err := logAccountsImported(accountsImported, wallet); err != nil {
+	if err := logAccountsImported(wallet, accountsImported); err != nil {
 		log.WithError(err).Fatal("Could not log accounts imported")
 	}
 
@@ -150,7 +150,7 @@ func copyFileFromZipToPath(file *zip.File, path string) error {
 	return nil
 }
 
-func logAccountsImported(accountNames []string, wallet *Wallet) error {
+func logAccountsImported(wallet *Wallet, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))

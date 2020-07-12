@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -56,12 +57,9 @@ func ExportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not zip accounts")
 	}
 
-	accountsBackedUp := accounts[0]
-	if len(accounts) > 1 {
-		accountsBackedUp = strings.Join(accounts, ", ")
+	if err := logAccountsExported(wallet, accounts); err != nil {
+		log.WithError(err).Fatal("Could not log out exported accounts")
 	}
-	backupFile := filepath.Join(outputDir, archiveFilename)
-	log.WithField("exportPath", backupFile).Infof("Successfully exported account(s) %s", accountsBackedUp)
 	return nil
 }
 
@@ -184,4 +182,30 @@ func copyFileFromZip(archive *zip.Writer, sourcePath string, info os.FileInfo, p
 	}()
 	_, err = io.Copy(writer, file)
 	return err
+}
+
+func logAccountsExported(wallet *Wallet, accountNames []string) error {
+	au := aurora.NewAurora(true)
+
+	numAccounts := au.BrightYellow(len(accountNames))
+	fmt.Println("")
+	if len(accountNames) == 1 {
+		fmt.Printf("Exported %d validator account\n", numAccounts)
+	} else {
+		fmt.Printf("Exported %d validator accounts\n", numAccounts)
+	}
+	for _, accountName := range accountNames {
+		fmt.Println("")
+		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
+
+		publicKey, err := wallet.publicKeyForAccount(accountName)
+		if err != nil {
+			return errors.Wrap(err, "could not get public key")
+		}
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), publicKey)
+
+		dirPath := au.BrightCyan("(wallet dir)")
+		fmt.Printf("%s %s\n", dirPath, filepath.Join(wallet.AccountsDir(), accountName))
+	}
+	return nil
 }
