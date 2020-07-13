@@ -85,16 +85,11 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 		return err
 	}
 
-	cachedHeadRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head root from cache")
-	}
-	if !bytes.Equal(blockRoot[:], cachedHeadRoot) {
-		if err := s.saveHeadNoDB(ctx, blockCopy, blockRoot); err != nil {
-			err := errors.Wrap(err, "could not save head")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
+	// Save the latest block as head in cache.
+	if err := s.saveHeadNoDB(ctx, blockCopy, blockRoot); err != nil {
+		err := errors.Wrap(err, "could not save head")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 
 	// Send notification of the processed block to the state feed.
