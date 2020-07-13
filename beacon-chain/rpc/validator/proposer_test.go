@@ -1333,7 +1333,7 @@ func TestEth1Data(t *testing.T) {
 	slot := uint64(20000)
 
 	p := &mockPOW.POWChain{
-		BlockNumberByHeight: map[uint64]*big.Int{
+		BlockNumberByTime: map[uint64]*big.Int{
 			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
 		},
 		HashesByHeight: map[int][]byte{
@@ -1401,7 +1401,7 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 	}
 
 	p := &mockPOW.POWChain{
-		BlockNumberByHeight: map[uint64]*big.Int{
+		BlockNumberByTime: map[uint64]*big.Int{
 			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
