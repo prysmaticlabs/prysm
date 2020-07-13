@@ -2,12 +2,10 @@ package p2p
 
 import (
 	"context"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -23,21 +21,12 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 	topic := baseTopic + s.Encoding().ProtocolSuffix()
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
-	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
-	var deadline = params.BeaconNetworkConfig().TtfbTimeout + params.BeaconNetworkConfig().RespTimeout
-	ctx, cancel := context.WithTimeout(ctx, deadline)
+	// Apply max dial timeout when opening a new stream.
+	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 
 	stream, err := s.host.NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, err
-	}
-	if err := stream.SetReadDeadline(time.Now().Add(deadline)); err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, err
-	}
-	if err := stream.SetWriteDeadline(time.Now().Add(deadline)); err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
