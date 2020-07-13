@@ -12,8 +12,8 @@ var Commands = &cli.Command{
 	Usage:    "defines commands for interacting with eth2 validator wallets (work in progress)",
 	Subcommands: []*cli.Command{
 		{
-			Name:     "accounts-v2",
-			Category: "accounts-v2",
+			Name:     "accounts",
+			Category: "accounts",
 			Usage:    "defines commands for interacting with eth2 validator accounts (work in progress)",
 			Subcommands: []*cli.Command{
 				{
