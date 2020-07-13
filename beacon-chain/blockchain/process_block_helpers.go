@@ -92,8 +92,8 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "forkChoice.VerifyBlkDescendant")
 	defer span.End()
-
-	finalizedBlkSigned, err := s.beaconDB.Block(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root)))
+	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	finalizedBlkSigned, err := s.beaconDB.Block(ctx, fRoot)
 	if err != nil {
 		return err
 	}
@@ -110,10 +110,10 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
 	}
 
-	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
+	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
 			bytesutil.Trunc(root[:]), finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot),
-			bytesutil.Trunc(s.finalizedCheckpt.Root))
+			bytesutil.Trunc(fRoot[:]))
 		traceutil.AnnotateError(span, err)
 		return err
 	}
