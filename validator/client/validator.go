@@ -277,6 +277,8 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			validatorActivated = true
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
+		case ethpb.ValidatorStatus_INVALID:
+			log.Error("Invalid BLS signature")
 		default:
 			log.WithFields(logrus.Fields{
 				"activationEpoch": status.Status.ActivationEpoch,

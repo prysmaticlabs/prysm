@@ -3,6 +3,8 @@
 package depositutil
 
 import (
+	"errors"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -74,4 +76,41 @@ func DepositInput(
 func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
+}
+
+func VerifyDepositSignature(deposit *ethpb.Deposit_Data) error {
+	cfg := params.BeaconConfig()
+	domain, err := helpers.ComputeDomain(
+		cfg.DomainDeposit,
+		cfg.GenesisForkVersion,
+		cfg.ZeroHash[:],
+	)
+	if err != nil {
+		return err
+	}
+	blsPubkey, err := bls.PublicKeyFromBytes(deposit.PublicKey)
+	if err != nil {
+		return err
+	}
+	blsSig, err := bls.SignatureFromBytes(deposit.Signature)
+	if err != nil {
+		return err
+	}
+	root, err := ssz.SigningRoot(deposit)
+	if err != nil {
+		return err
+	}
+	signingData := &pb.SigningData{
+		ObjectRoot: root[:],
+		Domain:     domain,
+	}
+	ctrRoot, err := ssz.HashTreeRoot(signingData)
+	if err != nil {
+		return err
+	}
+	if !blsSig.Verify(blsPubkey, ctrRoot[:]) {
+		err = errors.New("Invalid deposit signature")
+		return err
+	}
+	return nil
 }
