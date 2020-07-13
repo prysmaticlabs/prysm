@@ -5,7 +5,6 @@ package attestationutil
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"reflect"
 	"sort"
 
