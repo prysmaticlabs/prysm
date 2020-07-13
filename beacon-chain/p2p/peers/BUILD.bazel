@@ -3,7 +3,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["status.go"],
+    srcs = [
+        "score_bad_responses.go",
+        "scorer.go",
+        "status.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
@@ -24,6 +28,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "benchmark_test.go",
+        "score_bad_responses_test.go",
         "status_test.go",
     ],
     embed = [":go_default_library"],
