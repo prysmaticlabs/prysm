@@ -70,7 +70,7 @@ func (s *Service) broadcastObject(ctx context.Context, obj interface{}, topic st
 		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
 
-	if err := s.pubsub.Publish(topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
+	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")
 		traceutil.AnnotateError(span, err)
 		return err

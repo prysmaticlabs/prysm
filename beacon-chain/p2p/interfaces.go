@@ -22,6 +22,7 @@ type P2P interface {
 	SetStreamHandler
 	EncodingProvider
 	PubSubProvider
+	PubSubTopicUser
 	PeerManager
 	Sender
 	ConnectionHandler
@@ -38,6 +39,14 @@ type Broadcaster interface {
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.
 type SetStreamHandler interface {
 	SetStreamHandler(topic string, handler network.StreamHandler)
+}
+
+// PubSubTopicUser provides way to join, use and leave PubSub topics.
+type PubSubTopicUser interface {
+	JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error)
+	LeaveTopic(topic string) error
+	PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error
+	SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error)
 }
 
 // ConnectionHandler configures p2p to handle connections with a peer.
