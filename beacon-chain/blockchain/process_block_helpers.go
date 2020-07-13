@@ -204,6 +204,13 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
+	// Blocks need to be saved so that we can retrieve finalized block from
+	// DB when migrating states.
+	if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		return err
+	}
+	s.clearInitSyncBlocks()
+
 	s.prevFinalizedCheckpt = s.finalizedCheckpt
 	s.finalizedCheckpt = cp
 
