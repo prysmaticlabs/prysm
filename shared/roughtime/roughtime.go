@@ -52,12 +52,15 @@ func recalibrateRoughtime() {
 
 	// Log Debug Results.
 	for _, res := range results {
+		if res.Error() != nil {
+			log.Errorf("Could not get rough time result: %v", res.Error())
+			continue
+		}
 		log.WithFields(logrus.Fields{
-			"Server Name":   res.Server.Name,
-			"Midpoint":      res.Midpoint,
-			"Delay":         res.Delay,
-			"Radius":        res.Roughtime.Radius,
-			"Request Error": res.Error(),
+			"Server Name": res.Server.Name,
+			"Midpoint":    res.Midpoint,
+			"Delay":       res.Delay,
+			"Radius":      res.Roughtime.Radius,
 		}).Debug("Response received from roughtime server")
 	}
 	// Compute the average difference between the system's time and the
