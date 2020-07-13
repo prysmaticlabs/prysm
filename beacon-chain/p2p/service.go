@@ -73,6 +73,7 @@ type Service struct {
 	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
+	joinedTopics          map[string]*pubsub.Topic
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -104,6 +105,7 @@ func NewService(cfg *Config) (*Service, error) {
 		cfg:           cfg,
 		exclusionList: cache,
 		isPreGenesis:  true,
+		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -285,6 +287,49 @@ func (s *Service) Host() host.Host {
 // This method is a pass through to libp2pcore.Host.SetStreamHandler.
 func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) {
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
+}
+
+// JoinTopic will join PubSub topic, if not already joined.
+func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
+	if _, ok := s.joinedTopics[topic]; !ok {
+		topicHandle, err := s.pubsub.Join(topic, opts...)
+		if err != nil {
+			return nil, err
+		}
+		s.joinedTopics[topic] = topicHandle
+	}
+
+	return s.joinedTopics[topic], nil
+}
+
+// LeaveTopic closes topic and removes corresponding handler from list of joined topics.
+// This method will return error if there are outstanding event handlers or subscriptions.
+func (s *Service) LeaveTopic(topic string) error {
+	if t, ok := s.joinedTopics[topic]; ok {
+		if err := t.Close(); err != nil {
+			return err
+		}
+		delete(s.joinedTopics, topic)
+	}
+	return nil
+}
+
+// PublishToTopic joins (if necessary) and publishes a message to a PubSub topic.
+func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error {
+	topicHandle, err := s.JoinTopic(topic)
+	if err != nil {
+		return err
+	}
+	return topicHandle.Publish(ctx, data, opts...)
+}
+
+// SubscribeToTopic joins (if necessary) and subscribes to PubSub topic.
+func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error) {
+	topicHandle, err := s.JoinTopic(topic)
+	if err != nil {
+		return nil, err
+	}
+	return topicHandle.Subscribe(opts...)
 }
 
 // PeerID returns the Peer ID of the local peer.
