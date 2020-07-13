@@ -32,5 +32,25 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: ListAccounts,
 		},
+		{
+			Name:        "export",
+			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordsDirFlag,
+				flags.BackupPathFlag,
+			},
+			Action: ExportAccount,
+		},
+		{
+			Name:        "import",
+			Description: `imports the accounts from a given zip file to the provided wallet path. This zip can be created using the export command`,
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordsDirFlag,
+				flags.BackupPathFlag,
+			},
+			Action: ImportAccount,
+		},
 	},
 }
