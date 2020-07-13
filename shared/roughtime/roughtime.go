@@ -49,6 +49,17 @@ func init() {
 func recalibrateRoughtime() {
 	t0 := time.Now()
 	results := rt.Do(rt.Ecosystem, rt.DefaultQueryAttempts, rt.DefaultQueryTimeout, nil)
+
+	// Log Debug Results.
+	for _, res := range results {
+		log.WithFields(logrus.Fields{
+			"Server Name":   res.Server.Name,
+			"Midpoint":      res.Midpoint,
+			"Delay":         res.Delay,
+			"Radius":        res.Roughtime.Radius,
+			"Request Error": res.Error(),
+		}).Debug("Response received from roughtime server")
+	}
 	// Compute the average difference between the system's time and the
 	// Roughtime responses from the servers, rejecting responses whose radii
 	// are larger than 2 seconds.
@@ -68,6 +79,8 @@ func recalibrateRoughtime() {
 		offsetsRejected.Inc()
 		return
 	}
+
+	log.Infof("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
 	offset = newOffset
 }
 

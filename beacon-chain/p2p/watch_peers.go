@@ -3,7 +3,7 @@ package p2p
 import (
 	"context"
 
-	host "github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-core/host"
 )
 
 // ensurePeerConnections will attempt to reestablish connection to the peers
