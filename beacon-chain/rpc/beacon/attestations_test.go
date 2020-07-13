@@ -690,6 +690,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &chainMock.ChainService{State: state},
+		HeadFetcher:        &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db, sc),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{

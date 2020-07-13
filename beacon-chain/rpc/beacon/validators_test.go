@@ -742,9 +742,16 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 
 	count := 100
 	setupValidators(t, db, count)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	bs := &Server{
 		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
