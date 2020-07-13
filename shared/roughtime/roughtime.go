@@ -54,7 +54,7 @@ func recalibrateRoughtime() {
 	for _, res := range results {
 		if res.Error() != nil {
 			log.Errorf("Could not get rough time result: %v", res.Error())
-			continue
+			break
 		}
 		log.WithFields(logrus.Fields{
 			"Server Name": res.Server.Name,
