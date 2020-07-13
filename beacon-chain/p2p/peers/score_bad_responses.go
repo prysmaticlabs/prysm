@@ -4,7 +4,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-// BadResponses returns the maximum number of bad responses a peer can provide before it is considered bad.
+// BadResponsesThreshold returns the maximum number of bad responses a peer can provide before it is considered bad.
 func (s *PeerScorer) BadResponsesThreshold() int {
 	return s.params.BadResponsesThreshold
 }
