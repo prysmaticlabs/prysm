@@ -31,8 +31,12 @@ func TestService_Send(t *testing.T) {
 	// Register external listener which will repeat the message back.
 	var wg sync.WaitGroup
 	wg.Add(1)
-
-	p2.SetStreamHandler("/testing/1/ssz_snappy", func(stream network.Stream) {
+	topic := "/testing/1"
+	RPCTopicMappings[topic] = new(testpb.TestSimpleMessage)
+	defer func() {
+		delete(RPCTopicMappings, topic)
+	}()
+	p2.SetStreamHandler(topic+"/ssz_snappy", func(stream network.Stream) {
 		rcvd := &testpb.TestSimpleMessage{}
 		if err := svc.Encoding().DecodeWithMaxLength(stream, rcvd); err != nil {
 			t.Fatal(err)
