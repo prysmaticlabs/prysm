@@ -104,7 +104,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
 		return err
 	}
 	if !blsSig.Verify(blsPubkey, signedRoot[:]) {
-		err = errors.New("Invalid deposit signature.")
+		err = errors.New("invalid deposit signature")
 		return err
 	}
 	return nil
