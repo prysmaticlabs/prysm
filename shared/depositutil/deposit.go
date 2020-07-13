@@ -8,7 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -52,7 +52,7 @@ func DepositInput(
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
+	root, err := ssz.HashTreeRoot(&p2ppb.SigningData{ObjectRoot: sr[:], Domain: domain})
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -78,8 +78,16 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
 }
 
-func VerifyDepositSignature(deposit *ethpb.Deposit_Data) error {
+func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
 	cfg := params.BeaconConfig()
+	blsPubkey, err := bls.PublicKeyFromBytes(dd.PublicKey)
+	if err != nil {
+		return err
+	}
+	blsSig, err := bls.SignatureFromBytes(dd.Signature)
+	if err != nil {
+		return err
+	}
 	domain, err := helpers.ComputeDomain(
 		cfg.DomainDeposit,
 		cfg.GenesisForkVersion,
@@ -88,27 +96,13 @@ func VerifyDepositSignature(deposit *ethpb.Deposit_Data) error {
 	if err != nil {
 		return err
 	}
-	blsPubkey, err := bls.PublicKeyFromBytes(deposit.PublicKey)
+
+	dd.Signature = nil
+	signedRoot, err := helpers.ComputeSigningRoot(dd, domain)
 	if err != nil {
 		return err
 	}
-	blsSig, err := bls.SignatureFromBytes(deposit.Signature)
-	if err != nil {
-		return err
-	}
-	root, err := ssz.SigningRoot(deposit)
-	if err != nil {
-		return err
-	}
-	signingData := &pb.SigningData{
-		ObjectRoot: root[:],
-		Domain:     domain,
-	}
-	ctrRoot, err := ssz.HashTreeRoot(signingData)
-	if err != nil {
-		return err
-	}
-	if !blsSig.Verify(blsPubkey, ctrRoot[:]) {
+	if !blsSig.Verify(blsPubkey, signedRoot[:]) {
 		err = errors.New("Invalid deposit signature")
 		return err
 	}

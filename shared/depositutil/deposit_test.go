@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -50,5 +51,70 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	}
 	if !sig.Verify(k1.PublicKey(), root[:]) {
 		t.Error("Invalid proof of deposit input signature")
+	}
+}
+
+func TestVerifyDepositSignature_ValidSig(t *testing.T) {
+	cfg := params.BeaconConfig()
+	deposit := &ethpb.Deposit{
+		Data: &ethpb.Deposit_Data{
+			Amount:                cfg.MinDepositAmount,
+			WithdrawalCredentials: []byte("testing"),
+		},
+	}
+
+	sk := bls.RandKey()
+	deposit.Data.PublicKey = sk.PublicKey().Marshal()
+	d, err := helpers.ComputeDomain(
+		cfg.DomainDeposit,
+		cfg.GenesisForkVersion,
+		cfg.ZeroHash[:],
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig := sk.Sign(signedRoot[:])
+	deposit.Data.Signature = sig.Marshal()
+
+	err = depositutil.VerifyDepositSignature(deposit.Data)
+	if err != nil {
+		t.Fatal("Deposit Signature Verification fails with a valid signature")
+	}
+}
+
+func TestVerifyDepositSignature_InValidSig(t *testing.T) {
+	cfg := params.BeaconConfig()
+	deposit := &ethpb.Deposit{
+		Data: &ethpb.Deposit_Data{
+			Amount:                cfg.MinDepositAmount,
+			WithdrawalCredentials: []byte("testing"),
+		},
+	}
+
+	sk := bls.RandKey()
+	deposit.Data.PublicKey = sk.PublicKey().Marshal()
+	d, err := helpers.ComputeDomain(
+		cfg.DomainDeposit,
+		cfg.GenesisForkVersion,
+		cfg.ZeroHash[:],
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Omitting the last byte of the message to generate a wrong signature
+	sig := sk.Sign(signedRoot[1:])
+	deposit.Data.Signature = sig.Marshal()
+
+	err = depositutil.VerifyDepositSignature(deposit.Data)
+	if err == nil {
+		t.Fatal("Invalid Deposit Signature")
 	}
 }
