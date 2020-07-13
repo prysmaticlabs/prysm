@@ -17,6 +17,9 @@ import (
 func (s *Service) Send(ctx context.Context, message interface{}, baseTopic string, pid peer.ID) (network.Stream, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
+	if err := VerifyTopicMapping(baseTopic, message); err != nil {
+		return nil, err
+	}
 	topic := baseTopic + s.Encoding().ProtocolSuffix()
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 

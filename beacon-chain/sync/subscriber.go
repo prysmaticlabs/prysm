@@ -105,7 +105,7 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 		log.WithError(err).Error("Failed to register validator")
 	}
 
-	sub, err := s.p2p.PubSub().Subscribe(topic)
+	sub, err := s.p2p.SubscribeToTopic(topic)
 	if err != nil {
 		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
 		// libp2p PubSub library. This should not happen at normal runtime, unless the config

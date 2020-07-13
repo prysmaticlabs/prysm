@@ -242,7 +242,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	subscriptions[1], err = r.p2p.PubSub().Subscribe(fullTopic)
+	subscriptions[1], err = r.p2p.SubscribeToTopic(fullTopic)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	subscriptions[2], err = r.p2p.PubSub().Subscribe(fullTopic)
+	subscriptions[2], err = r.p2p.SubscribeToTopic(fullTopic)
 	if err != nil {
 		t.Fatal(err)
 	}
