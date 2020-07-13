@@ -209,7 +209,6 @@ func (s *Service) Start() {
 	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
-	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
 	runutil.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
