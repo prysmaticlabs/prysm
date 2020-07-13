@@ -696,7 +696,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		t.Error("Expected peer to be disconnected")
 	}
 
-	badResponses, err := p1.Peers().BadResponses(p2.PeerID())
+	badResponses, err := p1.Peers().Scorer().BadResponses(p2.PeerID())
 	if err != nil {
 		t.Fatal("Failed to obtain peer connection state")
 	}

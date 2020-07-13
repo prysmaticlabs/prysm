@@ -1,0 +1,73 @@
+package peers
+
+import (
+	"context"
+	"sync"
+	"time"
+
+	"github.com/libp2p/go-libp2p-core/peer"
+)
+
+// PeerScorer keeps track of peer counters that are used to calculate peer score.
+type PeerScorer struct {
+	lock      sync.RWMutex
+	ctx       context.Context
+	params    *PeerScorerParams
+	peerStats map[peer.ID]*peerScorerStats
+}
+
+// peerScorerStats holds peer counters and statistics that is used in per per score calculation.
+type peerScorerStats struct {
+	badResponses int
+}
+
+// PeerScorerParams holds configuration parameters for scoring service.
+type PeerScorerParams struct {
+	BadResponsesThreshold     int
+	BadResponsesWeight        float64
+	BadResponsesDecayInterval time.Duration
+}
+
+// NewPeerScorer provides fully initialized peer scoring service.
+func NewPeerScorer(ctx context.Context, params *PeerScorerParams) *PeerScorer {
+	scorer := &PeerScorer{
+		ctx:       ctx,
+		params:    params,
+		peerStats: make(map[peer.ID]*peerScorerStats),
+	}
+	go scorer.loop(scorer.ctx)
+	return scorer
+}
+
+// AddPeer adds peer record to peer stats map.
+func (s *PeerScorer) AddPeer(pid peer.ID) *peerScorerStats {
+	return s.fetch(pid)
+}
+
+// Score returns calculated peer score across all tracked metrics.
+func (s *PeerScorer) Score(pid peer.ID) float64 {
+	return 1
+}
+
+// loop handles background tasks.
+func (s *PeerScorer) loop(ctx context.Context) {
+	decayBadResponsesScores := time.NewTicker(s.params.BadResponsesDecayInterval)
+	defer decayBadResponsesScores.Stop()
+
+	for {
+		select {
+		case <-decayBadResponsesScores.C:
+			s.decayBadResponsesStats()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// fetch is a helper function that fetches a peer stats, possibly creating it.
+func (s *PeerScorer) fetch(pid peer.ID) *peerScorerStats {
+	if _, ok := s.peerStats[pid]; !ok {
+		s.peerStats[pid] = &peerScorerStats{}
+	}
+	return s.peerStats[pid]
+}

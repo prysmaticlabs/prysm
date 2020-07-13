@@ -390,7 +390,7 @@ func (s *Service) connectWithPeer(info peer.AddrInfo) error {
 	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
 	defer cancel()
 	if err := s.host.Connect(ctx, info); err != nil {
-		s.Peers().IncrementBadResponses(info.ID)
+		s.Peers().Scorer().IncrementBadResponses(info.ID)
 		return err
 	}
 	return nil

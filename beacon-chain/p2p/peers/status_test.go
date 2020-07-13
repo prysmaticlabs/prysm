@@ -21,8 +21,8 @@ func TestStatus(t *testing.T) {
 	if p == nil {
 		t.Fatalf("p not created")
 	}
-	if p.MaxBadResponses() != maxBadResponses {
-		t.Errorf("maxBadResponses incorrect value: expected %v, received %v", maxBadResponses, p.MaxBadResponses())
+	if p.Scorer().BadResponsesThreshold() != maxBadResponses {
+		t.Errorf("maxBadResponses incorrect value: expected %v, received %v", maxBadResponses, p.Scorer().BadResponsesThreshold())
 	}
 }
 
@@ -168,7 +168,7 @@ func TestErrUnknownPeer(t *testing.T) {
 		t.Errorf("Unexpected error: expected %v, received %v", peers.ErrPeerUnknown, err)
 	}
 
-	_, err = p.BadResponses(id)
+	_, err = p.Scorer().BadResponses(id)
 	if err != peers.ErrPeerUnknown {
 		t.Errorf("Unexpected error: expected %v, received %v", peers.ErrPeerUnknown, err)
 	}
@@ -332,14 +332,6 @@ func TestPeerBadResponses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	{
-		bytes, err := id.MarshalBinary()
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%x\n", bytes)
-	}
-
 	if p.IsBad(id) {
 		t.Error("Peer marked as bad when should be good")
 	}
@@ -351,7 +343,7 @@ func TestPeerBadResponses(t *testing.T) {
 	direction := network.DirInbound
 	p.Add(new(enr.Record), id, address, direction)
 
-	resBadResponses, err := p.BadResponses(id)
+	resBadResponses, err := p.Scorer().BadResponses(id)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -362,8 +354,8 @@ func TestPeerBadResponses(t *testing.T) {
 		t.Error("Peer marked as bad when should be good")
 	}
 
-	p.IncrementBadResponses(id)
-	resBadResponses, err = p.BadResponses(id)
+	p.Scorer().IncrementBadResponses(id)
+	resBadResponses, err = p.Scorer().BadResponses(id)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -374,8 +366,8 @@ func TestPeerBadResponses(t *testing.T) {
 		t.Error("Peer marked as bad when should be good")
 	}
 
-	p.IncrementBadResponses(id)
-	resBadResponses, err = p.BadResponses(id)
+	p.Scorer().IncrementBadResponses(id)
+	resBadResponses, err = p.Scorer().BadResponses(id)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -386,8 +378,8 @@ func TestPeerBadResponses(t *testing.T) {
 		t.Error("Peer not marked as bad when it should be")
 	}
 
-	p.IncrementBadResponses(id)
-	resBadResponses, err = p.BadResponses(id)
+	p.Scorer().IncrementBadResponses(id)
+	resBadResponses, err = p.Scorer().BadResponses(id)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -471,47 +463,6 @@ func TestPeerConnectionStatuses(t *testing.T) {
 	numPeersAll := numPeersActive + numPeersInactive
 	if len(p.All()) != numPeersAll {
 		t.Errorf("Unexpected number of peers: expected %v, received %v", numPeersAll, len(p.All()))
-	}
-}
-
-func TestDecay(t *testing.T) {
-	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses)
-
-	// Peer 1 has 0 bad responses.
-	pid1 := addPeer(t, p, peers.PeerConnected)
-	// Peer 2 has 1 bad response.
-	pid2 := addPeer(t, p, peers.PeerConnected)
-	p.IncrementBadResponses(pid2)
-	// Peer 3 has 2 bad response.
-	pid3 := addPeer(t, p, peers.PeerConnected)
-	p.IncrementBadResponses(pid3)
-	p.IncrementBadResponses(pid3)
-
-	// Decay the values
-	p.Decay()
-
-	// Ensure the new values are as expected
-	badResponses1, err := p.BadResponses(pid1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if badResponses1 != 0 {
-		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses1)
-	}
-	badResponses2, err := p.BadResponses(pid2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if badResponses2 != 0 {
-		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses2)
-	}
-	badResponses3, err := p.BadResponses(pid3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if badResponses3 != 1 {
-		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses3)
 	}
 }
 

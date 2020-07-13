@@ -55,7 +55,7 @@ func (s *Service) maintainPeerStatuses() {
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
 					if err := s.reValidatePeer(s.ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Error("Failed to revalidate peer")
-						s.p2p.Peers().IncrementBadResponses(id)
+						s.p2p.Peers().Scorer().IncrementBadResponses(id)
 					}
 				}
 			}(pid)
@@ -137,7 +137,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	if code != 0 {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 
@@ -149,7 +149,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 
 	err = s.validateStatusMessage(ctx, msg)
 	if err != nil {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
 		if err == errWrongForkDigestVersion {
 			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
@@ -212,7 +212,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			return nil
 		default:
 			respCode = responseCodeInvalidRequest
-			s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+			s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 		}
 
 		originalErr := err

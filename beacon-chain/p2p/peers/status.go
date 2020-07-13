@@ -20,6 +20,7 @@
 package peers
 
 import (
+	"context"
 	"errors"
 	"sort"
 	"sync"
@@ -58,9 +59,11 @@ var (
 
 // Status is the structure holding the peer status information.
 type Status struct {
-	lock            sync.RWMutex
-	maxBadResponses int
-	status          map[peer.ID]*peerStatus
+	lock   sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
+	status map[peer.ID]*peerStatus
+	scorer *PeerScorer
 }
 
 // peerStatus is the status of an individual peer at the protocol level.
@@ -72,20 +75,31 @@ type peerStatus struct {
 	enr                   *enr.Record
 	metaData              *pb.MetaData
 	chainStateLastUpdated time.Time
-	badResponses          int
 }
 
 // NewStatus creates a new status entity.
 func NewStatus(maxBadResponses int) *Status {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Status{
-		maxBadResponses: maxBadResponses,
-		status:          make(map[peer.ID]*peerStatus),
+		ctx:    ctx,
+		cancel: cancel,
+		status: make(map[peer.ID]*peerStatus),
+		scorer: NewPeerScorer(ctx, &PeerScorerParams{
+			BadResponsesThreshold:     maxBadResponses,
+			BadResponsesWeight:        -100,
+			BadResponsesDecayInterval: time.Hour,
+		}),
 	}
 }
 
-// MaxBadResponses returns the maximum number of bad responses a peer can provide before it is considered bad.
-func (p *Status) MaxBadResponses() int {
-	return p.maxBadResponses
+// Scorer exposes peer scoring service.
+func (p *Status) Scorer() *PeerScorer {
+	return p.scorer
+}
+
+// ScorePeer returns calculated application-level peer scorer.
+func (p *Status) ScorePeer(pid peer.ID) float64 {
+	return p.scorer.Score(pid)
 }
 
 // Add adds a peer.
@@ -113,6 +127,7 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 		status.enr = record
 	}
 	p.status[pid] = status
+	p.scorer.AddPeer(pid)
 }
 
 // Address returns the multiaddress of the given remote peer.
@@ -273,37 +288,10 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	return roughtime.Now(), ErrPeerUnknown
 }
 
-// IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-func (p *Status) IncrementBadResponses(pid peer.ID) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	status := p.fetch(pid)
-	status.badResponses++
-}
-
-// BadResponses obtains the number of bad responses we have received from the given remote peer.
-// This will error if the peer does not exist.
-func (p *Status) BadResponses(pid peer.ID) (int, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	if status, ok := p.status[pid]; ok {
-		return status.badResponses, nil
-	}
-	return -1, ErrPeerUnknown
-}
-
 // IsBad states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	if status, ok := p.status[pid]; ok {
-		return status.badResponses >= p.maxBadResponses
-	}
-	return false
+	return p.scorer.IsBadPeer(pid)
 }
 
 // Connecting returns the peers that are connecting.
@@ -386,15 +374,7 @@ func (p *Status) Inactive() []peer.ID {
 
 // Bad returns the peers that are bad.
 func (p *Status) Bad() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.badResponses >= p.maxBadResponses {
-			peers = append(peers, pid)
-		}
-	}
-	return peers
+	return p.scorer.BadPeers()
 }
 
 // All returns all the peers regardless of state.
@@ -406,19 +386,6 @@ func (p *Status) All() []peer.ID {
 		pids = append(pids, pid)
 	}
 	return pids
-}
-
-// Decay reduces the bad responses of all peers, giving reformed peers a chance to join the network.
-// This can be run periodically, although note that each time it runs it does give all bad peers another chance as well to clog up
-// the network with bad responses, so should not be run too frequently; once an hour would be reasonable.
-func (p *Status) Decay() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	for _, status := range p.status {
-		if status.badResponses > 0 {
-			status.badResponses--
-		}
-	}
 }
 
 // BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed upon by the majority of peers.

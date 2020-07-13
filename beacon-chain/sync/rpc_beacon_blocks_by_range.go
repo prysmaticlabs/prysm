@@ -65,7 +65,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	for startSlot <= endReqSlot {
 		remainingBucketCapacity = s.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
 		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
-			s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+			s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 			if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 				log.Debug("Disconnecting bad peer")
 				defer func() {
