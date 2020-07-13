@@ -142,6 +142,12 @@ func TestService_ReceiveBlock(t *testing.T) {
 			if err := s.saveGenesisData(ctx, genesis); err != nil {
 				t.Fatal(err)
 			}
+			gBlk, err := s.beaconDB.GenesisBlock(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := stateutil.BlockRoot(tt.args.block.Block)
 			if err != nil {
 				t.Error(err)
