@@ -40,8 +40,9 @@ func NewPeerScorer(ctx context.Context, params *PeerScorerParams) *PeerScorer {
 }
 
 // AddPeer adds peer record to peer stats map.
-func (s *PeerScorer) AddPeer(pid peer.ID) *peerScorerStats {
-	return s.fetch(pid)
+func (s *PeerScorer) AddPeer(pid peer.ID) {
+	// Fetch creates peer stats object if it doesn't already exist.
+	s.fetch(pid)
 }
 
 // Score returns calculated peer score across all tracked metrics.
