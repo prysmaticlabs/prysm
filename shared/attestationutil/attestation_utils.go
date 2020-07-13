@@ -151,9 +151,6 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 	if len(indices) == 0 {
 		return errors.New("expected non-empty attesting indices")
 	}
-	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
-	}
 	set := make(map[uint64]bool, len(indices))
 	setIndices := make([]uint64, 0, len(indices))
 	for _, i := range indices {
