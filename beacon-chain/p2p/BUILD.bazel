@@ -19,6 +19,7 @@ go_library(
         "log.go",
         "monitoring.go",
         "options.go",
+        "pubsub.go",
         "pubsub_message_id.go",
         "rpc_topic_mappings.go",
         "sender.go",
