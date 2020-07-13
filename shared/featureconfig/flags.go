@@ -625,4 +625,5 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
+	// "--enable-finalized-deposits-cache", // TODO(6588): Enable in e2e
 }
