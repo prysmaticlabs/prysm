@@ -89,6 +89,13 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 				aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count()) {
 			best = aggregatedAtt
 		}
+
+		// If the "best" still doesn't contain the validator's index, check the aggregation bits to
+		// choose the attestation with the most bits set.
+		if !best.AggregationBits.BitAt(indexInCommittee) &&
+			aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
+			best = aggregatedAtt
+		}
 	}
 	a := &ethpb.AggregateAttestationAndProof{
 		Aggregate:       best,
