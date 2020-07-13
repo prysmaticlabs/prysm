@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -34,39 +33,33 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 func (s *Service) registerRPCHandlers() {
 	s.registerRPC(
 		p2p.RPCStatusTopic,
-		&pb.Status{},
 		s.statusRPCHandler,
 	)
 	s.registerRPC(
 		p2p.RPCGoodByeTopic,
-		new(uint64),
 		s.goodbyeRPCHandler,
 	)
 	s.registerRPC(
 		p2p.RPCBlocksByRangeTopic,
-		&pb.BeaconBlocksByRangeRequest{},
 		s.beaconBlocksByRangeRPCHandler,
 	)
 	s.registerRPC(
 		p2p.RPCBlocksByRootTopic,
-		[][32]byte{},
 		s.beaconBlocksRootRPCHandler,
 	)
 	s.registerRPC(
 		p2p.RPCPingTopic,
-		new(uint64),
 		s.pingHandler,
 	)
 	s.registerRPC(
 		p2p.RPCMetaDataTopic,
-		new(interface{}),
 		s.metaDataHandler,
 	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler) {
-	topic += s.p2p.Encoding().ProtocolSuffix()
+func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
+	topic := baseTopic + s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	s.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
@@ -87,13 +80,22 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 			return
 		}
 
+		base, ok := p2p.RPCTopicMappings[baseTopic]
+		if !ok {
+			log.Errorf("Could not retrieve base message for topic %s", baseTopic)
+			return
+		}
+		t := reflect.TypeOf(base)
+		// Copy Base
+		base = reflect.New(t)
+
 		// Increment message received counter.
 		messageReceivedCounter.WithLabelValues(topic).Inc()
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if strings.Contains(topic, p2p.RPCMetaDataTopic) {
-			if err := handle(ctx, new(interface{}), stream); err != nil {
+		if baseTopic == p2p.RPCMetaDataTopic {
+			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != errWrongForkDigestVersion {
 					log.WithError(err).Warn("Failed to handle p2p RPC")
@@ -103,10 +105,9 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 			return
 		}
 
-		// Given we have an input argument that can be pointer or [][32]byte, this gives us
+		// Given we have an input argument that can be pointer or the actual object, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
-		t := reflect.TypeOf(base)
 		if t.Kind() == reflect.Ptr {
 			msg := reflect.New(t.Elem())
 			if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
