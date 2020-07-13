@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cmd.go",
+        "cmd_accounts.go",
         "doc.go",
         "export.go",
         "import.go",
