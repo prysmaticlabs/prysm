@@ -35,6 +35,8 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
