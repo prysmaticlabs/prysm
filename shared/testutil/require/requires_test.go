@@ -1,4 +1,4 @@
-package assert
+package require
 
 import (
 	"errors"

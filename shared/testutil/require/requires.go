@@ -1,4 +1,4 @@
-package assert
+package require
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
