@@ -159,11 +159,11 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0, err := generateAtt(beaconState, 0, privKeys)
+	att0, err := generateAtt(beaconState, 0, 1, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1, err := generateAtt(beaconState, 2, privKeys)
+	att1, err := generateAtt(beaconState, 2, 1, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,13 +252,13 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 }
 
-func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
+func generateAtt(state *beaconstate.BeaconState, index uint64, committeeIndex uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			CommitteeIndex: 1,
+			CommitteeIndex: committeeIndex,
 			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 			Target:         &ethpb.Checkpoint{Epoch: 0},
 		},
@@ -344,16 +344,17 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	// aggregated. 1 has the validator's signature making this request and that is the expected
 	// attestation to sign, even though the aggregated 0&2 would have more aggregated bits.
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0, err := generateAtt(beaconState, 0, privKeys)
+	att0, err := generateAtt(beaconState, 0 /*index*/, 0 /*committeeIndex*/, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
 	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
-	att1, err := generateAtt(beaconState, 1, privKeys)
+	att1, err := generateAtt(beaconState, 0 /*index*/, 1 /*committeeIndex*/, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-	att2, err := generateAtt(beaconState, 2, privKeys)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att2, err := generateAtt(beaconState, 2 /*index*/, 2 /*committeeIndex*/, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,12 +390,12 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); err != nil {
+	res, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
-	if reflect.DeepEqual(aggregatedAtts, att1) {
+	if !reflect.DeepEqual(res.AggregateAndProof.Aggregate, att1) {
 		t.Error("Did not receive wanted attestation")
 	}
 }
