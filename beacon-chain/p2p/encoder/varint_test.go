@@ -34,7 +34,7 @@ func TestReadVarint_ExceedsMaxLength(t *testing.T) {
 		t.Fatal("Expected no error from reading valid header")
 	}
 	length := len(header)
-	// Add an additional byte to make header invalid
+	// Add an additional byte to make header invalid.
 	header = append(header[:length-1], []byte{fByte, tByte}...)
 
 	_, err = readVarint(bytes.NewBuffer(header))
