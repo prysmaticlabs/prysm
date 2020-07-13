@@ -8,6 +8,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
+const (
+	defaultBadResponsesThreshold     = 6
+	defaultBadResponsesWeight        = -10
+	defaultBadResponsesDecayInterval = time.Hour
+)
+
 // PeerScorer keeps track of peer counters that are used to calculate peer score.
 type PeerScorer struct {
 	lock      sync.RWMutex
@@ -35,7 +41,18 @@ func NewPeerScorer(ctx context.Context, params *PeerScorerParams) *PeerScorer {
 		params:    params,
 		peerStats: make(map[peer.ID]*peerScorerStats),
 	}
+	if scorer.params.BadResponsesThreshold <= 0 {
+		scorer.params.BadResponsesThreshold = defaultBadResponsesThreshold
+	}
+	if scorer.params.BadResponsesWeight == 0.0 {
+		scorer.params.BadResponsesWeight = defaultBadResponsesWeight
+	}
+	if scorer.params.BadResponsesDecayInterval <= 0 {
+		scorer.params.BadResponsesDecayInterval = defaultBadResponsesDecayInterval
+	}
+
 	go scorer.loop(scorer.ctx)
+
 	return scorer
 }
 

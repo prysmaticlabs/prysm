@@ -2,6 +2,7 @@ package peers
 
 import (
 	"context"
+	"sort"
 	"testing"
 	"time"
 
@@ -9,6 +10,32 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
+
+func TestPeerScorer_BadResponsesThreshold(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	maxBadResponses := 2
+	scorer := NewPeerScorer(ctx, &PeerScorerParams{
+		BadResponsesThreshold: maxBadResponses,
+	})
+	assert.Equal(t, maxBadResponses, scorer.BadResponsesThreshold())
+}
+
+func TestPeerScorer_BadResponses(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	scorer := NewPeerScorer(ctx, &PeerScorerParams{})
+	pid := peer.ID("peer1")
+	_, err := scorer.BadResponses(pid)
+	assert.ErrorContains(t, ErrPeerUnknown.Error(), err)
+
+	scorer.AddPeer(pid)
+	count, err := scorer.BadResponses(pid)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
 
 func TestPeerScorer_decayBadResponsesStats(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -60,4 +87,52 @@ func TestPeerScorer_decayBadResponsesStats(t *testing.T) {
 	badResponsesCount, err = scorer.BadResponses(pid3)
 	require.NoError(t, err)
 	assert.Equal(t, 1, badResponsesCount, "unexpected bad responses for pid3")
+}
+
+func TestPeerScorer_IsBadPeer(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	scorer := NewPeerScorer(ctx, &PeerScorerParams{})
+	pid := peer.ID("peer1")
+	assert.Equal(t, false, scorer.IsBadPeer(pid))
+
+	scorer.AddPeer(pid)
+	assert.Equal(t, false, scorer.IsBadPeer(pid))
+
+	for i := 0; i < defaultBadResponsesThreshold; i++ {
+		scorer.IncrementBadResponses(pid)
+		if i == defaultBadResponsesThreshold-1 {
+			assert.Equal(t, true, scorer.IsBadPeer(pid), "Unexpected peer status")
+		} else {
+			assert.Equal(t, false, scorer.IsBadPeer(pid), "Unexpected peer status")
+		}
+	}
+}
+
+func TestPeerScorer_BadPeers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	scorer := NewPeerScorer(ctx, &PeerScorerParams{})
+	pids := []peer.ID{peer.ID("peer1"), peer.ID("peer2"), peer.ID("peer3"), peer.ID("peer4"), peer.ID("peer5")}
+	for i := 0; i < len(pids); i++ {
+		scorer.AddPeer(pids[i])
+	}
+	for i := 0; i < defaultBadResponsesThreshold; i++ {
+		scorer.IncrementBadResponses(pids[1])
+		scorer.IncrementBadResponses(pids[2])
+		scorer.IncrementBadResponses(pids[4])
+	}
+	assert.Equal(t, false, scorer.IsBadPeer(pids[0]), "Invalid peer status")
+	assert.Equal(t, true, scorer.IsBadPeer(pids[1]), "Invalid peer status")
+	assert.Equal(t, true, scorer.IsBadPeer(pids[2]), "Invalid peer status")
+	assert.Equal(t, false, scorer.IsBadPeer(pids[3]), "Invalid peer status")
+	assert.Equal(t, true, scorer.IsBadPeer(pids[4]), "Invalid peer status")
+	want := []peer.ID{pids[1], pids[2], pids[4]}
+	badPeers := scorer.BadPeers()
+	sort.Slice(badPeers, func(i, j int) bool {
+		return badPeers[i] < badPeers[j]
+	})
+	assert.DeepEqual(t, want, badPeers, "Unexpected list of bad peers")
 }
