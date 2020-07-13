@@ -70,13 +70,33 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 			return nil, status.Errorf(codes.Internal, "Could not find attestation for slot and committee in pool")
 		}
 	}
-	best := aggregatedAtts[0]
-	for _, aggregatedAtt := range aggregatedAtts[1:] {
-		if aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
-			best = aggregatedAtt
+
+	var indexInCommittee uint64
+	for i, idx := range committee {
+		if idx == validatorIndex {
+			indexInCommittee = uint64(i)
 		}
 	}
 
+	best := aggregatedAtts[0]
+	for _, aggregatedAtt := range aggregatedAtts[1:] {
+		// The aggregator should prefer an attestation that they have signed. We check this by
+		// looking at the attestation's committee index against the validator's committee index
+		// and check the aggregate bits to ensure the validator's index is set.
+		if aggregatedAtt.Data.CommitteeIndex == req.CommitteeIndex &&
+			aggregatedAtt.AggregationBits.BitAt(indexInCommittee) &&
+			(!best.AggregationBits.BitAt(indexInCommittee) ||
+				aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count()) {
+			best = aggregatedAtt
+		}
+
+		// If the "best" still doesn't contain the validator's index, check the aggregation bits to
+		// choose the attestation with the most bits set.
+		if !best.AggregationBits.BitAt(indexInCommittee) &&
+			aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
+			best = aggregatedAtt
+		}
+	}
 	a := &ethpb.AggregateAttestationAndProof{
 		Aggregate:       best,
 		SelectionProof:  req.SlotSignature,
