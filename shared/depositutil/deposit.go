@@ -78,6 +78,7 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
 }
 
+// VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
 func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
 	cfg := params.BeaconConfig()
 	blsPubkey, err := bls.PublicKeyFromBytes(dd.PublicKey)
@@ -103,7 +104,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
 		return err
 	}
 	if !blsSig.Verify(blsPubkey, signedRoot[:]) {
-		err = errors.New("Invalid deposit signature")
+		err = errors.New("Invalid deposit signature.")
 		return err
 	}
 	return nil
