@@ -186,8 +186,11 @@ func (bs *Server) ListValidators(
 		}
 		requestedEpoch = q.Epoch
 	}
+	reqState, err := bs.HeadFetcher.HeadState(ctx)
+	if requestedEpoch != currentEpoch {
+		reqState, err = bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	}
 
-	reqState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get requested state")
 	}
