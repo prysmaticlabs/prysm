@@ -20,8 +20,8 @@ type assertionLoggerFn func(string, ...interface{})
 func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...string) {
 	errMsg := parseMsg("Values are not equal", msg...)
 	if expected != actual {
-		_, file, line, _ := runtime.Caller(1)
-		loggerFn("%s:%d %s, got: %v, want: %v", file, line, errMsg, actual, expected)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s, got: %v, want: %v", filepath.Base(file), line, errMsg, actual, expected)
 	}
 }
 
@@ -29,8 +29,8 @@ func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...stri
 func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...string) {
 	errMsg := parseMsg("Values are not equal", msg...)
 	if !reflect.DeepEqual(expected, actual) {
-		_, file, line, _ := runtime.Caller(1)
-		loggerFn("%s:%d %s, got: %v, want: %v", file, line, errMsg, actual, expected)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s, got: %v, want: %v", filepath.Base(file), line, errMsg, actual, expected)
 	}
 }
 
@@ -38,7 +38,7 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 func NoError(loggerFn assertionLoggerFn, err error, msg ...string) {
 	errMsg := parseMsg("Unexpected error", msg...)
 	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
+		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
 	}
 }
@@ -47,7 +47,7 @@ func NoError(loggerFn assertionLoggerFn, err error, msg ...string) {
 func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...string) {
 	errMsg := parseMsg("Expected error not returned", msg...)
 	if err == nil || !strings.Contains(err.Error(), want) {
-		_, file, line, _ := runtime.Caller(1)
+		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, got: %v, want: %s", filepath.Base(file), line, errMsg, err, want)
 	}
 }
@@ -56,7 +56,7 @@ func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...st
 func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...string) {
 	errMsg := parseMsg("Unexpected nil value", msg...)
 	if obj == nil {
-		_, file, line, _ := runtime.Caller(1)
+		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s", filepath.Base(file), line, errMsg)
 	}
 }
