@@ -85,7 +85,8 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		// and check the aggregate bits to ensure the validator's index is set.
 		if aggregatedAtt.Data.CommitteeIndex == req.CommitteeIndex &&
 			aggregatedAtt.AggregationBits.BitAt(indexInCommittee) &&
-			aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
+			(!best.AggregationBits.BitAt(indexInCommittee) ||
+				aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count()) {
 			best = aggregatedAtt
 		}
 	}
