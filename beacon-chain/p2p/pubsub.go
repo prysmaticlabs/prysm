@@ -54,7 +54,8 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 
 // Content addressable ID function.
 //
-// Defined as Base64(FastSum256(data)).
+// ETH2 spec defines the message ID as:
+//    message-id: base64(SHA256(message.data))
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
 	h := hashutil.FastSum256(pmsg.Data)
 	return base64.URLEncoding.EncodeToString(h[:])
