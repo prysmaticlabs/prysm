@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -291,5 +292,42 @@ func TestPeer_Disconnect(t *testing.T) {
 	}
 	if len(s.host.Network().Conns()) != 0 {
 		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 0)
+	}
+}
+
+func TestService_JoinLeaveTopic(t *testing.T) {
+	s, err := NewService(&Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.joinedTopics) != 0 {
+		t.Errorf("want: %v, got: %v", 0, len(s.joinedTopics))
+	}
+
+	topic := fmt.Sprintf(AttestationSubnetTopicFormat, 42, 42)
+	topicHandle, err := s.JoinTopic(topic)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(s.joinedTopics) != 1 {
+		t.Errorf("want: %v, got: %v", 1, len(s.joinedTopics))
+	}
+
+	sub, err := topicHandle.Subscribe()
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Try leaving topic that has subscriptions.
+	want := "cannot close topic: outstanding event handlers or subscriptions"
+	if err := s.LeaveTopic(topic); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error not thrown, want: %v, got: %v", want, err)
+	}
+
+	// After subscription is cancelled, leaving topic should not result in error.
+	sub.Cancel()
+	if err := s.LeaveTopic(topic); err != nil {
+		t.Error(err)
 	}
 }
