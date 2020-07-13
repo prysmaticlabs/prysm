@@ -3,10 +3,12 @@ package sync
 import (
 	"bytes"
 	"errors"
-	"io"
+	"time"
 
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const genericError = "internal service error"
@@ -35,7 +37,41 @@ func (s *Service) generateErrorResponse(code byte, reason string) ([]byte, error
 }
 
 // ReadStatusCode response from a RPC stream.
-func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, string, error) {
+func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (uint8, string, error) {
+	// Set ttfb deadline.
+	if err := stream.SetReadDeadline(time.Now().Add(params.BeaconNetworkConfig().TtfbTimeout)); err != nil {
+		return 0, "", err
+	}
+	b := make([]byte, 1)
+	_, err := stream.Read(b)
+	if err != nil {
+		return 0, "", err
+	}
+
+	if b[0] == responseCodeSuccess {
+		// Set response deadline on a successful response code.
+		if err := stream.SetReadDeadline(time.Now().Add(params.BeaconNetworkConfig().RespTimeout)); err != nil {
+			return 0, "", err
+		}
+		return 0, "", nil
+	}
+
+	// Set response deadline, when reading error message.
+	if err := stream.SetReadDeadline(time.Now().Add(params.BeaconNetworkConfig().RespTimeout)); err != nil {
+		return 0, "", err
+	}
+	msg := &pb.ErrorResponse{
+		Message: []byte{},
+	}
+	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
+		return 0, "", err
+	}
+
+	return b[0], string(msg.Message), nil
+}
+
+// reads data from the stream without applying any timeouts.
+func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEncoding) (uint8, string, error) {
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
