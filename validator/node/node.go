@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -120,7 +121,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	} else {
 		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
 		for _, key := range pubKeys {
-			log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+			log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:]))).Info("Validating for public key")
 		}
 	}
 
