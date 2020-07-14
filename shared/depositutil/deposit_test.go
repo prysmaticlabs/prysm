@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
@@ -55,66 +55,26 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 }
 
 func TestVerifyDepositSignature_ValidSig(t *testing.T) {
-	cfg := params.BeaconConfig()
-	deposit := &ethpb.Deposit{
-		Data: &ethpb.Deposit_Data{
-			Amount:                cfg.MinDepositAmount,
-			WithdrawalCredentials: []byte("testing"),
-		},
-	}
-
-	sk := bls.RandKey()
-	deposit.Data.PublicKey = sk.PublicKey().Marshal()
-	d, err := helpers.ComputeDomain(
-		cfg.DomainDeposit,
-		cfg.GenesisForkVersion,
-		cfg.ZeroHash[:],
-	)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Error Generating Deposits and Keys - %v", err)
 	}
-	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, d)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sig := sk.Sign(signedRoot[:])
-	deposit.Data.Signature = sig.Marshal()
-
+	deposit := deposits[0]
 	err = depositutil.VerifyDepositSignature(deposit.Data)
 	if err != nil {
-		t.Fatal("Deposit Signature Verification fails with a valid signature")
+		t.Fatal("Deposit Verification fails with a valid signature")
 	}
 }
 
-func TestVerifyDepositSignature_InValidSig(t *testing.T) {
-	cfg := params.BeaconConfig()
-	deposit := &ethpb.Deposit{
-		Data: &ethpb.Deposit_Data{
-			Amount:                cfg.MinDepositAmount,
-			WithdrawalCredentials: []byte("testing"),
-		},
-	}
-
-	sk := bls.RandKey()
-	deposit.Data.PublicKey = sk.PublicKey().Marshal()
-	d, err := helpers.ComputeDomain(
-		cfg.DomainDeposit,
-		cfg.GenesisForkVersion,
-		cfg.ZeroHash[:],
-	)
+func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Error Generating Deposits and Keys - %v", err)
 	}
-	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, d)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Omitting the last byte of the message to generate a wrong signature
-	sig := sk.Sign(signedRoot[1:])
-	deposit.Data.Signature = sig.Marshal()
-
+	deposit := deposits[0]
+	deposit.Data.Signature = deposit.Data.Signature[1:]
 	err = depositutil.VerifyDepositSignature(deposit.Data)
 	if err == nil {
-		t.Fatal("Invalid Deposit Signature")
+		t.Fatal("Deposit Verification succeeds with a invalid signature")
 	}
 }

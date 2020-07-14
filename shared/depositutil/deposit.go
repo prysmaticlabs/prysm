@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -80,12 +81,16 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 
 // VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
 func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
+	ddCopy := *dd
+	if featureconfig.Get().SkipBLSVerify {
+		return nil
+	}
 	cfg := params.BeaconConfig()
-	blsPubkey, err := bls.PublicKeyFromBytes(dd.PublicKey)
+	blsPubkey, err := bls.PublicKeyFromBytes(ddCopy.PublicKey)
 	if err != nil {
 		return err
 	}
-	blsSig, err := bls.SignatureFromBytes(dd.Signature)
+	blsSig, err := bls.SignatureFromBytes(ddCopy.Signature)
 	if err != nil {
 		return err
 	}
@@ -98,12 +103,16 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
 		return err
 	}
 
-	dd.Signature = nil
-	signedRoot, err := helpers.ComputeSigningRoot(dd, domain)
+	ddCopy.Signature = nil
+	root, err := ssz.SigningRoot(ddCopy)
 	if err != nil {
 		return err
 	}
-	if !blsSig.Verify(blsPubkey, signedRoot[:]) {
+	sigRoot, err := ssz.HashTreeRoot(&p2ppb.SigningData{ObjectRoot: root[:], Domain: domain})
+	if err != nil {
+		return err
+	}
+	if !blsSig.Verify(blsPubkey, sigRoot[:]) {
 		err = errors.New("invalid deposit signature")
 		return err
 	}
