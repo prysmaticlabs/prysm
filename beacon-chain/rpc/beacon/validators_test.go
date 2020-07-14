@@ -704,11 +704,6 @@ func TestServer_ListValidators_StategenNotUsed(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 0,
-			},
-		},
 	}
 
 	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
