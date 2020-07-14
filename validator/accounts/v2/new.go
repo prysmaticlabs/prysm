@@ -9,12 +9,11 @@ import (
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -27,9 +26,9 @@ const (
 )
 
 var keymanagerKindSelections = map[v2keymanager.Kind]string{
-	v2keymanager.Direct:  "Direct, On-Disk Accounts (Recommended)",
-	v2keymanager.Derived: "Derived Accounts (Advanced)",
-	v2keymanager.Remote:  "Remote Accounts (Advanced)",
+	v2keymanager.Direct:  "Direct, On-Disk Wallet (Recommended)",
+	v2keymanager.Derived: "Derived HD Wallet (Advanced)",
+	v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 }
 
 // NewAccount creates a new validator account from user input. If a user
@@ -92,17 +91,17 @@ func NewAccount(cliCtx *cli.Context) error {
 			return nil
 		}
 		// Read the directory for password storage from user input.
-		passwordsDirPath := inputPasswordsDirectory(cliCtx)
-		walletConfig := &WalletConfig{
-			PasswordsDir:      passwordsDirPath,
-			WalletDir:         walletDir,
-			KeymanagerKind:    keymanagerKind,
-			CanUnlockAccounts: true,
-		}
-		wallet, err = CreateWallet(ctx, walletConfig)
-		if err != nil {
-			log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
-		}
+		//passwordsDirPath := inputPasswordsDirectory(cliCtx)
+		//walletConfig := &WalletConfig{
+		//	PasswordsDir:      passwordsDirPath,
+		//	WalletDir:         walletDir,
+		//	KeymanagerKind:    keymanagerKind,
+		//	CanUnlockAccounts: true,
+		//}
+		//wallet, err = CreateWallet(ctx, walletConfig)
+		//if err != nil {
+		//	log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
+		//}
 	}
 
 	// We initialize a new keymanager depending on the user's selected keymanager kind.
@@ -117,7 +116,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	}
 
 	// Read the new account's password from user input.
-	password, err := inputAccountPassword(cliCtx)
+	password, err := inputNewAccountPassword(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not read password: %v", err)
 	}
@@ -162,7 +161,7 @@ func inputKeymanagerKind(_ *cli.Context) (v2keymanager.Kind, error) {
 	return v2keymanager.Kind(selection), nil
 }
 
-func inputAccountPassword(_ *cli.Context) (string, error) {
+func inputNewAccountPassword(_ *cli.Context) (string, error) {
 	var hasValidPassword bool
 	var walletPassword string
 	var err error
@@ -191,6 +190,19 @@ func inputAccountPassword(_ *cli.Context) (string, error) {
 			continue
 		}
 		hasValidPassword = true
+	}
+	return walletPassword, nil
+}
+
+func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error) {
+	prompt := promptui.Prompt{
+		Label: fmt.Sprintf("Enter password for account %s", accountName),
+		Mask:  '*',
+	}
+
+	walletPassword, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
 	}
 	return walletPassword, nil
 }
