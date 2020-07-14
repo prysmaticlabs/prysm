@@ -213,7 +213,7 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 		passwordsDir = path.Join(passwordsDir, PasswordsDefaultDirName)
 	}
 	prompt := promptui.Prompt{
-		Label:    "Passwords directory",
+		Label:    "Directory where passwords will be stored",
 		Validate: validateDirectoryPath,
 		Default:  passwordsDir,
 	}
