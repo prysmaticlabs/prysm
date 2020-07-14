@@ -330,7 +330,8 @@ func (f *blocksFetcher) requestBlocks(
 
 	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
 	for i := uint64(0); ; i++ {
-		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p)
+		isFirstChunk := i == 0
+		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
 		if err == io.EOF {
 			break
 		}

@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -773,4 +774,139 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 			t.Error("Did not get wanted check point")
 		}
 	}
+}
+
+func TestVerifyBlkDescendant(t *testing.T) {
+	db, sc := testDB.SetupDB(t)
+	ctx := context.Background()
+
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 1
+	r, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.Body.Graffiti = bytesutil.PadTo([]byte{'a'}, 32)
+	r1, err := stateutil.BlockRoot(b1.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, b1); err != nil {
+		t.Fatal(err)
+	}
+
+	type args struct {
+		parentRoot    [32]byte
+		finalizedRoot [32]byte
+		finalizedSlot uint64
+	}
+	tests := []struct {
+		name        string
+		args        args
+		shouldError bool
+		err         string
+	}{
+		{
+			name: "could not get finalized block in block service cache",
+			args: args{
+				finalizedRoot: [32]byte{'a'},
+			},
+			shouldError: true,
+			err:         "nil finalized block",
+		},
+		{
+			name: "could not get finalized block root in DB",
+			args: args{
+				finalizedRoot: r,
+				parentRoot:    [32]byte{'a'},
+			},
+			shouldError: true,
+			err:         "could not get finalized block root",
+		},
+		{
+			name: "is not descendant",
+			args: args{
+				finalizedRoot: r1,
+				parentRoot:    r,
+			},
+			shouldError: true,
+			err:         "is not a descendent of the current finalized block slot",
+		},
+		{
+			name: "is descendant",
+			args: args{
+				finalizedRoot: r,
+				parentRoot:    r,
+			},
+			shouldError: false,
+		},
+	}
+	for _, test := range tests {
+		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(db, sc)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		service.finalizedCheckpt = &ethpb.Checkpoint{
+			Root: test.args.finalizedRoot[:],
+		}
+		err = service.VerifyBlkDescendant(ctx, test.args.parentRoot)
+		if test.shouldError {
+			if err == nil || !strings.Contains(err.Error(), test.err) {
+				t.Error("Did not get wanted error")
+			}
+		} else if err != nil {
+			t.Error(err)
+		}
+	}
+}
+
+func TestUpdateJustifiedInitSync(t *testing.T) {
+	db, _ := testDB.SetupDB(t)
+	ctx := context.Background()
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: gRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	service.genesisRoot = gRoot
+	currentCp := &ethpb.Checkpoint{Epoch: 1}
+	service.justifiedCheckpt = currentCp
+	newCp := &ethpb.Checkpoint{Epoch: 2, Root: gRoot[:]}
+
+	if err := service.updateJustifiedInitSync(ctx, newCp); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.DeepEqual(t, currentCp, service.prevJustifiedCheckpt, "incorrect previous justified checkpoint")
+	assert.DeepEqual(t, newCp, service.CurrentJustifiedCheckpt(), "incorrect current justified checkpoint in cache")
+	cp, err := service.beaconDB.JustifiedCheckpoint(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.DeepEqual(t, newCp, cp, "incorrect current justified checkpoint in db")
 }

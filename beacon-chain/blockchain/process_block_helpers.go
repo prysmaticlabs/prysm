@@ -92,13 +92,15 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "forkChoice.VerifyBlkDescendant")
 	defer span.End()
-
-	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
-		return errors.Wrap(err, "could not get finalized block")
+	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	finalizedBlkSigned, err := s.beaconDB.Block(ctx, fRoot)
+	if err != nil {
+		return err
+	}
+	if finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+		return errors.New("nil finalized block")
 	}
 	finalizedBlk := finalizedBlkSigned.Block
-
 	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
@@ -107,10 +109,10 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
 	}
 
-	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
+	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
 			bytesutil.Trunc(root[:]), finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot),
-			bytesutil.Trunc(s.finalizedCheckpt.Root))
+			bytesutil.Trunc(fRoot[:]))
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -200,6 +202,19 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
+// This caches input checkpoint as justified for the service struct. It rotates current justified to previous justified,
+// caches justified checkpoint balances for fork choice and save justified checkpoint in DB.
+// This method does not have defense against fork choice bouncing attack, which is why it's only recommend to be used during initial syncing.
+func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
+	s.prevJustifiedCheckpt = s.justifiedCheckpt
+	s.justifiedCheckpt = cp
+	if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		return err
+	}
+
+	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cp)
+}
+
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
 	// Blocks need to be saved so that we can retrieve finalized block from
 	// DB when migrating states.
@@ -253,7 +268,6 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 		return nil, errors.New("nil block")
 	}
 	b := signed.Block
-
 	if b.Slot == slot || b.Slot < slot {
 		return root, nil
 	}

@@ -166,6 +166,12 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		s.clearInitSyncBlocks()
 	}
 
+	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustifiedInitSync(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
+			return err
+		}
+	}
+
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
@@ -259,6 +265,12 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 			return err
 		}
 		s.clearInitSyncBlocks()
+	}
+
+	if jCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
+			return err
+		}
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
