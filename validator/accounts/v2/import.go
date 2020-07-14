@@ -2,6 +2,7 @@ package v2
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,15 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Could not parse wallet directory: %v", err)
 	}
+	ok, err := hasDir(walletDir)
+	if err != nil {
+		log.Fatalf("Could not check if wallet dir %s exists", walletDir)
+	}
+	if !ok {
+		log.Fatal(
+			"No wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
+		)
+	}
 
 	backupDir, err := inputImportDir(cliCtx)
 	if err != nil {
@@ -46,27 +56,23 @@ func ImportAccount(cliCtx *cli.Context) error {
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 
-	_ = passwordsDirPath
-	//wallet, err := CreateWallet(context.Background(), &WalletConfig{
-	//	CanUnlockAccounts: true,
-	//	PasswordsDir:      passwordsDirPath,
-	//	WalletDir:         walletDir,
-	//})
-	//if err == ErrNoWalletFound {
-	//	log.Fatal("No wallet found at path, please create a new wallet using `validator accounts-v2 new`")
-	//}
-	//if err != nil {
-	//	log.Fatalf("Could not open wallet: %v", err)
-	//}
-	//
-	//for _, accountName := range accountsImported {
-	//	if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-	//		log.WithError(err).Fatal("Could not set account password")
-	//	}
-	//}
-	//if err := logAccountsImported(wallet, accountsImported); err != nil {
-	//	log.WithError(err).Fatal("Could not log accounts imported")
-	//}
+	wallet, err := OpenWallet(context.Background(), &WalletConfig{
+		CanUnlockAccounts: true,
+		PasswordsDir:      passwordsDirPath,
+		WalletDir:         walletDir,
+	})
+	if err != nil {
+		log.Fatalf("Could not open wallet: %v", err)
+	}
+
+	for _, accountName := range accountsImported {
+		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
+			log.WithError(err).Fatal("Could not set account password")
+		}
+	}
+	if err := logAccountsImported(wallet, accountsImported); err != nil {
+		log.WithError(err).Fatal("Could not log accounts imported")
+	}
 
 	return nil
 }

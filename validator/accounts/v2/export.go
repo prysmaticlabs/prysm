@@ -2,6 +2,7 @@ package v2
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -26,41 +27,45 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
-	_ = walletDir
+	ok, err := hasDir(walletDir)
+	if err != nil {
+		log.Fatalf("Could not check if wallet dir %s exists", walletDir)
+	}
+	if !ok {
+		log.Fatal(
+			"No wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
+		)
+	}
 
 	outputDir, err := inputExportDir(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
 
-	_ = outputDir
-	//wallet, err := OpenWallet(context.Background(), &WalletConfig{
-	//	CanUnlockAccounts: false,
-	//	WalletDir:         walletDir,
-	//})
-	//if err == ErrNoWalletFound {
-	//	return errors.New("no wallet found at path, please create a new wallet using `validator accounts-v2 new`")
-	//}
-	//if err != nil {
-	//	return errors.Wrap(err, "could not open wallet")
-	//}
-	//
-	//allAccounts, err := wallet.AccountNames()
-	//if err != nil {
-	//	return err
-	//}
-	//accounts, err := selectAccounts(allAccounts)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if err := wallet.zipAccounts(accounts, outputDir); err != nil {
-	//	return errors.Wrap(err, "could not zip accounts")
-	//}
-	//
-	//if err := logAccountsExported(wallet, accounts); err != nil {
-	//	log.WithError(err).Fatal("Could not log out exported accounts")
-	//}
+	wallet, err := OpenWallet(context.Background(), &WalletConfig{
+		CanUnlockAccounts: false,
+		WalletDir:         walletDir,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not open wallet")
+	}
+
+	allAccounts, err := wallet.AccountNames()
+	if err != nil {
+		return err
+	}
+	accounts, err := selectAccounts(allAccounts)
+	if err != nil {
+		return err
+	}
+
+	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
+		return errors.Wrap(err, "could not zip accounts")
+	}
+
+	if err := logAccountsExported(wallet, accounts); err != nil {
+		log.WithError(err).Fatal("Could not log out exported accounts")
+	}
 	return nil
 }
 

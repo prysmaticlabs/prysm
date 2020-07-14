@@ -21,6 +21,15 @@ func ListAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+	ok, err := hasDir(walletDir)
+	if err != nil {
+		log.Fatalf("Could not check if wallet dir %s exists", walletDir)
+	}
+	if !ok {
+		log.Fatal(
+			"No wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
+		)
+	}
 	// Read the wallet from the specified path.
 	ctx := context.Background()
 	wallet, err := OpenWallet(ctx, &WalletConfig{
