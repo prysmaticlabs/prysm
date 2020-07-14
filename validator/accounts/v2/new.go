@@ -224,28 +224,6 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	return passwordsPath
 }
 
-func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
-	prompt := promptui.Prompt{
-		Label: "Remote gRPC address (such as host.example.com:4000)",
-		Validate: func(input string) error {
-			// TODO: Validate if it is a valid address.
-			if input == "" {
-				return errors.New("cannot be empty")
-			}
-			return nil
-		},
-	}
-	remoteAddr, err := prompt.Run()
-	if err != nil {
-		return nil, err
-	}
-	// TODO: Get path to ca certs, client certs, and key certs.
-	return &remote.Config{
-		RemoteCertificate: nil,
-		RemoteAddr:        remoteAddr,
-	}, nil
-}
-
 // Validate a strong password input for new accounts,
 // including a min length, at least 1 number and at least
 // 1 special character.
