@@ -4,6 +4,7 @@
 package maxprocs
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
@@ -11,6 +12,6 @@ import (
 func init() {
 	_, err := maxprocs.Set()
 	if err != nil {
-		panic(err)
+		log.WithError(err).Debug("Failed to set maxprocs")
 	}
 }
