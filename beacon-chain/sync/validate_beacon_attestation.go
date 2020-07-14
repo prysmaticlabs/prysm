@@ -72,7 +72,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
 	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
-	hasBlock := s.db.HasBlock(ctx, blockRoot)
+	hasBlock := s.db.HasBlock(ctx, blockRoot) || s.chain.HasInitSyncBlock(blockRoot)
 	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})

@@ -29,13 +29,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
-	if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root)) {
-		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return nil, errors.Wrap(err, "could not save initial sync blocks")
-		}
-		s.clearInitSyncBlocks()
-	}
-
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
@@ -77,9 +70,15 @@ func (s *Service) verifyAttTargetEpoch(ctx context.Context, genesisTime uint64, 
 
 // verifyBeaconBlock verifies beacon head block is known and not from the future.
 func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationData) error {
-	b, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(data.BeaconBlockRoot))
+	r := bytesutil.ToBytes32(data.BeaconBlockRoot)
+	b, err := s.beaconDB.Block(ctx, r)
 	if err != nil {
 		return err
+	}
+	// If the block does not exist in db, check again if block exists in initial sync block cache.
+	// This could happen as the node first syncs to head.
+	if b == nil && s.hasInitSyncBlock(r) {
+		b = s.getInitSyncBlock(r)
 	}
 	if b == nil || b.Block == nil {
 		return fmt.Errorf("beacon block %#x does not exist", bytesutil.Trunc(data.BeaconBlockRoot))
