@@ -64,7 +64,7 @@ func init() {
 	petname.NonDeterministicMode() // Set random account name generation.
 }
 
-// New given a set of configuration options, will leverage
+// NewWallet given a set of configuration options, will leverage
 // create and write a new wallet to disk for a Prysm validator.
 func NewWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	if cfg.WalletDir == "" || (cfg.CanUnlockAccounts && cfg.PasswordsDir == "") {
