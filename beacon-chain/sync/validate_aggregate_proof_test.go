@@ -177,6 +177,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),
+		chain:                &mock.ChainService{},
 	}
 
 	buf := new(bytes.Buffer)

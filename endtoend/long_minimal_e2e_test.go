@@ -20,7 +20,8 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	epochsToRun := 20
+	// Run for 5 epochs if not in long-running to confirm long-running has no issues.
+	epochsToRun := 5
 	var err error
 	epochStr, ok := os.LookupEnv("E2E_EPOCHS")
 	if ok {
@@ -28,8 +29,6 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-	} else {
-		t.Skip("E2E_EPOCHS not set")
 	}
 
 	minimalConfig := &types.E2EConfig{
@@ -38,7 +37,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 		},
 		ValidatorFlags: []string{},
 		EpochsToRun:    uint64(epochsToRun),
-		TestSync:       false,
+		TestSync:       true,
 		TestDeposits:   true,
 		TestSlasher:    true,
 		Evaluators: []types.Evaluator{

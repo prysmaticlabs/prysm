@@ -186,7 +186,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 
 		fmtKey := fmt.Sprintf("%#x", pubKey)
-		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
+		truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
