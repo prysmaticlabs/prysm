@@ -61,20 +61,6 @@ func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []by
 	return err
 }
 
-// DeleteProposalHistory deletes the proposal history for the corresponding validator public key.
-func (store *Store) DeleteProposalHistory(ctx context.Context, pubkey []byte) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.DeleteProposalHistory")
-	defer span.End()
-
-	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(historicProposalsBucket)
-		if err := bucket.DeleteBucket(pubkey); err != nil {
-			return errors.Wrap(err, "failed to delete the proposal history")
-		}
-		return nil
-	})
-}
-
 func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
@@ -85,7 +71,7 @@ func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 				return errors.Wrapf(err, "could not prune epoch %d in proposal history", epoch)
 			}
 		} else {
-			// If starting from the oldest, we stop finding anything prunable, stop pruning.
+			// If starting from the oldest, we dont find anything prunable, stop pruning.
 			break
 		}
 	}

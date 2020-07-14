@@ -82,17 +82,3 @@ func (store *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, histor
 	})
 	return err
 }
-
-// DeleteAttestationHistory deletes the attestation history for the corresponding validator public key.
-func (store *Store) DeleteAttestationHistory(ctx context.Context, pubkey []byte) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.DeleteAttestationHistory")
-	defer span.End()
-
-	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(historicAttestationsBucket)
-		if err := bucket.Delete(pubkey); err != nil {
-			return errors.Wrap(err, "failed to delete the attestation history")
-		}
-		return nil
-	})
-}
