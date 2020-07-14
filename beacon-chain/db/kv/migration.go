@@ -14,6 +14,7 @@ var migrations = []migration{
 	migrateArchivedIndex,
 }
 
+// RunMigrations defined in the migrations array.
 func (s *Store) RunMigrations(ctx context.Context) error {
 	for _, m := range migrations {
 		if ctx.Err() != nil {
