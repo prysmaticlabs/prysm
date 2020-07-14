@@ -101,7 +101,6 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 		return errors.New("nil finalized block")
 	}
 	finalizedBlk := finalizedBlkSigned.Block
-
 	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
@@ -203,6 +202,16 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
+func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
+	s.prevJustifiedCheckpt = s.justifiedCheckpt
+	s.justifiedCheckpt = cp
+	if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		return err
+	}
+
+	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cp)
+}
+
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
 	// Blocks need to be saved so that we can retrieve finalized block from
 	// DB when migrating states.
@@ -256,7 +265,6 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 		return nil, errors.New("nil block")
 	}
 	b := signed.Block
-
 	if b.Slot == slot || b.Slot < slot {
 		return root, nil
 	}

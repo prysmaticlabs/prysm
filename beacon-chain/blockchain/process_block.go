@@ -258,6 +258,12 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 		s.clearInitSyncBlocks()
 	}
 
+	if jCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
+			return err
+		}
+	}
+
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
