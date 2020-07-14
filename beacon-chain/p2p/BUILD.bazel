@@ -121,6 +121,8 @@ go_test(
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discover:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enode:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
