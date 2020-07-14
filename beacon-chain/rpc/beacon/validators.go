@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -187,7 +187,7 @@ func (bs *Server) ListValidators(
 		}
 		requestedEpoch = q.Epoch
 	}
-	var reqState *state2.BeaconState
+	var reqState *statetrie.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
 		reqState, err = bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
