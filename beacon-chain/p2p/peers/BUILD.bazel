@@ -29,6 +29,7 @@ go_test(
     srcs = [
         "benchmark_test.go",
         "score_bad_responses_test.go",
+        "scorer_test.go",
         "status_test.go",
     ],
     embed = [":go_default_library"],
