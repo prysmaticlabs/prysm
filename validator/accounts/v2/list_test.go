@@ -22,7 +22,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	walletDir, passwordsDir := setupWalletDir(t)
 	keymanagerKind := v2keymanager.Direct
 	ctx := context.Background()
-	wallet, err := CreateWallet(ctx, &WalletConfig{
+	wallet, err := NewWallet(ctx, &WalletConfig{
 		PasswordsDir:   passwordsDir,
 		WalletDir:      walletDir,
 		KeymanagerKind: keymanagerKind,
