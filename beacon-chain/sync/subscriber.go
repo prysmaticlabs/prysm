@@ -48,38 +48,36 @@ func (s *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Mess
 // Register PubSub subscribers
 func (s *Service) registerSubscribers() {
 	s.subscribe(
-		"/eth2/%x/beacon_block",
+		p2p.BlockSubnetTopicFormat,
 		s.validateBeaconBlockPubSub,
 		s.beaconBlockSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/beacon_aggregate_and_proof",
+		p2p.AggregateAndProofSubnetTopicFormat,
 		s.validateAggregateAndProof,
 		s.beaconAggregateProofSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/voluntary_exit",
+		p2p.ExitSubnetTopicFormat,
 		s.validateVoluntaryExit,
 		s.voluntaryExitSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/proposer_slashing",
+		p2p.ProposerSlashingSubnetTopicFormat,
 		s.validateProposerSlashing,
 		s.proposerSlashingSubscriber,
 	)
 	s.subscribe(
-		"/eth2/%x/attester_slashing",
+		p2p.AttesterSlashingSubnetTopicFormat,
 		s.validateAttesterSlashing,
 		s.attesterSlashingSubscriber,
 	)
 	if featureconfig.Get().DisableDynamicCommitteeSubnets {
-		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-			s.subscribe(
-				fmt.Sprintf("/eth2/%%x/beacon_attestation_%d", i),
-				s.validateCommitteeIndexBeaconAttestation,   /* validator */
-				s.committeeIndexBeaconAttestationSubscriber, /* message handler */
-			)
-		}
+		s.subscribeStaticWithSubnets(
+			"/eth2/%x/beacon_attestation_%d",
+			s.validateCommitteeIndexBeaconAttestation,   /* validator */
+			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
+		)
 	} else {
 		s.subscribeDynamicWithSubnets(
 			"/eth2/%x/beacon_attestation_%d",
@@ -107,7 +105,7 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 		log.WithError(err).Error("Failed to register validator")
 	}
 
-	sub, err := s.p2p.PubSub().Subscribe(topic)
+	sub, err := s.p2p.SubscribeToTopic(topic)
 	if err != nil {
 		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
 		// libp2p PubSub library. This should not happen at normal runtime, unless the config
@@ -185,6 +183,49 @@ func wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub
 		}
 		return b
 	}
+}
+
+// subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
+// used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
+func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler) {
+	base := p2p.GossipTopicMappings[topic]
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
+	}
+	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+		s.subscribeWithBase(base, s.addDigestAndIndexToTopic(topic, i), validator, handle)
+	}
+	genesis := s.chain.GenesisTime()
+	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+
+	go func() {
+		for {
+			select {
+			case <-s.ctx.Done():
+				ticker.Done()
+				return
+			case <-ticker.C():
+				if s.chainStarted && s.initialSync.Syncing() {
+					continue
+				}
+				// Check every slot that there are enough peers
+				for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+					if !s.validPeersExist(topic, i) {
+						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
+							"committee index %d. Searching network for peers subscribed to the subnet.", i)
+						go func(idx uint64) {
+							_, err := s.p2p.FindPeersWithSubnet(idx)
+							if err != nil {
+								log.Errorf("Could not search for peers: %v", err)
+								return
+							}
+						}(i)
+						return
+					}
+				}
+			}
+		}
+	}()
 }
 
 // subscribe to a dynamically changing list of subnets. This method expects a fmt compatible
@@ -323,6 +364,18 @@ func (s *Service) addDigestToTopic(topic string) string {
 		log.WithError(err).Fatal("Could not compute fork digest")
 	}
 	return fmt.Sprintf(topic, digest)
+}
+
+// Add the digest and index to subnet topic.
+func (s *Service) addDigestAndIndexToTopic(topic string, idx uint64) string {
+	if !strings.Contains(topic, "%x") {
+		log.Fatal("Topic does not have appropriate formatter for digest")
+	}
+	digest, err := s.forkDigest()
+	if err != nil {
+		log.WithError(err).Fatal("Could not compute fork digest")
+	}
+	return fmt.Sprintf(topic, digest, idx)
 }
 
 func (s *Service) forkDigest() ([4]byte, error) {

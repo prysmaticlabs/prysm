@@ -15,8 +15,8 @@ import (
 // It tracks the unaggregated attestations that weren't able to aggregate to prevent
 // the deletion of unaggregated attestations in the pool.
 func (p *AttCaches) AggregateUnaggregatedAttestations() error {
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
 	unaggregatedAtts := p.UnaggregatedAttestations()
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 		if err != nil {
@@ -111,10 +111,11 @@ func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error 
 
 // AggregatedAttestations returns the aggregated attestations in cache.
 func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, 0)
-
 	p.aggregatedAttLock.RLock()
 	defer p.aggregatedAttLock.RUnlock()
+
+	atts := make([]*ethpb.Attestation, 0)
+
 	for _, a := range p.aggregatedAtt {
 		atts = append(atts, a...)
 	}
@@ -187,7 +188,7 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer p.aggregatedAttLock.RUnlock()
 	if atts, ok := p.aggregatedAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Contains(att.AggregationBits) {
+			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
 				return true, nil
 			}
 		}
@@ -197,7 +198,7 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer p.blockAttLock.RUnlock()
 	if atts, ok := p.blockAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Contains(att.AggregationBits) {
+			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
 				return true, nil
 			}
 		}

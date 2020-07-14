@@ -429,7 +429,7 @@ func (p *Status) Decay() {
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
-	pidEpoch := make(map[peer.ID]uint64)
+	pidEpoch := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -493,7 +493,7 @@ func (p *Status) HighestEpoch() uint64 {
 }
 
 func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
-	committeeIdxs := []uint64{}
+	committeeIdxs := make([]uint64, 0, bitV.Count())
 	for i := uint64(0); i < 64; i++ {
 		if bitV.BitAt(i) {
 			committeeIdxs = append(committeeIdxs, i)

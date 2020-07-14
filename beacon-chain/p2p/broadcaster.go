@@ -18,8 +18,6 @@ import (
 // GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
-const attestationSubnetTopicFormat = "/eth2/%x/beacon_attestation_%d"
-
 // Broadcast a message to the p2p network.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
@@ -72,7 +70,7 @@ func (s *Service) broadcastObject(ctx context.Context, obj interface{}, topic st
 		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
 
-	if err := s.pubsub.Publish(topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
+	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -81,5 +79,5 @@ func (s *Service) broadcastObject(ctx context.Context, obj interface{}, topic st
 }
 
 func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
-	return fmt.Sprintf(attestationSubnetTopicFormat, forkDigest, subnet)
+	return fmt.Sprintf(AttestationSubnetTopicFormat, forkDigest, subnet)
 }

@@ -16,20 +16,26 @@ import (
 
 func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
+	db, c := testDB.SetupDB(t)
+	service := New(db, c)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	r := [32]byte{'a'}
-	if err := service.epochBoundaryStateCache.put(r, beaconState); err != nil {
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	br, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.epochBoundaryStateCache.put(br, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := service.MigrateToCold(ctx, 1, r); err != nil {
+	if err := service.MigrateToCold(ctx, br); err != nil {
 		t.Fatal(err)
 	}
 
-	wanted := &finalizedInfo{state: beaconState, root: r, slot: 1}
+	wanted := &finalizedInfo{state: beaconState, root: br, slot: 1}
 	if !reflect.DeepEqual(wanted, service.finalizedInfo) {
 		t.Error("Incorrect finalized info")
 	}
@@ -47,12 +53,18 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	if err := beaconState.SetSlot(stateSlot); err != nil {
 		t.Fatal(err)
 	}
-	fRoot := [32]byte{'a'}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
+	fRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.epochBoundaryStateCache.put(fRoot, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	fSlot := uint64(2)
-	if err := service.MigrateToCold(ctx, fSlot, fRoot); err != nil {
+	if err := service.MigrateToCold(ctx, fRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,7 +102,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	if err := beaconState.SetSlot(stateSlot); err != nil {
 		t.Fatal(err)
 	}
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
 	fRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -113,8 +125,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 		state: beaconState,
 	}
 
-	fSlot := uint64(2)
-	if err := service.MigrateToCold(ctx, fSlot, fRoot); err != nil {
+	if err := service.MigrateToCold(ctx, fRoot); err != nil {
 		t.Fatal(err)
 	}
 

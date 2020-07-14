@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
@@ -52,7 +51,7 @@ type Service struct {
 	exitPool                  *voluntaryexits.Pool
 	genesisTime               time.Time
 	p2p                       p2p.Broadcaster
-	maxRoutines               int64
+	maxRoutines               int
 	head                      *head
 	headLock                  sync.RWMutex
 	stateNotifier             statefeed.Notifier
@@ -90,7 +89,7 @@ type Config struct {
 	ExitPool          *voluntaryexits.Pool
 	SlashingPool      *slashings.Pool
 	P2p               p2p.Broadcaster
-	MaxRoutines       int64
+	MaxRoutines       int
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
@@ -161,7 +160,11 @@ func (s *Service) Start() {
 		}
 
 		// We start a counter to genesis, if needed.
-		go slotutil.CountdownToGenesis(ctx, s.genesisTime, uint64(beaconState.NumValidators()))
+		gState, err := s.beaconDB.GenesisState(ctx)
+		if err != nil {
+			log.Fatalf("Could not retrieve genesis state: %v", err)
+		}
+		go slotutil.CountdownToGenesis(ctx, s.genesisTime, uint64(gState.NumValidators()))
 
 		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(ctx)
 		if err != nil {
@@ -299,7 +302,7 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
-	if int64(runtime.NumGoroutine()) > s.maxRoutines {
+	if runtime.NumGoroutine() > s.maxRoutines {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
 	return nil
@@ -421,31 +424,14 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
-	if !featureconfig.Get().SkipRegenHistoricalStates {
-		// Since historical states were skipped, the node should start from last finalized check point.
-		finalizedRoot = s.beaconDB.LastArchivedRoot(ctx)
-		if finalizedRoot == params.BeaconConfig().ZeroHash {
-			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
-		}
+	finalizedRoot = s.beaconDB.LastArchivedRoot(ctx)
+	if finalizedRoot == params.BeaconConfig().ZeroHash {
+		finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 	}
 
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block from db")
-	}
-
-	// To skip the regeneration of historical state, the node has to generate the parent of the last finalized state.
-	// We don't need to do this for genesis.
-	atGenesis := s.CurrentSlot() == 0
-	if featureconfig.Get().SkipRegenHistoricalStates && !atGenesis {
-		parentRoot := bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)
-		parentState, err := s.generateState(ctx, finalizedRoot, parentRoot)
-		if err != nil {
-			return err
-		}
-		if s.beaconDB.SaveState(ctx, parentState, parentRoot) != nil {
-			return err
-		}
 	}
 
 	if finalizedState == nil || finalizedBlock == nil {

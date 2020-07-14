@@ -499,7 +499,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCStatusRequest, r.sendGenericGoodbyeMessage)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -597,7 +597,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCStatusRequest, r.sendGenericGoodbyeMessage)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 100*time.Second) {

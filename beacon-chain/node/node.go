@@ -294,12 +294,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not create new database")
 		}
 	} else {
-		if !featureconfig.Get().SkipRegenHistoricalStates {
-			// Only check if historical states were deleted and needed to recompute when
-			// user doesn't want to skip.
-			if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
-				return err
-			}
+		// Only check if historical states were deleted and needed to recompute when
+		// user doesn't want to skip.
+		if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
+			return err
 		}
 	}
 
@@ -411,7 +409,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	maxRoutines := b.cliCtx.Int64(cmd.MaxGoroutines.Name)
+	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,
@@ -623,7 +621,7 @@ func (b *BeaconNode) registerPrometheusService() error {
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int64(flags.MonitoringPortFlag.Name)),
+		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
 	)

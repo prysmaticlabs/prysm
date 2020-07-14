@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -30,7 +30,7 @@ import (
 //       - Save archived point
 //    - Else delete the state from the db if not finalized (why would we have a cold storage state in the db already?)
 //  - Update split data.
-func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte) error {
+func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
 
@@ -38,6 +38,11 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 	oldFSlot := s.finalizedInfo.slot
 	s.finalizedInfo.lock.RUnlock()
 
+	fBlock, err := s.beaconDB.Block(ctx, fRoot)
+	if err != nil {
+		return err
+	}
+	fSlot := fBlock.Block.Slot
 	if oldFSlot > fSlot {
 		return nil
 	}
@@ -75,7 +80,7 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 				if len(blks) != 1 {
 					return errUnknownBlock
 				}
-				missingRoot, err := ssz.HashTreeRoot(blks[0].Block)
+				missingRoot, err := stateutil.BlockRoot(blks[0].Block)
 				if err != nil {
 					return err
 				}

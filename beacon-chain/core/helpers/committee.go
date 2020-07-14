@@ -143,33 +143,6 @@ func ComputeCommittee(
 	return shuffledList[start:end], err
 }
 
-// AttestingIndices returns the attesting participants indices from the attestation data. The
-// committee is provided as an argument rather than a direct implementation from the spec definition.
-// Having the committee as an argument allows for re-use of beacon committees when possible.
-//
-// Spec pseudocode definition:
-//   def get_attesting_indices(state: BeaconState,
-//                          data: AttestationData,
-//                          bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]) -> Set[ValidatorIndex]:
-//    """
-//    Return the set of attesting indices corresponding to ``data`` and ``bits``.
-//    """
-//    committee = get_beacon_committee(state, data.slot, data.index)
-//    return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error) {
-	indices := make([]uint64, 0, len(committee))
-	indicesSet := make(map[uint64]bool, len(committee))
-	for i, idx := range committee {
-		if !indicesSet[idx] {
-			if bf.BitAt(uint64(i)) {
-				indices = append(indices, idx)
-			}
-		}
-		indicesSet[idx] = true
-	}
-	return indices, nil
-}
-
 // CommitteeAssignmentContainer represents a committee, index, and attester slot for a given epoch.
 type CommitteeAssignmentContainer struct {
 	Committee      []uint64
@@ -201,7 +174,7 @@ func CommitteeAssignments(
 	// Some validators may need to propose multiple times per epoch, so
 	// we use a map of proposer idx -> []slot to keep track of this possibility.
 	startSlot := StartSlot(epoch)
-	proposerIndexToSlots := make(map[uint64][]uint64)
+	proposerIndexToSlots := make(map[uint64][]uint64, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
@@ -224,7 +197,7 @@ func CommitteeAssignments(
 	// Each slot in an epoch has a different set of committees. This value is derived from the
 	// active validator set, which does not change.
 	numCommitteesPerSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
-	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer)
+	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer, numCommitteesPerSlot*params.BeaconConfig().SlotsPerEpoch)
 
 	// Compute all committees for all slots.
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {

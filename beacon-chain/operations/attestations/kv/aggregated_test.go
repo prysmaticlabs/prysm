@@ -382,6 +382,24 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b1111111}},
 			want: false,
 		},
+		{
+			name: "attestations with different bitlist lengths",
+			existing: []*ethpb.Attestation{
+				{
+					Data: &ethpb.AttestationData{
+						Slot: 2,
+					},
+					AggregationBits: bitfield.Bitlist{0b1111000},
+				},
+			},
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 2,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111},
+			},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {

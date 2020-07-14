@@ -20,6 +20,7 @@ go_library(
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
+        "//shared/maxprocs:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
         "@com_github_ipfs_go_log_v2//:go_default_library",
@@ -28,7 +29,6 @@ go_library(
         "@com_github_urfave_cli_v2//:go_default_library",
         "@com_github_urfave_cli_v2//altsrc:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
-        "@org_uber_go_automaxprocs//:go_default_library",
     ],
 )
 
@@ -65,7 +65,7 @@ go_image(
         "@com_github_urfave_cli_v2//:go_default_library",
         "@com_github_urfave_cli_v2//altsrc:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
-        "@org_uber_go_automaxprocs//:go_default_library",
+        "//shared/maxprocs:go_default_library",
     ],
 )
 

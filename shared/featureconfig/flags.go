@@ -119,10 +119,6 @@ var (
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
 	}
-	skipRegenHistoricalStates = &cli.BoolFlag{
-		Name:  "skip-regen-historical-states",
-		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
-	}
 	disableReduceAttesterStateCopy = &cli.BoolFlag{
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
@@ -148,9 +144,21 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	enableAccountsV2 = &cli.BoolFlag{
+		Name:  "enable-accounts-v2",
+		Usage: "Enables usage of v2 for Prysm validator accounts",
+	}
 	batchBlockVerify = &cli.BoolFlag{
 		Name:  "batch-block-verify",
 		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
+	}
+	initSyncVerbose = &cli.BoolFlag{
+		Name:  "init-sync-verbose",
+		Usage: "Enable logging every processed block during initial syncing. ",
+	}
+	enableFinalizedDepositsCache = &cli.BoolFlag{
+		Name:  "enable-finalized-deposits-cache",
+		Usage: "Enables utilization of cached finalized deposits",
 	}
 )
 
@@ -481,6 +489,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedSkipRegenHistoricalStates = &cli.BoolFlag{
+		Name:   "skip-regen-historical-states",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -547,6 +560,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectProposerFlag,
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
+	deprecatedSkipRegenHistoricalStates,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -556,6 +570,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	altonaTestnet,
+	enableAccountsV2,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -591,7 +606,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	skipRegenHistoricalStates,
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
@@ -600,6 +614,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
 	batchBlockVerify,
+	initSyncVerbose,
+	enableFinalizedDepositsCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -609,4 +625,5 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
+	// "--enable-finalized-deposits-cache", // TODO(6588): Enable in e2e
 }

@@ -18,11 +18,11 @@ import (
 func lookupValuesForIndices(ctx context.Context, indicesByBucket map[string][]byte, tx *bolt.Tx) [][][]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.lookupValuesForIndices")
 	defer span.End()
-	values := make([][][]byte, 0)
+	values := make([][][]byte, 0, len(indicesByBucket))
 	for k, v := range indicesByBucket {
 		bkt := tx.Bucket([]byte(k))
 		roots := bkt.Get(v)
-		splitRoots := make([][]byte, 0)
+		splitRoots := make([][]byte, 0, len(roots)/32)
 		for i := 0; i < len(roots); i += 32 {
 			splitRoots = append(splitRoots, roots[i:i+32])
 		}

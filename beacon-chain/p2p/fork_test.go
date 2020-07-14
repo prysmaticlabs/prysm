@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -32,7 +34,8 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	require.NoError(t, err)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -58,9 +61,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 			genesisValidatorsRoot: root,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
-		if err != nil {
-			t.Errorf("Could not start discovery for node: %v", err)
-		}
+		assert.NoError(t, err, "Could not start discovery for node")
 		listeners = append(listeners, listener)
 	}
 	defer func() {
@@ -85,7 +86,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err := NewService(cfg)
+	s, err = NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,20 +98,14 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	for _, n := range nodes {
 		if s.filterPeer(n) {
 			addr, err := convertToSingleMultiAddr(n)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			addrs = append(addrs, addr)
 		}
 	}
 
 	// We should not have valid peers if the fork digest mismatched.
-	if len(addrs) != 0 {
-		t.Errorf("Expected 0 valid peers, got %d", len(addrs))
-	}
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
-	}
+	assert.Equal(t, 0, len(addrs), "Expected 0 valid peers")
+	require.NoError(t, s.Stop())
 }
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
@@ -125,7 +120,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	require.NoError(t, err)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -155,9 +151,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
-		if err != nil {
-			t.Errorf("Could not start discovery for node: %v", err)
-		}
+		assert.NoError(t, err, "Could not start discovery for node")
 		listeners = append(listeners, listener)
 	}
 	defer func() {
@@ -182,10 +176,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err := NewService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s, err = NewService(cfg)
+	require.NoError(t, err)
 
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
@@ -195,9 +187,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	for _, n := range nodes {
 		if s.filterPeer(n) {
 			addr, err := convertToSingleMultiAddr(n)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			addrs = append(addrs, addr)
 		}
 	}
@@ -206,9 +196,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.Stop())
 }
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
@@ -227,83 +215,57 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	digest, err := p2putils.CreateForkDigest(genesisTime, make([]byte, 32))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
 		NextForkVersion:   nextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
 	enc, err := enrForkID.MarshalSSZ()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	forkEntry := enr.WithEntry(eth2ENRKey, enc)
 	// In epoch 1 of current time, the fork version should be
 	// {0, 0, 0, 1} according to the configuration override above.
 	temp := testutil.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
-	if err := os.Mkdir(tempPath, 0700); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Mkdir(tempPath, 0700))
 	pkey, err := privKey(&Config{DataDir: tempPath})
-	if err != nil {
-		t.Fatalf("Could not get private key: %v", err)
-	}
+	require.NoError(t, err, "Could not get private key")
 	db, err := enode.OpenDB("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode.Set(forkEntry)
 
 	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	resp, err := retrieveForkEntry(localNode.Node().Record())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !bytes.Equal(resp.CurrentForkDigest, want[:]) {
 		t.Errorf("Wanted fork digest: %v, received %v", want, resp.CurrentForkDigest)
 	}
 	if !bytes.Equal(resp.NextForkVersion[:], nextForkVersion) {
 		t.Errorf("Wanted next fork version: %v, received %v", nextForkVersion, resp.NextForkVersion)
 	}
-	if resp.NextForkEpoch != nextForkEpoch {
-		t.Errorf("Wanted next for epoch: %d, received: %d", nextForkEpoch, resp.NextForkEpoch)
-	}
+	assert.Equal(t, nextForkEpoch, resp.NextForkEpoch, "Unexpected next fork epoch")
 }
 
 func TestAddForkEntry_Genesis(t *testing.T) {
 	temp := testutil.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
-	if err := os.Mkdir(tempPath, 0700); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Mkdir(tempPath, 0700))
 	pkey, err := privKey(&Config{DataDir: tempPath})
-	if err != nil {
-		t.Fatalf("Could not get private key: %v", err)
-	}
+	require.NoError(t, err, "Could not get private key")
 	db, err := enode.OpenDB("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), []byte{'A', 'B', 'C', 'D'})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	forkEntry, err := retrieveForkEntry(localNode.Node().Record())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !bytes.Equal(forkEntry.NextForkVersion, params.BeaconConfig().GenesisForkVersion) {
 		t.Errorf("Wanted Next Fork Version to be equal to genesis fork version, instead got %#x", forkEntry.NextForkVersion)
 	}
