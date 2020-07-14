@@ -145,14 +145,16 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 			},
 		})
 
-		if err := s.saveHeadNoDB(ctx, blockCopy, blkRoots[i]); err != nil {
-			err := errors.Wrap(err, "could not save head")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-
 		// Reports on blockCopy and fork choice metrics.
 		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+	}
+
+	lastBlk := blocks[len(blocks)-1]
+	lastRoot := blkRoots[len(blkRoots)-1]
+	if err := s.saveHeadNoDB(ctx, lastBlk, lastRoot); err != nil {
+		err := errors.Wrap(err, "could not save head")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 
 	return nil
