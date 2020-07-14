@@ -85,12 +85,14 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:            wallet,
-		cfg:               cfg,
-		mnemonicGenerator: &EnglishMnemonicGenerator{},
-		keysCache:         make(map[[48]byte]bls.SecretKey),
+		wallet: wallet,
+		cfg:    cfg,
+		mnemonicGenerator: &EnglishMnemonicGenerator{
+			skipMnemonicConfirm: skipMnemonicConfirm,
+		},
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys

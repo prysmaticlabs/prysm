@@ -192,6 +192,7 @@ func (w *Wallet) AccountNames() ([]string, error) {
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) ExistingKeyManager(
 	ctx context.Context,
+	skipMnemonicConfirm bool,
 ) (v2keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
@@ -204,7 +205,7 @@ func (w *Wallet) ExistingKeyManager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = direct.NewKeymanager(ctx, w, cfg)
+		keymanager, err = direct.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize keymanager")
 		}
@@ -222,12 +223,12 @@ func (w *Wallet) ExistingKeyManager(
 // reads the config file and initializes the keymanager that way. Otherwise,
 // writes a new configuration file to the wallet and returns the initialized
 // keymanager for use.
-func (w *Wallet) CreateKeymanager(ctx context.Context) (v2keymanager.IKeymanager, error) {
+func (w *Wallet) CreateKeymanager(ctx context.Context, skipMnemonicConfirm bool) (v2keymanager.IKeymanager, error) {
 	var keymanager v2keymanager.IKeymanager
 	var err error
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
-		keymanager, err = direct.NewKeymanager(ctx, w, direct.DefaultConfig())
+		keymanager, err = direct.NewKeymanager(ctx, w, direct.DefaultConfig(), skipMnemonicConfirm)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read keymanager")
 		}
