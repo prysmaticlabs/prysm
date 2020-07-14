@@ -30,10 +30,8 @@ var keymanagerKindSelections = map[v2keymanager.Kind]string{
 	v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 }
 
-// NewAccount creates a new validator account from user input. If a user
-// does not have an initialized wallet at the specified wallet path, this
-// method will create a new wallet and ask user for input for their new wallet's
-// available options.
+// NewAccount creates a new validator account from user input by opening
+// a wallet from the user's specified path.
 func NewAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
@@ -41,39 +39,33 @@ func NewAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not parse wallet directory: %v", err)
 	}
 	// Check if the user has a wallet at the specified path.
-	// If a user does not have a wallet, we instantiate one
-	// based on specified options.
 	walletExists, err := hasDir(walletDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 	ctx := context.Background()
-	var wallet *Wallet
-	if walletExists {
-		keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if keymanagerKind == v2keymanager.Remote {
-			log.Fatal("Cannot create an account for a remote keymanager")
-		}
-		// Read the directory for password storage from user input.
-		passwordsDirPath := inputPasswordsDirectory(cliCtx)
-		wallet, err = OpenWallet(ctx, &WalletConfig{
-			PasswordsDir:      passwordsDirPath,
-			WalletDir:         walletDir,
-			CanUnlockAccounts: true,
-			KeymanagerKind:    keymanagerKind,
-		})
-	} else {
-		// Determine the desired keymanager kind for the wallet from user input.
-		if err := CreateWallet(cliCtx, walletDir); err != nil {
-			log.Fatalf("Could not create new wallet: %v", err)
-		}
+	if !walletExists {
+		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	}
+	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	if wallet.KeymanagerKind() != v2keymanager.Direct {
-		log.Fatalf("cannot create a new account for a %s keymanager", wallet.KeymanagerKind())
+	// Only direct keymanagers can create accounts for now.
+	if keymanagerKind != v2keymanager.Direct {
+		log.Fatalf("cannot create a new account for a %s keymanager", keymanagerKind)
+	}
+	// Read the directory for password storage from user input.
+	passwordsDirPath := inputPasswordsDirectory(cliCtx)
+	wallet, err := OpenWallet(ctx, &WalletConfig{
+		PasswordsDir:      passwordsDirPath,
+		WalletDir:         walletDir,
+		CanUnlockAccounts: true,
+		KeymanagerKind:    keymanagerKind,
+	})
+	if err != nil {
+		log.Fatalf("Could not open wallet: %v", err)
 	}
 
 	// We initialize a new keymanager depending on the wallet's keymanager kind.

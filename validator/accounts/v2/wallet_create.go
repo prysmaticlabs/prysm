@@ -14,37 +14,40 @@ import (
 // CreateWallet from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateWallet(cliCtx *cli.Context, walletDir string) error {
+func CreateWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
 	// Determine the desired keymanager kind for the wallet from user input.
 	keymanagerKind, err := inputKeymanagerKind(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not select keymanager kind: %v", err)
 	}
+	var wallet *Wallet
 	switch keymanagerKind {
 	case v2keymanager.Direct:
-		if err := initializeDirectWallet(cliCtx, walletDir); err != nil {
+		wallet, err = initializeDirectWallet(cliCtx, walletDir)
+		if err != nil {
 			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
 		}
 		log.Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
-				"Make a new validator account with ./prysm.sh validator wallet-v2 accounts new",
+				"Make a new validator account with ./prysm.sh validator accounts-2 new",
 		)
 	case v2keymanager.Derived:
 		log.Fatal("Derived keymanager is not yet supported")
 	case v2keymanager.Remote:
-		if err := initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
+		wallet, err = initializeRemoteSignerWallet(cliCtx, walletDir)
+		if err != nil {
 			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
 		}
 		log.Infof(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		log.Fatalf("Keymanager type %s is not supported", keymanagerKind.String())
+		log.Fatalf("Keymanager type %s is not supported", keymanagerKind)
 	}
-	return nil
+	return wallet, nil
 }
 
-func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
+func initializeDirectWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 	walletConfig := &WalletConfig{
 		PasswordsDir:      passwordsDirPath,
@@ -55,24 +58,27 @@ func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	ctx := context.Background()
 	wallet, err := NewWallet(ctx, walletConfig)
 	if err != nil {
-		return errors.Wrap(err, "could not create new wallet")
+		return nil, errors.Wrap(err, "could not create new wallet")
 	}
 	keymanagerConfig, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
 	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
+		return nil, errors.Wrap(err, "could not marshal keymanager config file")
 	}
-	return wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig)
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return nil, errors.Wrap(err, "could not write keymanager config to disk")
+	}
+	return wallet, nil
 }
 
-func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
+func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
 	conf, err := inputRemoteKeymanagerConfig(cliCtx)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not input remote keymanager config")
 	}
 	ctx := context.Background()
 	keymanagerConfig, err := remote.MarshalConfigFile(ctx, conf)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not marshal config file")
 	}
 	walletConfig := &WalletConfig{
 		WalletDir:      walletDir,
@@ -80,9 +86,12 @@ func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
 	}
 	wallet, err := NewWallet(ctx, walletConfig)
 	if err != nil {
-		return errors.Wrap(err, "could not create new wallet")
+		return nil, errors.Wrap(err, "could not create new wallet")
 	}
-	return wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig)
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return nil, errors.Wrap(err, "could not write keymanager config to disk")
+	}
+	return wallet, nil
 }
 
 func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
