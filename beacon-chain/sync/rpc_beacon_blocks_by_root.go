@@ -31,7 +31,8 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {
-		blk, err := ReadChunkedBlock(stream, s.p2p)
+		isFirstChunk := i == 0
+		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
 		// Return error until #6408 is resolved.
 		if err == io.EOF {
 			return err
@@ -79,7 +80,8 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {
-		blk, err := ReadChunkedBlock(stream, s.p2p)
+		isFirstChunk := i == 0
+		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
 		if err == io.EOF {
 			break
 		}
