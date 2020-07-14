@@ -39,8 +39,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	temp := testutil.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
-	err = os.Mkdir(tempPath, 0700)
-	require.NoError(t, err)
+	require.NoError(t, os.Mkdir(tempPath, 0700))
 	pkey, err := privKey(&Config{DataDir: tempPath})
 	require.NoError(t, err, "Could not get private key")
 	return ipAddr, pkey

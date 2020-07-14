@@ -84,8 +84,7 @@ func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
 	}
-	err := p.Broadcast(context.Background(), &testpb.AddressBook{})
-	assert.ErrorContains(t, ErrMessageNotMapped.Error(), err)
+	assert.ErrorContains(t, ErrMessageNotMapped.Error(), p.Broadcast(context.Background(), &testpb.AddressBook{}))
 }
 
 func TestService_Attestation_Subnet(t *testing.T) {

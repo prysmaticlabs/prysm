@@ -71,7 +71,7 @@ func TestPeerNoENR(t *testing.T) {
 	retrievedENR, err := p.ENR(id)
 	require.NoError(t, err, "Could not retrieve chainstate")
 	var nilENR *enr.Record
-	assert.DeepEqual(t, nilENR, retrievedENR, "Wanted a nil enr to be saved")
+	assert.Equal(t, nilENR, retrievedENR, "Wanted a nil enr to be saved")
 }
 
 func TestPeerNoOverwriteENR(t *testing.T) {

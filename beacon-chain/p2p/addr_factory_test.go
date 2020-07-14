@@ -45,5 +45,5 @@ func TestRelayAddrs_UseNonRelayAddrs(t *testing.T) {
 
 	result := f(addrs)
 	assert.Equal(t, 2, len(result), "Unexpected number of addresses")
-	assert.DeepEqual(t, result, addrs)
+	assert.DeepEqual(t, addrs, result)
 }
