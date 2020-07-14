@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -113,9 +114,8 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	prompt := promptui.Prompt{
 		Label: "Remote gRPC address (such as host.example.com:4000)",
 		Validate: func(input string) error {
-			// TODO: Validate if it is a valid address.
 			if input == "" {
-				return errors.New("cannot be empty")
+				return errors.New("remote host address cannot be empty")
 			}
 			return nil
 		},
@@ -125,42 +125,24 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 		return nil, err
 	}
 	prompt = promptui.Prompt{
-		Label: "Path to TLS crt (such as /path/to/client.crt)",
-		Validate: func(input string) error {
-			// TODO: Validate if it is a valid address.
-			if input == "" {
-				return errors.New("cannot be empty")
-			}
-			return nil
-		},
+		Label:    "Path to TLS crt (such as /path/to/client.crt)",
+		Validate: validateCertPath,
 	}
 	clientCrtPath, err := prompt.Run()
 	if err != nil {
 		return nil, err
 	}
 	prompt = promptui.Prompt{
-		Label: "Path to TLS key (such as /path/to/client.key)",
-		Validate: func(input string) error {
-			// TODO: Validate if it is a valid path.
-			if input == "" {
-				return errors.New("cannot be empty")
-			}
-			return nil
-		},
+		Label:    "Path to TLS key (such as /path/to/client.key)",
+		Validate: validateCertPath,
 	}
 	clientKeyPath, err := prompt.Run()
 	if err != nil {
 		return nil, err
 	}
 	prompt = promptui.Prompt{
-		Label: "(Optional) Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
-		Validate: func(input string) error {
-			// TODO: Validate if it is a valid path.
-			if input == "" {
-				return errors.New("cannot be empty")
-			}
-			return nil
-		},
+		Label:    "(Optional) Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
+		Validate: validateCertPath,
 	}
 	caCrtPath, err := prompt.Run()
 	if err != nil {
@@ -174,4 +156,14 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 		},
 		RemoteAddr: remoteAddr,
 	}, nil
+}
+
+func validateCertPath(input string) error {
+	if input == "" {
+		return errors.New("crt path cannot be empty")
+	}
+	if !fileExists(input) {
+		return fmt.Errorf("no crt found at path: %s", input)
+	}
+	return nil
 }
