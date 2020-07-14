@@ -11,10 +11,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
@@ -35,6 +34,7 @@ const (
 )
 
 var (
+	// ErrNoWalletFound signifies there was no wallet directory found on-disk.
 	ErrNoWalletFound = errors.New(
 		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
 	)
@@ -64,8 +64,8 @@ func init() {
 	petname.NonDeterministicMode() // Set random account name generation.
 }
 
-// CreateWallet given a set of configuration options, will leverage
-// a keymanager to create and write a new wallet to disk for a Prysm validator.
+// New given a set of configuration options, will leverage
+// create and write a new wallet to disk for a Prysm validator.
 func NewWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	if cfg.WalletDir == "" || (cfg.CanUnlockAccounts && cfg.PasswordsDir == "") {
 		return nil, errors.New("wallet dir and passwords dir cannot be nil")
