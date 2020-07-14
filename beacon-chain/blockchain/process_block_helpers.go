@@ -202,6 +202,9 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
+// This caches input checkpoint as justified for the service struct. It rotates current justified to previous justified,
+// caches justified checkpoint balances for fork choice and save justified checkpoint in DB.
+// This method does not have defense against fork choice bouncing attack, which is why it's only recommend to be used during initial syncing.
 func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
 	s.prevJustifiedCheckpt = s.justifiedCheckpt
 	s.justifiedCheckpt = cp
