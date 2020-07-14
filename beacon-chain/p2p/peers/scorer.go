@@ -10,7 +10,7 @@ import (
 
 const (
 	defaultBadResponsesThreshold     = 6
-	defaultBadResponsesWeight        = -0.75
+	defaultBadResponsesWeight        = -1.0
 	defaultBadResponsesDecayInterval = time.Hour
 )
 
