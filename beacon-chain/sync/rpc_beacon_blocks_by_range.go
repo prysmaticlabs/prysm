@@ -52,7 +52,11 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	// The final requested slot from remote peer.
 	endReqSlot := startSlot + (m.Step * (m.Count - 1))
 
-	remainingBucketCapacity := s.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
+	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
+	if err != nil {
+		return err
+	}
+	remainingBucketCapacity := blockLimiter.Remaining(stream.Conn().RemotePeer().String())
 	span.AddAttributes(
 		trace.Int64Attribute("start", int64(startSlot)),
 		trace.Int64Attribute("end", int64(endReqSlot)),
@@ -63,7 +67,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	)
 	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
 	for startSlot <= endReqSlot {
-		remainingBucketCapacity = s.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
+		remainingBucketCapacity = blockLimiter.Remaining(stream.Conn().RemotePeer().String())
 		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
 			s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 			if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
@@ -91,7 +95,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 		// Decrease allowed blocks capacity by the number of streamed blocks.
 		if startSlot <= endSlot {
-			s.blocksRateLimiter.Add(
+			blockLimiter.Add(
 				stream.Conn().RemotePeer().String(), int64(1+(endSlot-startSlot)/m.Step))
 		}
 

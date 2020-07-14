@@ -10,7 +10,6 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -22,7 +21,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -93,7 +91,7 @@ type Service struct {
 	validateBlockLock         sync.RWMutex
 	stateNotifier             statefeed.Notifier
 	blockNotifier             blockfeed.Notifier
-	blocksRateLimiter         *leakybucket.Collector
+	rateLimiter               *limiter
 	attestationNotifier       operation.Notifier
 	seenBlockLock             sync.RWMutex
 	seenBlockCache            *lru.Cache
@@ -111,10 +109,7 @@ type Service struct {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
-	// Initialize block limits.
-	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
-	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
-
+	rLimiter := NewRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		ctx:                  ctx,
@@ -134,7 +129,7 @@ func NewRegularSync(cfg *Config) *Service {
 		blockNotifier:        cfg.BlockNotifier,
 		stateSummaryCache:    cfg.StateSummaryCache,
 		stateGen:             cfg.StateGen,
-		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
+		rateLimiter:          rLimiter,
 	}
 
 	go r.registerHandlers()
@@ -166,9 +161,9 @@ func (s *Service) Start() {
 // Stop the regular sync service.
 func (s *Service) Stop() error {
 	defer func() {
-		if s.blocksRateLimiter != nil {
-			s.blocksRateLimiter.Free()
-			s.blocksRateLimiter = nil
+		if s.rateLimiter != nil {
+			s.rateLimiter.free()
+			s.rateLimiter = nil
 		}
 	}()
 	defer s.cancel()

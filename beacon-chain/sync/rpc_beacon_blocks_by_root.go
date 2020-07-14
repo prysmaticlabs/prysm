@@ -134,8 +134,12 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		}
 		return errors.New("no block roots provided")
 	}
+	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
+	if err != nil {
+		return err
+	}
 
-	if int64(len(blockRoots)) > s.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String()) {
+	if int64(len(blockRoots)) > blockLimiter.Remaining(stream.Conn().RemotePeer().String()) {
 		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			log.Debug("Disconnecting bad peer")
@@ -168,7 +172,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		return errors.New("requested more than the max block limit")
 	}
 
-	s.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(len(blockRoots)))
+	blockLimiter.Add(stream.Conn().RemotePeer().String(), int64(len(blockRoots)))
 
 	for _, root := range blockRoots {
 		blk, err := s.db.Block(ctx, root)
