@@ -12,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
@@ -25,9 +27,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -54,9 +54,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
-		if err != nil {
-			t.Errorf("Could not start discovery for node: %v", err)
-		}
+		assert.NoError(t, err, "Could not start discovery for node")
 		bitV := bitfield.NewBitvector64()
 		bitV.SetBitAt(uint64(i), true)
 
@@ -81,9 +79,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	}
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	s, err = NewService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
 		s.Start()
@@ -105,17 +101,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// look up 3 different subnets
 	exists, err := s.FindPeersWithSubnet(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	exists2, err := s.FindPeersWithSubnet(2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	exists3, err := s.FindPeersWithSubnet(3)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !exists || !exists2 || !exists3 {
 		t.Fatal("Peer with subnet doesn't exist")
 	}
@@ -130,15 +120,9 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	exists, err = s.FindPeersWithSubnet(2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if !exists {
-		t.Fatal("Peer with subnet doesn't exist")
-	}
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
-	}
+	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")
+	assert.NoError(t, s.Stop())
 	exitRoutine <- true
 }
