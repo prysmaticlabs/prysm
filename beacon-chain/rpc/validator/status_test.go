@@ -26,16 +26,12 @@ import (
 func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
-
-	pubKey1 := pubKey(1)
-	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey1,
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatalf("Could not generate deposits and keys: %v", err)
 	}
-	deposit := &ethpb.Deposit{
-		Data: depData,
-	}
+	deposit := deposits[0]
+	pubKey1 := deposit.Data.PublicKey
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
@@ -544,7 +540,8 @@ func TestActivationStatus_OK(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4)}
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
+	pubKeys := [][]byte{deposits[0].Data.PublicKey, deposits[1].Data.PublicKey, deposits[2].Data.PublicKey, deposits[3].Data.PublicKey}
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -570,32 +567,15 @@ func TestActivationStatus_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey(1),
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-		Amount:                10,
-	}
-
-	dep := &ethpb.Deposit{
-		Data: depData,
-	}
+	dep := deposits[0]
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
-	depData = &ethpb.Deposit_Data{
-		PublicKey:             pubKey(3),
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-		Amount:                10,
-	}
 
-	dep = &ethpb.Deposit{
-		Data: depData,
-	}
+	dep = deposits[2]
 	depositTrie.Insert(dep.Data.Signature, 15)
 	depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root())
 
@@ -918,7 +898,8 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4)}
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
+	pubKeys := [][]byte{deposits[0].Data.PublicKey, deposits[1].Data.PublicKey, deposits[2].Data.PublicKey, deposits[3].Data.PublicKey}
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -944,32 +925,14 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey(1),
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-		Amount:                10,
-	}
-
-	dep := &ethpb.Deposit{
-		Data: depData,
-	}
+	dep := deposits[0]
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
-	depData = &ethpb.Deposit_Data{
-		PublicKey:             pubKey(3),
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-		Amount:                10,
-	}
-
-	dep = &ethpb.Deposit{
-		Data: depData,
-	}
+	dep = deposits[2]
 	depositTrie.Insert(dep.Data.Signature, 15)
 	depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root())
 
