@@ -19,6 +19,8 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -38,13 +40,9 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
 	err = os.Mkdir(tempPath, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pkey, err := privKey(&Config{DataDir: tempPath})
-	if err != nil {
-		t.Fatalf("Could not get private key: %v", err)
-	}
+	require.NoError(t, err, "Could not get private key")
 	return ipAddr, pkey
 }
 
@@ -57,18 +55,12 @@ func TestCreateListener(t *testing.T) {
 		cfg:                   &Config{UDPPort: uint(port)},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer listener.Close()
 
-	if !listener.Self().IP().Equal(ipAddr) {
-		t.Errorf("Ip address is not the expected type, wanted %s but got %s", ipAddr.String(), listener.Self().IP().String())
-	}
+	assert.Equal(t, true, listener.Self().IP().Equal(ipAddr), "IP address is not the expected type")
+	assert.Equal(t, port, listener.Self().UDP(), "Incorrect port number")
 
-	if port != listener.Self().UDP() {
-		t.Errorf("In correct port number, wanted %d but got %d", port, listener.Self().UDP())
-	}
 	pubkey := listener.Self().Pubkey()
 	XisSame := pkey.PublicKey.X.Cmp(pubkey.X) == 0
 	YisSame := pkey.PublicKey.Y.Cmp(pubkey.Y) == 0
@@ -89,9 +81,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -110,9 +100,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
-		if err != nil {
-			t.Errorf("Could not start discovery for node: %v", err)
-		}
+		assert.NoError(t, err, "Could not start discovery for node")
 		listeners = append(listeners, listener)
 	}
 	defer func() {
@@ -141,13 +129,9 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 		genesisValidatorsRoot: []byte{'A'},
 	}
 	node, err := s.createLocalNode(pkey, addr, 0, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	multiAddr := convertToMultiAddr([]*enode.Node{node.Node()})
-	if len(multiAddr) != 0 {
-		t.Error("Invalid ip address converted successfully")
-	}
+	assert.Equal(t, 0, len(multiAddr), "Invalid ip address converted successfully")
 }
 
 func TestMultiAddrConversion_OK(t *testing.T) {
@@ -162,9 +146,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 		genesisValidatorsRoot: []byte{'A'},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer listener.Close()
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
@@ -201,9 +183,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	cfg.NoDiscovery = true
 	s, err := NewService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -222,11 +202,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	}
 	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
-	if len(peers) != 5 {
-		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
-	}
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
-	}
+	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
+	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
