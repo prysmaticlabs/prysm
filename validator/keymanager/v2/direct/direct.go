@@ -34,8 +34,9 @@ const (
 	DepositTransactionFileName = "deposit_transaction.rlp"
 	// TimestampFileName stores a timestamp for account creation as a
 	// file for a direct keymanager account.
-	TimestampFileName   = "created_at.txt"
-	keystoreFileName    = "keystore.json"
+	TimestampFileName = "created_at.txt"
+	// KeystoreFileName exposes the expected filename for the keystore file for an account.
+	KeystoreFileName    = "keystore.json"
 	depositDataFileName = "deposit_data.ssz"
 	eipVersion          = "EIP-2335"
 )
@@ -67,8 +68,8 @@ type Keymanager struct {
 	lock              sync.RWMutex
 }
 
-// Direct keystore json file representation as a Go struct.
-type directKeystore struct {
+// Keystore json file representation as a Go struct.
+type Keystore struct {
 	Crypto  map[string]interface{} `json:"crypto"`
 	ID      string                 `json:"uuid"`
 	Pubkey  string                 `json:"pubkey"`
@@ -178,7 +179,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	}
 
 	// Write the encoded keystore to disk.
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, KeystoreFileName, encoded); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 
@@ -223,11 +224,11 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 
 	for i, name := range accountNames {
-		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
+		encoded, err := dr.wallet.ReadFileForAccount(name, KeystoreFileName)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &directKeystore{}
+		keystoreFile := &Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -266,11 +267,11 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		if err != nil {
 			return errors.Wrapf(err, "could not read password for account %s", name)
 		}
-		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
+		encoded, err := dr.wallet.ReadFileForAccount(name, KeystoreFileName)
 		if err != nil {
 			return errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &directKeystore{}
+		keystoreFile := &Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -304,7 +305,7 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	if err != nil {
 		return nil, err
 	}
-	keystoreFile := &directKeystore{}
+	keystoreFile := &Keystore{}
 	keystoreFile.Crypto = cryptoFields
 	keystoreFile.ID = id.String()
 	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
