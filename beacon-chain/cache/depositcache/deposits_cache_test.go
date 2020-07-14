@@ -409,6 +409,16 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	}
 }
 
+func TestFinalizedDeposits_DepositsAreNil_ReturnsNil(t *testing.T) {
+	dc := DepositCache{}
+
+	deposits := dc.finalizedDeposits
+
+	if deposits != nil {
+		t.Error("Deposits should be nil")
+	}
+}
+
 func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 	dc := DepositCache{}
 

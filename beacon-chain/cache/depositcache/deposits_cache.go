@@ -248,6 +248,10 @@ func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposit
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
+	if dc.finalizedDeposits == nil {
+		return nil
+	}
+
 	return &FinalizedDeposits{
 		Deposits:        dc.finalizedDeposits.Deposits.Copy(),
 		MerkleTrieIndex: dc.finalizedDeposits.MerkleTrieIndex,
