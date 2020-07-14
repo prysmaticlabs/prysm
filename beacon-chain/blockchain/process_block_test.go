@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -863,4 +864,49 @@ func TestVerifyBlkDescendant(t *testing.T) {
 			t.Error(err)
 		}
 	}
+}
+
+func TestUpdateJustifiedInitSync(t *testing.T) {
+	db, _ := testDB.SetupDB(t)
+	ctx := context.Background()
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: gRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	service.genesisRoot = gRoot
+	currentCp := &ethpb.Checkpoint{Epoch: 1}
+	service.justifiedCheckpt = currentCp
+	newCp := &ethpb.Checkpoint{Epoch: 2, Root: gRoot[:]}
+
+	if err := service.updateJustifiedInitSync(ctx, newCp); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.DeepEqual(t, currentCp, service.prevJustifiedCheckpt, "incorrect previous justified checkpoint")
+	assert.DeepEqual(t, newCp, service.CurrentJustifiedCheckpt(), "incorrect current justified checkpoint in cache")
+	cp, err := service.beaconDB.JustifiedCheckpoint(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.DeepEqual(t, newCp, cp, "incorrect current justified checkpoint in db")
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestSszNetworkEncoder_BufferedReader(t *testing.T) {
@@ -18,10 +19,7 @@ func TestSszNetworkEncoder_BufferedReader(t *testing.T) {
 	rdr := newBufferedReader(bytes.NewBuffer(r2))
 
 	nPtr := reflect.ValueOf(rdr).Pointer()
-
-	if nPtr != ptr {
-		t.Errorf("wanted pointer value of %d but got %d", ptr, nPtr)
-	}
+	assert.Equal(t, ptr, nPtr, "invalid pointer value")
 }
 
 func TestSszNetworkEncoder_BufferedWriter(t *testing.T) {
@@ -34,8 +32,5 @@ func TestSszNetworkEncoder_BufferedWriter(t *testing.T) {
 	rdr := newBufferedWriter(bytes.NewBuffer(r2))
 
 	nPtr := reflect.ValueOf(rdr).Pointer()
-
-	if nPtr != ptr {
-		t.Errorf("wanted pointer value of %d but got %d", ptr, nPtr)
-	}
+	assert.Equal(t, ptr, nPtr, "invalid pointer value")
 }
