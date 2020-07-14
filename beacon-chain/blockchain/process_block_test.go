@@ -184,7 +184,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
+	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	if err != nil {
 		t.Fatal(err)
 	}
