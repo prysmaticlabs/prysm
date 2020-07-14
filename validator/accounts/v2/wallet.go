@@ -34,6 +34,12 @@ const (
 	directoryPermissions     = os.ModePerm
 )
 
+var (
+	ErrNoWalletFound = errors.New(
+		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
+	)
+)
+
 // WalletConfig for a wallet struct, containing important information
 // such as the passwords directory, the wallet's directory, and keymanager.
 type WalletConfig struct {

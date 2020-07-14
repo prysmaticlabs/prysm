@@ -14,11 +14,11 @@ import (
 // CreateWallet from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateWallet(cliCtx *cli.Context, walletDir string) error {
+func CreateWallet(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil {
-		log.Fatalf("Could not parse wallet directory: %v", err)
+	if !errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one

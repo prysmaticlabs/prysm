@@ -23,17 +23,10 @@ import (
 func ImportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil {
-		log.Fatalf("Could not parse wallet directory: %v", err)
-	}
-	ok, err := hasDir(walletDir)
-	if err != nil {
-		log.Fatalf("Could not check if wallet dir %s exists", walletDir)
-	}
-	if !ok {
-		log.Fatal(
-			"No wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
-		)
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	} else if err != nil {
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
 
 	backupDir, err := inputImportDir(cliCtx)

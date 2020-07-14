@@ -35,18 +35,12 @@ var keymanagerKindSelections = map[v2keymanager.Kind]string{
 func NewAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil {
-		log.Fatalf("Could not parse wallet directory: %v", err)
-	}
-	// Check if the user has a wallet at the specified path.
-	walletExists, err := hasDir(walletDir)
-	if err != nil {
+	if errors.Is(err, ErrNoWalletFound) {
+		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	} else if err != nil {
 		log.Fatal(err)
 	}
 	ctx := context.Background()
-	if !walletExists {
-		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	}
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
 	if err != nil {
 		log.Fatal(err)
@@ -100,6 +94,13 @@ func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	walletPath, err := prompt.Run()
 	if err != nil {
 		return "", fmt.Errorf("could not determine wallet directory: %v", formatPromptError(err))
+	}
+	ok, err := hasDir(walletPath)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not check if wallet dir %s exists", walletDir)
+	}
+	if !ok {
+		return walletPath, ErrNoWalletFound
 	}
 	return walletPath, nil
 }
