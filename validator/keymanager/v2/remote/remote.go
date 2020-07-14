@@ -104,7 +104,7 @@ func NewKeymanager(ctx context.Context, maxMessageSize int, cfg *Config) (*Keyma
 	return k, nil
 }
 
-// UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
+// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
 // configuration file into the *Config{} struct.
 func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 	enc, err := ioutil.ReadAll(r)
@@ -123,14 +123,14 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 	return cfg, nil
 }
 
+// MarshalConfigFile for the keymanager.
+func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+	return json.MarshalIndent(cfg, "", "\t")
+}
+
 // CreateAccount based on the keymanager's logic. Returns the account name.
 func (k *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	return "", errors.New("a remote validator account cannot be created from the client")
-}
-
-// MarshalConfigFile for the keymanager's options.
-func (k *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return json.MarshalIndent(k.cfg, "", "\t")
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.

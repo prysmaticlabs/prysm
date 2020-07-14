@@ -8,32 +8,13 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-
 	"github.com/urfave/cli/v2"
 )
 
 // CreateWallet from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateWallet(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil {
-		log.Fatalf("Could not parse wallet directory: %v", err)
-	}
-	// Check if the user has a wallet at the specified path.
-	// If a user does not have a wallet, we instantiate one
-	// based on specified options.
-	walletExists, err := hasDir(walletDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if walletExists {
-		log.Fatal(
-			"You already have a wallet at the specified path. You can " +
-				"edit your wallet configuration by running ./prysm validator wallet-v2 edit",
-		)
-	}
+func CreateWallet(cliCtx *cli.Context, walletDir string) error {
 	// Determine the desired keymanager kind for the wallet from user input.
 	keymanagerKind, err := inputKeymanagerKind(cliCtx)
 	if err != nil {
@@ -46,12 +27,12 @@ func CreateWallet(cliCtx *cli.Context) error {
 		}
 		log.Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
-				"Make a new validator account with ./prysm validator wallet-v2 accounts new",
+				"Make a new validator account with ./prysm.sh validator wallet-v2 accounts new",
 		)
 	case v2keymanager.Derived:
 		log.Fatal("Derived keymanager is not yet supported")
 	case v2keymanager.Remote:
-		if err := initializeRemoteSignerWallet(cliCtx); err != nil {
+		if err := initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
 		}
 		log.Infof(
@@ -76,11 +57,7 @@ func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not create new wallet")
 	}
-	keymanager, err := direct.NewKeymanager(ctx, wallet, direct.DefaultConfig())
-	if err != nil {
-		return errors.Wrap(err, "could not create new direct keymanager")
-	}
-	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
+	keymanagerConfig, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
@@ -93,15 +70,7 @@ func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
 		log.Fatal(err)
 	}
 	ctx := context.Background()
-	keymanager, err := remote.NewKeymanager(
-		ctx,
-		0, /* max grpc msg size, not relevant */
-		conf,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
+	keymanagerConfig, err := remote.MarshalConfigFile(ctx, conf)
 	if err != nil {
 		log.Fatal(err)
 	}

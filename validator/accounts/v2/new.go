@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -68,49 +67,17 @@ func NewAccount(cliCtx *cli.Context) error {
 		})
 	} else {
 		// Determine the desired keymanager kind for the wallet from user input.
-		keymanagerKind, err := inputKeymanagerKind(cliCtx)
-		if err != nil {
-			log.Fatalf("Could not select keymanager kind: %v", err)
+		if err := CreateWallet(cliCtx, walletDir); err != nil {
+			log.Fatalf("Could not create new wallet: %v", err)
 		}
-		if keymanagerKind == v2keymanager.Remote {
-			conf, err := inputRemoteKeymanagerConfig(cliCtx)
-			if err != nil {
-				log.Fatal(err)
-			}
-			keymanager, err := remote.NewKeymanager(ctx, 1, conf)
-			if err != nil {
-				log.Fatal(err)
-			}
-			keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-				log.Fatal("Could not write keymanager config file to disk")
-			}
-			return nil
-		}
-		// Read the directory for password storage from user input.
-		//passwordsDirPath := inputPasswordsDirectory(cliCtx)
-		//walletConfig := &WalletConfig{
-		//	PasswordsDir:      passwordsDirPath,
-		//	WalletDir:         walletDir,
-		//	KeymanagerKind:    keymanagerKind,
-		//	CanUnlockAccounts: true,
-		//}
-		//wallet, err = CreateWallet(ctx, walletConfig)
-		//if err != nil {
-		//	log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
-		//}
 	}
 
-	// We initialize a new keymanager depending on the user's selected keymanager kind.
-	var keymanager v2keymanager.IKeymanager
-	if walletExists {
-		keymanager, err = wallet.ExistingKeyManager(ctx)
-	} else {
-		keymanager, err = wallet.CreateKeymanager(ctx)
+	if wallet.KeymanagerKind() != v2keymanager.Direct {
+		log.Fatalf("cannot create a new account for a %s keymanager", wallet.KeymanagerKind())
 	}
+
+	// We initialize a new keymanager depending on the wallet's keymanager kind.
+	keymanager, err := wallet.InitializeKeymanager(ctx)
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
 	}

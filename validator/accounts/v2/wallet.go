@@ -152,9 +152,9 @@ func (w *Wallet) AccountNames() ([]string, error) {
 	return accountNames, err
 }
 
-// ExistingKeyManager reads a keymanager config from disk at the wallet path,
+// InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
-func (w *Wallet) ExistingKeyManager(
+func (w *Wallet) InitializeKeymanager(
 	ctx context.Context,
 ) (v2keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
@@ -178,36 +178,6 @@ func (w *Wallet) ExistingKeyManager(
 		return nil, errors.New("remote keymanager is unimplemented, work in progress")
 	default:
 		return nil, errors.New("keymanager kind must be specified")
-	}
-	return keymanager, nil
-}
-
-// CreateKeymanager determines if a config file exists in the wallet, it
-// reads the config file and initializes the keymanager that way. Otherwise,
-// writes a new configuration file to the wallet and returns the initialized
-// keymanager for use.
-func (w *Wallet) CreateKeymanager(ctx context.Context) (v2keymanager.IKeymanager, error) {
-	var keymanager v2keymanager.IKeymanager
-	var err error
-	switch w.KeymanagerKind() {
-	case v2keymanager.Direct:
-		keymanager, err = direct.NewKeymanager(ctx, w, direct.DefaultConfig())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read keymanager")
-		}
-	case v2keymanager.Derived:
-		return nil, errors.New("derived keymanager is unimplemented, work in progress")
-	case v2keymanager.Remote:
-		return nil, errors.New("remote keymanager is unimplemented, work in progress")
-	default:
-		return nil, errors.New("keymanager type must be specified")
-	}
-	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal keymanager config file")
-	}
-	if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return nil, errors.Wrap(err, "could not write keymanager config file to disk")
 	}
 	return keymanager, nil
 }
