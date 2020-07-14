@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/pkg/errors"
@@ -123,9 +122,9 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 	defer span.End()
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	postState, fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
+	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
-		err := errors.Wrap(err, "could not process block")
+		err := errors.Wrap(err, "could not process block in batch")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -146,30 +145,17 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 			},
 		})
 
-		// Reports on blockCopy and fork choice metrics.
-		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
-	}
-	lastBlk := blocks[len(blocks)-1]
-	lastRoot := blkRoots[len(blkRoots)-1]
-
-	if err := s.stateGen.SaveState(ctx, lastRoot, postState); err != nil {
-		return errors.Wrap(err, "could not save state")
-	}
-
-	cachedHeadRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head root from cache")
-	}
-
-	if !bytes.Equal(lastRoot[:], cachedHeadRoot) {
-		if err := s.saveHeadNoDB(ctx, lastBlk, lastRoot); err != nil {
+		if err := s.saveHeadNoDB(ctx, blockCopy, blkRoots[i]); err != nil {
 			err := errors.Wrap(err, "could not save head")
 			traceutil.AnnotateError(span, err)
 			return err
 		}
+
+		// Reports on blockCopy and fork choice metrics.
+		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 	}
 
-	return s.handleEpochBoundary(postState)
+	return nil
 }
 
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.

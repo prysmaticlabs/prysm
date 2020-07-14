@@ -177,28 +177,28 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock,
-	blockRoots [][32]byte) (*stateTrie.BeaconState, []*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
+	blockRoots [][32]byte) ([]*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
 	if len(blks) == 0 || len(blockRoots) == 0 {
-		return nil, nil, nil, errors.New("no blocks provided")
+		return nil, nil, errors.New("no blocks provided")
 	}
 	if blks[0] == nil || blks[0].Block == nil {
-		return nil, nil, nil, errors.New("nil block")
+		return nil, nil, errors.New("nil block")
 	}
 	b := blks[0].Block
 
 	// Retrieve incoming block's pre state.
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	preState, err := s.stateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if preState == nil {
-		return nil, nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot)
+		return nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot)
 	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
@@ -213,11 +213,14 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	for i, b := range blks {
 		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		// Save potential boundary states.
 		if helpers.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
+			if err := s.handleEpochBoundary(preState); err != nil {
+				return nil, nil, fmt.Errorf("could not handle epoch boundary state")
+			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
@@ -225,17 +228,17 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	}
 	verify, err := bls.VerifyMultipleSignatures(sigSet.Signatures, sigSet.Messages, sigSet.PublicKeys)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if !verify {
-		return nil, nil, nil, errors.New("batch block signature verification failed")
+		return nil, nil, errors.New("batch block signature verification failed")
 	}
 	for r, st := range boundaries {
 		if err := s.stateGen.SaveState(ctx, r, st); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 	}
-	return preState, fCheckpoints, jCheckpoints, nil
+	return fCheckpoints, jCheckpoints, nil
 }
 
 // handles a block after the block's batch has been verified, where we can save blocks
@@ -260,10 +263,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return err
-		}
-		s.clearInitSyncBlocks()
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
