@@ -30,7 +30,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 
-	if err := s.chain.ReceiveBlockNoPubsub(ctx, signed, root); err != nil {
+	if err := s.chain.ReceiveBlock(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)
 		return err
 	}

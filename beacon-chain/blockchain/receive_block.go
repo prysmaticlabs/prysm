@@ -3,14 +3,12 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -19,77 +17,26 @@ import (
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
-// ReceiveBlock is a function that defines the operations that are performed on
-// blocks that is received from rpc service. The operations consists of:
-//   1. Gossip block to other peers
-//   2. Validate block, apply state transition and update check points
-//   3. Apply fork choice to the processed block
-//   4. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
-	defer span.End()
-
-	// Broadcast the new block to the network.
-	if err := s.p2p.Broadcast(ctx, block); err != nil {
-		return errors.Wrap(err, "could not broadcast block")
-	}
-	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(blockRoot[:]),
-	}).Debug("Broadcasting block")
-
-	if err := captureSentTimeMetric(uint64(s.genesisTime.Unix()), block.Block.Slot); err != nil {
-		// If a node fails to capture metric, this shouldn't cause the block processing to fail.
-		log.Warnf("Could not capture block sent time metric: %v", err)
-	}
-
-	if err := s.ReceiveBlockNoPubsub(ctx, block, blockRoot); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ReceiveBlockNoPubsub is a function that defines the the operations (minus pubsub)
+// ReceiveBlock is a function that defines the the operations (minus pubsub)
 // that are performed on blocks that is received from regular sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
+func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
-	_, err := s.onBlock(ctx, blockCopy, blockRoot)
-	if err != nil {
+	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
-	}
-
-	// Add attestations from the block to the pool for fork choice.
-	if err := s.attPool.SaveBlockAttestations(blockCopy.Block.Body.Attestations); err != nil {
-		log.Errorf("Could not save attestation for fork choice: %v", err)
-		return nil
-	}
-	for _, exit := range block.Block.Body.VoluntaryExits {
-		s.exitPool.MarkIncluded(exit)
-	}
-
-	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot() {
-		if err := s.saveHead(ctx, blockRoot); err != nil {
-			return errors.Wrap(err, "could not save head")
-		}
-	} else {
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			return errors.Wrap(err, "could not update head")
-		}
 	}
 
 	// Send notification of the processed block to the state feed.
@@ -101,6 +48,16 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			Verified:  true,
 		},
 	})
+
+	// Handle post block operations such as attestations and exits.
+	if err := s.handlePostBlockOperations(blockCopy.Block); err != nil {
+		return err
+	}
+
+	// Update and save head block after fork choice.
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		return errors.Wrap(err, "could not update head")
+	}
 
 	// Reports on block and fork choice metrics.
 	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
@@ -117,28 +74,22 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 // ReceiveBlockInitialSync processes the input block for the purpose of initial syncing.
 // This method should only be used on blocks during initial syncing phase.
 func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoVerify")
+	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockNoVerify")
 	defer span.End()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
-	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
+	// Apply state transition on the new block.
 	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
 
-	cachedHeadRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head root from cache")
-	}
-
-	if !bytes.Equal(blockRoot[:], cachedHeadRoot) {
-		if err := s.saveHeadNoDB(ctx, blockCopy, blockRoot); err != nil {
-			err := errors.Wrap(err, "could not save head")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
+	// Save the latest block as head in cache.
+	if err := s.saveHeadNoDB(ctx, blockCopy, blockRoot); err != nil {
+		err := errors.Wrap(err, "could not save head")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 
 	// Send notification of the processed block to the state feed.
@@ -147,7 +98,7 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 		Data: &statefeed.BlockProcessedData{
 			Slot:      blockCopy.Block.Slot,
 			BlockRoot: blockRoot,
-			Verified:  false,
+			Verified:  true,
 		},
 	})
 
@@ -168,7 +119,7 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
 func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockBatch")
+	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
@@ -191,19 +142,12 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 			Data: &statefeed.BlockProcessedData{
 				Slot:      blockCopy.Block.Slot,
 				BlockRoot: blkRoots[i],
-				Verified:  false,
+				Verified:  true,
 			},
 		})
 
 		// Reports on blockCopy and fork choice metrics.
 		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
-
-		// Log state transition data.
-		log.WithFields(logrus.Fields{
-			"slot":         blockCopy.Block.Slot,
-			"attestations": len(blockCopy.Block.Body.Attestations),
-			"deposits":     len(blockCopy.Block.Body.Deposits),
-		}).Debug("Finished applying state transition")
 	}
 	lastBlk := blocks[len(blocks)-1]
 	lastRoot := blkRoots[len(blkRoots)-1]
@@ -231,4 +175,27 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
 func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
+}
+
+func (s *Service) handlePostBlockOperations(b *ethpb.BeaconBlock) error {
+	// Delete the processed block attestations from attestation pool.
+	if err := s.deletePoolAtts(b.Body.Attestations); err != nil {
+		return err
+	}
+
+	// Add block attestations to the fork choice pool to compute head.
+	if err := s.attPool.SaveBlockAttestations(b.Body.Attestations); err != nil {
+		log.Errorf("Could not save block attestations for fork choice: %v", err)
+		return nil
+	}
+	// Mark block exits as seen so we don't include same ones in future blocks.
+	for _, e := range b.Body.VoluntaryExits {
+		s.exitPool.MarkIncluded(e)
+	}
+
+	//  Mark attester slashings as seen so we don't include same ones in future blocks.
+	for _, as := range b.Body.AttesterSlashings {
+		s.slashingPool.MarkIncludedAttesterSlashing(as)
+	}
+	return nil
 }

@@ -32,7 +32,7 @@ func (s *Service) CurrentSlot() uint64 {
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
 func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.getBlockPreState")
+	ctx, span := trace.StartSpan(ctx, "forkChoice.getBlockPreState")
 	defer span.End()
 
 	// Verify incoming block has a valid pre state.
@@ -54,7 +54,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 	}
 
 	// Verify block is a descendent of a finalized block.
-	if err := s.verifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot), b.Slot); err != nil {
+	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
 		return nil, err
 	}
 
@@ -87,15 +87,18 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	return nil
 }
 
-// verifyBlkDescendant validates input block root is a descendant of the
+// VerifyBlkDescendant validates input block root is a descendant of the
 // current finalized block root.
-func (s *Service) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.verifyBlkDescendant")
+func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "forkChoice.VerifyBlkDescendant")
 	defer span.End()
-
-	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
-		return errors.Wrap(err, "could not get finalized block")
+	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	finalizedBlkSigned, err := s.beaconDB.Block(ctx, fRoot)
+	if err != nil {
+		return err
+	}
+	if finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+		return errors.New("nil finalized block")
 	}
 	finalizedBlk := finalizedBlkSigned.Block
 
@@ -104,12 +107,13 @@ func (s *Service) verifyBlkDescendant(ctx context.Context, root [32]byte, slot u
 		return errors.Wrap(err, "could not get finalized block root")
 	}
 	if bFinalizedRoot == nil {
-		return fmt.Errorf("no finalized block known for block from slot %d", slot)
+		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
 	}
 
-	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
-		err := fmt.Errorf("block from slot %d is not a descendent of the current finalized block slot %d, %#x != %#x",
-			slot, finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot), bytesutil.Trunc(s.finalizedCheckpt.Root))
+	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
+		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
+			bytesutil.Trunc(root[:]), finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot),
+			bytesutil.Trunc(fRoot[:]))
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -199,6 +203,25 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
+func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
+	// Blocks need to be saved so that we can retrieve finalized block from
+	// DB when migrating states.
+	if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		return err
+	}
+	s.clearInitSyncBlocks()
+
+	s.prevFinalizedCheckpt = s.finalizedCheckpt
+	s.finalizedCheckpt = cp
+
+	fRoot := bytesutil.ToBytes32(cp.Root)
+	if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
+		return errors.Wrap(err, "could not migrate to cold")
+	}
+
+	return s.beaconDB.SaveFinalizedCheckpoint(ctx, cp)
+}
+
 // ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
@@ -212,7 +235,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 //        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
 //        return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
+	ctx, span := trace.StartSpan(ctx, "forkChoice.ancestor")
 	defer span.End()
 
 	// Stop recursive ancestry lookup if context is cancelled.

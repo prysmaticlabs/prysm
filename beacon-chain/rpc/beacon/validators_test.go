@@ -680,6 +680,42 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 	}
 }
 
+func TestServer_ListValidators_StategenNotUsed(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+
+	validators, _ := setupValidators(t, db, 100)
+	want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
+	for i := 0; i < len(validators); i++ {
+		want[i] = &ethpb.Validators_ValidatorContainer{
+			Index:     uint64(i),
+			Validator: validators[i],
+		}
+	}
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
+	}
+
+	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(want, received.ValidatorList) {
+		t.Fatal("Incorrect respond of validators")
+	}
+}
+
 func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 
@@ -742,9 +778,16 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 
 	count := 100
 	setupValidators(t, db, count)
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	bs := &Server{
 		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,

@@ -2,17 +2,24 @@ package v2
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 const (
@@ -186,13 +193,13 @@ func (w *Wallet) AccountNames() ([]string, error) {
 func (w *Wallet) ExistingKeyManager(
 	ctx context.Context,
 ) (v2keymanager.IKeymanager, error) {
+	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keymanager config")
+	}
 	var keymanager v2keymanager.IKeymanager
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
-		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read keymanager config")
-		}
 		cfg, err := direct.UnmarshalConfigFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
@@ -351,6 +358,61 @@ func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 	return string(password), nil
 }
 
+func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
+	attemptingPassword := true
+	// Loop asking for the password until the user enters it correctly.
+	for attemptingPassword {
+		// Ask the user for the password to their account.
+		password, err := inputPasswordForAccount(cliCtx, accountName)
+		if err != nil {
+			return errors.Wrap(err, "could not input password")
+		}
+		accountKeystore, err := w.keystoreForAccount(accountName)
+		if err != nil {
+			return errors.Wrap(err, "could not get keystore")
+		}
+		decryptor := keystorev4.New()
+		_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
+		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+			fmt.Println("Incorrect password entered, please try again")
+			continue
+		}
+		if err != nil {
+			return errors.Wrap(err, "could not decrypt keystore")
+		}
+
+		if err := w.writePasswordToFile(accountName, password); err != nil {
+			return errors.Wrap(err, "could not write password to disk")
+		}
+		attemptingPassword = false
+	}
+	return nil
+}
+
+func (w *Wallet) publicKeyForAccount(accountName string) ([48]byte, error) {
+	accountKeystore, err := w.keystoreForAccount(accountName)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could not get keystore")
+	}
+	pubKey, err := hex.DecodeString(accountKeystore.Pubkey)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could decode pubkey string")
+	}
+	return bytesutil.ToBytes48(pubKey), nil
+}
+
+func (w *Wallet) keystoreForAccount(accountName string) (*direct.Keystore, error) {
+	encoded, err := w.ReadFileForAccount(accountName, direct.KeystoreFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keystore file")
+	}
+	keystoreJSON := &direct.Keystore{}
+	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+		return nil, errors.Wrap(err, "could not decode json")
+	}
+	return keystoreJSON, nil
+}
+
 // ReadFileForAccount from the wallet's accounts directory.
 func (w *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
 	accountPath := path.Join(w.accountsPath, accountName)
@@ -377,7 +439,13 @@ func (w *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte
 // Writes the password file for an account namespace in the wallet's passwords directory.
 func (w *Wallet) writePasswordToFile(accountName string, password string) error {
 	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
-	passwordFile, err := os.OpenFile(passwordFilePath, accountFilePermissions, directoryPermissions)
+	// Removing any file that exists to make sure the existing is overwritten.
+	if _, err := os.Stat(passwordFilePath); os.IsExist(err) {
+		if err := os.Remove(passwordFilePath); err != nil {
+			return errors.Wrap(err, "could not rewrite password file")
+		}
+	}
+	passwordFile, err := os.Create(passwordFilePath)
 	if err != nil {
 		return errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
 	}

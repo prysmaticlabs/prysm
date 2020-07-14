@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestService_ReceiveBlockNoPubsub(t *testing.T) {
+func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
@@ -142,12 +142,18 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 			if err := s.saveGenesisData(ctx, genesis); err != nil {
 				t.Fatal(err)
 			}
+			gBlk, err := s.beaconDB.GenesisBlock(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := stateutil.BlockRoot(tt.args.block.Block)
 			if err != nil {
 				t.Error(err)
 			}
-			if err := s.ReceiveBlockNoPubsub(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlockNoPubsub() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.ReceiveBlock(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
+				t.Errorf("ReceiveBlock() error = %v, wantErr %v", err, tt.wantErr)
 			} else {
 				tt.check(t, s)
 			}

@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "assertions.go",
         "block.go",
         "deposits.go",
         "helpers.go",

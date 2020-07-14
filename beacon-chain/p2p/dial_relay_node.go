@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/libp2p/go-libp2p-core/host"
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"go.opencensus.io/trace"
 )
 
 // MakePeer from multiaddress string.
-func MakePeer(addr string) (*peerstore.PeerInfo, error) {
+func MakePeer(addr string) (*peer.AddrInfo, error) {
 	maddr, err := multiAddrFromString(addr)
 	if err != nil {
 		return nil, err
 	}
-	return peerstore.InfoFromP2pAddr(maddr)
+	return peer.AddrInfoFromP2pAddr(maddr)
 }
 
 func dialRelayNode(ctx context.Context, h host.Host, relayAddr string) error {
@@ -25,6 +25,7 @@ func dialRelayNode(ctx context.Context, h host.Host, relayAddr string) error {
 	if err != nil {
 		return err
 	}
-
+	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
+	defer cancel()
 	return h.Connect(ctx, *p)
 }

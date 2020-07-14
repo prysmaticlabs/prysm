@@ -6,9 +6,9 @@ import (
 	"net"
 
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/sirupsen/logrus"
-	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
 )
 

@@ -4,11 +4,8 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -24,8 +21,6 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -57,6 +52,9 @@ const maxBadResponses = 5
 // Exclusion list cache config values.
 const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
+// maxDialTimeout is the timeout for a single peer dial.
+const maxDialTimeout = 30 * time.Second
+
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
 	started               bool
@@ -70,6 +68,7 @@ type Service struct {
 	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
+	joinedTopics          map[string]*pubsub.Topic
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -101,6 +100,7 @@ func NewService(cfg *Config) (*Service, error) {
 		cfg:           cfg,
 		exclusionList: cache,
 		isPreGenesis:  true,
+		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -322,86 +322,6 @@ func (s *Service) MetadataSeq() uint64 {
 	return s.metaData.SeqNumber
 }
 
-// RefreshENR uses an epoch to refresh the enr entry for our node
-// with the tracked committee ids for the epoch, allowing our node
-// to be dynamically discoverable by others given our tracked committee ids.
-func (s *Service) RefreshENR() {
-	// return early if discv5 isnt running
-	if s.dv5Listener == nil {
-		return
-	}
-	bitV := bitfield.NewBitvector64()
-	committees := cache.SubnetIDs.GetAllSubnets()
-	for _, idx := range committees {
-		bitV.SetBitAt(idx, true)
-	}
-	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
-	if err != nil {
-		log.Errorf("Could not retrieve bitfield: %v", err)
-		return
-	}
-	if bytes.Equal(bitV, currentBitV) {
-		// return early if bitfield hasn't changed
-		return
-	}
-	s.updateSubnetRecordWithMetadata(bitV)
-	// ping all peers to inform them of new metadata
-	s.pingPeers()
-}
-
-// FindPeersWithSubnet performs a network search for peers
-// subscribed to a particular subnet. Then we try to connect
-// with those peers.
-func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
-	if s.dv5Listener == nil {
-		// return if discovery isn't set
-		return false, nil
-	}
-	iterator := s.dv5Listener.RandomNodes()
-	nodes := enode.ReadNodes(iterator, lookupLimit)
-	exists := false
-	for _, node := range nodes {
-		if node.IP() == nil {
-			continue
-		}
-		// do not look for nodes with no tcp port set
-		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
-			if !enr.IsNotFound(err) {
-				log.WithError(err).Debug("Could not retrieve tcp port")
-			}
-			continue
-		}
-		subnets, err := retrieveAttSubnets(node.Record())
-		if err != nil {
-			log.Debugf("could not retrieve subnets: %v", err)
-			continue
-		}
-		for _, comIdx := range subnets {
-			if comIdx == index {
-				info, multiAddr, err := convertToAddrInfo(node)
-				if err != nil {
-					return false, err
-				}
-				if s.peers.IsActive(info.ID) {
-					exists = true
-					continue
-				}
-				if s.host.Network().Connectedness(info.ID) == network.Connected {
-					exists = true
-					continue
-				}
-				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
-				if err := s.connectWithPeer(*info); err != nil {
-					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
-					continue
-				}
-				exists = true
-			}
-		}
-	}
-	return exists, nil
-}
-
 // AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can
 // be used to refresh ENR.
 func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
@@ -444,41 +364,6 @@ func (s *Service) awaitStateInitialized() {
 	}
 }
 
-// listen for new nodes watches for new nodes in the network and adds them to the peerstore.
-func (s *Service) listenForNewNodes() {
-	iterator := s.dv5Listener.RandomNodes()
-	iterator = enode.Filter(iterator, s.filterPeer)
-	defer iterator.Close()
-	for {
-		// Exit if service's context is canceled
-		if s.ctx.Err() != nil {
-			break
-		}
-		if s.isPeerAtLimit() {
-			// Pause the main loop for a period to stop looking
-			// for new peers.
-			log.Trace("Not looking for peers, at peer limit")
-			time.Sleep(pollingPeriod)
-			continue
-		}
-		exists := iterator.Next()
-		if !exists {
-			break
-		}
-		node := iterator.Node()
-		peerInfo, _, err := convertToAddrInfo(node)
-		if err != nil {
-			log.WithError(err).Error("Could not convert to peer info")
-			continue
-		}
-		go func(info *peer.AddrInfo) {
-			if err := s.connectWithPeer(*info); err != nil {
-				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
-			}
-		}(peerInfo)
-	}
-}
-
 func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
 	if err != nil {
@@ -502,7 +387,9 @@ func (s *Service) connectWithPeer(info peer.AddrInfo) error {
 	if s.Peers().IsBad(info.ID) {
 		return nil
 	}
-	if err := s.host.Connect(s.ctx, info); err != nil {
+	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
+	defer cancel()
+	if err := s.host.Connect(ctx, info); err != nil {
 		s.Peers().IncrementBadResponses(info.ID)
 		return err
 	}
@@ -528,58 +415,4 @@ func (s *Service) connectToBootnodes() error {
 	multiAddresses := convertToMultiAddr(nodes)
 	s.connectWithAllPeers(multiAddresses)
 	return nil
-}
-
-// Updates the service's discv5 listener record's attestation subnet
-// with a new value for a bitfield of subnets tracked. It also updates
-// the node's metadata by increasing the sequence number and the
-// subnets tracked by the node.
-func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
-	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	s.dv5Listener.LocalNode().Set(entry)
-	s.metaData = &pb.MetaData{
-		SeqNumber: s.metaData.SeqNumber + 1,
-		Attnets:   bitV,
-	}
-}
-
-func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {
-	var correctAddr ma.Multiaddr
-	for _, addr := range addrs {
-		if strings.Contains(addr.String(), "/ip4/") || strings.Contains(addr.String(), "/ip6/") {
-			correctAddr = addr
-			break
-		}
-	}
-	if correctAddr != nil {
-		log.WithField(
-			"multiAddr",
-			correctAddr.String()+"/p2p/"+id.String(),
-		).Info("Node started p2p server")
-	}
-}
-
-func logExternalIPAddr(id peer.ID, addr string, port uint) {
-	if addr != "" {
-		multiAddr, err := multiAddressBuilder(addr, port)
-		if err != nil {
-			log.Errorf("Could not create multiaddress: %v", err)
-			return
-		}
-		log.WithField(
-			"multiAddr",
-			multiAddr.String()+"/p2p/"+id.String(),
-		).Info("Node started external p2p server")
-	}
-}
-
-func logExternalDNSAddr(id peer.ID, addr string, port uint) {
-	if addr != "" {
-		p := strconv.FormatUint(uint64(port), 10)
-
-		log.WithField(
-			"multiAddr",
-			"/dns4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
-		).Info("Node started external p2p server")
-	}
 }
