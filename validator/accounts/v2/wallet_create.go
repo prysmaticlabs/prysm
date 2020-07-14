@@ -14,17 +14,33 @@ import (
 // CreateWallet from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
+func CreateWallet(cliCtx *cli.Context, walletDir string) error {
+	// Read a wallet's directory from user input.
+	walletDir, err := inputWalletDir(cliCtx)
+	if err != nil {
+		log.Fatalf("Could not parse wallet directory: %v", err)
+	}
+	// Check if the user has a wallet at the specified path.
+	// If a user does not have a wallet, we instantiate one
+	// based on specified options.
+	walletExists, err := hasDir(walletDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if walletExists {
+		log.Fatal(
+			"You already have a wallet at the specified path. You can " +
+				"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit",
+		)
+	}
 	// Determine the desired keymanager kind for the wallet from user input.
 	keymanagerKind, err := inputKeymanagerKind(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not select keymanager kind: %v", err)
 	}
-	var wallet *Wallet
 	switch keymanagerKind {
 	case v2keymanager.Direct:
-		wallet, err = initializeDirectWallet(cliCtx, walletDir)
-		if err != nil {
+		if err = initializeDirectWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
 		}
 		log.Infof(
@@ -34,8 +50,7 @@ func CreateWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
 	case v2keymanager.Derived:
 		log.Fatal("Derived keymanager is not yet supported")
 	case v2keymanager.Remote:
-		wallet, err = initializeRemoteSignerWallet(cliCtx, walletDir)
-		if err != nil {
+		if err = initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
 		}
 		log.Infof(
@@ -44,10 +59,10 @@ func CreateWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
 	default:
 		log.Fatalf("Keymanager type %s is not supported", keymanagerKind)
 	}
-	return wallet, nil
+	return nil
 }
 
-func initializeDirectWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
+func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 	walletConfig := &WalletConfig{
 		PasswordsDir:      passwordsDirPath,
@@ -58,27 +73,27 @@ func initializeDirectWallet(cliCtx *cli.Context, walletDir string) (*Wallet, err
 	ctx := context.Background()
 	wallet, err := NewWallet(ctx, walletConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create new wallet")
+		return errors.Wrap(err, "could not create new wallet")
 	}
 	keymanagerConfig, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal keymanager config file")
+		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return nil, errors.Wrap(err, "could not write keymanager config to disk")
+		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	return wallet, nil
+	return nil
 }
 
-func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) (*Wallet, error) {
+func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
 	conf, err := inputRemoteKeymanagerConfig(cliCtx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not input remote keymanager config")
+		return errors.Wrap(err, "could not input remote keymanager config")
 	}
 	ctx := context.Background()
 	keymanagerConfig, err := remote.MarshalConfigFile(ctx, conf)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal config file")
+		return errors.Wrap(err, "could not marshal config file")
 	}
 	walletConfig := &WalletConfig{
 		WalletDir:      walletDir,
@@ -86,12 +101,12 @@ func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) (*Walle
 	}
 	wallet, err := NewWallet(ctx, walletConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create new wallet")
+		return errors.Wrap(err, "could not create new wallet")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return nil, errors.Wrap(err, "could not write keymanager config to disk")
+		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	return wallet, nil
+	return nil
 }
 
 func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
