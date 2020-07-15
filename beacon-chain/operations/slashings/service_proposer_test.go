@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
@@ -39,9 +41,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	slashings := make([]*ethpb.ProposerSlashing, 20)
 	for i := 0; i < len(slashings); i++ {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		slashings[i] = sl
 	}
 
@@ -51,19 +51,13 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 
 	// We mark the following validators with some preconditions.
 	exitedVal, err := beaconState.ValidatorAtIndex(uint64(2))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	exitedVal.WithdrawableEpoch = 0
 	futureExitedVal, err := beaconState.ValidatorAtIndex(uint64(4))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	futureExitedVal.WithdrawableEpoch = 17
 	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	slashedVal.Slashed = true
 	if err := beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal); err != nil {
 		t.Fatal(err)
@@ -192,18 +186,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			if !tt.fields.wantErr && err != nil {
 				t.Fatalf("Did not expect error: %v", err)
 			}
-			if len(p.pendingProposerSlashing) != len(tt.want) {
-				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))
-			}
+			assert.Equal(t, len(tt.want), len(p.pendingProposerSlashing))
 			for i := range p.pendingAttesterSlashing {
-				if p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex != tt.want[i].Header_1.Header.ProposerIndex {
-					t.Errorf(
-						"Pending proposer to slash at index %d does not match expected. Got=%v wanted=%v",
-						i,
-						p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex,
-						tt.want[i].Header_1.Header.ProposerIndex,
-					)
-				}
+				assert.Equal(t, p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex, tt.want[i].Header_1.Header.ProposerIndex)
 				if !proto.Equal(p.pendingProposerSlashing[i], tt.want[i]) {
 					t.Errorf("Proposer slashing at index %d does not match expected. Got=%v wanted=%v", i, p.pendingProposerSlashing[i], tt.want[i])
 				}
@@ -221,9 +206,7 @@ func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 	slashings := make([]*ethpb.ProposerSlashing, 2)
 	for i := 0; i < 2; i++ {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		slashings[i] = sl
 	}
 	// We mess up the signature of the second slashing.
@@ -248,10 +231,7 @@ func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 	); err == nil {
 		t.Error("Expected slashing with bad signature to fail, received nil")
 	}
-	// We expect to only have 1 pending proposer slashing in the pool.
-	if len(p.pendingProposerSlashing) != 1 {
-		t.Error("Expected failed proposer slashing to have been cleared from pool")
-	}
+	assert.Equal(t, 1, len(p.pendingProposerSlashing))
 }
 
 func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
@@ -362,13 +342,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 				included:                tt.fields.included,
 			}
 			p.MarkIncludedProposerSlashing(tt.args.slashing)
-			if len(p.pendingProposerSlashing) != len(tt.want.pending) {
-				t.Fatalf(
-					"Mismatched lengths of pending list. Got %d, wanted %d.",
-					len(p.pendingProposerSlashing),
-					len(tt.want.pending),
-				)
-			}
+			assert.Equal(t, len(tt.want.pending), len(p.pendingProposerSlashing))
 			for i := range p.pendingProposerSlashing {
 				if !proto.Equal(p.pendingProposerSlashing[i], tt.want.pending[i]) {
 					t.Errorf(
@@ -379,9 +353,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 					)
 				}
 			}
-			if !reflect.DeepEqual(p.included, tt.want.included) {
-				t.Errorf("Included map is not as expected. Got=%v wanted=%v", p.included, tt.want.included)
-			}
+			assert.DeepEqual(t, tt.want.included, p.included)
 		})
 	}
 }
@@ -394,9 +366,7 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 	slashings := make([]*ethpb.ProposerSlashing, 20)
 	for i := 0; i < len(slashings); i++ {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		slashings[i] = sl
 	}
 	tests := []struct {
@@ -446,17 +416,13 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	}
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	val, err := beaconState.ValidatorAtIndex(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	val.Slashed = true
 	if err := beaconState.UpdateValidatorAtIndex(0, val); err != nil {
 		t.Fatal(err)
 	}
 	val, err = beaconState.ValidatorAtIndex(5)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	val.Slashed = true
 	if err := beaconState.UpdateValidatorAtIndex(5, val); err != nil {
 		t.Fatal(err)
@@ -464,9 +430,7 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	slashings := make([]*ethpb.ProposerSlashing, 32)
 	for i := 0; i < len(slashings); i++ {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		slashings[i] = sl
 	}
 	result := make([]*ethpb.ProposerSlashing, 32)
