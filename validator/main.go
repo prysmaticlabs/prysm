@@ -107,7 +107,8 @@ func main() {
 	app.Version = version.GetVersion()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
-		v2.Commands,
+		v2.WalletCommands,
+		v2.AccountCommands,
 		{
 			Name:     "accounts",
 			Category: "accounts",
