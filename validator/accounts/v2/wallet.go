@@ -249,9 +249,6 @@ func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fi
 // and writes it to the wallet path.
 func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error {
 	configFilePath := path.Join(w.accountsPath, keymanagerConfigFileName)
-	if fileExists(configFilePath) {
-		return nil
-	}
 	// Open the keymanager config file for writing.
 	f, err := os.OpenFile(configFilePath, accountFilePermissions, directoryPermissions)
 	if err != nil {

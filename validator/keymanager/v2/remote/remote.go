@@ -112,7 +112,7 @@ func NewKeymanager(ctx context.Context, maxMessageSize int, cfg *Config) (*Keyma
 func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not read config")
 	}
 	defer func() {
 		if err := r.Close(); err != nil {
@@ -120,8 +120,9 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 		}
 	}()
 	cfg := &Config{}
+	log.Infof("%s", enc)
 	if err := json.Unmarshal(enc, cfg); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not JSON unmarshal")
 	}
 	return cfg, nil
 }

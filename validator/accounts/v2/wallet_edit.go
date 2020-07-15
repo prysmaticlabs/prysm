@@ -44,11 +44,11 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 	case v2keymanager.Remote:
 		enc, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Could not read: %v", err)
 		}
 		cfg, err := remote.UnmarshalConfigFile(enc)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Could not unmarshal: %v", err)
 		}
 		log.Infof("Current configuration")
 		fmt.Printf("%s\n", cfg)
@@ -57,10 +57,12 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Info("marshaling config...")
 		encodedCfg, err := remote.MarshalConfigFile(ctx, newCfg)
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Info("writing keymanager...")
 		if err := wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg); err != nil {
 			log.Fatal(err)
 		}
