@@ -13,15 +13,15 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to be connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	p1.LocalMetadata = &pb.MetaData{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
@@ -50,23 +50,14 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
-		if *out != 2 {
-			t.Fatalf("Wanted 2 but got %d as our sequence number", *out)
-		}
+		require.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.Equal(t, uint64(2), *out)
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	seqNumber := uint64(1)
 
-	err = r.pingHandler(context.Background(), &seqNumber, stream1)
-	if err != nil {
-		t.Errorf("Unxpected error: %v", err)
-	}
+	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
@@ -82,9 +73,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to be connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	p1.LocalMetadata = &pb.MetaData{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
@@ -119,22 +108,12 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r2.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
-		if *out != 2 {
-			t.Fatalf("Wanted 2 but got %d as our sequence number", *out)
-		}
-		err := r2.pingHandler(context.Background(), out, stream)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, r2.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		require.Equal(t, uint64(2), *out)
+		require.NoError(t, r2.pingHandler(context.Background(), out, stream))
 	})
 
-	err := r.sendPingRequest(context.Background(), p2.BHost.ID())
-	if err != nil {
-		t.Errorf("Unxpected error: %v", err)
-	}
+	assert.NoError(t, r.sendPingRequest(context.Background(), p2.BHost.ID()))
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
