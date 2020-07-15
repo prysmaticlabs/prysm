@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPruneExpired_Ticker(t *testing.T) {
@@ -20,9 +22,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 		Pool:          NewPool(),
 		pruneInterval: 250 * time.Millisecond,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	atts := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1000, 0b1}},
@@ -41,9 +41,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	if err := s.pool.SaveAggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
 	}
-	if s.pool.AggregatedAttestationCount() != 2 {
-		t.Fatalf("Unexpected number of attestations: %d", s.pool.AggregatedAttestationCount())
-	}
+	assert.Equal(t, 2, s.pool.AggregatedAttestationCount())
 	if err := s.pool.SaveBlockAttestations(atts); err != nil {
 		t.Fatal(err)
 	}
@@ -85,9 +83,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 
 func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1101}}
 	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1111}}
@@ -120,9 +116,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 
 func TestPruneExpired_Expired(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Rewind back one epoch worth of time.
 	s.genesisTime = uint64(roughtime.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
