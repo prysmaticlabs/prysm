@@ -58,6 +58,7 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 func (l *limiter) topicCollector(topic string) (*leakybucket.Collector, error) {
 	l.RLock()
 	defer l.RUnlock()
+
 	collector, ok := l.limiterMap[topic]
 	if !ok {
 		return nil, errors.Errorf("collector does not exist for topic %s", topic)
@@ -69,6 +70,7 @@ func (l *limiter) topicCollector(topic string) (*leakybucket.Collector, error) {
 func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	l.RLock()
 	defer l.RUnlock()
+
 	topic := string(stream.Protocol())
 	log := l.topicLogger(topic)
 
@@ -98,6 +100,7 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 func (l *limiter) add(stream network.Stream, amt int64) {
 	l.Lock()
 	defer l.Unlock()
+
 	topic := string(stream.Protocol())
 	log := l.topicLogger(topic)
 
