@@ -148,6 +148,33 @@ var (
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
 	}
+	// GrpcRemoteAddressFlag defines the host:port address for a remote keymanager to connect to.
+	GrpcRemoteAddressFlag = &cli.StringFlag{
+		Name:  "grpc-remote-address",
+		Usage: "Host:port of a gRPC server for a remote keymanager",
+		Value: "",
+	}
+	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
+	// a secure signer via TLS and gRPC.
+	RemoteSignerCertPathFlag = &cli.StringFlag{
+		Name:  "remote-signer-crt-path",
+		Usage: "/path/to/client.crt for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
+	}
+	// RemoteSignerKeyPathFlag defines the path to a client.key file for a wallet to connect to
+	// a secure signer via TLS and gRPC.
+	RemoteSignerKeyPathFlag = &cli.StringFlag{
+		Name:  "remote-signer-key-path",
+		Usage: "/path/to/client.key for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
+	}
+	// RemoteSignerCACertPathFlag defines the path to a ca.crt file for a wallet to connect to
+	// a secure signer via TLS and gRPC.
+	RemoteSignerCACertPathFlag = &cli.StringFlag{
+		Name:  "remote-signer-ca-crt-path",
+		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

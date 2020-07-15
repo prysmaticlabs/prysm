@@ -42,6 +42,7 @@ go_test(
     srcs = [
         "list_test.go",
         "new_test.go",
+        "wallet_edit_test.go",
         "wallet_test.go",
     ],
     embed = [":go_default_library"],

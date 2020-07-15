@@ -7,11 +7,11 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/urfave/cli/v2"
 )
 
 // CreateWallet from user input with a desired keymanager. If a
@@ -113,6 +113,24 @@ func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
 }
 
 func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
+	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
+	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
+	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
+	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
+	if addr != "" && crt != "" && key != "" && ca != "" {
+		newCfg := &remote.Config{
+			RemoteCertificate: &remote.CertificateConfig{
+				ClientCertPath: strings.TrimRight(crt, "\r\n"),
+				ClientKeyPath:  strings.TrimRight(key, "\r\n"),
+				CACertPath:     strings.TrimRight(ca, "\r\n"),
+			},
+			RemoteAddr: strings.TrimRight(addr, "\r\n"),
+		}
+		log.Infof("New configuration")
+		fmt.Printf("%s\n", newCfg)
+		return newCfg, nil
+	}
+	log.Infof("Input desired configuration")
 	prompt := promptui.Prompt{
 		Label: "Remote gRPC address (such as host.example.com:4000)",
 		Validate: func(input string) error {
@@ -150,14 +168,16 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &remote.Config{
+	newCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: strings.TrimRight(clientCrtPath, "\r\n"),
 			ClientKeyPath:  strings.TrimRight(clientKeyPath, "\r\n"),
 			CACertPath:     strings.TrimRight(caCrtPath, "\r\n"),
 		},
 		RemoteAddr: strings.TrimRight(remoteAddr, "\r\n"),
-	}, nil
+	}
+	fmt.Printf("%s\n", newCfg)
+	return newCfg, nil
 }
 
 func validateCertPath(input string) error {

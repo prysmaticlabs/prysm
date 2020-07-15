@@ -2,6 +2,8 @@ package v2
 
 import (
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/validator/flags"
 )
 
 // WalletCommands for accounts-v2 for Prysm validators.
@@ -17,8 +19,15 @@ var WalletCommands = &cli.Command{
 			Action: CreateWallet,
 		},
 		{
-			Name:   "edit-config",
-			Usage:  "edits a wallet configuration options",
+			Name:  "edit-config",
+			Usage: "edits a wallet configuration options, such as gRPC connection credentials and TLS certificates",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.GrpcRemoteAddressFlag,
+				flags.RemoteSignerCertPathFlag,
+				flags.RemoteSignerKeyPathFlag,
+				flags.RemoteSignerCACertPathFlag,
+			},
 			Action: EditWalletConfiguration,
 		},
 	},
