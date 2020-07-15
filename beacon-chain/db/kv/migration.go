@@ -12,6 +12,7 @@ type migration func(*bolt.Tx) error
 
 var migrations = []migration{
 	migrateArchivedIndex,
+	migrateBlockSlotIndex,
 }
 
 // RunMigrations defined in the migrations array.

@@ -25,7 +25,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 					if _, err := tx.CreateBucketIfNotExists(archivedRootBucket); err != nil {
 						t.Error(err)
 					}
-					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo")); err != nil {
+					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
 						return err
 					}
 					return tx.Bucket(migrationsBucket).Put(migrationArchivedIndex0Key, migrationCompleted)
@@ -35,7 +35,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			},
 			eval: func(t *testing.T, db *bbolt.DB) {
 				if err := db.View(func(tx *bbolt.Tx) error {
-					v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytes(2048))
+					v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytesLittleEndian(2048))
 					if !bytes.Equal(v, []byte("foo")) {
 						return fmt.Errorf("did not receive correct data for key 2048, wanted 'foo' got %s", v)
 					}
@@ -55,7 +55,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 					if _, err := tx.CreateBucketIfNotExists(slotsHasObjectBucket); err != nil {
 						t.Error(err)
 					}
-					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo")); err != nil {
+					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
 						return err
 					}
 

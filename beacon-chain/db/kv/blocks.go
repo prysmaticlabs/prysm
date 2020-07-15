@@ -317,10 +317,7 @@ func (kv *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*et
 		// Iterate through the index, which is in byte sorted order.
 		c := bkt.Cursor()
 		for s, root := c.First(); s != nil; s, root = c.Next() {
-			key, err := strconv.ParseUint(string(s), 10, 64)
-			if err != nil {
-				return err
-			}
+			key := bytesutil.BytesToUint64BigEndian(s)
 			if root == nil {
 				continue
 			}
@@ -490,7 +487,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block *ethpb.BeaconBlock) 
 		blockSlotIndicesBucket,
 	}
 	indices := [][]byte{
-		[]byte(fmt.Sprintf("%07d", block.Slot)),
+		bytesutil.Uint64ToBytesBigEndian(block.Slot),
 	}
 	if block.ParentRoot != nil && len(block.ParentRoot) > 0 {
 		buckets = append(buckets, blockParentRootIndicesBucket)

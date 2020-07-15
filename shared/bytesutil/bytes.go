@@ -308,16 +308,16 @@ func HighestBitIndexAt(b []byte, index int) (int, error) {
 	return 0, nil
 }
 
-// Uint64ToBytes little endian conversion.
-func Uint64ToBytes(i uint64) []byte {
+// Uint64ToBytesLittleEndian conversion.
+func Uint64ToBytesLittleEndian(i uint64) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, i)
 	return buf
 }
 
-// BytesToUint64 little endian conversion. Returns 0 if empty bytes or byte slice with length less
+// BytesToUint64LittleEndian conversion. Returns 0 if empty bytes or byte slice with length less
 // than 8.
-func BytesToUint64(b []byte) uint64 {
+func BytesToUint64LittleEndian(b []byte) uint64 {
 	if len(b) < 8 { // This will panic otherwise.
 		return 0
 	}
