@@ -2,6 +2,7 @@ package sync
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -16,6 +17,7 @@ const defaultBurstLimit = 5
 type limiter struct {
 	limiterMap map[string]*leakybucket.Collector
 	p2p        p2p.P2P
+	sync.RWMutex
 }
 
 // Instantiates a multi-rpc protocol rate limiter, providing
@@ -54,6 +56,8 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 
 // Returns the current topic collector for the provided topic.
 func (l *limiter) topicCollector(topic string) (*leakybucket.Collector, error) {
+	l.RLock()
+	defer l.RUnlock()
 	collector, ok := l.limiterMap[topic]
 	if !ok {
 		return nil, errors.Errorf("collector does not exist for topic %s", topic)
@@ -63,6 +67,8 @@ func (l *limiter) topicCollector(topic string) (*leakybucket.Collector, error) {
 
 // validates a request with the accompanying cost.
 func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
+	l.RLock()
+	defer l.RUnlock()
 	topic := string(stream.Protocol())
 	log := l.topicLogger(topic)
 
@@ -90,6 +96,8 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 
 // adds the cost to our leaky bucket for the topic.
 func (l *limiter) add(stream network.Stream, amt int64) {
+	l.Lock()
+	defer l.Unlock()
 	topic := string(stream.Protocol())
 	log := l.topicLogger(topic)
 
@@ -104,6 +112,9 @@ func (l *limiter) add(stream network.Stream, amt int64) {
 
 // frees all the collectors and removes them.
 func (l *limiter) free() {
+	l.Lock()
+	defer l.Unlock()
+
 	tempMap := map[uintptr]bool{}
 	for t, collector := range l.limiterMap {
 		// Check if collector has already been cleared of
