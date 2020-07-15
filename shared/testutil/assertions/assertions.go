@@ -69,7 +69,7 @@ func parseMsg(defaultMsg string, msg ...string) string {
 	return msgString
 }
 
-// AssertionsTBMock exposes enough testing.TB methods for assertions.
+// TBMock exposes enough testing.TB methods for assertions.
 type TBMock struct {
 	ErrorfMsg string
 	FatalfMsg string
