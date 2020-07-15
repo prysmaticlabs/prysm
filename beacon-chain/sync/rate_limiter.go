@@ -1,22 +1,29 @@
 package sync
 
 import (
+	"reflect"
+
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultBurstLimit = 5
 
 type limiter struct {
 	limiterMap map[string]*leakybucket.Collector
+	p2p        p2p.P2P
 }
 
-func NewRateLimiter(encoder p2p.EncodingProvider) *limiter {
+// Instantiates a multi-rpc protocol rate limiter, providing
+// separate collectors for each topic.
+func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// add encoding suffix
 	addEncoding := func(topic string) string {
-		return topic + encoder.Encoding().ProtocolSuffix()
+		return topic + p2pProvider.Encoding().ProtocolSuffix()
 	}
 	// Initialize block limits.
 	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
@@ -42,9 +49,10 @@ func NewRateLimiter(encoder p2p.EncodingProvider) *limiter {
 	// BlockByRange requests
 	topicMap[addEncoding(p2p.RPCBlocksByRangeTopic)] = blockCollector
 
-	return &limiter{limiterMap: topicMap}
+	return &limiter{limiterMap: topicMap, p2p: p2pProvider}
 }
 
+// Returns the current topic collector for the provided topic.
 func (l *limiter) topicCollector(topic string) (*leakybucket.Collector, error) {
 	collector, ok := l.limiterMap[topic]
 	if !ok {
@@ -53,10 +61,64 @@ func (l *limiter) topicCollector(topic string) (*leakybucket.Collector, error) {
 	return collector, nil
 }
 
+// validates a request with the accompanying cost.
+func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
+	topic := string(stream.Protocol())
+	log := l.topicLogger(topic)
+
+	collector, err := l.topicCollector(topic)
+	if err != nil {
+		return err
+	}
+	key := stream.Conn().RemotePeer().String()
+	remaining := collector.Remaining(key)
+	if amt > uint64(remaining) {
+		l.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		if l.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
+			log.Debug("Disconnecting bad peer")
+			defer func() {
+				if err := l.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
+					log.WithError(err).Error("Failed to disconnect peer")
+				}
+			}()
+		}
+		writeErrorResponseToStream(responseCodeInvalidRequest, rateLimitedError, stream, l.p2p)
+		return errors.New(rateLimitedError)
+	}
+	return nil
+}
+
+// adds the cost to our leaky bucket for the topic.
+func (l *limiter) add(stream network.Stream, amt int64) {
+	topic := string(stream.Protocol())
+	log := l.topicLogger(topic)
+
+	collector, err := l.topicCollector(topic)
+	if err != nil {
+		log.Errorf("collector with topic '%s' does not exist", topic)
+		return
+	}
+	key := stream.Conn().RemotePeer().String()
+	collector.Add(key, amt)
+}
+
+// frees all the collectors and removes them.
 func (l *limiter) free() {
+	tempMap := map[uintptr]bool{}
 	for t, collector := range l.limiterMap {
+		// Check if collector has already been cleared of
+		// as all collectors are not distinct from each other.
+		ptr := reflect.ValueOf(collector).Pointer()
+		if tempMap[ptr] {
+			continue
+		}
 		collector.Free()
 		// Remove from map
 		delete(l.limiterMap, t)
+		tempMap[ptr] = true
 	}
+}
+
+func (l *limiter) topicLogger(topic string) *logrus.Entry {
+	return log.WithField("rate limiter", topic)
 }

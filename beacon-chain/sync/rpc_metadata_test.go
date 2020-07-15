@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/go-ssz"
@@ -32,12 +34,15 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d, _ := db.SetupDB(t)
 	r := &Service{
-		db:  d,
-		p2p: p1,
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	// Setup streams
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -76,17 +81,23 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d, _ := db.SetupDB(t)
 	r := &Service{
-		db:  d,
-		p2p: p1,
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	r2 := &Service{
-		db:  d,
-		p2p: p2,
+		db:          d,
+		p2p:         p2,
+		rateLimiter: newRateLimiter(p2),
 	}
 
 	// Setup streams
 	pcl := protocol.ID(p2p.RPCMetaDataTopic + r.p2p.Encoding().ProtocolSuffix())
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r2.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {

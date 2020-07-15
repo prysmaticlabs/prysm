@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -24,12 +26,15 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d, _ := db.SetupDB(t)
 	r := &Service{
-		db:  d,
-		p2p: p1,
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	// Setup streams
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -61,13 +66,16 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d, _ := db.SetupDB(t)
 	r := &Service{
-		db:  d,
-		p2p: p1,
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
 	}
 	failureCode := codeClientShutdown
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -99,13 +107,16 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d, _ := db.SetupDB(t)
 	r := &Service{
-		db:  d,
-		p2p: p1,
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
 	}
 	failureCode := codeClientShutdown
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {

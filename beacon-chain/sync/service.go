@@ -109,7 +109,7 @@ type Service struct {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
-	rLimiter := NewRateLimiter(cfg.P2P)
+	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		ctx:                  ctx,

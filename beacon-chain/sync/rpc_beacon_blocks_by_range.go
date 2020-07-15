@@ -28,7 +28,6 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
-	log := log.WithField("handler", "beacon_blocks_by_range")
 
 	// Ticker to stagger out large requests.
 	ticker := time.NewTicker(time.Second)
@@ -67,19 +66,9 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	)
 	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
 	for startSlot <= endReqSlot {
-		remainingBucketCapacity = blockLimiter.Remaining(stream.Conn().RemotePeer().String())
-		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
-			s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
-			if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
-				log.Debug("Disconnecting bad peer")
-				defer func() {
-					if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
-						log.WithError(err).Error("Failed to disconnect peer")
-					}
-				}()
-			}
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, rateLimitedError, stream)
-			return errors.New(rateLimitedError)
+		if err := s.rateLimiter.validateRequest(stream, allowedBlocksPerSecond); err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
 		}
 
 		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > maxRequestBlocks {
@@ -95,8 +84,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 		// Decrease allowed blocks capacity by the number of streamed blocks.
 		if startSlot <= endSlot {
-			blockLimiter.Add(
-				stream.Conn().RemotePeer().String(), int64(1+(endSlot-startSlot)/m.Step))
+			s.rateLimiter.add(stream, int64(1+(endSlot-startSlot)/m.Step))
 		}
 
 		// Recalculate start and end slots for the next batch to be returned to the remote peer.
@@ -183,14 +171,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 }
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
-	resp, err := s.generateErrorResponse(responseCode, reason)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate a response error")
-	} else {
-		if _, err := stream.Write(resp); err != nil {
-			log.WithError(err).Errorf("Failed to write to stream")
-		}
-	}
+	writeErrorResponseToStream(responseCode, reason, stream, s.p2p)
 }
 
 func (s *Service) retrieveGenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, [32]byte, error) {

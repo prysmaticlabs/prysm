@@ -31,6 +31,15 @@ func Init(c *GlobalFlags) {
 	globalConfig = c
 }
 
+// InitWithReset sets the global config and returns function that is used to reset configuration.
+func InitWithReset(c *GlobalFlags) func() {
+	resetFunc := func() {
+		Init(&GlobalFlags{})
+	}
+	Init(c)
+	return resetFunc
+}
+
 // ConfigureGlobalFlags initializes the global config.
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
