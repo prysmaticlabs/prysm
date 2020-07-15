@@ -61,9 +61,15 @@ type DepositCache struct {
 
 // NewDepositCache instantiates a new deposit cache
 func NewDepositCache() *DepositCache {
+	finalizedDepositsTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		panic(err)
+	}
+
 	return &DepositCache{
 		pendingDeposits:    []*dbpb.DepositContainer{},
 		deposits:           []*dbpb.DepositContainer{},
+		finalizedDeposits:  &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 		chainStartPubkeys:  make(map[string]bool),
 		chainStartDeposits: make([]*ethpb.Deposit, 0),
 	}
@@ -104,54 +110,29 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*dbp
 	historicalDepositsCount.Add(float64(len(ctrs)))
 }
 
-// InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (exclusive) into the finalized deposits cache.
+// InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
 func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 
-	var depositTrie *trieutil.SparseMerkleTrie
-
-	if dc.finalizedDeposits != nil {
-		depositTrie = dc.finalizedDeposits.Deposits
-
-		insertIndex := dc.finalizedDeposits.MerkleTrieIndex + 1
-		for _, d := range dc.deposits {
-			if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
-				continue
-			}
-			if d.Index > eth1DepositIndex {
-				break
-			}
-			depHash, err := ssz.HashTreeRoot(d.Deposit.Data)
-			if err != nil {
-				log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
-				return
-			}
-			depositTrie.Insert(depHash[:], int(insertIndex))
-			insertIndex++
+	depositTrie := dc.finalizedDeposits.Deposits
+	insertIndex := dc.finalizedDeposits.MerkleTrieIndex + 1
+	for _, d := range dc.deposits {
+		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
+			continue
 		}
-	} else {
-		var finalizedDeposits [][]byte
-		for _, d := range dc.deposits {
-			if d.Index > eth1DepositIndex {
-				break
-			}
-			hash, err := ssz.HashTreeRoot(d.Deposit.Data)
-			if err != nil {
-				log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
-				return
-			}
-			finalizedDeposits = append(finalizedDeposits, hash[:])
+		if d.Index > eth1DepositIndex {
+			break
 		}
-
-		var err error
-		depositTrie, err = trieutil.GenerateTrieFromItems(finalizedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
+		depHash, err := ssz.HashTreeRoot(d.Deposit.Data)
 		if err != nil {
-			log.WithError(err).Error("Could not generate deposit trie. Finalized deposit cache not updated.")
+			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return
 		}
+		depositTrie.Insert(depHash[:], int(insertIndex))
+		insertIndex++
 	}
 
 	dc.finalizedDeposits = &FinalizedDeposits{
@@ -247,10 +228,6 @@ func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposit
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
-
-	if dc.finalizedDeposits == nil {
-		return nil
-	}
 
 	return &FinalizedDeposits{
 		Deposits:        dc.finalizedDeposits.Deposits.Copy(),
