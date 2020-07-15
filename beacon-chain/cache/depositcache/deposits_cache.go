@@ -66,11 +66,11 @@ func NewDepositCache() (*DepositCache, error) {
 		return nil, err
 	}
 
+	// finalizedDeposits.MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
+	// Inserting the first item into the trie will set the value of the index to 0.
 	return &DepositCache{
-		pendingDeposits: []*dbpb.DepositContainer{},
-		deposits:        []*dbpb.DepositContainer{},
-		// MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
-		// Inserting the first item into the trie will set the value of the index to 0.
+		pendingDeposits:    []*dbpb.DepositContainer{},
+		deposits:           []*dbpb.DepositContainer{},
 		finalizedDeposits:  &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 		chainStartPubkeys:  make(map[string]bool),
 		chainStartDeposits: make([]*ethpb.Deposit, 0),
