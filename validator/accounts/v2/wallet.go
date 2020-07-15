@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/logrusorgru/aurora"
+
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -301,6 +303,8 @@ func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 }
 
 func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
+	au := aurora.NewAurora(true)
+
 	var password string
 	var err error
 	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
@@ -328,8 +332,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 			}
 			err = w.checkPasswordForAccount(accountName, password)
 			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				log.Error(err)
-				fmt.Println("Incorrect password entered, please try again")
+				fmt.Println(au.Red("Incorrect password entered, please try again"))
 				continue
 			}
 			if err != nil {
