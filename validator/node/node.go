@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -99,19 +100,18 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			WalletDir:         walletDir,
 			CanUnlockAccounts: true,
 		})
-		if err == accountsv2.ErrNoWalletFound {
-			log.Fatal("No wallet found at path, please create a new wallet using `validator accounts-v2 new`")
-		}
 		if err != nil {
 			log.Fatalf("Could not open wallet: %v", err)
 		}
-		keyManagerV2, err = wallet.ExistingKeyManager(context.Background())
+		keyManagerV2, err = wallet.InitializeKeymanager(
+			context.Background(), false, /* skipMnemonicConfirm */
+		)
 		if err != nil {
 			log.Fatalf("Could not read existing keymanager for wallet: %v", err)
 		}
 	}
 
-	pubKeys, err := ExtractPublicKeysFromKeymanager(cliCtx, keyManagerV2)
+	pubKeys, err := ExtractPublicKeysFromKeymanager(cliCtx, keyManagerV1, keyManagerV2)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	} else {
 		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
 		for _, key := range pubKeys {
-			log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+			log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:]))).Info("Validating for public key")
 		}
 	}
 
@@ -372,7 +372,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 }
 
 // ExtractPublicKeysFromKeymanager extracts only the public keys from the specified key manager.
-func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
+func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV1 v1.KeyManager, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
 	var pubKeys [][48]byte
 	var err error
 	if featureconfig.Get().EnableAccountsV2 {
@@ -382,9 +382,5 @@ func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV2 v2.IKeyma
 		}
 		return pubKeys, nil
 	}
-	km, err := selectV1Keymanager(cliCtx)
-	if err != nil {
-		return nil, err
-	}
-	return km.FetchValidatingKeys()
+	return keyManagerV1.FetchValidatingKeys()
 }
