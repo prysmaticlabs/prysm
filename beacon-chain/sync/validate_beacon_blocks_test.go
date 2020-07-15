@@ -28,6 +28,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -49,9 +51,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	chainService := &mock.ChainService{Genesis: time.Now(),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -66,9 +66,8 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -78,10 +77,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-
-	if result {
-		t.Error("Expected false result, got true")
-	}
+	assert.Equal(t, false, result)
 }
 
 func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
@@ -95,14 +91,10 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 			ParentRoot: testutil.Random32Bytes(t),
 		},
 	}
-	if err := db.SaveBlock(context.Background(), msg); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), msg))
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		db:                db,
@@ -115,9 +107,8 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
@@ -128,9 +119,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-	if result {
-		t.Error("Expected false result, got true")
-	}
+	assert.Equal(t, false, result)
 }
 
 func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
@@ -144,26 +133,15 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			Slot:          0,
 		},
 	}
-	if err := db.SaveBlock(ctx, parentBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
-	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveStateSummary(ctx, &pb.StateSummary{
-		Root: bRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
-	if err := copied.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, copied.SetSlot(1))
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: proposerIdx,
@@ -173,20 +151,14 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	}
 
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	stateGen := stategen.New(db, stateSummaryCache)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
@@ -206,9 +178,8 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -218,13 +189,8 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-	if !result {
-		t.Error("Expected true result, got false")
-	}
-
-	if m.ValidatorData == nil {
-		t.Error("Decoded message was not set on the message validator data")
-	}
+	assert.Equal(t, true, result)
+	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
 func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
@@ -238,29 +204,18 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			Slot:          0,
 		},
 	}
-	if err := db.SaveBlock(ctx, parentBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
-	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveStateSummary(ctx, &pb.StateSummary{
-		Root: bRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
 	// The next block is at least 2 epochs ahead to induce shuffling and a new seed.
 	blkSlot := params.BeaconConfig().SlotsPerEpoch * 2
 	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: proposerIdx,
@@ -270,20 +225,14 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	}
 
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	stateGen := stategen.New(db, stateSummaryCache)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
@@ -303,9 +252,8 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -315,13 +263,8 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-	if !result {
-		t.Error("Expected true result, got false")
-	}
-
-	if m.ValidatorData == nil {
-		t.Error("Decoded message was not set on the message validator data")
-	}
+	assert.Equal(t, true, result)
+	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
 func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
@@ -331,9 +274,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
@@ -354,9 +295,8 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -366,9 +306,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-	if result {
-		t.Error("Expected false result, got true")
-	}
+	assert.Equal(t, false, result)
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
@@ -378,9 +316,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
@@ -390,9 +326,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	}
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		p2p:                 p,
@@ -406,9 +340,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -418,9 +351,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-	if result {
-		t.Error("Expected false result, got true")
-	}
+	assert.Equal(t, false, result)
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
@@ -430,9 +361,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	sk, err := bls.SecretKeyFromBytes(b32[:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
@@ -443,9 +372,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 
 	genesisTime := time.Now()
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	chainService := &mock.ChainService{
 		Genesis: time.Unix(genesisTime.Unix()-1000, 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -461,9 +388,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -473,10 +399,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-
-	if result {
-		t.Error("Expected false result, got true")
-	}
+	assert.Equal(t, false, result)
 }
 
 func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
@@ -490,20 +413,12 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			Slot:          0,
 		},
 	}
-	if err := db.SaveBlock(ctx, parentBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
-	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -514,20 +429,14 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	}
 
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -546,9 +455,8 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -560,9 +468,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-	if result {
-		t.Error("Expected false result, got true")
-	}
+	assert.Equal(t, false, result)
 }
 
 func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
@@ -571,21 +477,15 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	parent := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := db.SaveBlock(context.Background(), parent); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), parent))
 	parentRoot, err := stateutil.BlockRoot(parent.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	chain := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 1,
 		}}
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r := &Service{
 		db:             db,
 		p2p:            p,
@@ -600,9 +500,8 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 		Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:], Body: &ethpb.BeaconBlockBody{}},
 	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, b); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, b)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -618,9 +517,8 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	hook.Reset()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	buf = new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, b); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, b)
+	require.NoError(t, err)
 	m = &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -646,26 +544,15 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			Slot:          0,
 		},
 	}
-	if err := db.SaveBlock(ctx, parentBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
-	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveStateSummary(ctx, &pb.StateSummary{
-		Root: bRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
-	if err := copied.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, copied.SetSlot(1))
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: proposerIdx,
@@ -675,20 +562,14 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	}
 
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	stateGen := stategen.New(db, stateSummaryCache)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
@@ -710,9 +591,8 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -721,8 +601,6 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			},
 		},
 	}
-	if res := r.validateBeaconBlockPubSub(ctx, "", m); res != pubsub.ValidationReject {
-		t.Error("Wrong validation result returned")
-	}
+	assert.Equal(t, pubsub.ValidationReject, r.validateBeaconBlockPubSub(ctx, "", m), "Wrong validation result returned")
 	testutil.AssertLogsContain(t, hook, "not part of finalized chain")
 }

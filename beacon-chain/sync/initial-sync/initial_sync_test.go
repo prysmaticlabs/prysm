@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -29,6 +28,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -78,18 +79,11 @@ func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
-		Block: &eth.BeaconBlock{
-			Slot: 0,
-		}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 0}})
+	require.NoError(t, err)
 
 	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	return &mock.ChainService{
 		State: st,
@@ -107,9 +101,7 @@ func makeGenesisTime(currentSlot uint64) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := uint64(64)
 	gt := makeGenesisTime(currentSlot)
-	if helpers.SlotsSince(gt) != currentSlot {
-		t.Fatalf("Wanted %d, got %d", currentSlot, helpers.SlotsSince(gt))
-	}
+	require.Equal(t, currentSlot, helpers.SlotsSince(gt))
 }
 
 // helper function for sequences of block slots
@@ -135,9 +127,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 		Slot: 0,
 	}
 	genesisRoot, err := stateutil.BlockRoot(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	c.rootCache[0] = genesisRoot
 	parentRoot := genesisRoot
 	for _, slot := range reqSlots {
@@ -146,9 +136,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 			ParentRoot: parentRoot[:],
 		}
 		parentRoot, err = stateutil.BlockRoot(currentBlock)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		c.rootCache[slot] = parentRoot
 		c.parentSlotCache[slot] = parentSlot
 		parentSlot = slot
@@ -159,9 +147,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 func TestMakeSequence(t *testing.T) {
 	got := makeSequence(3, 5)
 	want := []uint64{3, 4, 5}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("Wanted %v, got %v", want, got)
-	}
+	require.DeepEqual(t, want, got)
 }
 
 // Connect peers with local host. This method sets up peer statuses and the appropriate handlers
@@ -183,9 +169,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			}()
 
 			req := &p2ppb.BeaconBlocksByRangeRequest{}
-			if err := peer.Encoding().DecodeWithMaxLength(stream, req); err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, peer.Encoding().DecodeWithMaxLength(stream, req))
 
 			requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+(req.Count*req.Step))
 
@@ -224,9 +208,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 				}
 				ret = append(ret, blk)
 				currRoot, err := stateutil.BlockRoot(blk.Block)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				logrus.Tracef("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 			}
 
@@ -235,9 +217,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			}
 
 			for i := 0; i < len(ret); i++ {
-				if err := beaconsync.WriteChunk(stream, peer.Encoding(), ret[i]); err != nil {
-					t.Error(err)
-				}
+				assert.NoError(t, beaconsync.WriteChunk(stream, peer.Encoding(), ret[i]))
 			}
 		})
 
