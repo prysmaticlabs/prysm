@@ -15,21 +15,6 @@ import (
 // MigrateToCold advances the finalized info in between the cold and hot state sections.
 // It moves the recent finalized states from the hot section to the cold section and
 // only preserve the ones that's on archived point.
-//
-// This method does:
-//  - Check the split is after the finalized slot. (why?)
-//  - Save all of the state summaries from cache to db.
-//  - Clear the cache
-//  - Fetch last archived slot
-//  - Query all of the block roots since the last split and the current finalized slot-1 (why -1?)
-//  - For each block root:
-//    - Load the state summary from db (why not use cached and clear later?)
-//    - If no state summary for that block root, skip it. (when wouldn't there be a state summary?)
-//    - If the summary slot is within the range of lastArchivedSlot to lastArchivedPointSlot+slotsPerArchivedCheckpointInterval
-//       - If the database doesn't have a state for this slot, skip it. (Why? There shouldn't be a state in cold storage already if we are migrating to cold storage.)
-//       - Save archived point
-//    - Else delete the state from the db if not finalized (why would we have a cold storage state in the db already?)
-//  - Update split data.
 func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
