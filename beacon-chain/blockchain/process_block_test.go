@@ -669,7 +669,7 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t,service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: gRoot[:]}) )
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: gRoot[:]}))
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, gRoot))
 	service.genesisRoot = gRoot
