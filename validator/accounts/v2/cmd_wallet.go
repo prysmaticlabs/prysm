@@ -1,9 +1,8 @@
 package v2
 
 import (
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/urfave/cli/v2"
 )
 
 // WalletCommands for accounts-v2 for Prysm validators.

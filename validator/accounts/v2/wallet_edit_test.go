@@ -6,13 +6,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/urfave/cli/v2"
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
