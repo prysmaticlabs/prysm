@@ -142,6 +142,11 @@ var (
 		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
 		Value: false,
 	}
+	// AccountsFlag for non-interactive usage of accounts exporting, sets a list of account names or all to be exported.
+	AccountsFlag = &cli.StringSliceFlag{
+		Name:  "accounts",
+		Usage: "List of account names to export, or \"all\" to backup all accounts",
+	}
 	// BackupPathFlag defines the path for the zip backup of the wallet will be created.
 	BackupPathFlag = &cli.StringFlag{
 		Name:  "backup-path",
