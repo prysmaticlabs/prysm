@@ -19,6 +19,9 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 	}
 
 	bkt := tx.Bucket(archivedRootBucket)
+	if bkt == nil {
+		return nil
+	}
 	// Remove "last archived index" key before iterating over all keys.
 	if err := bkt.Delete(lastArchivedIndexKey); err != nil {
 		return err
