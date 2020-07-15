@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"strconv"
 
-	bolt "go.etcd.io/bbolt"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	bolt "go.etcd.io/bbolt"
 )
 
 var migrationBlockSlotIndex0Key = []byte("block_slot_index_0")
