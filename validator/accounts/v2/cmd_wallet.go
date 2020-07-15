@@ -16,5 +16,10 @@ var WalletCommands = &cli.Command{
 				"either on-disk (direct), derived, or using remote credentials",
 			Action: CreateWallet,
 		},
+		{
+			Name:   "edit-config",
+			Usage:  "edits a wallet configuration options",
+			Action: EditWalletConfiguration,
+		},
 	},
 }

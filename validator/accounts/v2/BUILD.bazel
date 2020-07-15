@@ -13,6 +13,7 @@ go_library(
         "new.go",
         "wallet.go",
         "wallet_create.go",
+        "wallet_edit.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2",
     visibility = [

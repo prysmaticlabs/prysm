@@ -5,10 +5,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -126,6 +129,39 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 // MarshalConfigFile for the keymanager.
 func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
+}
+
+// String pretty-print of a remote keymanager configuration.
+func (c *Config) String() string {
+	au := aurora.NewAurora(true)
+	var b strings.Builder
+	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("Remote gRPC address"), c.RemoteAddr)
+	if _, err := b.WriteString(strAddr); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strCrt := fmt.Sprintf(
+		"%s: %s\n", au.BrightMagenta("Client cert path"), c.RemoteCertificate.ClientCertPath,
+	)
+	if _, err := b.WriteString(strCrt); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strKey := fmt.Sprintf(
+		"%s: %s\n", au.BrightMagenta("Client key path"), c.RemoteCertificate.ClientKeyPath,
+	)
+	if _, err := b.WriteString(strKey); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strCa := fmt.Sprintf(
+		"%s: %s\n", au.BrightMagenta("CA cert path"), c.RemoteCertificate.CACertPath,
+	)
+	if _, err := b.WriteString(strCa); err != nil {
+		log.Error(err)
+		return ""
+	}
+	return b.String()
 }
 
 // CreateAccount based on the keymanager's logic. Returns the account name.

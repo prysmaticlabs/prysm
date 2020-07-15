@@ -253,7 +253,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 		return nil
 	}
 	// Open the keymanager config file for writing.
-	f, err := os.Create(configFilePath)
+	f, err := os.OpenFile(configFilePath, accountFilePermissions, directoryPermissions)
 	if err != nil {
 		return err
 	}
