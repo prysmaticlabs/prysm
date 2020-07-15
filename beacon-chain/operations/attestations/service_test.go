@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStop_OK(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if err := s.Stop(); err != nil {
 		t.Fatalf("Unable to stop attestation pool service: %v", err)
