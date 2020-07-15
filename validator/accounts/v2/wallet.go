@@ -312,7 +312,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		password = string(data)
 		err = w.checkPasswordForAccount(accountName, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			return fmt.Errorf("invalid password entered for account %s\n", accountName)
+			return fmt.Errorf("invalid password entered for account %s", accountName)
 		}
 		if err != nil {
 			return err
