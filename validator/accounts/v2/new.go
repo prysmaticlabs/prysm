@@ -86,10 +86,8 @@ func NewAccount(cliCtx *cli.Context) error {
 func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if cliCtx.IsSet(flags.WalletDirFlag.Name) {
-		log.Info("Set")
 		return walletDir, nil
 	}
-	log.Info("Not set")
 
 	if walletDir == flags.DefaultValidatorDir() {
 		walletDir = path.Join(walletDir, WalletDefaultDirName)

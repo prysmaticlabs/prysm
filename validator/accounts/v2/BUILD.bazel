@@ -50,6 +50,8 @@ go_test(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/direct:go_default_library",
         "//validator/keymanager/v2/remote:go_default_library",

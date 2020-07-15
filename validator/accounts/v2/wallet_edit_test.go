@@ -4,23 +4,21 @@ import (
 	"context"
 	"flag"
 	"os"
-	"reflect"
 	"testing"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
 	walletDir := testutil.TempDir() + "/wallet"
 	defer func() {
-		if err := os.RemoveAll(walletDir); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.RemoveAll(walletDir))
 	}()
 	ctx := context.Background()
 	originalCfg := &remote.Config{
@@ -32,20 +30,14 @@ func TestEditWalletConfiguration(t *testing.T) {
 		RemoteAddr: "my.server.com:4000",
 	}
 	encodedCfg, err := remote.MarshalConfigFile(ctx, originalCfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	walletConfig := &WalletConfig{
 		WalletDir:      walletDir,
 		KeymanagerKind: v2keymanager.Remote,
 	}
 	wallet, err := NewWallet(ctx, walletConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
 	wantCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
@@ -55,24 +47,25 @@ func TestEditWalletConfiguration(t *testing.T) {
 		},
 		RemoteAddr: "host.example.com:4000",
 	}
-	set.String("wallet-dir", walletDir, "")
-	set.String("grpc-remote-address", wantCfg.RemoteAddr, "")
-	set.String("remote-signer-crt-path", wantCfg.RemoteCertificate.ClientCertPath, "")
-	set.String("remote-signer-key-path", wantCfg.RemoteCertificate.ClientKeyPath, "")
-	set.String("remote-signer-ca-crt-path", wantCfg.RemoteCertificate.CACertPath, "")
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, walletDir, "")
+	set.String(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr, "")
+	set.String(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath, "")
+	set.String(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath, "")
+	set.String(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath, "")
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
+	assert.NoError(t, set.Set(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr))
+	assert.NoError(t, set.Set(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath))
+	assert.NoError(t, set.Set(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath))
+	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
 	cliCtx := cli.NewContext(&app, set, nil)
-	if err := EditWalletConfiguration(cliCtx); err != nil {
-		t.Fatal(err)
-	}
+
+	assert.NoError(t, EditWalletConfiguration(cliCtx))
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	cfg, err := remote.UnmarshalConfigFile(encoded)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(wantCfg, cfg) {
-		t.Errorf("Wanted %v, received %v", wantCfg, cfg)
-	}
+	assert.NoError(t, err)
+	assert.DeepEqual(t, wantCfg, cfg)
 }
