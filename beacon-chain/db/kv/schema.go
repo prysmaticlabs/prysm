@@ -47,7 +47,7 @@ var (
 	powchainDataKey           = []byte("powchain-data")
 
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
-	lastArchivedIndexKey      = []byte("last-archived")
+	lastArchivedIndexKey = []byte("last-archived")
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	savedStateSlotsKey = []byte("saved-state-slots")
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.

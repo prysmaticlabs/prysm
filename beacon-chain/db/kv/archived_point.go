@@ -2,15 +2,11 @@ package kv
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
-
-// TODO: Remove all of this!
-// This isn't necessary, it's really just looking at state data.
 
 // LastArchivedSlot from the db.
 func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
@@ -20,7 +16,7 @@ func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
 	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		b, _ := bkt.Cursor().Last()
-		index = binary.LittleEndian.Uint64(b)
+		index = bytesutil.BytesToUint64BigEndian(b)
 		return nil
 	})
 
@@ -53,7 +49,7 @@ func (kv *Store) ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte {
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSlotIndicesBucket)
-		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(slot))
+		blockRoot = bucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
@@ -69,7 +65,7 @@ func (kv *Store) HasArchivedPoint(ctx context.Context, slot uint64) bool {
 	var exists bool
 	if err := kv.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(stateSlotIndicesBucket)
-		exists = iBucket.Get(bytesutil.Uint64ToBytes(slot)) != nil
+		exists = iBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot)) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)

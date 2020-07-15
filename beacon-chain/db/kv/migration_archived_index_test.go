@@ -2,12 +2,14 @@ package kv
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"go.etcd.io/bbolt"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func Test_migrateArchivedIndex(t *testing.T) {
@@ -20,6 +22,9 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			name: "only runs once",
 			setup: func(t *testing.T, db *bbolt.DB) {
 				if err := db.Update(func(tx *bbolt.Tx) error {
+					if _, err := tx.CreateBucketIfNotExists(archivedRootBucket); err != nil {
+						t.Error(err)
+					}
 					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo")); err != nil {
 						return err
 					}
@@ -44,20 +49,30 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			name: "migrates and deletes entries",
 			setup: func(t *testing.T, db *bbolt.DB) {
 				if err := db.Update(func(tx *bbolt.Tx) error {
-					return tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo"))
+					if _, err := tx.CreateBucketIfNotExists(archivedRootBucket); err != nil {
+						t.Error(err)
+					}
+					if _, err := tx.CreateBucketIfNotExists(slotsHasObjectBucket); err != nil {
+						t.Error(err)
+					}
+					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytes(2048), []byte("foo")); err != nil {
+						return err
+					}
+
+					b, err := encode(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2048}})
+					if err != nil {
+						return err
+					}
+					return tx.Bucket(blocksBucket).Put([]byte("foo"), b)
 				}); err != nil {
 					t.Error(err)
 				}
 			},
 			eval: func(t *testing.T, db *bbolt.DB) {
 				if err := db.View(func(tx *bbolt.Tx) error {
-					original := uint64(2048)
-					k := original / params.BeaconConfig().SlotsPerArchivedPoint
-					if v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytes(k)); !bytes.Equal(v, []byte("foo")) {
-						return fmt.Errorf("did not receive correct data for key %d, wanted 'foo' got %s", k, v)
-					}
-					if v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytes(original)); v != nil {
-						return fmt.Errorf("expected no data for key %d, got %s", original, v)
+					k := uint64(2048)
+					if v := tx.Bucket(stateSlotIndicesBucket).Get(bytesutil.Uint64ToBytesBigEndian(k)); !bytes.Equal(v, []byte("foo")) {
+						return fmt.Errorf("did not receive correct data for key %d, wanted 'foo' got %v", k, v)
 					}
 					return nil
 				}); err != nil {
@@ -66,9 +81,12 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			},
 		},
 		{
-			name: "deletes bitlist key/value for state",
+			name: "deletes old buckets",
 			setup: func(t *testing.T, db *bbolt.DB) {
 				if err := db.Update(func(tx *bbolt.Tx) error {
+					if _, err := tx.CreateBucketIfNotExists(archivedRootBucket); err != nil {
+						t.Error(err)
+					}
 					if _, err := tx.CreateBucketIfNotExists(slotsHasObjectBucket); err != nil {
 						t.Error(err)
 					}
@@ -79,31 +97,11 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			},
 			eval: func(t *testing.T, db *bbolt.DB) {
 				if err := db.View(func(tx *bbolt.Tx) error {
-					if val := tx.Bucket(slotsHasObjectBucket).Get(savedStateSlotsKey); val != nil {
-						t.Errorf("Expected %v to be deleted but returned %v", savedStateSlotsKey, val)
+					if tx.Bucket(slotsHasObjectBucket) != nil {
+						t.Errorf("Expected %v to be deleted", savedStateSlotsKey)
 					}
-					return nil
-				}); err != nil {
-					t.Error(err)
-				}
-			},
-		},
-		{
-			name: "deletes bitlist key/value for blocks",
-			setup: func(t *testing.T, db *bbolt.DB) {
-				if err := db.Update(func(tx *bbolt.Tx) error {
-					if _, err := tx.CreateBucketIfNotExists(slotsHasObjectBucket); err != nil {
-						t.Error(err)
-					}
-					return tx.Bucket(slotsHasObjectBucket).Put(savedBlockSlotsKey, []byte("foo"))
-				}); err != nil {
-					t.Error(err)
-				}
-			},
-			eval: func(t *testing.T, db *bbolt.DB) {
-				if err := db.View(func(tx *bbolt.Tx) error {
-					if val := tx.Bucket(slotsHasObjectBucket).Get(savedBlockSlotsKey); val != nil {
-						t.Errorf("Expected %v to be deleted but returned %v", savedBlockSlotsKey, val)
+					if tx.Bucket(archivedRootBucket) != nil {
+						t.Errorf("Expected %v to be deleted", savedStateSlotsKey)
 					}
 					return nil
 				}); err != nil {
