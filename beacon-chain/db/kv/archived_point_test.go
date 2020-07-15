@@ -15,9 +15,6 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 	if r1 == received {
 		t.Fatal("Should not have been saved")
 	}
-	if err := db.SaveArchivedPointRoot(ctx, r1, i1); err != nil {
-		t.Fatal(err)
-	}
 	received = db.ArchivedPointRoot(ctx, i1)
 	if r1 != received {
 		t.Error("Should have been saved")
@@ -35,16 +32,8 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 		t.Error("Did not get correct index")
 	}
 
-	if err := db.SaveArchivedPointRoot(ctx, [32]byte{'A'}, 1); err != nil {
-		t.Fatal(err)
-	}
-
 	if db.LastArchivedRoot(ctx) != [32]byte{'A'} {
 		t.Error("Did not get wanted root")
-	}
-
-	if err := db.SaveArchivedPointRoot(ctx, [32]byte{'B'}, 3); err != nil {
-		t.Fatal(err)
 	}
 
 	if db.LastArchivedRoot(ctx) != [32]byte{'B'} {

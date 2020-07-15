@@ -34,9 +34,6 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	if err := beaconState.SetSlot(1); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveArchivedPointRoot(ctx, bRoot, 0); err != nil {
-		t.Fatal(err)
-	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -269,17 +266,11 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveArchivedPointRoot(ctx, bRoot, 0); err != nil {
-		t.Fatal(err)
-	}
 	if err := db.SaveGenesisBlockRoot(ctx, bRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	r := [32]byte{}
-	if err := service.beaconDB.SaveArchivedPointRoot(ctx, r, 1); err != nil {
-		t.Fatal(err)
-	}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot: service.slotsPerArchivedPoint,
 		Root: r[:],

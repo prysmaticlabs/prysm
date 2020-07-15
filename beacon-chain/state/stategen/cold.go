@@ -25,9 +25,6 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, slot); err != nil {
-		return err
-	}
 
 	log.WithFields(logrus.Fields{
 		"slot":      slot,

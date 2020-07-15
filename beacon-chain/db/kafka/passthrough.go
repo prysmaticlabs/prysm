@@ -283,11 +283,6 @@ func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) 
 	return e.db.SavePowchainData(ctx, data)
 }
 
-// SaveArchivedPointRoot -- passthrough
-func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, slot uint64) error {
-	return e.db.SaveArchivedPointRoot(ctx, blockRoot, slot)
-}
-
 // ArchivedPointRoot -- passthrough
 func (e Exporter) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 	return e.db.ArchivedPointRoot(ctx, index)

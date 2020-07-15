@@ -323,3 +323,19 @@ func BytesToUint64(b []byte) uint64 {
 	}
 	return binary.LittleEndian.Uint64(b)
 }
+
+// Uint64ToBytes big endian conversion.
+func Uint64ToBytesBigEndian(i uint64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, i)
+	return buf
+}
+
+// BytesToUint64 big endian conversion. Returns 0 if empty bytes or byte slice with length less
+// than 8.
+func BytesToUint64BigEndian(b []byte) uint64 {
+	if len(b) < 8 { // This will panic otherwise.
+		return 0
+	}
+	return binary.BigEndian.Uint64(b)
+}

@@ -2,9 +2,10 @@ package kv
 
 import (
 	"bytes"
+	"context"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -15,32 +16,43 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 	if b := mb.Get(migrationArchivedIndex0Key); bytes.Equal(b, migrationCompleted) {
 		return nil // Migration already completed.
 	}
+
 	bkt := tx.Bucket(archivedRootBucket)
+	// Remove "last archived index" key before iterating over all keys.
+	if err := bkt.Delete(lastArchivedIndexKey); err != nil {
+		return err
+	}
 
-	// Migration must be done in reverse order to prevent key collisions during migration.
+	var highest uint64
 	c := bkt.Cursor()
-	for k, v := c.Last(); k != nil; k, v = c.Prev() {
-		idx := bytesutil.BytesToUint64(k)
-		// Migrate index to slot.
-		slot := idx / params.BeaconConfig().SlotsPerArchivedPoint
-		if err := bkt.Put(bytesutil.Uint64ToBytes(slot), v); err != nil {
+	for k, v := c.First(); k != nil; k, v = c.Next() {
+		// Look up actual slot from block
+		b := tx.Bucket(blocksBucket).Get(v)
+		// Skip this key if there is no block for whatever reason.
+		if b == nil {
+			continue
+		}
+		blk := &ethpb.SignedBeaconBlock{}
+		if err := decode(context.Background(), b, blk); err != nil {
 			return err
 		}
-		// Delete the old key.
-		if err := bkt.Delete(k); err != nil {
+		if err := tx.Bucket(stateSlotIndicesBucket).Put(bytesutil.Uint64ToBytesBigEndian(blk.Block.Slot), v); err != nil {
 			return err
 		}
-	}
-
-	// Remove the saved bitlists, if they exist.
-	if tx.Bucket(slotsHasObjectBucket) != nil {
-		if err := tx.Bucket(slotsHasObjectBucket).Delete(savedStateSlotsKey); err != nil {
-			return err
-		}
-		if err := tx.Bucket(slotsHasObjectBucket).Delete(savedBlockSlotsKey); err != nil {
-			return err
+		if blk.Block.Slot > highest {
+			highest = blk.Block.Slot
 		}
 	}
 
+	// Delete deprecated buckets.
+	for _, bkt := range [][]byte{slotsHasObjectBucket, archivedRootBucket} {
+		if tx.Bucket(bkt) != nil {
+			if err := tx.DeleteBucket(bkt); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Mark migration complete.
 	return mb.Put(migrationArchivedIndex0Key, migrationCompleted)
 }

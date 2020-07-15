@@ -24,9 +24,6 @@ func TestResume(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, beaconState, root); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveArchivedPointRoot(ctx, root, 1); err != nil {
-		t.Fatal(err)
-	}
 
 	resumeState, err := service.Resume(ctx)
 	if err != nil {

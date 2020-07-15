@@ -20,7 +20,7 @@ import (
 //  - Check the split is after the finalized slot. (why?)
 //  - Save all of the state summaries from cache to db.
 //  - Clear the cache
-//  - Fetch last archived index/slot
+//  - Fetch last archived slot
 //  - Query all of the block roots since the last split and the current finalized slot-1 (why -1?)
 //  - For each block root:
 //    - Load the state summary from db (why not use cached and clear later?)
@@ -96,9 +96,6 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			}
 
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
-				return err
-			}
-			if err := s.beaconDB.SaveArchivedPointRoot(ctx, aRoot, aState.Slot()); err != nil {
 				return err
 			}
 			log.WithFields(

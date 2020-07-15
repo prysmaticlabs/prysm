@@ -9,24 +9,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SaveArchivedPointRoot saves an archived point root to the DB. This is used for cold state management.
-func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedPointRoot")
-	defer span.End()
-
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedRootBucket)
-		if err := bucket.Put(bytesutil.Uint64ToBytes(slot), blockRoot[:]); err != nil {
-			return err
-		}
-		// Update last archived state, if this state is higher than the the previous.
-		last := bucket.Get(lastArchivedIndexKey)
-		if slot > bytesutil.BytesToUint64(last) {
-			return bucket.Put(lastArchivedIndexKey, bytesutil.Uint64ToBytes(slot))
-		}
-		return nil
-	})
-}
+// TODO: Remove all of this!
+// This isn't necessary, it's really just looking at state data.
 
 // LastArchivedSlot from the db.
 func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
@@ -34,11 +18,8 @@ func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
 	defer span.End()
 	var index uint64
 	err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedRootBucket)
-		b := bucket.Get(lastArchivedIndexKey)
-		if b == nil {
-			return nil
-		}
+		bkt := tx.Bucket(stateSlotIndicesBucket)
+		b, _ := bkt.Cursor().Last()
 		index = binary.LittleEndian.Uint64(b)
 		return nil
 	})
@@ -53,12 +34,8 @@ func (kv *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedRootBucket)
-		lastArchivedIndex := bucket.Get(lastArchivedIndexKey)
-		if lastArchivedIndex == nil {
-			return nil
-		}
-		blockRoot = bucket.Get(lastArchivedIndex)
+		bkt := tx.Bucket(stateSlotIndicesBucket)
+		_, blockRoot = bkt.Cursor().Last()
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
@@ -75,7 +52,7 @@ func (kv *Store) ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte {
 
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedRootBucket)
+		bucket := tx.Bucket(stateSlotIndicesBucket)
 		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(slot))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
@@ -91,7 +68,7 @@ func (kv *Store) HasArchivedPoint(ctx context.Context, slot uint64) bool {
 	defer span.End()
 	var exists bool
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		iBucket := tx.Bucket(archivedRootBucket)
+		iBucket := tx.Bucket(stateSlotIndicesBucket)
 		exists = iBucket.Get(bytesutil.Uint64ToBytes(slot)) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.

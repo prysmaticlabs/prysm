@@ -228,8 +228,5 @@ func (kv *Store) saveArchivedInfo(ctx context.Context,
 	if err := kv.SaveState(ctx, currentState, lastBlocksRoot); err != nil {
 		return err
 	}
-	if err := kv.SaveArchivedPointRoot(ctx, lastBlocksRoot, currentState.Slot()); err != nil {
-		return err
-	}
 	return nil
 }

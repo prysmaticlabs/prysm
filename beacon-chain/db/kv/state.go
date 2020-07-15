@@ -3,16 +3,15 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"strconv"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
 )
 
 // State returns the saved state using block's signing root,
@@ -298,10 +297,7 @@ func (kv *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*st
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		c := bkt.Cursor()
 		for s, root := c.First(); s != nil; s, root = c.Next() {
-			key, err := strconv.ParseUint(string(s), 10, 64)
-			if err != nil {
-				return err
-			}
+			key := bytesutil.BytesToUint64BigEndian(s)
 			if root == nil {
 				continue
 			}
@@ -345,8 +341,9 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[strin
 	buckets := [][]byte{
 		stateSlotIndicesBucket,
 	}
+
 	indices := [][]byte{
-		[]byte(fmt.Sprintf("%07d", slot)),
+		bytesutil.Uint64ToBytesBigEndian(slot),
 	}
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]

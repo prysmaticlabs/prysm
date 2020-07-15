@@ -21,10 +21,11 @@ var (
 	archivedBalancesBucket               = []byte("archived-balances")
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
 	powchainBucket                       = []byte("powchain")
-	archivedRootBucket                   = []byte("archived-index-root")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket = []byte("slots-has-objects")
+	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
+	archivedRootBucket = []byte("archived-index-root")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
@@ -44,8 +45,9 @@ var (
 	justifiedCheckpointKey    = []byte("justified-checkpoint")
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
 	powchainDataKey           = []byte("powchain-data")
-	lastArchivedIndexKey      = []byte("last-archived")
 
+	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
+	lastArchivedIndexKey      = []byte("last-archived")
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	savedStateSlotsKey = []byte("saved-state-slots")
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.

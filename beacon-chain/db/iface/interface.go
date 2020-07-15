@@ -97,7 +97,6 @@ type NoHeadAccessDatabase interface {
 	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
-	SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, slot uint64) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.

@@ -558,9 +558,6 @@ func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
-	if err := db.SaveArchivedPointRoot(ctx, r, 1); err != nil {
-		t.Fatal(err)
-	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
