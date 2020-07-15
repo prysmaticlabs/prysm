@@ -75,6 +75,7 @@ go_test(
         "finalized_block_roots_test.go",
         "kv_test.go",
         "migration_archived_index_test.go",
+        "migration_block_slot_index_test.go",
         "operations_test.go",
         "slashings_test.go",
         "state_summary_test.go",
