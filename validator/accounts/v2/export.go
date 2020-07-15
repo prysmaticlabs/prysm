@@ -24,7 +24,9 @@ const archiveFilename = "backup.zip"
 func ExportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil {
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	} else if err != nil {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
 
@@ -37,9 +39,6 @@ func ExportAccount(cliCtx *cli.Context) error {
 		CanUnlockAccounts: false,
 		WalletDir:         walletDir,
 	})
-	if err == ErrNoWalletFound {
-		return errors.New("no wallet found at path, please create a new wallet using `validator accounts-v2 new`")
-	}
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
