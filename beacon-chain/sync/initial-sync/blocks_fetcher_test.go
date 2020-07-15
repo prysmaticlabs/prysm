@@ -3,7 +3,6 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"sync"
 	"testing"
@@ -25,6 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -43,9 +44,7 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 
 	t.Run("check for leaked goroutines", func(t *testing.T) {
 		err := fetcher.start()
-		if err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, err)
 		fetcher.stop() // should block up until all resources are reclaimed
 		select {
 		case <-fetcher.requestResponses():
@@ -55,9 +54,7 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 	})
 
 	t.Run("re-starting of stopped fetcher", func(t *testing.T) {
-		if err := fetcher.start(); err == nil {
-			t.Errorf("expected error not returned: %v", errFetcherCtxIsDone)
-		}
+		assert.ErrorContains(t, errFetcherCtxIsDone.Error(), fetcher.start())
 	})
 
 	t.Run("multiple stopping attempts", func(t *testing.T) {
@@ -67,10 +64,7 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 				headFetcher: mc,
 				p2p:         p2p,
 			})
-		if err := fetcher.start(); err != nil {
-			t.Error(err)
-		}
-
+		require.NoError(t, fetcher.start())
 		fetcher.stop()
 		fetcher.stop()
 	})
@@ -83,10 +77,7 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 				headFetcher: mc,
 				p2p:         p2p,
 			})
-		if err := fetcher.start(); err != nil {
-			t.Error(err)
-		}
-
+		require.NoError(t, fetcher.start())
 		cancel()
 		fetcher.stop()
 	})
@@ -260,18 +251,12 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
-				Block: &eth.BeaconBlock{
-					Slot: 0,
-				}})
-			if err != nil {
-				t.Fatal(err)
-			}
+			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 0}})
+			require.NoError(t, err)
 
 			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
+
 			mc := &mock.ChainService{
 				State: st,
 				Root:  genesisRoot[:],
@@ -279,17 +264,8 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
-			fetcher := newBlocksFetcher(
-				ctx,
-				&blocksFetcherConfig{
-					headFetcher: mc,
-					p2p:         p,
-				})
-
-			err = fetcher.start()
-			if err != nil {
-				t.Error(err)
-			}
+			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{headFetcher: mc, p2p: p})
+			require.NoError(t, fetcher.start())
 
 			var wg sync.WaitGroup
 			wg.Add(len(tt.requests)) // how many block requests we are going to make
@@ -330,16 +306,12 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			maxExpectedBlocks := uint64(0)
 			for _, requestParams := range tt.requests {
 				err = fetcher.scheduleRequest(context.Background(), requestParams.start, requestParams.count)
-				if err != nil {
-					t.Error(err)
-				}
+				assert.NoError(t, err)
 				maxExpectedBlocks += requestParams.count
 			}
 
 			blocks, err := processFetchedBlocks()
-			if err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, err)
 
 			sort.Slice(blocks, func(i, j int) bool {
 				return blocks[i].Block.Slot < blocks[j].Block.Slot
@@ -358,9 +330,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			if len(blocks) > int(maxExpectedBlocks) {
 				t.Errorf("Too many blocks returned. Wanted %d got %d", maxExpectedBlocks, len(blocks))
 			}
-			if len(blocks) != len(tt.expectedBlockSlots) {
-				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(blocks))
-			}
+			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
 			var receivedBlockSlots []uint64
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
@@ -383,9 +353,7 @@ func TestBlocksFetcher_scheduleRequest(t *testing.T) {
 			p2p:         nil,
 		})
 		cancel()
-		if err := fetcher.scheduleRequest(ctx, 1, blockBatchLimit); err == nil {
-			t.Errorf("expected error: %v", errFetcherCtxIsDone)
-		}
+		assert.ErrorContains(t, "context canceled", fetcher.scheduleRequest(ctx, 1, blockBatchLimit))
 	})
 }
 func TestBlocksFetcher_handleRequest(t *testing.T) {
@@ -420,9 +388,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 
 		cancel()
 		response := fetcher.handleRequest(ctx, 1, blockBatchLimit)
-		if response.err == nil {
-			t.Errorf("expected error: %v", errFetcherCtxIsDone)
-		}
+		assert.ErrorContains(t, "context canceled", response.err)
 	})
 
 	t.Run("receive blocks", func(t *testing.T) {
@@ -510,20 +476,14 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 		Count:     blockBatchLimit,
 	}
 	blocks, err := fetcher.requestBlocks(ctx, req, peers[0])
-	if err != nil {
-		t.Errorf("error: %v", err)
-	}
-	if uint64(len(blocks)) != blockBatchLimit {
-		t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(blocks))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, blockBatchLimit, uint64(len(blocks)), "Incorrect number of blocks returned")
 
 	// Test context cancellation.
 	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
 	blocks, err = fetcher.requestBlocks(ctx, req, peers[0])
-	if err == nil || err.Error() != "context canceled" {
-		t.Errorf("expected context closed error, got: %v", err)
-	}
+	assert.ErrorContains(t, "context canceled", err)
 }
 
 func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
@@ -670,12 +630,8 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	for seekSlot, expectedSlot := range seekSlots {
 		t.Run(fmt.Sprintf("range: %d (%d-%d)", expectedSlot-seekSlot, seekSlot, expectedSlot), func(t *testing.T) {
 			slot, err := fetcher.nonSkippedSlotAfter(ctx, seekSlot)
-			if err != nil {
-				t.Error(err)
-			}
-			if slot != expectedSlot {
-				t.Errorf("unexpected slot, want: %v, got: %v", expectedSlot, slot)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, expectedSlot, slot, "Unexpected slot")
 		})
 	}
 
@@ -686,9 +642,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		var i int
 		for i = 0; i < 100; i++ {
 			slot, err := fetcher.nonSkippedSlotAfter(ctx, seekSlot)
-			if err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, err)
 			if slot == expectedSlot {
 				found = true
 				break
@@ -772,9 +726,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
 			got, err := fetcher.filterPeers(pids, tt.args.peersPercentage)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
@@ -786,9 +738,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				}
 				return i < j
 			})
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("filterPeers() got = %#v, want %#v", got, tt.want)
-			}
+			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }
@@ -799,9 +749,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	p3 := p2pt.NewTestP2P(t)
 	p1.Connect(p2)
 	p1.Connect(p3)
-	if len(p1.BHost.Network().Peers()) != 2 {
-		t.Fatal("Expected peers to be connected")
-	}
+	require.Equal(t, 2, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
 		Step:      1,
@@ -811,9 +759,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	topic := p2pm.RPCBlocksByRangeTopic
 	protocol := core.ProtocolID(topic + p2.Encoding().ProtocolSuffix())
 	streamHandlerFn := func(stream network.Stream) {
-		if err := stream.Close(); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, stream.Close())
 	}
 	p2.BHost.SetStreamHandler(protocol, streamHandlerFn)
 	p3.BHost.SetStreamHandler(protocol, streamHandlerFn)
@@ -851,9 +797,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	ch := make(chan struct{}, 1)
 	go func() {
 		_, err := fetcher.requestBlocks(ctx, req, p3.PeerID())
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		ch <- struct{}{}
 	}()
 	timer := time.NewTimer(2 * time.Second)
@@ -992,9 +936,7 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			sort.SliceStable(peersOut2, func(i, j int) bool {
 				return peersOut2[i].String() < peersOut2[j].String()
 			})
-			if !reflect.DeepEqual(peersOut1, peersOut2) {
-				t.Errorf("unexpected peers map, want: %#v, got: %#v", peersOut1, peersOut2)
-			}
+			assert.DeepEqual(t, peersOut1, peersOut2, "Unexpected peers map")
 		})
 	}
 }

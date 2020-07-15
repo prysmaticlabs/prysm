@@ -3,8 +3,10 @@ package initialsync
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStateMachineManager_String(t *testing.T) {
@@ -35,27 +37,19 @@ func TestStateMachineManager_String(t *testing.T) {
 			smm := &stateMachineManager{
 				machines: tt.machines,
 			}
-			if got := smm.String(); got != tt.want {
-				t.Errorf("unexpected output,  got: %v, want: %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, smm.String())
 		})
 	}
 }
 
 func TestStateMachine_StateIDString(t *testing.T) {
 	stateIDs := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped, stateSent}
-	want := "[new scheduled dataParsed skipped sent]"
-	if got := fmt.Sprintf("%v", stateIDs); got != want {
-		t.Errorf("unexpected output, got: %q, want: %q", got, want)
-	}
+	assert.Equal(t, "[new scheduled dataParsed skipped sent]", fmt.Sprintf("%v", stateIDs))
 }
 
 func TestStateMachine_EventIDString(t *testing.T) {
 	eventIDs := []eventID{eventTick, eventDataReceived}
-	want := "[tick dataReceived]"
-	if got := fmt.Sprintf("%v", eventIDs); got != want {
-		t.Errorf("unexpected output, got: %q, want: %q", got, want)
-	}
+	assert.Equal(t, "[tick dataReceived]", fmt.Sprintf("%v", eventIDs))
 }
 
 func TestStateMachineManager_addEventHandler(t *testing.T) {
@@ -64,47 +58,29 @@ func TestStateMachineManager_addEventHandler(t *testing.T) {
 	smm.addEventHandler(eventTick, stateNew, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateScheduled, nil
 	})
-	if len(smm.handlers[stateNew]) != 1 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(smm.handlers[stateNew]), 1)
-	}
+	assert.Equal(t, 1, len(smm.handlers[stateNew]), "Unexpected size")
 	state, err := smm.handlers[stateNew][eventTick](nil, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if state != stateScheduled {
-		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, stateScheduled, state, "Unexpected state")
 
 	// Add second handler to the same event
 	smm.addEventHandler(eventTick, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateDataParsed, nil
 	})
-	if len(smm.handlers[stateSent]) != 1 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(smm.handlers[stateSent]), 1)
-	}
+	assert.Equal(t, 1, len(smm.handlers[stateSent]), "Unexpected size")
 	state, err = smm.handlers[stateSent][eventTick](nil, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if state != stateDataParsed {
-		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, stateDataParsed, state, "Unexpected state")
 
 	// Add another handler to existing event/state pair. Should have no effect.
 	smm.addEventHandler(eventTick, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateSkipped, nil
 	})
-	if len(smm.handlers[stateSent]) != 1 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(smm.handlers[stateSent]), 1)
-	}
+	assert.Equal(t, 1, len(smm.handlers[stateSent]), "Unexpected size")
 	state, err = smm.handlers[stateSent][eventTick](nil, nil)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	// No effect, previous handler worked.
-	if state != stateDataParsed {
-		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
-	}
+	assert.Equal(t, stateDataParsed, state, "Unexpected state")
 }
 
 func TestStateMachine_trigger(t *testing.T) {
@@ -242,28 +218,20 @@ func TestStateMachineManager_QueueLoop(t *testing.T) {
 
 		return stateScheduled, nil
 	})
-	if len(smm.handlers) != 4 {
-		t.Errorf("unexpected number of state events, want: %v, got: %v", 4, len(smm.handlers))
-	}
+	assert.Equal(t, 4, len(smm.handlers), "Unexpected number of state events")
 	smm.addStateMachine(64)
 	smm.addStateMachine(512)
 
 	assertState := func(startBlock uint64, state stateID) {
 		fsm, ok := smm.findStateMachine(startBlock)
-		if !ok {
-			t.Fatalf("state machine not found: %v", startBlock)
-		}
-		if fsm.state != state {
-			t.Errorf("unexpected state machine state, want: %v, got: %v", state, fsm.state)
-		}
+		require.Equal(t, true, ok, "State machine not found")
+		assert.Equal(t, state, fsm.state, "Unexpected state machine state")
 	}
 
 	triggerTickEvent := func() {
 		for _, fsm := range smm.machines {
 			data := 42
-			if err := fsm.trigger(eventTick, data); err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, fsm.trigger(eventTick, data))
 		}
 	}
 
@@ -292,13 +260,9 @@ func TestStateMachineManager_removeStateMachine(t *testing.T) {
 	if _, ok := smm.findStateMachine(64); !ok {
 		t.Error("expected machine not found")
 	}
-	expectedError := fmt.Errorf("state for machine %v is not found", 65)
-	if err := smm.removeStateMachine(65); err == nil || err.Error() != expectedError.Error() {
-		t.Errorf("expected error (%v), got: %v", expectedError, err)
-	}
-	if err := smm.removeStateMachine(64); err != nil {
-		t.Error(err)
-	}
+	expectedError := fmt.Sprintf("state for machine %v is not found", 65)
+	assert.ErrorContains(t, expectedError, smm.removeStateMachine(65))
+	assert.NoError(t, smm.removeStateMachine(64))
 	if _, ok := smm.findStateMachine(64); ok {
 		t.Error("unexpected machine found")
 	}
@@ -310,24 +274,13 @@ func TestStateMachineManager_removeAllStateMachines(t *testing.T) {
 	smm.addStateMachine(128)
 	smm.addStateMachine(196)
 	keys := []uint64{64, 128, 196}
-	if !reflect.DeepEqual(keys, smm.keys) {
-		t.Errorf("keys not sorted, want: %v, got: %v", keys, smm.keys)
-	}
-	if len(smm.machines) != 3 {
-		t.Errorf("unexpected list size: %v", len(smm.machines))
-	}
-
-	if err := smm.removeAllStateMachines(); err != nil {
-		t.Error(err)
-	}
+	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
+	assert.Equal(t, 3, len(smm.machines), "Unexpected list size")
+	assert.NoError(t, smm.removeAllStateMachines())
 
 	keys = []uint64{}
-	if !reflect.DeepEqual(keys, smm.keys) {
-		t.Errorf("unexpected keys, want: %v, got: %v", keys, smm.keys)
-	}
-	if len(smm.machines) != 0 {
-		t.Error("expected empty list")
-	}
+	assert.DeepEqual(t, smm.keys, keys, "Unexpected keys")
+	assert.Equal(t, 0, len(smm.machines), "Expected empty list")
 }
 
 func TestStateMachineManager_findStateMachine(t *testing.T) {
@@ -350,36 +303,23 @@ func TestStateMachineManager_findStateMachine(t *testing.T) {
 		t.Errorf("unexpected start block: %v, want: %v", fsm.start, 512)
 	}
 	keys := []uint64{64, 128, 196, 256, 512}
-	if !reflect.DeepEqual(keys, smm.keys) {
-		t.Errorf("keys not sorted, want: %v, got: %v", keys, smm.keys)
-	}
+	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 }
 
 func TestStateMachineManager_highestStartBlock(t *testing.T) {
 	smm := newStateMachineManager()
-	if _, err := smm.highestStartBlock(); err == nil {
-		t.Error("expected error")
-	}
+	_, err := smm.highestStartBlock()
+	assert.ErrorContains(t, "no state machine exist", err)
 	smm.addStateMachine(64)
 	smm.addStateMachine(128)
 	smm.addStateMachine(196)
 	start, err := smm.highestStartBlock()
-	if err != nil {
-		t.Error(err)
-	}
-	if start != 196 {
-		t.Errorf("incorrect highest start block: %v, want: %v", start, 196)
-	}
-	if err := smm.removeStateMachine(196); err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(196), start, "Incorrect highest start block")
+	assert.NoError(t, smm.removeStateMachine(196))
 	start, err = smm.highestStartBlock()
-	if err != nil {
-		t.Error(err)
-	}
-	if start != 128 {
-		t.Errorf("incorrect highest start block: %v, want: %v", start, 128)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(128), start, "Incorrect highest start block")
 }
 
 func TestStateMachineManager_allMachinesInState(t *testing.T) {
@@ -469,14 +409,10 @@ func TestStateMachineManager_allMachinesInState(t *testing.T) {
 
 func TestStateMachine_isFirstLast(t *testing.T) {
 	checkFirst := func(m *stateMachine, want bool) {
-		if m.isFirst() != want {
-			t.Errorf("isFirst() returned unexpected value, want: %v, got: %v", want, m.start)
-		}
+		assert.Equal(t, want, m.isFirst(), "isFirst() returned unexpected value")
 	}
 	checkLast := func(m *stateMachine, want bool) {
-		if m.isLast() != want {
-			t.Errorf("isLast(%v) returned unexpected value, want: %v, got: %v", m.start, want, m.start)
-		}
+		assert.Equal(t, want, m.isLast(), "isLast() returned unexpected value")
 	}
 	smm := newStateMachineManager()
 	m1 := smm.addStateMachine(64)
@@ -522,7 +458,5 @@ func TestStateMachine_isFirstLast(t *testing.T) {
 	checkLast(m5, false)
 
 	keys := []uint64{32, 64, 128, 196, 512}
-	if !reflect.DeepEqual(keys, smm.keys) {
-		t.Errorf("keys not sorted, want: %v, got: %v", keys, smm.keys)
-	}
+	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 }

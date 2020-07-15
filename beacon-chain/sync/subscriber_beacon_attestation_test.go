@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
@@ -33,30 +34,18 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	ctx := context.Background()
 	db, _ := dbtest.SetupDB(t)
 	s, sKeys := testutil.DeterministicGenesisState(t, 64 /*validators*/)
-	if err := s.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.SetGenesisTime(uint64(time.Now().Unix())))
 	blk, err := testutil.GenerateFullBlock(s, sKeys, nil, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	root, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
 
 	savedState := testutil.NewBeaconState()
-	if err := db.SaveState(context.Background(), savedState, root); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(context.Background(), savedState, root))
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r := &Service{
 		attPool: attestations.NewPool(),
 		chain: &mock.ChainService{
@@ -76,9 +65,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	p.Digest, err = r.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r.registerSubscribers()
 	r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
@@ -96,13 +83,9 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		AggregationBits: bitfield.Bitlist{0b0101},
 	}
 	domain, err := helpers.Domain(s.Fork(), att.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	attRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	att.Signature = sKeys[16].Sign(attRoot[:]).Marshal()
 
 	p.ReceivePubSub("/eth2/%x/beacon_attestation_0", att)
