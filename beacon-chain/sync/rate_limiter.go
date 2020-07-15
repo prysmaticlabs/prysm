@@ -115,7 +115,7 @@ func (l *limiter) free() {
 
 	tempMap := map[uintptr]bool{}
 	for t, collector := range l.limiterMap {
-		// Check if collector has already been cleared of
+		// Check if collector has already been cleared off
 		// as all collectors are not distinct from each other.
 		ptr := reflect.ValueOf(collector).Pointer()
 		if tempMap[ptr] {
