@@ -5,10 +5,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/urfave/cli/v2"
 )
 
 // EditWalletConfiguration for a user's on-disk wallet, being able to change
@@ -52,17 +51,15 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 		}
 		log.Infof("Current configuration")
 		fmt.Printf("%s\n", cfg)
-		log.Infof("Input new configuration...")
+		log.Infof("Input new configuration:")
 		newCfg, err := inputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Info("marshaling config...")
 		encodedCfg, err := remote.MarshalConfigFile(ctx, newCfg)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Info("writing keymanager...")
 		if err := wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg); err != nil {
 			log.Fatal(err)
 		}

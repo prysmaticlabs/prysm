@@ -120,7 +120,6 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 		}
 	}()
 	cfg := &Config{}
-	log.Infof("%s", enc)
 	if err := json.Unmarshal(enc, cfg); err != nil {
 		return nil, errors.Wrap(err, "could not JSON unmarshal")
 	}

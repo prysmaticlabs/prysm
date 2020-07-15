@@ -3,13 +3,15 @@ package v2
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // CreateWallet from user input with a desired keymanager. If a
@@ -150,11 +152,11 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	}
 	return &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: clientCrtPath,
-			ClientKeyPath:  clientKeyPath,
-			CACertPath:     caCrtPath,
+			ClientCertPath: strings.TrimRight(clientCrtPath, "\r\n"),
+			ClientKeyPath:  strings.TrimRight(clientKeyPath, "\r\n"),
+			CACertPath:     strings.TrimRight(caCrtPath, "\r\n"),
 		},
-		RemoteAddr: remoteAddr,
+		RemoteAddr: strings.TrimRight(remoteAddr, "\r\n"),
 	}, nil
 }
 
