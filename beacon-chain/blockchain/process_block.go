@@ -244,6 +244,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 			return nil, nil, err
 		}
 	}
+	// Also saves the last post state which to be used as pre state for the next batch.
+	if err := s.stateGen.SaveState(ctx, blockRoots[len(blockRoots)-1], preState); err != nil {
+		return nil, nil, err
+	}
 	return fCheckpoints, jCheckpoints, nil
 }
 
