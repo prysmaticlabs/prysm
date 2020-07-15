@@ -32,7 +32,7 @@ func ListAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 	}
-	keymanager, err := wallet.InitializeKeymanager(ctx)
+	keymanager, err := wallet.InitializeKeymanager(ctx, false /* skipMnemonicConfirm */)
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
 	}

@@ -179,6 +179,7 @@ contract in order to activate the validator client`,
 						if cliCtx.String(flags.KeyManager.Name) != "" {
 							pubKeysBytes48, success := node.ExtractPublicKeysFromKeymanager(
 								cliCtx,
+								nil, /* nil v1 keymanager */
 								nil, /* nil v2 keymanager */
 							)
 							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success

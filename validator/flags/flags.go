@@ -126,6 +126,16 @@ var (
 		Usage: "Path to a directory on-disk where wallet passwords are stored",
 		Value: DefaultValidatorDir(),
 	}
+	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
+	PasswordFileFlag = &cli.StringFlag{
+		Name:  "password-file",
+		Usage: "File to retrieve password for writing to the password dir when making a new account",
+	}
+	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
+	SkipMnemonicConfirmFlag = &cli.BoolFlag{
+		Name:  "skip-mnemonic-confirm",
+		Usage: "Skip the withdrawal key mnemonic phrase prompt confirmation",
+	}
 	// ShowDepositDataFlag for accounts-v2.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",
