@@ -58,12 +58,7 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 func (l *limiter) topicCollector(topic string) (*leakybucket.Collector, error) {
 	l.RLock()
 	defer l.RUnlock()
-
-	collector, ok := l.limiterMap[topic]
-	if !ok {
-		return nil, errors.Errorf("collector does not exist for topic %s", topic)
-	}
-	return collector, nil
+	return l.retrieveCollector(topic)
 }
 
 // validates a request with the accompanying cost.
@@ -74,7 +69,7 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	topic := string(stream.Protocol())
 	log := l.topicLogger(topic)
 
-	collector, err := l.topicCollector(topic)
+	collector, err := l.retrieveCollector(topic)
 	if err != nil {
 		return err
 	}
@@ -104,7 +99,7 @@ func (l *limiter) add(stream network.Stream, amt int64) {
 	topic := string(stream.Protocol())
 	log := l.topicLogger(topic)
 
-	collector, err := l.topicCollector(topic)
+	collector, err := l.retrieveCollector(topic)
 	if err != nil {
 		log.Errorf("collector with topic '%s' does not exist", topic)
 		return
@@ -131,6 +126,16 @@ func (l *limiter) free() {
 		delete(l.limiterMap, t)
 		tempMap[ptr] = true
 	}
+}
+
+// not to be used outside the rate limiter file as it is unsafe for concurrent usage
+// and is protected by a lock on all of its usages here.
+func (l *limiter) retrieveCollector(topic string) (*leakybucket.Collector, error) {
+	collector, ok := l.limiterMap[topic]
+	if !ok {
+		return nil, errors.Errorf("collector does not exist for topic %s", topic)
+	}
+	return collector, nil
 }
 
 func (l *limiter) topicLogger(topic string) *logrus.Entry {
