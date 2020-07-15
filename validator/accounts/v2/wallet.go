@@ -11,10 +11,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
@@ -35,8 +34,10 @@ const (
 )
 
 var (
-	// ErrNoWalletFound signifies there is no data at the given wallet path.
-	ErrNoWalletFound = errors.New("no wallet found at path")
+	// ErrNoWalletFound signifies there was no wallet directory found on-disk.
+	ErrNoWalletFound = errors.New(
+		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
+	)
 )
 
 // WalletConfig for a wallet struct, containing important information
@@ -63,9 +64,9 @@ func init() {
 	petname.NonDeterministicMode() // Set random account name generation.
 }
 
-// CreateWallet given a set of configuration options, will leverage
-// a keymanager to create and write a new wallet to disk for a Prysm validator.
-func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
+// NewWallet given a set of configuration options, will leverage
+// create and write a new wallet to disk for a Prysm validator.
+func NewWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	if cfg.WalletDir == "" || (cfg.CanUnlockAccounts && cfg.PasswordsDir == "") {
 		return nil, errors.New("wallet dir and passwords dir cannot be nil")
 	}
@@ -91,42 +92,11 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	ok, err := hasDir(cfg.WalletDir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not check if wallet exists at %s", cfg.WalletDir)
-	}
-	if !ok {
-		return nil, ErrNoWalletFound
-	}
 	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
-	walletDir, err := os.Open(cfg.WalletDir)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := walletDir.Close(); err != nil {
-			log.WithField(
-				"path", walletPath,
-			).Errorf("Could not close wallet directory: %v", err)
-		}
-	}()
-	// Retrieve the type of keymanager the wallet uses by looking at
-	// directories in its directory path.
-	list, err := walletDir.Readdirnames(0) // 0 to read all files and folders.
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read files in directory: %s", walletPath)
-	}
-	if len(list) != 1 {
-		return nil, fmt.Errorf("expected a single directory in the wallet path: %s", walletPath)
-	}
-	keymanagerKind, err := v2keymanager.ParseKind(list[0])
-	if err != nil {
-		return nil, errors.Wrap(err, "could not parse keymanager kind from wallet path")
-	}
 	return &Wallet{
 		accountsPath:      walletPath,
 		passwordsDir:      cfg.PasswordsDir,
-		keymanagerKind:    keymanagerKind,
+		keymanagerKind:    cfg.KeymanagerKind,
 		canUnlockAccounts: cfg.CanUnlockAccounts,
 	}, nil
 }
@@ -188,9 +158,9 @@ func (w *Wallet) AccountNames() ([]string, error) {
 	return accountNames, err
 }
 
-// ExistingKeyManager reads a keymanager config from disk at the wallet path,
+// InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
-func (w *Wallet) ExistingKeyManager(
+func (w *Wallet) InitializeKeymanager(
 	ctx context.Context,
 	skipMnemonicConfirm bool,
 ) (v2keymanager.IKeymanager, error) {
@@ -215,36 +185,6 @@ func (w *Wallet) ExistingKeyManager(
 		return nil, errors.New("remote keymanager is unimplemented, work in progress")
 	default:
 		return nil, errors.New("keymanager kind must be specified")
-	}
-	return keymanager, nil
-}
-
-// CreateKeymanager determines if a config file exists in the wallet, it
-// reads the config file and initializes the keymanager that way. Otherwise,
-// writes a new configuration file to the wallet and returns the initialized
-// keymanager for use.
-func (w *Wallet) CreateKeymanager(ctx context.Context, skipMnemonicConfirm bool) (v2keymanager.IKeymanager, error) {
-	var keymanager v2keymanager.IKeymanager
-	var err error
-	switch w.KeymanagerKind() {
-	case v2keymanager.Direct:
-		keymanager, err = direct.NewKeymanager(ctx, w, direct.DefaultConfig(), skipMnemonicConfirm)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read keymanager")
-		}
-	case v2keymanager.Derived:
-		return nil, errors.New("derived keymanager is unimplemented, work in progress")
-	case v2keymanager.Remote:
-		return nil, errors.New("remote keymanager is unimplemented, work in progress")
-	default:
-		return nil, errors.New("keymanager type must be specified")
-	}
-	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal keymanager config file")
-	}
-	if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return nil, errors.Wrap(err, "could not write keymanager config file to disk")
 	}
 	return keymanager, nil
 }
@@ -480,6 +420,28 @@ func (w *Wallet) generateAccountName() (string, error) {
 		}
 	}
 	return accountName, nil
+}
+
+func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, error) {
+	walletItem, err := os.Open(walletPath)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err := walletItem.Close(); err != nil {
+			log.WithField(
+				"path", walletPath,
+			).Errorf("Could not close wallet directory: %v", err)
+		}
+	}()
+	list, err := walletItem.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		return 0, fmt.Errorf("could not read files in directory: %s", walletPath)
+	}
+	if len(list) != 1 {
+		return 0, fmt.Errorf("wanted 1 directory in wallet dir, received %d", len(list))
+	}
+	return v2keymanager.ParseKind(list[0])
 }
 
 // Returns true if a file is not a directory and exists

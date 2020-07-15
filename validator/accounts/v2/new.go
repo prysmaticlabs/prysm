@@ -26,67 +26,46 @@ const (
 )
 
 var keymanagerKindSelections = map[v2keymanager.Kind]string{
-	v2keymanager.Direct:  "Direct, On-Disk Accounts (Recommended)",
-	v2keymanager.Derived: "Derived Accounts (Advanced)",
-	v2keymanager.Remote:  "Remote Accounts (Advanced)",
+	v2keymanager.Direct:  "Direct, On-Disk Wallet (Recommended)",
+	v2keymanager.Derived: "Derived HD Wallet (Advanced)",
+	v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 }
 
-// NewAccount creates a new validator account from user input. If a user
-// does not have an initialized wallet at the specified wallet path, this
-// method will create a new wallet and ask user for input for their new wallet's
-// available options.
+// NewAccount creates a new validator account from user input by opening
+// a wallet from the user's specified path.
 func NewAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
+	if errors.Is(err, ErrNoWalletFound) {
+		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	} else if err != nil {
+		log.Fatal(err)
+	}
+	ctx := context.Background()
+	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
 	if err != nil {
-		log.Fatalf("Could not parse wallet directory: %v", err)
+		log.Fatal(err)
 	}
 
+	// Only direct keymanagers can create accounts for now.
+	if keymanagerKind != v2keymanager.Direct {
+		log.Fatalf("cannot create a new account for a %s keymanager", keymanagerKind)
+	}
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-
-	ctx := context.Background()
-	// Check if the user has a wallet at the specified path.
-	// If a user does not have a wallet, we instantiate one
-	// based on specified options.
-	var wallet *Wallet
-	var isNewWallet bool
-	// Read the wallet from the specified path.
-	wallet, err = OpenWallet(ctx, &WalletConfig{
+	wallet, err := OpenWallet(ctx, &WalletConfig{
 		PasswordsDir:      passwordsDirPath,
 		WalletDir:         walletDir,
 		CanUnlockAccounts: true,
+		KeymanagerKind:    keymanagerKind,
 	})
-	if err == ErrNoWalletFound {
-		// Determine the desired keymanager kind for the wallet from user input.
-		keymanagerKind, err := inputKeymanagerKind(cliCtx)
-		if err != nil {
-			log.Fatalf("Could not select keymanager kind: %v", err)
-		}
-
-		walletConfig := &WalletConfig{
-			PasswordsDir:      passwordsDirPath,
-			WalletDir:         walletDir,
-			KeymanagerKind:    keymanagerKind,
-			CanUnlockAccounts: true,
-		}
-		wallet, err = CreateWallet(ctx, walletConfig)
-		if err != nil {
-			log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
-		}
-		isNewWallet = true
-	} else if err != nil {
-		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
+	if err != nil {
+		log.Fatalf("Could not open wallet: %v", err)
 	}
 
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	// We initialize a new keymanager depending on the user's selected keymanager kind.
-	var keymanager v2keymanager.IKeymanager
-	if isNewWallet {
-		keymanager, err = wallet.CreateKeymanager(ctx, skipMnemonicConfirm)
-	} else {
-		keymanager, err = wallet.ExistingKeyManager(ctx, skipMnemonicConfirm)
-	}
+	// We initialize a new keymanager depending on the wallet's keymanager kind.
+	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
 	}
@@ -121,6 +100,13 @@ func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	walletPath, err := prompt.Run()
 	if err != nil {
 		return "", fmt.Errorf("could not determine wallet directory: %v", formatPromptError(err))
+	}
+	ok, err := hasDir(walletPath)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not check if wallet dir %s exists", walletDir)
+	}
+	if !ok {
+		return walletPath, ErrNoWalletFound
 	}
 	return walletPath, nil
 }
@@ -210,7 +196,7 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 		passwordsDir = path.Join(passwordsDir, PasswordsDefaultDirName)
 	}
 	prompt := promptui.Prompt{
-		Label:    "Passwords directory",
+		Label:    "Directory where passwords will be stored",
 		Validate: validateDirectoryPath,
 		Default:  passwordsDir,
 	}

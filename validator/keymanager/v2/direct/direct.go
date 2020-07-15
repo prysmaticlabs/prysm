@@ -125,6 +125,11 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 	return cfg, nil
 }
 
+// MarshalConfigFile returns a marshaled configuration file for a keymanager.
+func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+	return json.MarshalIndent(cfg, "", "\t")
+}
+
 // CreateAccount for a direct keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It
 // stores the generated keystore.json file in the wallet and additionally
@@ -197,11 +202,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		"path": dr.wallet.AccountsDir(),
 	}).Info("Successfully created new validator account")
 	return accountName, nil
-}
-
-// MarshalConfigFile returns a marshaled configuration file for a direct keymanager.
-func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return json.MarshalIndent(dr.cfg, "", "\t")
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
