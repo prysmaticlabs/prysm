@@ -2,6 +2,8 @@ package initialsync
 
 import (
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func BenchmarkStateMachine_trigger(b *testing.B) {
@@ -32,8 +34,6 @@ func BenchmarkStateMachine_trigger(b *testing.B) {
 			count: 32,
 		}
 		err := sm.machines[64].trigger(eventTick, data)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
 }
