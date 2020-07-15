@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/validator/flags"
+
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -300,32 +302,57 @@ func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 }
 
 func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
-	attemptingPassword := true
-	// Loop asking for the password until the user enters it correctly.
-	for attemptingPassword {
-		// Ask the user for the password to their account.
-		password, err := inputPasswordForAccount(cliCtx, accountName)
+	var password string
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
-			return errors.Wrap(err, "could not input password")
+			return err
 		}
-		accountKeystore, err := w.keystoreForAccount(accountName)
-		if err != nil {
-			return errors.Wrap(err, "could not get keystore")
-		}
-		decryptor := keystorev4.New()
-		_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
+		password = string(data)
+		err = w.checkPasswordForAccount(accountName, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Println("Incorrect password entered, please try again")
-			continue
+			fmt.Printf("Incorrect password entered for account %s\n", accountName)
 		}
 		if err != nil {
-			return errors.Wrap(err, "could not decrypt keystore")
+			return err
 		}
+	} else {
+		attemptingPassword := true
+		// Loop asking for the password until the user enters it correctly.
+		for attemptingPassword {
+			// Ask the user for the password to their account.
+			password, err := inputPasswordForAccount(cliCtx, accountName)
+			if err != nil {
+				return errors.Wrap(err, "could not input password")
+			}
+			err = w.checkPasswordForAccount(accountName, password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				fmt.Println("Incorrect password entered, please try again")
+				continue
+			}
+			if err != nil {
+				return err
+			}
 
-		if err := w.writePasswordToFile(accountName, password); err != nil {
-			return errors.Wrap(err, "could not write password to disk")
+			attemptingPassword = false
 		}
-		attemptingPassword = false
+	}
+	if err := w.writePasswordToFile(accountName, password); err != nil {
+		return errors.Wrap(err, "could not write password to disk")
+	}
+	return nil
+}
+
+func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
+	accountKeystore, err := w.keystoreForAccount(accountName)
+	if err != nil {
+		return errors.Wrap(err, "could not get keystore")
+	}
+	decryptor := keystorev4.New()
+	_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
+	if err != nil {
+		return errors.Wrap(err, "could not decrypt keystore")
 	}
 	return nil
 }
