@@ -8,6 +8,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
@@ -126,10 +128,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
 	})
-
-	if !reflect.DeepEqual(atts, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	assert.DeepEqual(t, atts, returned)
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
@@ -198,9 +197,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 
 		returned := cache.AggregatedAttestations()
 		wanted := []*ethpb.Attestation{att2}
-		if !reflect.DeepEqual(wanted, returned) {
-			t.Error("Did not receive correct aggregated atts")
-		}
+		assert.DeepEqual(t, wanted, returned)
 	})
 
 	t.Run("filtered deletion", func(t *testing.T) {
@@ -226,9 +223,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		sort.Slice(returned, func(i, j int) bool {
 			return string(returned[i].AggregationBits) < string(returned[j].AggregationBits)
 		})
-		if !reflect.DeepEqual(wanted, returned) {
-			t.Errorf("Did not receive correct aggregated atts, want: %v, got: %v", wanted, returned)
-		}
+		assert.DeepEqual(t, wanted, returned)
 	})
 }
 
@@ -410,9 +405,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			}
 
 			result, err := cache.HasAggregatedAttestation(tt.input)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			if result != tt.want {
 				t.Errorf("Result = %v, wanted = %v", result, tt.want)
 			}
@@ -424,9 +417,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			}
 
 			result, err = cache.HasAggregatedAttestation(tt.input)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			if result != tt.want {
 				t.Errorf("Result = %v, wanted = %v", result, tt.want)
 			}
