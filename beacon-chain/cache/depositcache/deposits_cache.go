@@ -60,10 +60,10 @@ type DepositCache struct {
 }
 
 // NewDepositCache instantiates a new deposit cache
-func NewDepositCache() *DepositCache {
+func NewDepositCache() (*DepositCache, error) {
 	finalizedDepositsTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return &DepositCache{
@@ -74,7 +74,7 @@ func NewDepositCache() *DepositCache {
 		finalizedDeposits:  &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 		chainStartPubkeys:  make(map[string]bool),
 		chainStartDeposits: make([]*ethpb.Deposit, 0),
-	}
+	}, nil
 }
 
 // InsertDeposit into the database. If deposit or block number are nil

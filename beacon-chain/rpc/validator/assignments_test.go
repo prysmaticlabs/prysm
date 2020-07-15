@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // pubKey is a helper to generate a well-formed public key.
@@ -55,12 +56,15 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	chain := &mockChain.ChainService{
 		State: beaconState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	vs := &Server{
 		BeaconDB:           db,
 		HeadFetcher:        chain,
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		Eth1InfoFetcher:    p,
-		DepositFetcher:     depositcache.NewDepositCache(),
+		DepositFetcher:     depositCache,
 		GenesisTimeFetcher: chain,
 	}
 

@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -108,10 +109,13 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	if err != nil {
 		t.Fatal(err)
 	}
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	cfg := &Config{
 		BeaconBlockBuf:    0,
 		BeaconDB:          beaconDB,
-		DepositCache:      depositcache.NewDepositCache(),
+		DepositCache:      depositCache,
 		ChainStartFetcher: web3Service,
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
