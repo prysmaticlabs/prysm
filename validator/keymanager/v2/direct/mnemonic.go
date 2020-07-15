@@ -20,7 +20,9 @@ type SeedPhraseFactory interface {
 // EnglishMnemonicGenerator implements methods for creating
 // mnemonic seed phrases in english using a given
 // source of entropy such as a private key.
-type EnglishMnemonicGenerator struct{}
+type EnglishMnemonicGenerator struct {
+	skipMnemonicConfirm bool
+}
 
 // Generate a mnemonic seed phrase in english using a source of
 // entropy given as raw bytes.
@@ -42,6 +44,9 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 
 ===================================================================
 	`, phrase)
+	if m.skipMnemonicConfirm {
+		return nil
+	}
 	// Confirm the user has written down the mnemonic phrase offline.
 	prompt := promptui.Prompt{
 		Label:     "Confirm you have written down the recovery words somewhere safe (offline)",

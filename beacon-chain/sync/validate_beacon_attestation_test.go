@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
@@ -38,9 +39,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	}
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	s := &Service{
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		p2p:                  p,
@@ -51,32 +50,22 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	digest, err := s.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot: 1,
 		},
 	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, blk))
 
 	validBlockRoot, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	validators := uint64(64)
 	savedState, keys := testutil.DeterministicGenesisState(t, validators)
-	if err := savedState.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(context.Background(), savedState, validBlockRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, savedState.SetSlot(1))
+	require.NoError(t, db.SaveState(context.Background(), savedState, validBlockRoot))
 	chain.State = savedState
 
 	tests := []struct {
@@ -186,17 +175,11 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			chain.ValidAttestation = tt.validAttestationSignature
 			if tt.validAttestationSignature {
 				com, err := helpers.BeaconCommitteeFromState(savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				domain, err := helpers.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorRoot())
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				attRoot, err := helpers.ComputeSigningRoot(tt.msg.Data, domain)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				for i := 0; ; i++ {
 					if tt.msg.AggregationBits.BitAt(uint64(i)) {
 						tt.msg.Signature = keys[com[i]].Sign(attRoot[:]).Marshal()
@@ -206,9 +189,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			}
 			buf := new(bytes.Buffer)
 			_, err := p.Encoding().EncodeGossip(buf, tt.msg)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			m := &pubsub.Message{
 				Message: &pubsubpb.Message{
 					Data:     buf.Bytes(),
