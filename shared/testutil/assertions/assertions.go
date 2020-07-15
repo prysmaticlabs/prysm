@@ -1,4 +1,4 @@
-package testutil
+package assertions
 
 import (
 	"fmt"
@@ -69,18 +69,18 @@ func parseMsg(defaultMsg string, msg ...string) string {
 	return msgString
 }
 
-// AssertionsTBMock exposes enough testing.TB methods for assertions.
-type AssertionsTBMock struct {
+// TBMock exposes enough testing.TB methods for assertions.
+type TBMock struct {
 	ErrorfMsg string
 	FatalfMsg string
 }
 
 // Errorf writes testing logs to ErrorfMsg.
-func (tb *AssertionsTBMock) Errorf(format string, args ...interface{}) {
+func (tb *TBMock) Errorf(format string, args ...interface{}) {
 	tb.ErrorfMsg = fmt.Sprintf(format, args...)
 }
 
 // Fatalf writes testing logs to FatalfMsg.
-func (tb *AssertionsTBMock) Fatalf(format string, args ...interface{}) {
+func (tb *TBMock) Fatalf(format string, args ...interface{}) {
 	tb.FatalfMsg = fmt.Sprintf(format, args...)
 }
