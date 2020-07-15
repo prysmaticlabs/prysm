@@ -1,12 +1,12 @@
 package kv
 
 import (
-	"reflect"
 	"sort"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestKV_BlockAttestation_CanSaveRetrieve(t *testing.T) {
@@ -29,9 +29,7 @@ func TestKV_BlockAttestation_CanSaveRetrieve(t *testing.T) {
 		return returned[i].Data.Slot < returned[j].Data.Slot
 	})
 
-	if !reflect.DeepEqual(atts, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	assert.DeepEqual(t, atts, returned)
 }
 
 func TestKV_BlockAttestation_CanDelete(t *testing.T) {
@@ -57,8 +55,5 @@ func TestKV_BlockAttestation_CanDelete(t *testing.T) {
 
 	returned := cache.BlockAttestations()
 	wanted := []*ethpb.Attestation{att2}
-
-	if !reflect.DeepEqual(wanted, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	assert.DeepEqual(t, wanted, returned)
 }
