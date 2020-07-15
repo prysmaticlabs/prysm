@@ -4,18 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -435,8 +432,8 @@ func fetchBlockRootsBySlotRange(
 		startSlot = helpers.StartSlot(startEpoch)
 		endSlot = helpers.StartSlot(endEpoch) + params.BeaconConfig().SlotsPerEpoch - 1
 	}
-	min := []byte(fmt.Sprintf("%07d", startSlot))
-	max := []byte(fmt.Sprintf("%07d", endSlot))
+	min := bytesutil.Uint64ToBytesBigEndian(startSlot)
+	max := bytesutil.Uint64ToBytesBigEndian(endSlot)
 	var conditional func(key, max []byte) bool
 	if endSlot == 0 {
 		conditional = func(key, max []byte) bool {
@@ -455,11 +452,7 @@ func fetchBlockRootsBySlotRange(
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
 		if step > 1 {
-			slot, err := strconv.ParseUint(string(k), 10, 64)
-			if err != nil {
-				log.WithError(err).Error("Cannot parse key to uint")
-				continue
-			}
+			slot := bytesutil.BytesToUint64BigEndian(k)
 			if (slot-startSlot)%step != 0 {
 				continue
 			}
