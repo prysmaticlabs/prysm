@@ -10,7 +10,7 @@ import (
 
 func TestAssert_Equal(t *testing.T) {
 	type args struct {
-		tb       *assertions.AssertionsTBMock
+		tb       *assertions.TBMock
 		expected interface{}
 		actual   interface{}
 		msg      []string
@@ -23,7 +23,7 @@ func TestAssert_Equal(t *testing.T) {
 		{
 			name: "equal values",
 			args: args{
-				tb:       &assertions.AssertionsTBMock{},
+				tb:       &assertions.TBMock{},
 				expected: 42,
 				actual:   42,
 			},
@@ -31,7 +31,7 @@ func TestAssert_Equal(t *testing.T) {
 		{
 			name: "non-equal values",
 			args: args{
-				tb:       &assertions.AssertionsTBMock{},
+				tb:       &assertions.TBMock{},
 				expected: 42,
 				actual:   41,
 			},
@@ -40,7 +40,7 @@ func TestAssert_Equal(t *testing.T) {
 		{
 			name: "custom error message",
 			args: args{
-				tb:       &assertions.AssertionsTBMock{},
+				tb:       &assertions.TBMock{},
 				expected: 42,
 				actual:   41,
 				msg:      []string{"Custom values are not equal"},
@@ -60,7 +60,7 @@ func TestAssert_Equal(t *testing.T) {
 
 func TestAssert_DeepEqual(t *testing.T) {
 	type args struct {
-		tb       *assertions.AssertionsTBMock
+		tb       *assertions.TBMock
 		expected interface{}
 		actual   interface{}
 		msg      []string
@@ -73,7 +73,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 		{
 			name: "equal values",
 			args: args{
-				tb:       &assertions.AssertionsTBMock{},
+				tb:       &assertions.TBMock{},
 				expected: struct{ i int }{42},
 				actual:   struct{ i int }{42},
 			},
@@ -81,7 +81,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 		{
 			name: "non-equal values",
 			args: args{
-				tb:       &assertions.AssertionsTBMock{},
+				tb:       &assertions.TBMock{},
 				expected: struct{ i int }{42},
 				actual:   struct{ i int }{41},
 			},
@@ -90,7 +90,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 		{
 			name: "custom error message",
 			args: args{
-				tb:       &assertions.AssertionsTBMock{},
+				tb:       &assertions.TBMock{},
 				expected: struct{ i int }{42},
 				actual:   struct{ i int }{41},
 				msg:      []string{"Custom values are not equal"},
@@ -110,7 +110,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 
 func TestAssert_NoError(t *testing.T) {
 	type args struct {
-		tb  *assertions.AssertionsTBMock
+		tb  *assertions.TBMock
 		err error
 		msg []string
 	}
@@ -122,13 +122,13 @@ func TestAssert_NoError(t *testing.T) {
 		{
 			name: "nil error",
 			args: args{
-				tb: &assertions.AssertionsTBMock{},
+				tb: &assertions.TBMock{},
 			},
 		},
 		{
 			name: "non-nil error",
 			args: args{
-				tb:  &assertions.AssertionsTBMock{},
+				tb:  &assertions.TBMock{},
 				err: errors.New("failed"),
 			},
 			expectedErr: "Unexpected error: failed",
@@ -136,7 +136,7 @@ func TestAssert_NoError(t *testing.T) {
 		{
 			name: "non-nil error",
 			args: args{
-				tb:  &assertions.AssertionsTBMock{},
+				tb:  &assertions.TBMock{},
 				err: errors.New("failed"),
 				msg: []string{"Custom error message"},
 			},
@@ -155,7 +155,7 @@ func TestAssert_NoError(t *testing.T) {
 
 func TestAssert_ErrorContains(t *testing.T) {
 	type args struct {
-		tb   *assertions.AssertionsTBMock
+		tb   *assertions.TBMock
 		want string
 		err  error
 		msg  []string
@@ -168,7 +168,7 @@ func TestAssert_ErrorContains(t *testing.T) {
 		{
 			name: "nil error",
 			args: args{
-				tb:   &assertions.AssertionsTBMock{},
+				tb:   &assertions.TBMock{},
 				want: "some error",
 			},
 			expectedErr: "Expected error not returned, got: <nil>, want: some error",
@@ -176,7 +176,7 @@ func TestAssert_ErrorContains(t *testing.T) {
 		{
 			name: "unexpected error",
 			args: args{
-				tb:   &assertions.AssertionsTBMock{},
+				tb:   &assertions.TBMock{},
 				want: "another error",
 				err:  errors.New("failed"),
 			},
@@ -185,7 +185,7 @@ func TestAssert_ErrorContains(t *testing.T) {
 		{
 			name: "expected error",
 			args: args{
-				tb:   &assertions.AssertionsTBMock{},
+				tb:   &assertions.TBMock{},
 				want: "failed",
 				err:  errors.New("failed"),
 			},
@@ -194,7 +194,7 @@ func TestAssert_ErrorContains(t *testing.T) {
 		{
 			name: "custom unexpected error",
 			args: args{
-				tb:   &assertions.AssertionsTBMock{},
+				tb:   &assertions.TBMock{},
 				want: "another error",
 				err:  errors.New("failed"),
 				msg:  []string{"Something wrong"},
@@ -204,7 +204,7 @@ func TestAssert_ErrorContains(t *testing.T) {
 		{
 			name: "expected error",
 			args: args{
-				tb:   &assertions.AssertionsTBMock{},
+				tb:   &assertions.TBMock{},
 				want: "failed",
 				err:  errors.New("failed"),
 				msg:  []string{"Something wrong"},
@@ -224,7 +224,7 @@ func TestAssert_ErrorContains(t *testing.T) {
 
 func TestAssert_NotNil(t *testing.T) {
 	type args struct {
-		tb  *assertions.AssertionsTBMock
+		tb  *assertions.TBMock
 		obj interface{}
 		msg []string
 	}
@@ -236,14 +236,14 @@ func TestAssert_NotNil(t *testing.T) {
 		{
 			name: "nil",
 			args: args{
-				tb: &assertions.AssertionsTBMock{},
+				tb: &assertions.TBMock{},
 			},
 			expectedErr: "Unexpected nil value",
 		},
 		{
 			name: "nil custom message",
 			args: args{
-				tb:  &assertions.AssertionsTBMock{},
+				tb:  &assertions.TBMock{},
 				msg: []string{"This should not be nil"},
 			},
 			expectedErr: "This should not be nil",
@@ -251,7 +251,7 @@ func TestAssert_NotNil(t *testing.T) {
 		{
 			name: "not nil",
 			args: args{
-				tb:  &assertions.AssertionsTBMock{},
+				tb:  &assertions.TBMock{},
 				obj: "some value",
 			},
 			expectedErr: "",
