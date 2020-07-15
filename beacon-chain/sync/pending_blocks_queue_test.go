@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"math"
-	"reflect"
 	"sync"
 	"testing"
 
@@ -18,6 +17,8 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 //    /- b1 - b2
@@ -41,58 +42,34 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	}
 
 	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}}
-	if err := r.db.SaveBlock(context.Background(), b3); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b3))
 	// Incomplete block link
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
 	b1Root, err := stateutil.BlockRoot(b1.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}}
 	b2Root, err := stateutil.BlockRoot(b1.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Add b2 to the cache
 	r.slotToPendingBlocks[b2.Block.Slot] = b2
 	r.seenPendingBlocks[b2Root] = true
 
-	if err := r.processPendingBlocks(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.slotToPendingBlocks) != 1 {
-		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
-	}
-	if len(r.seenPendingBlocks) != 1 {
-		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
-	}
+	require.NoError(t, r.processPendingBlocks(context.Background()))
+	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 1, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b1 to the cache
 	r.slotToPendingBlocks[b1.Block.Slot] = b1
 	r.seenPendingBlocks[b1Root] = true
-	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
-		t.Fatal(err)
-	}
-	if err := r.processPendingBlocks(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.slotToPendingBlocks) != 0 {
-		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
-	}
-	if len(r.seenPendingBlocks) != 0 {
-		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
+	require.NoError(t, r.processPendingBlocks(context.Background()))
+	assert.Equal(t, 0, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
 //    /- b1 - b2 - b5
@@ -104,18 +81,14 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to be connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		code, errMsg, err := ReadStatusCode(stream, p1.Encoding())
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		if code == 0 {
 			t.Error("Expected a non-zero code")
 		}
@@ -141,92 +114,53 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
 	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
-	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
 	b1Root, err := stateutil.BlockRoot(b1.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
 	b2Root, err := ssz.HashTreeRoot(b2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
 	b5Root, err := ssz.HashTreeRoot(b5)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
 	b3Root, err := ssz.HashTreeRoot(b3)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
 	b4Root, err := ssz.HashTreeRoot(b4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	r.slotToPendingBlocks[b4.Slot] = &ethpb.SignedBeaconBlock{Block: b4}
 	r.seenPendingBlocks[b4Root] = true
 	r.slotToPendingBlocks[b5.Slot] = &ethpb.SignedBeaconBlock{Block: b5}
 	r.seenPendingBlocks[b5Root] = true
 
-	if err := r.processPendingBlocks(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.slotToPendingBlocks) != 2 {
-		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
-	}
-	if len(r.seenPendingBlocks) != 2 {
-		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
-	}
+	require.NoError(t, r.processPendingBlocks(context.Background()))
+	assert.Equal(t, 2, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b3 to the cache
 	r.slotToPendingBlocks[b3.Slot] = &ethpb.SignedBeaconBlock{Block: b3}
 	r.seenPendingBlocks[b3Root] = true
-	if err := r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b3}); err != nil {
-		t.Fatal(err)
-	}
-	if err := r.processPendingBlocks(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.slotToPendingBlocks) != 1 {
-		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
-	}
-	if len(r.seenPendingBlocks) != 1 {
-		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b3}))
+	require.NoError(t, r.processPendingBlocks(context.Background()))
+	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 1, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b2 to the cache
 	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}
 	r.seenPendingBlocks[b2Root] = true
 
-	if err := r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b2}); err != nil {
-		t.Fatal(err)
-	}
-	if err := r.processPendingBlocks(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.slotToPendingBlocks) != 0 {
-		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
-	}
-	t.Log(r.seenPendingBlocks)
-	if len(r.seenPendingBlocks) != 0 {
-		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b2}))
+	require.NoError(t, r.processPendingBlocks(context.Background()))
+	assert.Equal(t, 0, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
 func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
@@ -234,9 +168,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to be connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	r := &Service{
 		p2p: p1,
@@ -254,43 +186,27 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	p1.Peers().SetChainState(p1.PeerID(), &pb.Status{})
 
 	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
-	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
 	b1Root, err := stateutil.BlockRoot(b1.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
 	b2Root, err := ssz.HashTreeRoot(b2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
 	b5Root, err := ssz.HashTreeRoot(b5)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
 	b3Root, err := ssz.HashTreeRoot(b3)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
 	b4Root, err := ssz.HashTreeRoot(b4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}
 	r.seenPendingBlocks[b2Root] = true
@@ -301,15 +217,9 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	r.slotToPendingBlocks[b5.Slot] = &ethpb.SignedBeaconBlock{Block: b5}
 	r.seenPendingBlocks[b5Root] = true
 
-	if err := r.processPendingBlocks(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.slotToPendingBlocks) != 0 {
-		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
-	}
-	if len(r.seenPendingBlocks) != 0 {
-		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
-	}
+	require.NoError(t, r.processPendingBlocks(context.Background()))
+	assert.Equal(t, 0, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
 func TestService_sortedPendingSlots(t *testing.T) {
@@ -324,8 +234,5 @@ func TestService_sortedPendingSlots(t *testing.T) {
 	r.slotToPendingBlocks[lastSlot-2] = &ethpb.SignedBeaconBlock{}
 
 	want := []uint64{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
-	got := r.sortedPendingSlots()
-	if !reflect.DeepEqual(want, got) {
-		t.Errorf("unexpected pending slots list, want: %v, got: %v", want, got)
-	}
+	assert.DeepEqual(t, want, r.sortedPendingSlots(), "Unexpected pending slots list")
 }
