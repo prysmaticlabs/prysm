@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"unicode"
 
@@ -78,12 +79,13 @@ func NewAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 	}
 
+	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	// We initialize a new keymanager depending on the user's selected keymanager kind.
 	var keymanager v2keymanager.IKeymanager
 	if isNewWallet {
-		keymanager, err = wallet.CreateKeymanager(ctx)
+		keymanager, err = wallet.CreateKeymanager(ctx, skipMnemonicConfirm)
 	} else {
-		keymanager, err = wallet.ExistingKeyManager(ctx)
+		keymanager, err = wallet.ExistingKeyManager(ctx, skipMnemonicConfirm)
 	}
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)
@@ -104,6 +106,10 @@ func NewAccount(cliCtx *cli.Context) error {
 
 func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if cliCtx.IsSet(flags.WalletDirFlag.Name) {
+		return walletDir, nil
+	}
+
 	if walletDir == flags.DefaultValidatorDir() {
 		walletDir = path.Join(walletDir, WalletDefaultDirName)
 	}
@@ -135,7 +141,20 @@ func inputKeymanagerKind(_ *cli.Context) (v2keymanager.Kind, error) {
 	return v2keymanager.Kind(selection), nil
 }
 
-func inputNewAccountPassword(_ *cli.Context) (string, error) {
+func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", err
+		}
+		enteredPassword := string(data)
+		if err := validatePasswordInput(enteredPassword); err != nil {
+			log.WithError(err).Fatal("Password did not pass validation")
+		}
+		return enteredPassword, nil
+	}
+
 	var hasValidPassword bool
 	var walletPassword string
 	var err error
@@ -183,6 +202,10 @@ func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error)
 
 func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
+	if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) {
+		return passwordsDir
+	}
+
 	if passwordsDir == flags.DefaultValidatorDir() {
 		passwordsDir = path.Join(passwordsDir, PasswordsDefaultDirName)
 	}
