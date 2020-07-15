@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_ReceiveBlock(t *testing.T) {
@@ -154,6 +156,86 @@ func TestService_ReceiveBlock(t *testing.T) {
 			}
 			if err := s.ReceiveBlock(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
 				t.Errorf("ReceiveBlock() error = %v, wantErr %v", err, tt.wantErr)
+			} else {
+				tt.check(t, s)
+			}
+		})
+	}
+}
+
+func TestService_ReceiveBlockInitialSync(t *testing.T) {
+	ctx := context.Background()
+
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
+		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
+		if err != nil {
+			t.Error(err)
+		}
+		return blk
+	}
+
+	type args struct {
+		block *ethpb.SignedBeaconBlock
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+		check   func(*testing.T, *Service)
+	}{
+		{
+			name: "applies block with state transition",
+			args: args{
+				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 2 /*slot*/),
+			},
+			check: func(t *testing.T, s *Service) {
+				assert.Equal(t, uint64(2), s.head.state.Slot(), "Incorrect head state slot")
+				assert.Equal(t, uint64(2), s.head.block.Block.Slot, "Incorrect head block slot")
+			},
+		},
+		{
+			name: "notifies block processed on state feed",
+			args: args{
+				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 1 /*slot*/),
+			},
+			check: func(t *testing.T, s *Service) {
+				if recvd := len(s.stateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
+					t.Errorf("Received %d state notifications, expected at least 1", recvd)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, stateSummaryCache := testDB.SetupDB(t)
+			genesisBlockRoot := bytesutil.ToBytes32(nil)
+
+			cfg := &Config{
+				BeaconDB: db,
+				ForkChoiceStore: protoarray.New(
+					0, // justifiedEpoch
+					0, // finalizedEpoch
+					genesisBlockRoot,
+				),
+				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
+				StateGen:      stategen.New(db, stateSummaryCache),
+			}
+			s, err := NewService(ctx, cfg)
+			require.NoError(t, err)
+			err = s.saveGenesisData(ctx, genesis)
+			require.NoError(t, err)
+			gBlk, err := s.beaconDB.GenesisBlock(ctx)
+			require.NoError(t, err)
+
+			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+			root, err := stateutil.BlockRoot(tt.args.block.Block)
+			require.NoError(t, err)
+
+			if err := s.ReceiveBlockInitialSync(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
+				t.Errorf("ReceiveBlockInitialSync() error = %v, wantErr %v", err, tt.wantErr)
 			} else {
 				tt.check(t, s)
 			}
