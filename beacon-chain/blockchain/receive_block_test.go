@@ -325,5 +325,14 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-
+	s, err := NewService(context.Background(), &Config{})
+	require.NoError(t, err)
+	r := [32]byte{'a'}
+	if s.HasInitSyncBlock(r) {
+		t.Error("Should not have block")
+	}
+	s.saveInitSyncBlock(r, testutil.NewBeaconBlock())
+	if !s.HasInitSyncBlock(r) {
+		t.Error("Should have block")
+	}
 }
