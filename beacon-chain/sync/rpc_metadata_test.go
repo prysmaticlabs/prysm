@@ -44,8 +44,8 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := new(pb.MetaData)
-		require.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		require.DeepEqual(t, p1.LocalMetadata, out, "Metadata unequal")
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.DeepEqual(t, p1.LocalMetadata, out, "Metadata unequal")
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		require.NoError(t, r2.metaDataHandler(context.Background(), new(interface{}), stream))
+		assert.NoError(t, r2.metaDataHandler(context.Background(), new(interface{}), stream))
 	})
 
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())

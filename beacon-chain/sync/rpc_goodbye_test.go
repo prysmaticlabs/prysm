@@ -73,8 +73,8 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		require.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		require.Equal(t, failureCode, *out)
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.Equal(t, failureCode, *out)
 	})
 
 	err := r.sendGoodByeMessage(context.Background(), failureCode, p2.BHost.ID())
@@ -111,8 +111,8 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		require.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		require.Equal(t, failureCode, *out)
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.Equal(t, failureCode, *out)
 	})
 
 	assert.NoError(t, r.sendGoodByeAndDisconnect(context.Background(), failureCode, p2.BHost.ID()))

@@ -50,7 +50,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := new(uint64)
-		require.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), *out)
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
@@ -108,9 +108,9 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		require.NoError(t, r2.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		require.Equal(t, uint64(2), *out)
-		require.NoError(t, r2.pingHandler(context.Background(), out, stream))
+		assert.NoError(t, r2.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.Equal(t, uint64(2), *out)
+		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
 	})
 
 	assert.NoError(t, r.sendPingRequest(context.Background(), p2.BHost.ID()))

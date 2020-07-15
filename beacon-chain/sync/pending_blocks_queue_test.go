@@ -88,7 +88,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		code, errMsg, err := ReadStatusCode(stream, p1.Encoding())
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		if code == 0 {
 			t.Error("Expected a non-zero code")
 		}

@@ -115,12 +115,12 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := [][32]byte{}
-		require.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
-		require.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
+		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
+		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
 		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
 		for _, blk := range response {
 			_, err := stream.Write([]byte{responseCodeSuccess})
-			require.NoError(t, err, "Failed to write to stream")
+			assert.NoError(t, err, "Failed to write to stream")
 			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
 			assert.NoError(t, err, "Could not send response back")
 		}
