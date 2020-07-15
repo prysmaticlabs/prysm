@@ -11,6 +11,7 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -407,6 +408,15 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	if actualRoot != expectedRoot {
 		t.Errorf("Incorrect deposit trie root (%x) vs expected %x", actualRoot, expectedRoot)
 	}
+}
+
+func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
+	dc := NewDepositCache()
+
+	finalizedDeposits := dc.finalizedDeposits
+	assert.NotNil(t, finalizedDeposits)
+	assert.NotNil(t, finalizedDeposits.Deposits)
+	assert.Equal(t, int64(-1), finalizedDeposits.MerkleTrieIndex)
 }
 
 func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
