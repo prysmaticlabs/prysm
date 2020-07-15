@@ -11,11 +11,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/validator/flags"
-
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
@@ -303,6 +302,7 @@ func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 
 func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
 	var password string
+	var err error
 	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
 		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
 		data, err := ioutil.ReadFile(passwordFilePath)
@@ -312,7 +312,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		password = string(data)
 		err = w.checkPasswordForAccount(accountName, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Printf("Incorrect password entered for account %s\n", accountName)
+			return fmt.Errorf("invalid password entered for account %s\n", accountName)
 		}
 		if err != nil {
 			return err
@@ -322,12 +322,13 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		// Loop asking for the password until the user enters it correctly.
 		for attemptingPassword {
 			// Ask the user for the password to their account.
-			password, err := inputPasswordForAccount(cliCtx, accountName)
+			password, err = inputPasswordForAccount(cliCtx, accountName)
 			if err != nil {
 				return errors.Wrap(err, "could not input password")
 			}
 			err = w.checkPasswordForAccount(accountName, password)
 			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				log.Error(err)
 				fmt.Println("Incorrect password entered, please try again")
 				continue
 			}
