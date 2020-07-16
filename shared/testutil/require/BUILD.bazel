@@ -7,12 +7,12 @@ go_library(
     srcs = ["requires.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil/require",
     visibility = ["//visibility:public"],
-    deps = ["//shared/testutil:go_default_library"],
+    deps = ["//shared/testutil/assertions:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
     srcs = ["requires_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil:go_default_library"],
+    deps = ["//shared/testutil/assertions:go_default_library"],
 )

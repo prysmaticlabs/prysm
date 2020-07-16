@@ -25,7 +25,7 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if m.peers == nil {
-		m.peers = peers.NewStatus(5 /* maxBadResponses */)
+		m.peers = peers.NewStatus(5, 30)
 		// Pretend we are connected to two peers
 		id0, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 		if err != nil {
