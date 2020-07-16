@@ -8,7 +8,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,12 +32,6 @@ func TestRateLimiter_ExceedCapacity(t *testing.T) {
 	p2 := mockp2p.NewTestP2P(t)
 	p1.Connect(p2)
 	rlimiter := newRateLimiter(p1)
-
-	bFlags := flags.Get()
-	bFlags.BlockBatchLimit = 64
-	bFlags.BlockBatchLimitBurstFactor = 10
-	reset := flags.InitWithReset(bFlags)
-	defer reset()
 
 	// BlockByRange
 	topic := p2p.RPCBlocksByRangeTopic + p1.Encoding().ProtocolSuffix()

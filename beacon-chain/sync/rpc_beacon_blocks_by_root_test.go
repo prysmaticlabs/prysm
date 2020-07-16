@@ -129,6 +129,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
 			assert.NoError(t, err, "Could not send response back")
 		}
+		assert.NoError(t, stream.Close())
 	})
 
 	p1.Connect(p2)
