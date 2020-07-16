@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStore_OnAttestation(t *testing.T) {
@@ -30,50 +32,30 @@ func TestStore_OnAttestation(t *testing.T) {
 		StateGen:        stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_, err = blockTree1(db, []byte{'g'})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	BlkWithOutState := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
-	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, BlkWithOutState))
 	BlkWithOutStateRoot, err := stateutil.BlockRoot(BlkWithOutState.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	BlkWithStateBadAtt := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, BlkWithStateBadAtt))
 	BlkWithStateBadAttRoot, err := stateutil.BlockRoot(BlkWithStateBadAtt.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	s := testutil.NewBeaconState()
-	if err := s.SetSlot(100 * params.BeaconConfig().SlotsPerEpoch); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
 	BlkWithValidState := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
-	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, BlkWithValidState))
 
 	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	s = testutil.NewBeaconState()
 	if err := s.SetFork(&pb.Fork{
 		Epoch:           0,
@@ -82,9 +64,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
 
 	tests := []struct {
 		name          string
@@ -168,9 +148,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		StateGen: stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Fork: &pb.Fork{
@@ -188,13 +166,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		Validators:          []*ethpb.Validator{{PublicKey: bytesutil.PadTo([]byte("foo"), 48)}},
 		Balances:            []uint64{0},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r := [32]byte{'g'}
-	if err := service.beaconDB.SaveState(ctx, s, r); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, r))
 
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
@@ -203,81 +177,43 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	r = bytesutil.ToBytes32([]byte{'A'})
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}))
 
 	s1, err := service.getAttPreState(ctx, cp1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s1.Slot() != 1*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
-	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}))
 	s2, err := service.getAttPreState(ctx, cp2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s2.Slot() != 2*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
 	s1, err = service.getAttPreState(ctx, cp1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s1.Slot() != 1*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
 	s1, err = service.checkpointState.StateByCheckpoint(cp1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s1.Slot() != 1*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
 	s2, err = service.checkpointState.StateByCheckpoint(cp2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s2.Slot() != 2*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
-	if err := s.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}
-	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}))
 	s3, err := service.getAttPreState(ctx, cp3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s3.Slot() != s.Slot() {
-		t.Errorf("Wanted state slot: %d, got: %d", s.Slot(), s3.Slot())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, s.Slot(), s3.Slot(), "Unexpected state slot")
 }
 
 func TestStore_UpdateCheckpointState(t *testing.T) {
@@ -289,56 +225,32 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 		StateGen: stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	epoch := uint64(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
-	if err := baseState.SetSlot(epoch * params.BeaconConfig().SlotsPerEpoch); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, baseState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch))
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
-	if err := service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if baseState.Slot() != returned.Slot() {
-		t.Error("Incorrectly returned base state")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
 
 	cached, err := service.checkpointState.StateByCheckpoint(checkpoint)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cached == nil {
-		t.Error("State should have been cached")
-	}
+	require.NoError(t, err)
+	assert.NotNil(t, cached, "State should have been cached")
 
 	epoch = uint64(2)
 	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch}
-	if err := service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(newCheckpoint.Epoch))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if baseState.Slot() != returned.Slot() {
-		t.Error("Incorrectly returned base state")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
 
 	cached, err = service.checkpointState.StateByCheckpoint(newCheckpoint)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(returned.InnerStateUnsafe(), cached.InnerStateUnsafe()) {
 		t.Error("Incorrectly cached base state")
 	}
@@ -350,9 +262,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if err := service.verifyAttTargetEpoch(
 		ctx,
@@ -369,9 +279,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if err := service.verifyAttTargetEpoch(
 		ctx,
@@ -388,9 +296,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if err := service.verifyAttTargetEpoch(
 		ctx,
@@ -408,14 +314,10 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	d := &ethpb.AttestationData{}
-	if err := service.verifyBeaconBlock(ctx, d); !strings.Contains(err.Error(), "beacon block  does not exist") {
-		t.Error("Did not receive the wanted error")
-	}
+	assert.ErrorContains(t, "beacon block  does not exist", service.verifyBeaconBlock(ctx, d))
 }
 
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
@@ -424,24 +326,15 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
-	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	r, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
 
-	err = service.verifyBeaconBlock(ctx, d)
-	if err == nil || !strings.Contains(err.Error(), "could not process attestation for future block") {
-		t.Error("Did not receive the wanted error")
-	}
+	assert.ErrorContains(t, "could not process attestation for future block", service.verifyBeaconBlock(ctx, d))
 }
 
 func TestVerifyBeaconBlock_OK(t *testing.T) {
@@ -450,23 +343,15 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
-	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	r, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
 
-	if err := service.verifyBeaconBlock(ctx, d); err != nil {
-		t.Error("Did not receive the wanted error")
-	}
+	assert.NoError(t, service.verifyBeaconBlock(ctx, d), "Did not receive the wanted error")
 }
 
 func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
@@ -475,31 +360,19 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	b32 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 32}}
-	if err := service.beaconDB.SaveBlock(ctx, b32); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
 	r32, err := stateutil.BlockRoot(b32.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b33 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 33, ParentRoot: r32[:]}}
-	if err := service.beaconDB.SaveBlock(ctx, b33); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
 	r33, err := stateutil.BlockRoot(b33.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := "FFG and LMD votes are not consistent"
-	if err := service.verifyLMDFFGConsistent(context.Background(), 1, []byte{'a'}, r33[:]); err.Error() != wanted {
-		t.Error("Did not get wanted error")
-	}
+	assert.ErrorContains(t, wanted, service.verifyLMDFFGConsistent(context.Background(), 1, []byte{'a'}, r33[:]))
 }
 
 func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
@@ -508,28 +381,17 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	b32 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 32}}
-	if err := service.beaconDB.SaveBlock(ctx, b32); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
 	r32, err := stateutil.BlockRoot(b32.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b33 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 33, ParentRoot: r32[:]}}
-	if err := service.beaconDB.SaveBlock(ctx, b33); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
 	r33, err := stateutil.BlockRoot(b33.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if err := service.verifyLMDFFGConsistent(context.Background(), 1, r32[:], r33[:]); err != nil {
-		t.Errorf("Could not verify LMD and FFG votes to be consistent: %v", err)
-	}
+	err = service.verifyLMDFFGConsistent(context.Background(), 1, r32[:], r33[:])
+	assert.NoError(t, err, "Could not verify LMD and FFG votes to be consistent")
 }
