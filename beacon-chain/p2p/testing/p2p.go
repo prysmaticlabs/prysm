@@ -58,7 +58,7 @@ func NewTestP2P(t *testing.T) *TestP2P {
 		BHost:        h,
 		pubsub:       ps,
 		joinedTopics: map[string]*pubsub.Topic{},
-		peers:        peers.NewStatus(5 /* maxBadResponses */),
+		peers:        peers.NewStatus(5, 30),
 	}
 }
 
