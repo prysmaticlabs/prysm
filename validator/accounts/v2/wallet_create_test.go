@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -35,9 +36,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.
-	if err := CreateWallet(cliCtx); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, CreateWallet(cliCtx))
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
@@ -89,9 +88,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.
-	if err := CreateWallet(cliCtx); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, CreateWallet(cliCtx))
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
