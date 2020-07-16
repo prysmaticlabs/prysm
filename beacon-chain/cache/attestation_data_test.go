@@ -1,4 +1,4 @@
-package cache
+package cache_test
 
 import (
 	"context"
@@ -6,12 +6,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestAttestationCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
-	c := NewAttestationCache()
+	c := cache.NewAttestationCache()
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,

@@ -1,9 +1,10 @@
-package cache
+package cache_test
 
 import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -12,7 +13,7 @@ import (
 
 func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
-	c := NewSkipSlotCache()
+	c := cache.NewSkipSlotCache()
 
 	state, err := c.Get(ctx, 5)
 	require.NoError(t, err)
