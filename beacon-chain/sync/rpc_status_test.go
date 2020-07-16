@@ -65,6 +65,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		if !bytes.Equal(out.FinalizedRoot, root[:]) {
 			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
 		}
+		assert.NoError(t, stream.Close())
 	})
 
 	pcl2 := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
@@ -77,6 +78,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		msg := new(uint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, msg))
 		assert.Equal(t, codeWrongNetwork, *msg)
+		assert.NoError(t, stream.Close())
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)

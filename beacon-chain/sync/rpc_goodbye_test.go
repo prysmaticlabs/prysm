@@ -125,6 +125,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 		out := new(uint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
+		assert.NoError(t, stream.Close())
 	})
 
 	assert.NoError(t, r.sendGoodByeAndDisconnect(context.Background(), failureCode, p2.BHost.ID()))

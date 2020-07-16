@@ -119,6 +119,8 @@ func (l *limiter) free() {
 		// as all collectors are not distinct from each other.
 		ptr := reflect.ValueOf(collector).Pointer()
 		if tempMap[ptr] {
+			// Remove from map
+			delete(l.limiterMap, t)
 			continue
 		}
 		collector.Free()
