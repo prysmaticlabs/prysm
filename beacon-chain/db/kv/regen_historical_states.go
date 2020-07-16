@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
@@ -50,7 +51,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		startSlot = currentState.Slot()
 	}
 
-	lastSavedBlockArchivedIndex, err := kv.lastSavedBlockArchivedSlot(ctx)
+	lastSavedBlockArchivedSlot, err := kv.lastSavedBlockArchivedSlot(ctx)
 	if err != nil {
 		return err
 	}
@@ -59,7 +60,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for slot := lastArchivedSlot; slot <= lastSavedBlockArchivedIndex; slot++ {
+	for slot := lastArchivedSlot; slot <= lastSavedBlockArchivedSlot; slot++ {
 		// This is an expensive operation, so we check if the context was canceled
 		// at any point in the iteration.
 		if err := ctx.Err(); err != nil {
@@ -119,7 +120,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 					return err
 				}
 				log.WithFields(log.Fields{
-					"currentArchivedIndex/totalArchivedIndices": fmt.Sprintf("%d/%d", slot, lastSavedBlockArchivedIndex),
+					"currentArchivedIndex/totalArchivedIndices": fmt.Sprintf("%d/%d", slot, lastSavedBlockArchivedSlot),
 					"archivedStateSlot":                         currentState.Slot()}).Info("Saved historical state")
 			}
 		}
@@ -197,15 +198,20 @@ func regenHistoricalStateProcessSlots(ctx context.Context, state *stateTrie.Beac
 func (kv *Store) lastSavedBlockArchivedSlot(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.lastSavedBlockArchivedSlot")
 	defer span.End()
-	b, err := kv.HighestSlotBlock(ctx)
-	if err != nil {
+
+	var slot uint64
+	if err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blockSlotIndicesBucket)
+		// This index is sorted in byte order so accessing the last value would represent the
+		// highest slot stored in this index bucket.
+		s, _ := bkt.Cursor().Last()
+		slot = bytesutil.BytesToUint64BigEndian(s)
+		return nil
+	}); err != nil {
 		return 0, err
 	}
-	if b == nil || b.Block == nil {
-		return 0, errors.New("nil last block")
-	}
 
-	return b.Block.Slot, nil
+	return slot, nil
 }
 
 // This saved archived info (state, root) into the db.

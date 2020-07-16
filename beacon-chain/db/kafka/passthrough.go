@@ -298,11 +298,6 @@ func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
 	return e.db.LastArchivedRoot(ctx)
 }
 
-// HighestSlotBlock -- passthrough
-func (e Exporter) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
-	return e.db.HighestSlotBlock(ctx)
-}
-
 // HighestSlotBlocksBelow -- passthrough
 func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	return e.db.HighestSlotBlocksBelow(ctx, slot)

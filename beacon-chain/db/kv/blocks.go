@@ -271,38 +271,6 @@ func (kv *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) e
 	})
 }
 
-// HighestSlotBlock returns the blocks with the highest slot from the db.
-func (kv *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlock")
-	defer span.End()
-
-	var blkRoot []byte
-	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blockSlotIndicesBucket)
-		// This index is sorted in byte order so accessing the last value would represent the
-		// highest slot stored in this index bucket.
-		_, blkRoot = bkt.Cursor().Last()
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	var blk *ethpb.SignedBeaconBlock
-	if blkRoot != nil {
-		var err error
-		blk, err = kv.Block(ctx, bytesutil.ToBytes32(blkRoot))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if blk == nil {
-		return kv.GenesisBlock(ctx)
-	}
-
-	return blk, nil
-}
-
 // HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
 func (kv *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
