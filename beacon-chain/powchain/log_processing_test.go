@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -43,11 +44,14 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB, _ := testDB.SetupDB(t)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
-		DepositCache:    depositcache.NewDepositCache(),
+		DepositCache:    depositCache,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -117,11 +121,14 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB, _ := testDB.SetupDB(t)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
-		DepositCache:    depositcache.NewDepositCache(),
+		DepositCache:    depositCache,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -269,11 +276,14 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB, _ := testDB.SetupDB(t)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
-		DepositCache:    depositcache.NewDepositCache(),
+		DepositCache:    depositCache,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -354,11 +364,14 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB, _ := testDB.SetupDB(t)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
-		DepositCache:    depositcache.NewDepositCache(),
+		DepositCache:    depositCache,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -471,11 +484,14 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	kvStore, _ := testDB.SetupDB(t)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
-		DepositCache:    depositcache.NewDepositCache(),
+		DepositCache:    depositCache,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -582,11 +598,14 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB, _ := testDB.SetupDB(t)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
-		DepositCache:    depositcache.NewDepositCache(),
+		DepositCache:    depositCache,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -765,11 +784,14 @@ func TestConsistentGenesisState(t *testing.T) {
 }
 
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: eth1Backend.ContractAddr,
 		BeaconDB:        beaconDB,
-		DepositCache:    depositcache.NewDepositCache(),
+		DepositCache:    depositCache,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
