@@ -74,6 +74,7 @@ go_test(
     srcs = [
         "chain_info_test.go",
         "head_test.go",
+        "info_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
         "receive_attestation_test.go",
