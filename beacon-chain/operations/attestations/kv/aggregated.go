@@ -3,7 +3,6 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -38,7 +37,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 			if helpers.IsAggregated(att) {
 				aggregatedAtts = append(aggregatedAtts, att)
 			} else {
-				h, err := ssz.HashTreeRoot(att)
+				h, err := hashFn(att)
 				if err != nil {
 					return err
 				}
@@ -52,7 +51,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 
 	// Remove the unaggregated attestations from the pool that were successfully aggregated.
 	for _, att := range unaggregatedAtts {
-		h, err := ssz.HashTreeRoot(att)
+		h, err := hashFn(att)
 		if err != nil {
 			return err
 		}
