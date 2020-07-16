@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_ReceiveBlock(t *testing.T) {
@@ -23,9 +25,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		return blk
 	}
 	bc := params.BeaconConfig()
@@ -119,9 +119,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db, stateSummaryCache := testDB.SetupDB(t)
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
-			if err := db.SaveState(ctx, genesis, genesisBlockRoot); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveState(ctx, genesis, genesisBlockRoot))
 
 			cfg := &Config{
 				BeaconDB: db,
@@ -136,22 +134,14 @@ func TestService_ReceiveBlock(t *testing.T) {
 				StateGen:      stategen.New(db, stateSummaryCache),
 			}
 			s, err := NewService(ctx, cfg)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := s.saveGenesisData(ctx, genesis); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
+			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			gRoot, err := stateutil.BlockRoot(gBlk.Block)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := stateutil.BlockRoot(tt.args.block.Block)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			if err := s.ReceiveBlock(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
 				t.Errorf("ReceiveBlock() error = %v, wantErr %v", err, tt.wantErr)
 			} else {
