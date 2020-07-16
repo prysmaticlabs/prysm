@@ -41,6 +41,18 @@ func (s *PeerScorer) IsBadPeer(pid peer.ID) bool {
 	return false
 }
 
+// IsGoodPeer states if the peer is to be considered good.
+// If the peer is unknown this will return `true`.
+func (s *PeerScorer) IsGoodPeer(pid peer.ID) bool {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	if peerStats, ok := s.peerStats[pid]; ok {
+		return peerStats.badResponses < s.params.BadResponsesThreshold
+	}
+	return true
+}
+
 // BadPeers returns the peers that are bad.
 func (s *PeerScorer) BadPeers() []peer.ID {
 	s.lock.RLock()

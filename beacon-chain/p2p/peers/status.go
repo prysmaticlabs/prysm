@@ -52,6 +52,10 @@ const (
 	PeerConnecting
 )
 
+// Additional buffer beyond current peer limit, from which we can store
+// the relevant peer statuses.
+const maxLimitBuffer = 150
+
 var (
 	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
 	ErrPeerUnknown = errors.New("peer unknown")
@@ -59,11 +63,12 @@ var (
 
 // Status is the structure holding the peer status information.
 type Status struct {
-	lock   sync.RWMutex
-	ctx    context.Context
-	cancel context.CancelFunc
-	status map[peer.ID]*peerStatus
-	scorer *PeerScorer
+	lock     sync.RWMutex
+	ctx      context.Context
+	cancel   context.CancelFunc
+	status   map[peer.ID]*peerStatus
+	maxLimit int
+	scorer   *PeerScorer
 }
 
 // peerStatus is the status of an individual peer at the protocol level.
@@ -78,12 +83,13 @@ type peerStatus struct {
 }
 
 // NewStatus creates a new status entity.
-func NewStatus(maxBadResponses int) *Status {
+func NewStatus(maxBadResponses int, peerLimit int) *Status {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Status{
-		ctx:    ctx,
-		cancel: cancel,
-		status: make(map[peer.ID]*peerStatus),
+		ctx:      ctx,
+		cancel:   cancel,
+		status:   make(map[peer.ID]*peerStatus),
+		maxLimit: maxLimitBuffer + peerLimit,
 		scorer: NewPeerScorer(ctx, &PeerScorerParams{
 			BadResponsesThreshold:     maxBadResponses,
 			BadResponsesWeight:        -100,
@@ -100,6 +106,12 @@ func (p *Status) Scorer() *PeerScorer {
 // ScorePeer returns calculated application-level peer scorer.
 func (p *Status) ScorePeer(pid peer.ID) float64 {
 	return p.scorer.Score(pid)
+}
+
+// MaxPeerLimit returns the max peer limit stored in
+// the current peer store.
+func (p *Status) MaxPeerLimit() int {
+	return p.maxLimit
 }
 
 // Add adds a peer.
@@ -386,6 +398,58 @@ func (p *Status) All() []peer.ID {
 		pids = append(pids, pid)
 	}
 	return pids
+}
+
+// Prune clears out and removes outdated and disconnected peers.
+func (p *Status) Prune() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	currSize := len(p.status)
+	// Exit early if there is nothing to prune.
+	if currSize <= p.maxLimit {
+		return
+	}
+
+	type peerResp struct {
+		pid     peer.ID
+		badResp int
+	}
+	peersToPrune := make([]*peerResp, 0)
+	// Select disconnected peers with a smaller bad response count.
+	for pid, status := range p.status {
+		if status.peerState == PeerDisconnected && p.scorer.IsGoodPeer(pid) {
+			badResp, err := p.scorer.BadResponses(pid)
+			if err != nil {
+				badResp = 0
+			}
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:     pid,
+				badResp: badResp,
+			})
+		}
+	}
+
+	// Sort peers in ascending order, so the peers with the
+	// least amount of bad responses are pruned first. This
+	// is to protect the node from malicious/lousy peers so
+	// that their memory is still kept.
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].badResp < peersToPrune[j].badResp
+	})
+
+	limitDiff := currSize - p.maxLimit
+	if limitDiff > len(peersToPrune) {
+		limitDiff = len(peersToPrune)
+	}
+
+	peersToPrune = peersToPrune[:limitDiff]
+
+	// Delete peers from map.
+	for _, peerRes := range peersToPrune {
+		delete(p.status, peerRes.pid)
+		p.scorer.RemovePeer(peerRes.pid)
+	}
 }
 
 // BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed upon by the majority of peers.

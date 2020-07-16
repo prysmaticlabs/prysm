@@ -68,6 +68,14 @@ func (s *PeerScorer) AddPeer(pid peer.ID) {
 	s.fetch(pid)
 }
 
+// RemovePeer removes peer record from peer stats map.
+func (s *PeerScorer) RemovePeer(pid peer.ID) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	delete(s.peerStats, pid)
+}
+
 // Score returns calculated peer score across all tracked metrics.
 func (s *PeerScorer) Score(pid peer.ID) float64 {
 	s.lock.RLock()

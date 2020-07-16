@@ -11,9 +11,12 @@ import (
 	"path"
 	"strings"
 
+	"github.com/logrusorgru/aurora"
+
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
@@ -222,21 +225,8 @@ func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fi
 		return errors.Wrapf(err, "account does not exist in wallet directory: %s", w.accountsPath)
 	}
 	filePath := path.Join(accountPath, fileName)
-	f, err := os.OpenFile(filePath, accountFilePermissions, directoryPermissions)
-	if err != nil {
-		return errors.Wrapf(err, "could not open file for account: %s", filePath)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.WithError(err).Error("Could not close file after writing")
-		}
-	}()
-	n, err := f.Write(data)
-	if err != nil {
-		return errors.Wrapf(err, "could not write file for account: %s", filePath)
-	}
-	if n != len(data) {
-		return fmt.Errorf("could only write %d/%d file bytes to disk", n, len(data))
+	if err := ioutil.WriteFile(filePath, data, os.ModePerm); err != nil {
+		return errors.Wrapf(err, "could not write %s", filePath)
 	}
 	log.WithFields(logrus.Fields{
 		"name": accountName,
@@ -249,29 +239,9 @@ func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fi
 // and writes it to the wallet path.
 func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error {
 	configFilePath := path.Join(w.accountsPath, keymanagerConfigFileName)
-	if fileExists(configFilePath) {
-		return nil
-	}
-	// Open the keymanager config file for writing.
-	f, err := os.Create(configFilePath)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.WithError(err).Error("Could not close keymanager opts file")
-		}
-	}()
-	n, err := f.Write(encoded)
-	if err != nil {
-		return err
-	}
-	if n != len(encoded) {
-		return fmt.Errorf(
-			"expected to write %d bytes to disk, but wrote %d",
-			len(encoded),
-			n,
-		)
+	// Write the config file to disk.
+	if err := ioutil.WriteFile(configFilePath, encoded, os.ModePerm); err != nil {
+		return errors.Wrapf(err, "could not write %s", configFilePath)
 	}
 	log.WithField("configFile", configFilePath).Debug("Wrote keymanager config file to disk")
 	return nil
@@ -300,32 +270,60 @@ func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 }
 
 func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
-	attemptingPassword := true
-	// Loop asking for the password until the user enters it correctly.
-	for attemptingPassword {
-		// Ask the user for the password to their account.
-		password, err := inputPasswordForAccount(cliCtx, accountName)
-		if err != nil {
-			return errors.Wrap(err, "could not input password")
-		}
-		accountKeystore, err := w.keystoreForAccount(accountName)
-		if err != nil {
-			return errors.Wrap(err, "could not get keystore")
-		}
-		decryptor := keystorev4.New()
-		_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
-		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Println("Incorrect password entered, please try again")
-			continue
-		}
-		if err != nil {
-			return errors.Wrap(err, "could not decrypt keystore")
-		}
+	au := aurora.NewAurora(true)
 
-		if err := w.writePasswordToFile(accountName, password); err != nil {
-			return errors.Wrap(err, "could not write password to disk")
+	var password string
+	var err error
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return err
 		}
-		attemptingPassword = false
+		password = string(data)
+		err = w.checkPasswordForAccount(accountName, password)
+		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+			return fmt.Errorf("invalid password entered for account %s", accountName)
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		attemptingPassword := true
+		// Loop asking for the password until the user enters it correctly.
+		for attemptingPassword {
+			// Ask the user for the password to their account.
+			password, err = inputPasswordForAccount(cliCtx, accountName)
+			if err != nil {
+				return errors.Wrap(err, "could not input password")
+			}
+			err = w.checkPasswordForAccount(accountName, password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				fmt.Println(au.Red("Incorrect password entered, please try again"))
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			attemptingPassword = false
+		}
+	}
+	if err := w.writePasswordToFile(accountName, password); err != nil {
+		return errors.Wrap(err, "could not write password to disk")
+	}
+	return nil
+}
+
+func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
+	accountKeystore, err := w.keystoreForAccount(accountName)
+	if err != nil {
+		return errors.Wrap(err, "could not get keystore")
+	}
+	decryptor := keystorev4.New()
+	_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
+	if err != nil {
+		return errors.Wrap(err, "could not decrypt keystore")
 	}
 	return nil
 }

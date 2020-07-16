@@ -72,6 +72,9 @@ func ImportAccount(cliCtx *cli.Context) error {
 
 func inputImportDir(cliCtx *cli.Context) (string, error) {
 	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
+	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
+		return outputDir, nil
+	}
 	if outputDir == flags.DefaultValidatorDir() {
 		outputDir = path.Join(outputDir)
 	}

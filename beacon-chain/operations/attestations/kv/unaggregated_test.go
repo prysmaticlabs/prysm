@@ -1,11 +1,11 @@
 package kv
 
 import (
-	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
@@ -151,9 +151,7 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 			}
 		}
 		returned := cache.UnaggregatedAttestations()
-		if !reflect.DeepEqual([]*ethpb.Attestation{}, returned) {
-			t.Error("Did not receive correct aggregated atts")
-		}
+		assert.DeepEqual(t, []*ethpb.Attestation{}, returned)
 	})
 }
 
@@ -172,15 +170,9 @@ func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	}
 
 	returned := cache.UnaggregatedAttestationsBySlotIndex(1, 1)
-	if !reflect.DeepEqual([]*ethpb.Attestation{att1}, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	assert.DeepEqual(t, []*ethpb.Attestation{att1}, returned)
 	returned = cache.UnaggregatedAttestationsBySlotIndex(1, 2)
-	if !reflect.DeepEqual([]*ethpb.Attestation{att2}, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	assert.DeepEqual(t, []*ethpb.Attestation{att2}, returned)
 	returned = cache.UnaggregatedAttestationsBySlotIndex(2, 1)
-	if !reflect.DeepEqual([]*ethpb.Attestation{att3}, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	assert.DeepEqual(t, []*ethpb.Attestation{att3}, returned)
 }
