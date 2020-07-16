@@ -105,7 +105,6 @@ func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 		{Eth1BlockHeight: 10, Index: 10},
 		{Eth1BlockHeight: 12, Index: 12},
 	}
-
 	assert.DeepEqual(t, expected, dc.pendingDeposits)
 }
 

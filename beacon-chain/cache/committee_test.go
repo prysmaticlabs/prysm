@@ -45,7 +45,6 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	if indices != nil {
 		t.Error("Expected committee not to exist in empty cache")
 	}
-
 	require.NoError(t, cache.AddCommitteeShuffledList(item))
 
 	wantedIndex := uint64(0)
@@ -98,7 +97,6 @@ func TestCommitteeCache_AddProposerIndicesList(t *testing.T) {
 	if indices != nil {
 		t.Error("Expected committee count not to exist in empty cache")
 	}
-
 	require.NoError(t, cache.AddProposerIndicesList(seed, indices))
 
 	received, err := cache.ProposerIndices(seed)
@@ -113,7 +111,6 @@ func TestCommitteeCache_AddProposerIndicesList(t *testing.T) {
 	if indices != nil {
 		t.Error("Expected committee count not to exist in empty cache")
 	}
-
 	require.NoError(t, cache.AddProposerIndicesList(item.Seed, indices))
 
 	received, err = cache.ProposerIndices(item.Seed)

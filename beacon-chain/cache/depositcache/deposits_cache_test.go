@@ -109,7 +109,6 @@ func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
 	dc.deposits = deposits
 
 	d := dc.AllDeposits(context.Background(), nil)
-
 	assert.Equal(t, len(deposits), len(d))
 }
 
@@ -149,7 +148,6 @@ func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 	dc.deposits = deposits
 
 	d := dc.AllDeposits(context.Background(), big.NewInt(11))
-
 	assert.Equal(t, 5, len(d))
 }
 
@@ -189,7 +187,6 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 	}
 
 	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(11))
-
 	assert.Equal(t, 5, int(n))
 	assert.Equal(t, bytesutil.ToBytes32([]byte("root")), root)
 }
@@ -211,7 +208,6 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 	}
 
 	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(2))
-
 	assert.Equal(t, 0, int(n))
 	assert.Equal(t, [32]byte{}, root)
 }
