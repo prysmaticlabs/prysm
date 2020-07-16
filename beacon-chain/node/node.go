@@ -306,7 +306,13 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	}
 
 	b.db = d
-	b.depositCache = depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	if err != nil {
+		return errors.Wrap(err, "could not create deposit cache")
+	}
+
+	b.depositCache = depositCache
 	return nil
 }
 
