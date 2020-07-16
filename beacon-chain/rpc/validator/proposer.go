@@ -361,23 +361,20 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 	var finalizedDeposits *depositcache.FinalizedDeposits
 	if featureconfig.Get().EnableFinalizedDepositsCache {
 		finalizedDeposits = vs.DepositFetcher.FinalizedDeposits(ctx)
+		depositTrie = finalizedDeposits.Deposits
+		upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+		insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
-		if finalizedDeposits != nil {
-			depositTrie = finalizedDeposits.Deposits
-
-			upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
-			insertIndex := finalizedDeposits.MerkleTrieIndex + 1
-			for _, dep := range upToEth1DataDeposits {
-				depHash, err := ssz.HashTreeRoot(dep.Data)
-				if err != nil {
-					return nil, errors.Wrap(err, "could not hash deposit data")
-				}
-				depositTrie.Insert(depHash[:], int(insertIndex))
-				insertIndex++
+		for _, dep := range upToEth1DataDeposits {
+			depHash, err := ssz.HashTreeRoot(dep.Data)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash deposit data")
 			}
-
-			return depositTrie, nil
+			depositTrie.Insert(depHash[:], int(insertIndex))
+			insertIndex++
 		}
+
+		return depositTrie, nil
 	}
 
 	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
