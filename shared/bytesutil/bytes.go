@@ -315,15 +315,6 @@ func Uint64ToBytesLittleEndian(i uint64) []byte {
 	return buf
 }
 
-// BytesToUint64LittleEndian conversion. Returns 0 if empty bytes or byte slice with length less
-// than 8.
-func BytesToUint64LittleEndian(b []byte) uint64 {
-	if len(b) < 8 { // This will panic otherwise.
-		return 0
-	}
-	return binary.LittleEndian.Uint64(b)
-}
-
 // Uint64ToBytesBigEndian conversion.
 func Uint64ToBytesBigEndian(i uint64) []byte {
 	buf := make([]byte, 8)
