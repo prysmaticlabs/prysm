@@ -1,46 +1,34 @@
 package cache_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestHotStateCache_RoundTrip(t *testing.T) {
 	c := cache.NewHotStateCache()
 	root := [32]byte{'A'}
 	state := c.Get(root)
-	if state != nil {
-		t.Errorf("Empty cache returned an object: %v", state)
-	}
-	if c.Has(root) {
-		t.Error("Empty cache has an object")
-	}
+	assert.Equal(t, (*stateTrie.BeaconState)(nil), state)
+	assert.Equal(t, false, c.Has(root), "Empty cache has an object")
 
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 10,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	c.Put(root, state)
+	require.NoError(t, err)
 
-	if !c.Has(root) {
-		t.Error("Empty cache does not have an object")
-	}
+	c.Put(root, state)
+	assert.Equal(t, true, c.Has(root), "Empty cache does not have an object")
+
 	res := c.Get(root)
-	if state == nil {
-		t.Errorf("Empty cache returned an object: %v", state)
-	}
-	if !reflect.DeepEqual(state.CloneInnerState(), res.CloneInnerState()) {
-		t.Error("Expected equal protos to return from cache")
-	}
+	assert.NotNil(t, state)
+	assert.DeepEqual(t, res.CloneInnerState(), state.CloneInnerState(), "Expected equal protos to return from cache")
 
 	c.Delete(root)
-	if c.Has(root) {
-		t.Error("Cache not suppose to have the object")
-	}
+	assert.Equal(t, false, c.Has(root), "Cache not supposed to have the object")
 }
