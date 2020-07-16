@@ -104,10 +104,14 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 
 	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	cfg := &Config{
 		BeaconBlockBuf:    0,
 		BeaconDB:          beaconDB,
-		DepositCache:      depositcache.NewDepositCache(),
+		DepositCache:      depositCache,
 		ChainStartFetcher: web3Service,
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
