@@ -6,12 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 // State returns the saved state using block's signing root,

@@ -7,9 +7,8 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"go.etcd.io/bbolt"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"go.etcd.io/bbolt"
 )
 
 func Test_migrateArchivedIndex(t *testing.T) {
