@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,6 +16,18 @@ var WalletCommands = &cli.Command{
 			Usage: "creates a new wallet with a desired type of keymanager: " +
 				"either on-disk (direct), derived, or using remote credentials",
 			Action: CreateWallet,
+		},
+		{
+			Name:  "edit-config",
+			Usage: "edits a wallet configuration options, such as gRPC connection credentials and TLS certificates",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.GrpcRemoteAddressFlag,
+				flags.RemoteSignerCertPathFlag,
+				flags.RemoteSignerKeyPathFlag,
+				flags.RemoteSignerCACertPathFlag,
+			},
+			Action: EditWalletConfiguration,
 		},
 	},
 }
