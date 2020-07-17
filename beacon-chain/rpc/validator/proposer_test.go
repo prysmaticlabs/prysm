@@ -36,6 +36,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -583,7 +584,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 				}},
 		},
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
@@ -737,7 +741,10 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 				}},
 		},
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
@@ -858,7 +865,10 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
@@ -967,7 +977,10 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
@@ -1074,7 +1087,10 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {
@@ -1195,7 +1211,9 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		},
 	}
 
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
@@ -1291,7 +1309,10 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	for _, dp := range deps {
 		depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
 	}
@@ -1348,11 +1369,14 @@ func TestEth1Data(t *testing.T) {
 	if err := headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}); err != nil {
 		t.Fatal(err)
 	}
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	ps := &Server{
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
 		Eth1BlockFetcher:  p,
-		DepositFetcher:    depositcache.NewDepositCache(),
+		DepositFetcher:    depositCache,
 		HeadFetcher:       &mock.ChainService{State: headState},
 	}
 
@@ -1395,7 +1419,10 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	for _, dp := range deps {
 		depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
 	}
@@ -1616,7 +1643,9 @@ func Benchmark_Eth1Data(b *testing.B) {
 		},
 	}
 
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(b, err)
+
 	for i, dp := range deposits {
 		var root [32]byte
 		copy(root[:], []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)})
@@ -1737,7 +1766,10 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	if err != nil {
 		t.Fatalf("could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
 		if err != nil {

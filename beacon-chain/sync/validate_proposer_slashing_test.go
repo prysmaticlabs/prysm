@@ -22,6 +22,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTrie.BeaconState) {
@@ -57,9 +59,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	domain, err := helpers.Domain(
 		state.Fork(),
@@ -67,9 +67,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		params.BeaconConfig().DomainBeaconProposer,
 		state.GenesisValidatorRoot(),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	privKey := bls.RandKey()
 
 	someRoot := [32]byte{1, 2, 3}
@@ -84,9 +82,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		},
 	}
 	signingRoot, err := helpers.ComputeSigningRoot(header1.Header, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	header1.Signature = privKey.Sign(signingRoot[:]).Marshal()[:]
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
@@ -99,9 +95,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		},
 	}
 	signingRoot, err = helpers.ComputeSigningRoot(header2.Header, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	header2.Signature = privKey.Sign(signingRoot[:]).Marshal()[:]
 
 	slashing := &ethpb.ProposerSlashing{
@@ -109,18 +103,13 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		Header_2: header2,
 	}
 	val, err := state.ValidatorAtIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	val.PublicKey = privKey.PublicKey().Marshal()[:]
-	if err := state.UpdateValidatorAtIndex(1, val); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, state.UpdateValidatorAtIndex(1, val))
 
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		t.Fatal(err)
-	}
+	_, err = rand.Read(b)
+	require.NoError(t, err)
 
 	return slashing, state
 }
@@ -132,9 +121,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: s},
@@ -143,9 +130,8 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -156,13 +142,8 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	}
 
 	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
-	if !valid {
-		t.Error("Failed validation")
-	}
-
-	if m.ValidatorData == nil {
-		t.Error("Decoded message was not set on the message validator data")
-	}
+	assert.Equal(t, true, valid, "Failed validation")
+	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
 func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
@@ -171,20 +152,14 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	slashing, state := setupValidProposerSlashing(t)
 	slashing.Header_1.Header.Slot = 100000000
 	err := state.SetJustificationBits(bitfield.Bitvector4{0x0F}) // 0b1111
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = state.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 0, Root: []byte{}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: state},
@@ -193,9 +168,8 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -205,9 +179,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 		},
 	}
 	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
-	if valid {
-		t.Error("slashing from the far distant future should have timed out and returned false")
-	}
+	assert.Equal(t, false, valid, "Slashing from the far distant future should have timed out and returned false")
 }
 
 func TestValidateProposerSlashing_Syncing(t *testing.T) {
@@ -223,9 +195,8 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
-		t.Fatal(err)
-	}
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -235,7 +206,5 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 		},
 	}
 	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
-	if valid {
-		t.Error("Did not fail validation")
-	}
+	assert.Equal(t, false, valid, "Did not fail validation")
 }

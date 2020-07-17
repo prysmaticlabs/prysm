@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestBlocksQueueInitStartStop(t *testing.T) {
@@ -30,10 +31,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 			headFetcher:         mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-
-		if err := queue.stop(); err == nil {
-			t.Errorf("expected error: %v", errQueueTakesTooLongToStop)
-		}
+		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
 	})
 
 	t.Run("use default fetcher", func(t *testing.T) {
@@ -43,9 +41,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 			headFetcher:         mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-		if err := queue.start(); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, queue.start())
 	})
 
 	t.Run("stop timeout", func(t *testing.T) {
@@ -55,12 +51,8 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 			headFetcher:         mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-		if err := queue.start(); err != nil {
-			t.Error(err)
-		}
-		if err := queue.stop(); err == nil {
-			t.Errorf("expected error: %v", errQueueTakesTooLongToStop)
-		}
+		assert.NoError(t, queue.start())
+		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
 	})
 
 	t.Run("check for leaked goroutines", func(t *testing.T) {
@@ -72,13 +64,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 			highestExpectedSlot: blockBatchLimit,
 		})
 
-		if err := queue.start(); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, queue.start())
 		// Blocks up until all resources are reclaimed (or timeout is called)
-		if err := queue.stop(); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, queue.stop())
 		select {
 		case <-queue.fetchedBlocks:
 		default:
@@ -99,15 +87,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 			headFetcher:         mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-		if err := queue.start(); err != nil {
-			t.Error(err)
-		}
-		if err := queue.stop(); err != nil {
-			t.Error(err)
-		}
-		if err := queue.start(); err == nil {
-			t.Errorf("expected error not returned: %v", errQueueCtxIsDone)
-		}
+		assert.NoError(t, queue.start())
+		assert.NoError(t, queue.stop())
+		assert.ErrorContains(t, errQueueCtxIsDone.Error(), queue.start())
 	})
 
 	t.Run("multiple stopping attempts", func(t *testing.T) {
@@ -118,16 +100,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 			headFetcher:         mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-		if err := queue.start(); err != nil {
-			t.Error(err)
-		}
-
-		if err := queue.stop(); err != nil {
-			t.Error(err)
-		}
-		if err := queue.stop(); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, queue.start())
+		assert.NoError(t, queue.stop())
+		assert.NoError(t, queue.stop())
 	})
 
 	t.Run("cancellation", func(t *testing.T) {
@@ -137,14 +112,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 			headFetcher:         mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-		if err := queue.start(); err != nil {
-			t.Error(err)
-		}
-
+		assert.NoError(t, queue.start())
 		cancel()
-		if err := queue.stop(); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, queue.stop())
 	})
 }
 
@@ -268,9 +238,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 				headFetcher:         mc,
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
-			if err := queue.start(); err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, queue.start())
 			processBlock := func(block *eth.SignedBeaconBlock) error {
 				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block.ParentRoot)) {
 					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
@@ -296,22 +264,19 @@ func TestBlocksQueueLoop(t *testing.T) {
 				}
 			}
 
-			if err := queue.stop(); err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, queue.stop())
 
 			if queue.headFetcher.HeadSlot() < tt.highestExpectedSlot {
 				t.Errorf("Not enough slots synced, want: %v, got: %v",
 					len(tt.expectedBlockSlots), queue.headFetcher.HeadSlot())
 			}
-			if len(blocks) != len(tt.expectedBlockSlots) {
-				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(blocks))
-			}
+			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
 			var receivedBlockSlots []uint64
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 			}
-			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
+			missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
 		})

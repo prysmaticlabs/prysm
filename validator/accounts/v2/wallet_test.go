@@ -50,7 +50,7 @@ func setupWalletDir(t testing.TB) (string, string) {
 
 func TestCreateAndReadWallet(t *testing.T) {
 	ctx := context.Background()
-	if _, err := CreateWallet(ctx, &WalletConfig{
+	if _, err := NewWallet(ctx, &WalletConfig{
 		PasswordsDir: "",
 		WalletDir:    "",
 	}); err == nil {
@@ -58,7 +58,7 @@ func TestCreateAndReadWallet(t *testing.T) {
 	}
 	walletDir, passwordsDir := setupWalletDir(t)
 	keymanagerKind := v2keymanager.Direct
-	wallet, err := CreateWallet(ctx, &WalletConfig{
+	wallet, err := NewWallet(ctx, &WalletConfig{
 		PasswordsDir:   passwordsDir,
 		WalletDir:      walletDir,
 		KeymanagerKind: keymanagerKind,
@@ -85,7 +85,7 @@ func TestCreateAndReadWallet(t *testing.T) {
 	}
 
 	// We should be able to now read the wallet as well.
-	if _, err := CreateWallet(ctx, &WalletConfig{
+	if _, err := NewWallet(ctx, &WalletConfig{
 		PasswordsDir: passwordsDir,
 		WalletDir:    walletDir,
 	}); err != nil {

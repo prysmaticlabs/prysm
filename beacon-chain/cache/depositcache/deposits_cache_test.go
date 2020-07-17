@@ -3,6 +3,7 @@ package depositcache
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -11,6 +12,8 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -21,20 +24,18 @@ var _ = DepositFetcher(&DepositCache{})
 
 func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{})
 
-	if len(dc.deposits) != 0 {
-		t.Fatal("Number of deposits changed")
-	}
-	if hook.LastEntry().Message != nilDepositErr {
-		t.Errorf("Did not log correct message, wanted \"Ignoring nil deposit insertion\", got \"%s\"", hook.LastEntry().Message)
-	}
+	require.Equal(t, 0, len(dc.deposits), "Number of deposits changed")
+	assert.Equal(t, nilDepositErr, hook.LastEntry().Message)
 }
 
 func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	insertions := []struct {
 		blkNum  uint64
@@ -69,14 +70,14 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 
 	expectedIndices := []int64{0, 1, 3, 4}
 	for i, ei := range expectedIndices {
-		if dc.deposits[i].Index != ei {
-			t.Errorf("dc.deposits[%d].Index = %d, wanted %d", i, dc.deposits[i].Index, ei)
-		}
+		assert.Equal(t, ei, dc.deposits[i].Index,
+			fmt.Sprintf("dc.deposits[%d].Index = %d, wanted %d", i, dc.deposits[i].Index, ei))
 	}
 }
 
 func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	deposits := []*dbpb.DepositContainer{
 		{
@@ -111,13 +112,12 @@ func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
 	dc.deposits = deposits
 
 	d := dc.AllDeposits(context.Background(), nil)
-	if len(d) != len(deposits) {
-		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), len(deposits))
-	}
+	assert.Equal(t, len(deposits), len(d))
 }
 
 func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	deposits := []*dbpb.DepositContainer{
 		{
@@ -152,14 +152,12 @@ func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 	dc.deposits = deposits
 
 	d := dc.AllDeposits(context.Background(), big.NewInt(11))
-	expected := 5
-	if len(d) != expected {
-		t.Errorf("Return the wrong number of deposits (%d) wanted %d", len(d), expected)
-	}
+	assert.Equal(t, 5, len(d))
 }
 
 func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
 		{
@@ -194,17 +192,13 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 	}
 
 	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(11))
-	if int(n) != 5 {
-		t.Errorf("Returned unexpected deposits number %d wanted %d", n, 5)
-	}
-
-	if root != bytesutil.ToBytes32([]byte("root")) {
-		t.Errorf("Returned unexpected root: %v", root)
-	}
+	assert.Equal(t, 5, int(n))
+	assert.Equal(t, bytesutil.ToBytes32([]byte("root")), root)
 }
 
 func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOldestDeposit(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
 		{
@@ -220,17 +214,13 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 	}
 
 	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(2))
-	if int(n) != 0 {
-		t.Errorf("Returned unexpected deposits number %d wanted %d", n, 0)
-	}
-
-	if root != [32]byte{} {
-		t.Errorf("Returned unexpected root: %v", root)
-	}
+	assert.Equal(t, 0, int(n))
+	assert.Equal(t, [32]byte{}, root)
 }
 
 func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
 		{
@@ -272,13 +262,13 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 	if !bytes.Equal(dep.Data.PublicKey, []byte("pk1")) {
 		t.Error("Returned wrong deposit")
 	}
-	if blkNum.Cmp(big.NewInt(10)) != 0 {
-		t.Errorf("Returned wrong block number %v", blkNum)
-	}
+	assert.Equal(t, 0, blkNum.Cmp(big.NewInt(10)),
+		fmt.Sprintf("Returned wrong block number %v", blkNum))
 }
 
 func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
 		{
@@ -318,35 +308,23 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	dc.InsertFinalizedDeposits(context.Background(), 2)
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
-	if cachedDeposits == nil {
-		t.Fatalf("Deposits not cached")
-	}
-	if cachedDeposits.MerkleTrieIndex != 2 {
-		t.Errorf("Incorrect index of last deposit (%d) vs expected 2", cachedDeposits.MerkleTrieIndex)
-	}
+	require.NotNil(t, cachedDeposits, "Deposits not cached")
+	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
 
 	var deps [][]byte
 	for _, d := range finalizedDeposits {
 		hash, err := ssz.HashTreeRoot(d.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Could not hash deposit data")
-		}
+		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
 	trie, err := trieutil.GenerateTrieFromItems(deps, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not generate deposit trie")
-	}
-
-	actualRoot := cachedDeposits.Deposits.HashTreeRoot()
-	expectedRoot := trie.HashTreeRoot()
-	if actualRoot != expectedRoot {
-		t.Errorf("Incorrect deposit trie root (%x) vs expected %x", actualRoot, expectedRoot)
-	}
+	require.NoError(t, err, "Could not generate deposit trie")
+	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
 }
 
 func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	oldFinalizedDeposits := []*dbpb.DepositContainer{
 		{
@@ -382,35 +360,33 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	dc.InsertFinalizedDeposits(context.Background(), 2)
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
-	if cachedDeposits == nil {
-		t.Fatalf("Deposits not cached")
-	}
-	if cachedDeposits.MerkleTrieIndex != 2 {
-		t.Errorf("Incorrect index of last deposit (%d) vs expected 3", cachedDeposits.MerkleTrieIndex)
-	}
+	require.NotNil(t, cachedDeposits, "Deposits not cached")
+	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
 
 	var deps [][]byte
 	for _, d := range append(oldFinalizedDeposits, &newFinalizedDeposit) {
 		hash, err := ssz.HashTreeRoot(d.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Could not hash deposit data")
-		}
+		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
 	trie, err := trieutil.GenerateTrieFromItems(deps, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not generate deposit trie")
-	}
+	require.NoError(t, err, "Could not generate deposit trie")
+	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
+}
 
-	actualRoot := cachedDeposits.Deposits.HashTreeRoot()
-	expectedRoot := trie.HashTreeRoot()
-	if actualRoot != expectedRoot {
-		t.Errorf("Incorrect deposit trie root (%x) vs expected %x", actualRoot, expectedRoot)
-	}
+func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
+
+	finalizedDeposits := dc.finalizedDeposits
+	assert.NotNil(t, finalizedDeposits)
+	assert.NotNil(t, finalizedDeposits.Deposits)
+	assert.Equal(t, int64(-1), finalizedDeposits.MerkleTrieIndex)
 }
 
 func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
 		{
@@ -454,13 +430,12 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 	dc.InsertFinalizedDeposits(context.Background(), 1)
 
 	deps := dc.NonFinalizedDeposits(context.Background(), nil)
-	if len(deps) != 2 {
-		t.Errorf("Incorrect number of non-finalized deposits (%d) vs expected 2", len(deps))
-	}
+	assert.Equal(t, 2, len(deps))
 }
 
 func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *testing.T) {
-	dc := DepositCache{}
+	dc, err := NewDepositCache()
+	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
 		{
@@ -504,7 +479,5 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 	dc.InsertFinalizedDeposits(context.Background(), 1)
 
 	deps := dc.NonFinalizedDeposits(context.Background(), big.NewInt(10))
-	if len(deps) != 1 {
-		t.Errorf("Incorrect number of non-finalized deposits (%d) vs expected 1", len(deps))
-	}
+	assert.Equal(t, 1, len(deps))
 }

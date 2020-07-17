@@ -24,37 +24,36 @@ const archiveFilename = "backup.zip"
 func ExportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil {
-		return errors.Wrap(err, "could not parse wallet directory")
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	} else if err != nil {
+		log.WithError(err).Fatal("Could not parse wallet directory")
 	}
 
 	outputDir, err := inputExportDir(cliCtx)
 	if err != nil {
-		return errors.Wrap(err, "could not parse output directory")
+		log.WithError(err).Fatal("Could not parse output directory")
 	}
 
 	wallet, err := OpenWallet(context.Background(), &WalletConfig{
 		CanUnlockAccounts: false,
 		WalletDir:         walletDir,
 	})
-	if err == ErrNoWalletFound {
-		return errors.New("no wallet found at path, please create a new wallet using `validator accounts-v2 new`")
-	}
 	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
+		log.WithError(err).Fatal("Could not open wallet")
 	}
 
 	allAccounts, err := wallet.AccountNames()
 	if err != nil {
-		return err
+		log.WithError(err).Fatal("Could not get account names")
 	}
-	accounts, err := selectAccounts(allAccounts)
+	accounts, err := selectAccounts(cliCtx, allAccounts)
 	if err != nil {
-		return err
+		log.WithError(err).Fatal("Could not select accounts")
 	}
 
 	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
-		return errors.Wrap(err, "could not zip accounts")
+		log.WithError(err).Error("Could not export accounts")
 	}
 
 	if err := logAccountsExported(wallet, accounts); err != nil {
@@ -65,6 +64,9 @@ func ExportAccount(cliCtx *cli.Context) error {
 
 func inputExportDir(cliCtx *cli.Context) (string, error) {
 	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
+	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
+		return outputDir, nil
+	}
 	if outputDir == flags.DefaultValidatorDir() {
 		outputDir = path.Join(outputDir)
 	}
@@ -80,10 +82,24 @@ func inputExportDir(cliCtx *cli.Context) (string, error) {
 	return outputPath, nil
 }
 
-func selectAccounts(accounts []string) ([]string, error) {
+func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 	if len(accounts) == 1 {
 		return accounts, nil
 	}
+	if cliCtx.IsSet(flags.AccountsFlag.Name) {
+		enteredAccounts := cliCtx.StringSlice(flags.AccountsFlag.Name)
+		if len(enteredAccounts) == 1 && enteredAccounts[0] == "all" {
+			return accounts, nil
+		}
+		allAccountsStr := strings.Join(accounts, " ")
+		for _, accountName := range enteredAccounts {
+			if !strings.Contains(allAccountsStr, accountName) {
+				return nil, fmt.Errorf("entered account %s not found in given wallet directory", accountName)
+			}
+		}
+		return enteredAccounts, nil
+	}
+
 	prompt := promptui.SelectWithAdd{
 		Label: "Select accounts to backup",
 		Items: append(accounts, allAccountsText),

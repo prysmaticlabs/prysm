@@ -23,8 +23,10 @@ import (
 func ImportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil {
-		log.Fatalf("Could not parse wallet directory: %v", err)
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	} else if err != nil {
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
 
 	backupDir, err := inputImportDir(cliCtx)
@@ -47,14 +49,11 @@ func ImportAccount(cliCtx *cli.Context) error {
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 
-	wallet, err := CreateWallet(context.Background(), &WalletConfig{
+	wallet, err := OpenWallet(context.Background(), &WalletConfig{
 		CanUnlockAccounts: true,
 		PasswordsDir:      passwordsDirPath,
 		WalletDir:         walletDir,
 	})
-	if err == ErrNoWalletFound {
-		log.Fatal("No wallet found at path, please create a new wallet using `validator accounts-v2 new`")
-	}
 	if err != nil {
 		log.Fatalf("Could not open wallet: %v", err)
 	}
@@ -73,6 +72,9 @@ func ImportAccount(cliCtx *cli.Context) error {
 
 func inputImportDir(cliCtx *cli.Context) (string, error) {
 	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
+	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
+		return outputDir, nil
+	}
 	if outputDir == flags.DefaultValidatorDir() {
 		outputDir = path.Join(outputDir)
 	}

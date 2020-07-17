@@ -20,6 +20,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -36,7 +37,9 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -86,7 +89,9 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -174,7 +179,9 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -225,7 +232,9 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
@@ -330,7 +339,9 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -400,7 +411,9 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -478,7 +491,9 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -509,7 +524,9 @@ func TestValidatorStatus_Exited(t *testing.T) {
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	pubKey := pubKey(1)
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 0,
 	})
@@ -572,7 +589,9 @@ func TestActivationStatus_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
 
 	dep = deposits[2]
@@ -700,7 +719,8 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
 
 	for i := 0; i < 6; i++ {
 		depData := &ethpb.Deposit_Data{
@@ -764,7 +784,9 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -839,7 +861,9 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -930,7 +954,9 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
 	dep = deposits[2]
 	depositTrie.Insert(dep.Data.Signature, 15)

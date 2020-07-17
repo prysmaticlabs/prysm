@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -79,6 +80,9 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	vs := &Server{
 		BeaconDB:           db,
 		Ctx:                ctx,
@@ -86,7 +90,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		DepositFetcher:     depositcache.NewDepositCache(),
+		DepositFetcher:     depositCache,
 		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
@@ -160,7 +164,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
-	depositCache := depositcache.NewDepositCache()
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
 	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
 	if err != nil {
