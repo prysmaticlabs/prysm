@@ -2,7 +2,6 @@ package peers
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -10,24 +9,18 @@ import (
 
 const (
 	// How many bad responses to tolerate before peer is deemed bad.
-	defaultBadResponsesThreshold = 6
+	DefaultBadResponsesThreshold = 6
 	// Since score represents penalty, it has negative weight.
-	defaultBadResponsesWeight = -1.0
+	DefaultBadResponsesWeight = -1.0
 	// How often to decay previous statistics. Every interval bad responses counter will be decremented by 1.
-	defaultBadResponsesDecayInterval = time.Hour
+	DefaultBadResponsesDecayInterval = time.Hour
 )
 
 // PeerScorer keeps track of peer counters that are used to calculate peer score.
 type PeerScorer struct {
-	lock      sync.RWMutex
-	ctx       context.Context
-	params    *PeerScorerParams
-	peerStats map[peer.ID]*peerScorerStats
-}
-
-// peerScorerStats holds peer counters and statistics that is used in per per score calculation.
-type peerScorerStats struct {
-	badResponses int
+	ctx    context.Context
+	params *PeerScorerParams
+	store  *peerDataStore
 }
 
 // PeerScorerParams holds configuration parameters for scoring service.
@@ -37,21 +30,21 @@ type PeerScorerParams struct {
 	BadResponsesDecayInterval time.Duration
 }
 
-// NewPeerScorer provides fully initialized peer scoring service.
-func NewPeerScorer(ctx context.Context, params *PeerScorerParams) *PeerScorer {
+// newPeerScorer provides fully initialized peer scoring service.
+func newPeerScorer(ctx context.Context, store *peerDataStore, params *PeerScorerParams) *PeerScorer {
 	scorer := &PeerScorer{
-		ctx:       ctx,
-		params:    params,
-		peerStats: make(map[peer.ID]*peerScorerStats),
+		ctx:    ctx,
+		params: params,
+		store:  store,
 	}
 	if scorer.params.BadResponsesThreshold <= 0 {
-		scorer.params.BadResponsesThreshold = defaultBadResponsesThreshold
+		scorer.params.BadResponsesThreshold = DefaultBadResponsesThreshold
 	}
 	if scorer.params.BadResponsesWeight == 0.0 {
-		scorer.params.BadResponsesWeight = defaultBadResponsesWeight
+		scorer.params.BadResponsesWeight = DefaultBadResponsesWeight
 	}
 	if scorer.params.BadResponsesDecayInterval <= 0 {
-		scorer.params.BadResponsesDecayInterval = defaultBadResponsesDecayInterval
+		scorer.params.BadResponsesDecayInterval = DefaultBadResponsesDecayInterval
 	}
 
 	go scorer.loop(scorer.ctx)
@@ -59,36 +52,26 @@ func NewPeerScorer(ctx context.Context, params *PeerScorerParams) *PeerScorer {
 	return scorer
 }
 
-// AddPeer adds peer record to peer stats map.
-func (s *PeerScorer) AddPeer(pid peer.ID) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	// Fetch creates peer stats object (if it doesn't already exist).
-	s.fetch(pid)
-}
-
-// RemovePeer removes peer record from peer stats map.
-func (s *PeerScorer) RemovePeer(pid peer.ID) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	delete(s.peerStats, pid)
-}
-
 // Score returns calculated peer score across all tracked metrics.
 func (s *PeerScorer) Score(pid peer.ID) float64 {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	s.store.RLock()
+	defer s.store.RUnlock()
 
 	var score float64
-	peerStats := s.fetch(pid)
+	if _, ok := s.store.peers[pid]; !ok {
+		return 0
+	}
 
-	badResponsesScore := float64(peerStats.badResponses) / float64(s.params.BadResponsesThreshold)
+	badResponsesScore := float64(s.store.peers[pid].badResponsesCount) / float64(s.params.BadResponsesThreshold)
 	badResponsesScore = badResponsesScore * s.params.BadResponsesWeight
 	score += badResponsesScore
 
 	return score
+}
+
+// Params exposes peer scorer parameters.
+func (s *PeerScorer) Params() *PeerScorerParams {
+	return s.params
 }
 
 // loop handles background tasks.
@@ -99,18 +82,9 @@ func (s *PeerScorer) loop(ctx context.Context) {
 	for {
 		select {
 		case <-decayBadResponsesScores.C:
-			s.decayBadResponsesStats()
+			s.DecayBadResponsesStats()
 		case <-ctx.Done():
 			return
 		}
 	}
-}
-
-// fetch is a helper function that fetches a peer stats, possibly creating it.
-// This method must be called after s.lock is locked.
-func (s *PeerScorer) fetch(pid peer.ID) *peerScorerStats {
-	if _, ok := s.peerStats[pid]; !ok {
-		s.peerStats[pid] = &peerScorerStats{}
-	}
-	return s.peerStats[pid]
 }

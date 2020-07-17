@@ -51,8 +51,7 @@ const (
 	PeerConnecting
 )
 
-// Additional buffer beyond current peer limit, from which we can store
-// the relevant peer statuses.
+// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 const maxLimitBuffer = 150
 
 var (
@@ -63,26 +62,27 @@ var (
 // Status is the structure holding the peer status information.
 type Status struct {
 	ctx    context.Context
-	cancel context.CancelFunc
-	store  *peerDataStore
+	params *StatusParams
 	scorer *PeerScorer
+	store  *peerDataStore
+}
+
+// StatusParams represents peer status service params.
+type StatusParams struct {
+	PeerLimit    int
+	ScorerParams *PeerScorerParams
 }
 
 // NewStatus creates a new status entity.
-func NewStatus(maxBadResponses int, peerLimit int) *Status {
-	ctx, cancel := context.WithCancel(context.Background())
-	store := newStore(ctx, &peerStoreParams{
-		maxPeers: maxLimitBuffer + peerLimit,
+func NewStatus(ctx context.Context, params *StatusParams) *Status {
+	store := newPeerDataStore(ctx, &peerDataStoreParams{
+		maxPeers: maxLimitBuffer + params.PeerLimit,
 	})
 	return &Status{
 		ctx:    ctx,
-		cancel: cancel,
+		params: params,
 		store:  store,
-		scorer: NewPeerScorer(ctx, store, &PeerScorerParams{
-			BadResponsesThreshold:     maxBadResponses,
-			BadResponsesWeight:        -100,
-			BadResponsesDecayInterval: time.Hour,
-		}),
+		scorer: newPeerScorer(ctx, store, params.ScorerParams),
 	}
 }
 
@@ -91,8 +91,7 @@ func (p *Status) Scorer() *PeerScorer {
 	return p.scorer
 }
 
-// MaxPeerLimit returns the max peer limit stored in
-// the current peer store.
+// MaxPeerLimit returns the max peer limit stored in the current peer store.
 func (p *Status) MaxPeerLimit() int {
 	return p.store.params.maxPeers
 }
@@ -399,8 +398,8 @@ func (p *Status) Prune() {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.peers {
-		if peerData.connState == PeerDisconnected && !p.scorer.IsBadPeer(pid) {
-			badResp, err := p.scorer.BadResponses(pid)
+		if peerData.connState == PeerDisconnected && !p.scorer.isBadPeer(pid) {
+			badResp, err := p.scorer.badResponses(pid)
 			if err != nil {
 				badResp = 0
 			}
