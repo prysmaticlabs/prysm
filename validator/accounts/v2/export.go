@@ -45,13 +45,10 @@ func ExportAccount(cliCtx *cli.Context) error {
 		log.WithError(err).Fatal("Could not open wallet")
 	}
 
-	fmt.Println("fuck2")
-
 	allAccounts, err := wallet.AccountNames()
 	if err != nil {
 		log.WithError(err).Error("Could not get account names")
 	}
-	fmt.Println("fuck3")
 	accounts, err := selectAccounts(cliCtx, allAccounts)
 	if err != nil {
 		log.WithError(err).Fatal("Could not select accounts")
@@ -59,13 +56,11 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if len(accounts) == 0 {
 		return errors.New("no accounts to export")
 	}
-	fmt.Println("fuck4")
 
 	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
 		log.WithError(err).Error("Could not export accounts")
 	}
 
-	fmt.Println("fuck5")
 	if err := logAccountsExported(wallet, accounts); err != nil {
 		log.WithError(err).Fatal("Could not log out exported accounts")
 	}

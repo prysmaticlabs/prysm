@@ -16,11 +16,9 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
-const password = "10testPass!"
-
 func setupWallet(t *testing.T, testDir string) *Wallet {
-	walletDir := filepath.Join(testDir, "/wallet")
-	passwordsDir := filepath.Join(testDir, "/walletpasswords")
+	walletDir := filepath.Join(testDir, walletDirName)
+	passwordsDir := filepath.Join(testDir, passwordDirName)
 	ctx := context.Background()
 	if err := initializeDirectWallet(walletDir, passwordsDir); err != nil {
 		t.Fatal(err)
@@ -46,7 +44,16 @@ func setupWallet(t *testing.T, testDir string) *Wallet {
 
 func TestZipAndUnzip(t *testing.T) {
 	testDir := testutil.TempDir()
-	exportDir := filepath.Join(testDir, "/export")
+	walletDir := filepath.Join(testDir, walletDirName)
+	passwordsDir := filepath.Join(testDir, passwordDirName)
+	exportDir := filepath.Join(testDir, exportDirName)
+	importDir := filepath.Join(testDir, importDirName)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(walletDir))
+		assert.NoError(t, os.RemoveAll(passwordsDir))
+		assert.NoError(t, os.RemoveAll(exportDir))
+		assert.NoError(t, os.RemoveAll(importDir))
+	}()
 	wallet := setupWallet(t, testDir)
 
 	accounts, err := wallet.AccountNames()
@@ -64,8 +71,6 @@ func TestZipAndUnzip(t *testing.T) {
 		t.Fatal("Expected file to exist")
 	}
 
-	importFolder := "import"
-	importDir := filepath.Join(testDir, importFolder)
 	importedAccounts, err := unzipArchiveToTarget(exportDir, importDir)
 	if err != nil {
 		t.Fatal(err)
@@ -81,9 +86,9 @@ func TestZipAndUnzip(t *testing.T) {
 
 func TestExport_Noninteractive(t *testing.T) {
 	testDir := testutil.TempDir()
-	walletDir := filepath.Join(testDir, "/wallet")
-	passwordsDir := filepath.Join(testDir, "/walletpasswords")
-	exportDir := filepath.Join(testDir, "/export")
+	walletDir := filepath.Join(testDir, walletDirName)
+	passwordsDir := filepath.Join(testDir, passwordDirName)
+	exportDir := filepath.Join(testDir, exportDirName)
 	accounts := "all"
 	defer func() {
 		assert.NoError(t, os.RemoveAll(walletDir))

@@ -15,27 +15,27 @@ import (
 
 func TestImport_Noninteractive(t *testing.T) {
 	testDir := testutil.TempDir()
-	walletDir := filepath.Join(testDir, "/wallet")
-	passwordsDir := filepath.Join(testDir, "/walletpasswords")
-	exportDir := filepath.Join(testDir, "/export")
+	exportDir := filepath.Join(testDir, exportDirName)
+	importDir := filepath.Join(testDir, importDirName)
+	importPasswordDir := filepath.Join(testDir, importPasswordDirName)
 
-	passwordFilePath := filepath.Join(testDir, "password.txt")
+	passwordFilePath := filepath.Join(testDir, passwordFileName)
 	if err := ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.RemoveAll(passwordsDir))
 		assert.NoError(t, os.RemoveAll(exportDir))
+		assert.NoError(t, os.RemoveAll(importDir))
+		assert.NoError(t, os.RemoveAll(importPasswordDir))
 	}()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
+	set.String(flags.WalletDirFlag.Name, importDir, "")
+	set.String(flags.WalletPasswordsDirFlag.Name, importPasswordDir, "")
 	set.String(flags.BackupPathFlag.Name, exportDir, "")
 	set.String(flags.PasswordFileFlag.Name, passwordFilePath, "")
-	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, importDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, importPasswordDir))
 	assert.NoError(t, set.Set(flags.PasswordFileFlag.Name, passwordFilePath))
 	assert.NoError(t, set.Set(flags.BackupPathFlag.Name, exportDir))
 	cliCtx := cli.NewContext(&app, set, nil)
