@@ -42,6 +42,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "export_test.go",
+        "import_test.go",
         "list_test.go",
         "new_test.go",
         "wallet_edit_test.go",

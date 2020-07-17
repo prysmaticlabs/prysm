@@ -16,6 +16,8 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
+const password = "10testPass!"
+
 func setupWallet(t *testing.T, testDir string) *Wallet {
 	walletDir := filepath.Join(testDir, "/wallet")
 	passwordsDir := filepath.Join(testDir, "/walletpasswords")
@@ -36,7 +38,6 @@ func setupWallet(t *testing.T, testDir string) *Wallet {
 	if err != nil {
 		t.Fatalf("Could not initialize keymanager: %v", err)
 	}
-	password := "10testPass!"
 	if _, err := keymanager.CreateAccount(ctx, password); err != nil {
 		t.Fatalf("Could not create account in wallet: %v", err)
 	}
