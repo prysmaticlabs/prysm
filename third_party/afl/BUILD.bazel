@@ -1,0 +1,59 @@
+package(
+    default_testonly = True,
+    default_visibility = ["//visibility:public"],
+)
+# Note: these libraries only compile with llvm.
+
+cc_library(
+    name = "comm_hdr",
+    hdrs = [
+        "alloc-inl.h",
+        "config.h",
+        "debug.h",
+        "hash.h",
+        "types.h",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+CFLAGS = [
+    "-O3 -funroll-loops",
+    "-Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign",
+    "-DAFL_PATH=\\\"/usr/local/lib/afl\\\"",
+    "-DDOC_PATH=\\\"/usr/local/share/doc/afl\\\"",
+    "-DBIN_PATH=\\\"/usr/local/bin\\\"",
+]
+
+LDFLAGS = ["-ldl"]
+
+cc_library(
+    name = "afl-fuzz",
+    srcs = ["afl-fuzz.c"],
+    copts = CFLAGS,
+    linkopts = LDFLAGS,
+    deps = [":comm_hdr"],
+)
+
+cc_library(
+    name = "afl-showmap",
+    srcs = ["afl-showmap.c"],
+    copts = CFLAGS,
+    linkopts = LDFLAGS,
+    deps = [":comm_hdr"],
+)
+
+cc_library(
+    name = "afl-llvm-rt",
+    srcs = ["llvm_mode/afl-llvm-rt.o.c"],
+    copts = ["-Wno-pointer-sign -O3"],
+    visibility = ["//visibility:private"],
+    deps = [":comm_hdr"],
+)
+
+cc_library(
+    name = "fuzzing_engine",
+    srcs = ["afl_driver.cpp"],
+    copts = ["-fsanitize=address -O3"],
+    linkopts = ["-fsanitize=address"],
+    deps = [":afl-llvm-rt"],
+)
