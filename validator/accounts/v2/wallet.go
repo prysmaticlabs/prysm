@@ -11,13 +11,11 @@ import (
 	"path"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
-	"github.com/logrusorgru/aurora"
-
 	petname "github.com/dustinkirkland/golang-petname"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"

@@ -8,35 +8,30 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/urfave/cli/v2"
-
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/urfave/cli/v2"
 )
 
 func setupWallet(t *testing.T, testDir string) *Wallet {
 	walletDir := filepath.Join(testDir, walletDirName)
 	passwordsDir := filepath.Join(testDir, passwordDirName)
 	ctx := context.Background()
-	err := initializeDirectWallet(walletDir, passwordsDir)
-	assert.NoError(t, err)
+
+	assert.NoError(t, initializeDirectWallet(walletDir, passwordsDir))
 	cfg := &WalletConfig{
 		WalletDir:      walletDir,
 		PasswordsDir:   passwordsDir,
 		KeymanagerKind: v2.Direct,
 	}
 	w, err := NewWallet(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	assert.NoError(t, err)
 	keymanager, err := w.InitializeKeymanager(ctx, true)
-	if err != nil {
-		t.Fatalf("Could not initialize keymanager: %v", err)
-	}
+	assert.NoError(t, err)
 
 	assert.NoError(t, err)
 	if _, err := keymanager.CreateAccount(ctx, password); err != nil {

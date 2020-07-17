@@ -46,7 +46,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 
 	allAccounts, err := wallet.AccountNames()
 	if err != nil {
-		log.WithError(err).Error("Could not get account names")
+		log.WithError(err).Fatal("Could not get account names")
 	}
 	accounts, err := selectAccounts(cliCtx, allAccounts)
 	if err != nil {
