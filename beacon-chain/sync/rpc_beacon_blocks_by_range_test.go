@@ -41,10 +41,10 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	}
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false),
-		chain: &chainMock.ChainService{}}
+	r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
 	pcl := protocol.ID("/testing")
-
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -66,7 +66,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make sure that rate limiter doesn't limit capacity exceedingly.
-	remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
+	remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 	expectedCapacity := int64(req.Count*10 - req.Count)
 	require.Equal(t, expectedCapacity, remainingCapacity, "Unexpected rate limiting capacity")
 
@@ -95,9 +95,11 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	}
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false),
+	r := &Service{p2p: p1, db: d, rateLimiter: newRateLimiter(p1),
 		chain: &chainMock.ChainService{}}
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -148,8 +150,10 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		require.NoError(t, d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: i}}))
 	}
 
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false), chain: &chainMock.ChainService{}}
+	r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -223,8 +227,11 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 		capacity := int64(flags.Get().BlockBatchLimit * 3)
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false), chain: &chainMock.ChainService{}}
+		r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
 
+		pcl := protocol.ID("/testing")
+		topic := string(pcl)
+		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, false)
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
 			Step:      5,
@@ -236,7 +243,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		assert.NoError(t, sendRequest(p1, p2, r, req, true))
 		testutil.AssertLogsDoNotContain(t, hook, "Disconnecting bad peer")
 
-		remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
+		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used, but no overflow.
 		assert.Equal(t, expectedCapacity, remainingCapacity, "Unexpected rate limiting capacity")
 	})
@@ -248,7 +255,11 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 		capacity := int64(flags.Get().BlockBatchLimit * 3)
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false), chain: &chainMock.ChainService{}}
+		r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
+
+		pcl := protocol.ID("/testing")
+		topic := string(pcl)
+		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, false)
 
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
@@ -265,7 +276,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		// Make sure that we were blocked indeed.
 		testutil.AssertLogsContain(t, hook, "Disconnecting bad peer")
 
-		remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
+		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used.
 		assert.Equal(t, expectedCapacity, remainingCapacity, "Unexpected rate limiting capacity")
 	})
@@ -277,7 +288,10 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 		capacity := int64(flags.Get().BlockBatchLimit * flags.Get().BlockBatchLimitBurstFactor)
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false), chain: &chainMock.ChainService{}}
+		r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
+		pcl := protocol.ID("/testing")
+		topic := string(pcl)
+		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, false)
 
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
@@ -300,7 +314,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 		testutil.AssertLogsContain(t, hook, "Disconnecting bad peer")
 
-		remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
+		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used.
 		assert.Equal(t, expectedCapacity, remainingCapacity, "Unexpected rate limiting capacity")
 	})

@@ -187,6 +187,10 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	if !ok {
 		return errors.New("message is not type *pb.Status")
 	}
+	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
+		return err
+	}
+	s.rateLimiter.add(stream, 1)
 
 	if err := s.validateStatusMessage(ctx, m); err != nil {
 		log.WithFields(logrus.Fields{
