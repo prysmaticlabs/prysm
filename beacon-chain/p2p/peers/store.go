@@ -18,12 +18,12 @@ import (
 type peerDataStore struct {
 	sync.RWMutex
 	ctx    context.Context
-	params *peerDataStoreParams
+	config *peerDataStoreConfig
 	peers  map[peer.ID]*peerData
 }
 
-// peerDataStoreParams holds peer store parameters.
-type peerDataStoreParams struct {
+// peerDataStoreConfig holds peer store parameters.
+type peerDataStoreConfig struct {
 	maxPeers int
 }
 
@@ -40,10 +40,10 @@ type peerData struct {
 }
 
 // newPeerDataStore creates peer store.
-func newPeerDataStore(ctx context.Context, params *peerDataStoreParams) *peerDataStore {
+func newPeerDataStore(ctx context.Context, config *peerDataStoreConfig) *peerDataStore {
 	return &peerDataStore{
 		ctx:    ctx,
-		params: params,
+		config: config,
 		peers:  make(map[peer.ID]*peerData),
 	}
 }

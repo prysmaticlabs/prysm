@@ -18,9 +18,9 @@ func TestPeerScorer_BadResponsesThreshold(t *testing.T) {
 	defer cancel()
 
 	maxBadResponses := 2
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -32,9 +32,9 @@ func TestPeerScorer_BadResponses(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit:    30,
-		ScorerParams: &peers.PeerScorerParams{},
+		ScorerParams: &peers.PeerScorerConfig{},
 	})
 	scorer := peerStatuses.Scorer()
 
@@ -53,9 +53,9 @@ func TestPeerScorer_decayBadResponsesStats(t *testing.T) {
 	defer cancel()
 
 	maxBadResponses := 2
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold:     maxBadResponses,
 			BadResponsesWeight:        1,
 			BadResponsesDecayInterval: 50 * time.Nanosecond,
@@ -108,9 +108,9 @@ func TestPeerScorer_IsBadPeer(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit:    30,
-		ScorerParams: &peers.PeerScorerParams{},
+		ScorerParams: &peers.PeerScorerConfig{},
 	})
 	scorer := peerStatuses.Scorer()
 	pid := peer.ID("peer1")
@@ -133,9 +133,9 @@ func TestPeerScorer_BadPeers(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit:    30,
-		ScorerParams: &peers.PeerScorerParams{},
+		ScorerParams: &peers.PeerScorerConfig{},
 	})
 	scorer := peerStatuses.Scorer()
 	pids := []peer.ID{peer.ID("peer1"), peer.ID("peer2"), peer.ID("peer3"), peer.ID("peer4"), peer.ID("peer5")}

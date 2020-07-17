@@ -6,7 +6,7 @@ import (
 
 // BadResponsesThreshold returns the maximum number of bad responses a peer can provide before it is considered bad.
 func (s *PeerScorer) BadResponsesThreshold() int {
-	return s.params.BadResponsesThreshold
+	return s.config.BadResponsesThreshold
 }
 
 // BadResponses obtains the number of bad responses we have received from the given remote peer.
@@ -50,7 +50,7 @@ func (s *PeerScorer) IsBadPeer(pid peer.ID) bool {
 // isBadPeer is lock-free version of IsBadPeer.
 func (s *PeerScorer) isBadPeer(pid peer.ID) bool {
 	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.badResponsesCount >= s.params.BadResponsesThreshold
+		return peerData.badResponsesCount >= s.config.BadResponsesThreshold
 	}
 	return false
 }
@@ -62,7 +62,7 @@ func (s *PeerScorer) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid, peerData := range s.store.peers {
-		if peerData.badResponsesCount >= s.params.BadResponsesThreshold {
+		if peerData.badResponsesCount >= s.config.BadResponsesThreshold {
 			badPeers = append(badPeers, pid)
 		}
 	}

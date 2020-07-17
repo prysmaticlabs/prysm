@@ -62,27 +62,25 @@ var (
 // Status is the structure holding the peer status information.
 type Status struct {
 	ctx    context.Context
-	params *StatusParams
 	scorer *PeerScorer
 	store  *peerDataStore
 }
 
-// StatusParams represents peer status service params.
-type StatusParams struct {
+// StatusConfig represents peer status service params.
+type StatusConfig struct {
 	PeerLimit    int
-	ScorerParams *PeerScorerParams
+	ScorerParams *PeerScorerConfig
 }
 
 // NewStatus creates a new status entity.
-func NewStatus(ctx context.Context, params *StatusParams) *Status {
-	store := newPeerDataStore(ctx, &peerDataStoreParams{
-		maxPeers: maxLimitBuffer + params.PeerLimit,
+func NewStatus(ctx context.Context, config *StatusConfig) *Status {
+	store := newPeerDataStore(ctx, &peerDataStoreConfig{
+		maxPeers: maxLimitBuffer + config.PeerLimit,
 	})
 	return &Status{
 		ctx:    ctx,
-		params: params,
 		store:  store,
-		scorer: newPeerScorer(ctx, store, params.ScorerParams),
+		scorer: newPeerScorer(ctx, store, config.ScorerParams),
 	}
 }
 
@@ -93,7 +91,7 @@ func (p *Status) Scorer() *PeerScorer {
 
 // MaxPeerLimit returns the max peer limit stored in the current peer store.
 func (p *Status) MaxPeerLimit() int {
-	return p.store.params.maxPeers
+	return p.store.config.maxPeers
 }
 
 // Add adds a peer.
@@ -387,7 +385,7 @@ func (p *Status) Prune() {
 	defer p.store.Unlock()
 
 	// Exit early if there is nothing to prune.
-	if len(p.store.peers) <= p.store.params.maxPeers {
+	if len(p.store.peers) <= p.store.config.maxPeers {
 		return
 	}
 
@@ -418,7 +416,7 @@ func (p *Status) Prune() {
 		return peersToPrune[i].badResp < peersToPrune[j].badResp
 	})
 
-	limitDiff := len(p.store.peers) - p.store.params.maxPeers
+	limitDiff := len(p.store.peers) - p.store.config.maxPeers
 	if limitDiff > len(peersToPrune) {
 		limitDiff = len(peersToPrune)
 	}

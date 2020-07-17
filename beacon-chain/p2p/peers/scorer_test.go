@@ -16,10 +16,10 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	t.Run("default params", func(t *testing.T) {
-		peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	t.Run("default config", func(t *testing.T) {
+		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit:    30,
-			ScorerParams: &peers.PeerScorerParams{},
+			ScorerParams: &peers.PeerScorerConfig{},
 		})
 		scorer := peerStatuses.Scorer()
 		assert.Equal(t, peers.DefaultBadResponsesThreshold, scorer.Params().BadResponsesThreshold, "Unexpected threshold value")
@@ -27,10 +27,10 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 		assert.Equal(t, peers.DefaultBadResponsesDecayInterval, scorer.Params().BadResponsesDecayInterval, "Unexpected decay interval value")
 	})
 
-	t.Run("explicit params", func(t *testing.T) {
-		peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	t.Run("explicit config", func(t *testing.T) {
+		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit: 30,
-			ScorerParams: &peers.PeerScorerParams{
+			ScorerParams: &peers.PeerScorerConfig{
 				BadResponsesThreshold:     2,
 				BadResponsesWeight:        -1,
 				BadResponsesDecayInterval: 1 * time.Minute,
@@ -47,9 +47,9 @@ func TestPeerScorer_Score(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold:     5,
 			BadResponsesWeight:        -0.5,
 			BadResponsesDecayInterval: 50 * time.Millisecond,
@@ -96,9 +96,9 @@ func TestPeerScorer_loop(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold:     5,
 			BadResponsesWeight:        -0.5,
 			BadResponsesDecayInterval: 50 * time.Millisecond,

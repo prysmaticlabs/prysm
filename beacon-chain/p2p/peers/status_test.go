@@ -19,9 +19,9 @@ import (
 
 func TestStatus(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -31,9 +31,9 @@ func TestStatus(t *testing.T) {
 
 func TestPeerExplicitAdd(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -70,9 +70,9 @@ func TestPeerExplicitAdd(t *testing.T) {
 
 func TestPeerNoENR(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -92,9 +92,9 @@ func TestPeerNoENR(t *testing.T) {
 
 func TestPeerNoOverwriteENR(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -117,9 +117,9 @@ func TestPeerNoOverwriteENR(t *testing.T) {
 
 func TestErrUnknownPeer(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -148,9 +148,9 @@ func TestErrUnknownPeer(t *testing.T) {
 
 func TestPeerCommitteeIndices(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -183,9 +183,9 @@ func TestPeerCommitteeIndices(t *testing.T) {
 
 func TestPeerSubscribedToSubnet(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -225,9 +225,9 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 
 func TestPeerImplicitAdd(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -246,9 +246,9 @@ func TestPeerImplicitAdd(t *testing.T) {
 
 func TestPeerChainState(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -279,9 +279,9 @@ func TestPeerChainState(t *testing.T) {
 
 func TestPeerBadResponses(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -326,9 +326,9 @@ func TestPeerBadResponses(t *testing.T) {
 
 func TestAddMetaData(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -353,9 +353,9 @@ func TestAddMetaData(t *testing.T) {
 
 func TestPeerConnectionStatuses(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -393,9 +393,9 @@ func TestPeerConnectionStatuses(t *testing.T) {
 
 func TestPrune(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -440,9 +440,9 @@ func TestPrune(t *testing.T) {
 }
 
 func TestTrimmedOrderedPeers(t *testing.T) {
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: 1,
 		},
 	})
@@ -503,9 +503,9 @@ func TestBestPeer(t *testing.T) {
 	expectedFinEpoch := uint64(4)
 	expectedRoot := [32]byte{'t', 'e', 's', 't'}
 	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -553,9 +553,9 @@ func TestBestPeer(t *testing.T) {
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	maxBadResponses := 2
 	maxPeers := 10
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
@@ -574,9 +574,9 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 
 func TestStatus_CurrentEpoch(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(context.Background(), &peers.StatusParams{
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerParams{
+		ScorerParams: &peers.PeerScorerConfig{
 			BadResponsesThreshold: maxBadResponses,
 		},
 	})
