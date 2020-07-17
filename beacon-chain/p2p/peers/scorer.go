@@ -8,11 +8,12 @@ import (
 )
 
 const (
-	// How many bad responses to tolerate before peer is deemed bad.
+	// DefaultBadResponsesThreshold defines how many bad responses to tolerate before peer is deemed bad.
 	DefaultBadResponsesThreshold = 6
-	// Since score represents penalty, it has negative weight.
+	// DefaultBadResponsesWeight is a default weight. Since score represents penalty, it has negative weight.
 	DefaultBadResponsesWeight = -1.0
-	// How often to decay previous statistics. Every interval bad responses counter will be decremented by 1.
+	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
+	// Every interval bad responses counter will be decremented by 1.
 	DefaultBadResponsesDecayInterval = time.Hour
 )
 
