@@ -1,4 +1,4 @@
-package derived
+package v2
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ func (m *EnglishMnemonicGenerator) Generate(data []byte) (string, error) {
 func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 	log.Info(
 		"Write down the sentence below, as it is your only " +
-			"means of recovering your withdrawal key",
+			"means of recovering your wallet",
 	)
 	fmt.Printf(`
 =================Withdrawal Key Recovery Phrase====================

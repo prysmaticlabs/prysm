@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
 	"strconv"
 	"sync"
 
-	"github.com/cloudflare/roughtime"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -111,6 +113,22 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
+func InitializeWalletSeed(ctx context.Context) ([]byte, error) {
+	walletSeed := make([]byte, 32)
+	n, err := rand.NewGenerator().Read(walletSeed)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize wallet seed")
+	}
+	if n != len(walletSeed) {
+		return nil, errors.New("could not randomly create seed")
+	}
+	return walletSeed, nil
+}
+
+func MarshalEncryptedSeedFile(ctx context.Context, seed []byte) ([]byte, error) {
+	return nil, nil
+}
+
 // CreateAccount for a derived keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It uses the EIP-2333 and EIP-2334
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
@@ -118,44 +136,63 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// TODO: needs better formatting at the top
-	// Increment the account number.
-	dr.accountNum++
 	withdrawalKeyPath := fmt.Sprintf("m/12381/3600/%d/0", dr.accountNum)
-	//validatingKeyPath := fmt.Sprintf("m/12381/3600/%d/0/0", dr.accountNum)
+	validatingKeyPath := fmt.Sprintf("m/12381/3600/%d/0/0", dr.accountNum)
 	// TODO: better seed.
 	seed := make([]byte, 32)
 	copy(seed, "hello world")
 
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(seed, withdrawalKeyPath)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to create private key for account %d", dr.accountNum)
+		return "", errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.accountNum)
 	}
-	// Encrypt the private key
-	publicKey := withdrawalKey.PublicKey()
+	validatingKey, err := util.PrivateKeyFromSeedAndPath(seed, validatingKeyPath)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to create validating key for account %d", dr.accountNum)
+	}
+
+	// Create encrypted keystores for both the withdrawal and validating keys.
 	encodedWithdrawalKeystore, err := dr.generateKeystoreFile(
 		withdrawalKey.Marshal(),
-		publicKey.Marshal(),
+		withdrawalKey.PublicKey().Marshal(),
 		password,
 	)
 	if err != nil {
 		return "", err
 	}
-	// TODO: Need ability to write a file at a path.
+	encodedValidatingKeystore, err := dr.generateKeystoreFile(
+		validatingKey.Marshal(),
+		validatingKey.PublicKey().Marshal(),
+		password,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	// Write both keystores to disk at their respective derived paths.
 	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, KeystoreFileName, encodedWithdrawalKeystore); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.accountNum)
 	}
-	// Finally, write the account creation timestamp as a file.
+	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, KeystoreFileName, encodedValidatingKeystore); err != nil {
+		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.accountNum)
+	}
+
+	// Finally, write the account creation timestamps as a files.
 	createdAt := roughtime.Now().Unix()
 	createdAtStr := strconv.FormatInt(createdAt, 10)
 	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, TimestampFileName, []byte(createdAtStr)); err != nil {
 		return "", errors.Wrapf(err, "could not write timestamp file for account %d", dr.accountNum)
 	}
+	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, TimestampFileName, []byte(createdAtStr)); err != nil {
+		return "", errors.Wrapf(err, "could not write timestamp file for account %d", dr.accountNum)
+	}
 
 	log.WithFields(logrus.Fields{
 		"accountNumber":       dr.accountNum,
-		"validatingPublicKey": fmt.Sprintf("%%x", publicKey),
-		"path":                dr.wallet.AccountsDir() + withdrawalKeyPath,
+		"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
+		"path":                path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
 	}).Info("Successfully created new validator account")
+	dr.accountNum++
 	return fmt.Sprintf("%d", dr.accountNum), nil
 }
 

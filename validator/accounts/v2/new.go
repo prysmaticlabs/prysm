@@ -63,8 +63,8 @@ func NewAccount(cliCtx *cli.Context) error {
 		log.Fatalf("Could not open wallet: %v", err)
 	}
 
-	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	// We initialize a new keymanager depending on the wallet's keymanager kind.
+	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
 		log.Fatalf("Could not initialize keymanager: %v", err)

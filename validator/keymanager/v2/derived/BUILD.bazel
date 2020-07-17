@@ -15,8 +15,7 @@ go_library(
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
-        "@com_github_cloudflare_roughtime//:go_default_library",
-        "@com_github_google_martian//log:go_default_library",
+        "//shared/roughtime:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

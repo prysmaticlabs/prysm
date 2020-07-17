@@ -31,6 +31,7 @@ const (
 	// PasswordsDefaultDirName where account passwords are stored.
 	PasswordsDefaultDirName  = ".prysm-wallet-v2-passwords"
 	keymanagerConfigFileName = "keymanageropts.json"
+	encryptedSeedFileName    = "seed.encrypted.json"
 	passwordFileSuffix       = ".pass"
 	numAccountWords          = 3 // Number of words in account human-readable names.
 	accountFilePermissions   = os.O_CREATE | os.O_RDWR
@@ -221,6 +222,9 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 // WriteFileAtPath --
 func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName string, data []byte) error {
 	accountPath := path.Join(w.accountsPath, filePath)
+	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
+		return errors.Wrapf(err, "could not create path: %s", accountPath)
+	}
 	fullPath := path.Join(accountPath, fileName)
 	if err := ioutil.WriteFile(fullPath, data, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", filePath)
@@ -263,7 +267,18 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	if err := ioutil.WriteFile(configFilePath, encoded, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", configFilePath)
 	}
-	log.WithField("configFile", configFilePath).Debug("Wrote keymanager config file to disk")
+	log.WithField("configFilePath", configFilePath).Debug("Wrote keymanager config file to disk")
+	return nil
+}
+
+// WriteEncryptedSeedToDisk --
+func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
+	seedFilePath := path.Join(w.accountsPath, encryptedSeedFileName)
+	// Write the config file to disk.
+	if err := ioutil.WriteFile(seedFilePath, encoded, os.ModePerm); err != nil {
+		return errors.Wrapf(err, "could not write %s", seedFilePath)
+	}
+	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
 	return nil
 }
 
