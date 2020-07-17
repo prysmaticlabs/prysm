@@ -18,7 +18,7 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 
 	t.Run("default params", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
-			PeerLimit:    5,
+			PeerLimit:    30,
 			ScorerParams: &peers.PeerScorerParams{},
 		})
 		scorer := peerStatuses.Scorer()
@@ -29,7 +29,7 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 
 	t.Run("explicit params", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
-			PeerLimit: 5,
+			PeerLimit: 30,
 			ScorerParams: &peers.PeerScorerParams{
 				BadResponsesThreshold:     2,
 				BadResponsesWeight:        -1,
@@ -48,7 +48,7 @@ func TestPeerScorer_Score(t *testing.T) {
 	defer cancel()
 
 	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
-		PeerLimit: 5,
+		PeerLimit: 30,
 		ScorerParams: &peers.PeerScorerParams{
 			BadResponsesThreshold:     5,
 			BadResponsesWeight:        -0.5,
@@ -97,7 +97,7 @@ func TestPeerScorer_loop(t *testing.T) {
 	defer cancel()
 
 	peerStatuses := peers.NewStatus(ctx, &peers.StatusParams{
-		PeerLimit: 5,
+		PeerLimit: 30,
 		ScorerParams: &peers.PeerScorerParams{
 			BadResponsesThreshold:     5,
 			BadResponsesWeight:        -0.5,

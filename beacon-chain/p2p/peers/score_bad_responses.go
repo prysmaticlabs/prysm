@@ -31,6 +31,9 @@ func (s *PeerScorer) IncrementBadResponses(pid peer.ID) {
 	defer s.store.Unlock()
 
 	if _, ok := s.store.peers[pid]; !ok {
+		s.store.peers[pid] = &peerData{
+			badResponsesCount: 1,
+		}
 		return
 	}
 	s.store.peers[pid].badResponsesCount++
