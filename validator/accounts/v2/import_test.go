@@ -20,9 +20,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	importPasswordDir := filepath.Join(testDir, importPasswordDirName)
 
 	passwordFilePath := filepath.Join(testDir, passwordFileName)
-	if err := ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	defer func() {
 		assert.NoError(t, os.RemoveAll(exportDir))
 		assert.NoError(t, os.RemoveAll(importDir))
@@ -43,20 +41,17 @@ func TestImport_Noninteractive(t *testing.T) {
 	wallet := setupWallet(t, testDir)
 
 	accounts, err := wallet.AccountNames()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	if len(accounts) == 0 {
 		t.Fatal("Expected more accounts, received 0")
 	}
-	if err := wallet.zipAccounts(accounts, exportDir); err != nil {
-		t.Fatal(err)
-	}
+	err = wallet.zipAccounts(accounts, exportDir)
+	assert.NoError(t, err)
+
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
 
-	if err := ImportAccount(cliCtx); err != nil {
-		t.Fatal(err)
-	}
+	err = ImportAccount(cliCtx)
+	assert.NoError(t, err)
 }

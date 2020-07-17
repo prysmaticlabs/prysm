@@ -20,9 +20,8 @@ func setupWallet(t *testing.T, testDir string) *Wallet {
 	walletDir := filepath.Join(testDir, walletDirName)
 	passwordsDir := filepath.Join(testDir, passwordDirName)
 	ctx := context.Background()
-	if err := initializeDirectWallet(walletDir, passwordsDir); err != nil {
-		t.Fatal(err)
-	}
+	err := initializeDirectWallet(walletDir, passwordsDir)
+	assert.NoError(t, err)
 	cfg := &WalletConfig{
 		WalletDir:      walletDir,
 		PasswordsDir:   passwordsDir,
@@ -32,13 +31,19 @@ func setupWallet(t *testing.T, testDir string) *Wallet {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	assert.NoError(t, err)
 	keymanager, err := w.InitializeKeymanager(ctx, true)
 	if err != nil {
 		t.Fatalf("Could not initialize keymanager: %v", err)
 	}
+
+	assert.NoError(t, err)
 	if _, err := keymanager.CreateAccount(ctx, password); err != nil {
 		t.Fatalf("Could not create account in wallet: %v", err)
 	}
+
+	assert.NoError(t, err)
 	return w
 }
 
@@ -57,24 +62,20 @@ func TestZipAndUnzip(t *testing.T) {
 	wallet := setupWallet(t, testDir)
 
 	accounts, err := wallet.AccountNames()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	if len(accounts) == 0 {
 		t.Fatal("Expected more accounts, received 0")
 	}
-	if err := wallet.zipAccounts(accounts, exportDir); err != nil {
-		t.Fatal(err)
-	}
+	err = wallet.zipAccounts(accounts, exportDir)
+	assert.NoError(t, err)
 
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
 
 	importedAccounts, err := unzipArchiveToTarget(exportDir, importDir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	allAccountsStr := strings.Join(accounts, " ")
 	for _, importedAccount := range importedAccounts {
@@ -108,9 +109,8 @@ func TestExport_Noninteractive(t *testing.T) {
 	assert.NoError(t, set.Set(flags.AccountsFlag.Name, accounts))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	if err := ExportAccount(cliCtx); err != nil {
-		t.Fatal(err)
-	}
+	err := ExportAccount(cliCtx)
+	assert.NoError(t, err)
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
