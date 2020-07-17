@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
+
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -35,8 +37,9 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d, _ := db.SetupDB(t)
 	r := &Service{
-		db:  d,
-		p2p: p1,
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	p1.Peers().Add(new(enr.Record), p2.BHost.ID(), p2.BHost.Addrs()[0], network.DirUnknown)
@@ -44,6 +47,8 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 
 	// Setup streams
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -87,8 +92,9 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d, _ := db.SetupDB(t)
 	r := &Service{
-		db:  d,
-		p2p: p1,
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	p1.Peers().Add(new(enr.Record), p2.BHost.ID(), p2.BHost.Addrs()[0], network.DirUnknown)
@@ -98,11 +104,15 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.Peers().SetMetadata(p1.BHost.ID(), p1.LocalMetadata)
 
 	r2 := &Service{
-		db:  d,
-		p2p: p2,
+		db:          d,
+		p2p:         p2,
+		rateLimiter: newRateLimiter(p2),
 	}
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/ping/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
