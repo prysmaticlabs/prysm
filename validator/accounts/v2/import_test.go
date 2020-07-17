@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -22,7 +23,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	importPasswordDir := filepath.Join(testDir, importPasswordDirName)
 
 	passwordFilePath := filepath.Join(testDir, passwordFileName)
-	assert.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	defer func() {
 		assert.NoError(t, os.RemoveAll(walletDir))
 		assert.NoError(t, os.RemoveAll(passwordsDir))
@@ -34,13 +35,10 @@ func TestImport_Noninteractive(t *testing.T) {
 	wallet := setupWallet(t, testDir)
 
 	accounts, err := wallet.AccountNames()
-	assert.NoError(t, err)
-	if len(accounts) == 0 {
-		t.Fatal("Expected more accounts, received 0")
-	}
-	err = wallet.zipAccounts(accounts, exportDir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	assert.Equal(t, len(accounts), 0)
 
+	require.NoError(t, wallet.zipAccounts(accounts, exportDir))
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
@@ -57,6 +55,5 @@ func TestImport_Noninteractive(t *testing.T) {
 	assert.NoError(t, set.Set(flags.PasswordFileFlag.Name, passwordFilePath))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	err = ImportAccount(cliCtx)
-	assert.NoError(t, err)
+	require.NoError(t, ImportAccount(cliCtx))
 }

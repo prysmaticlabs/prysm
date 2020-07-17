@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -27,18 +29,13 @@ func setupWallet(t *testing.T, testDir string) *Wallet {
 		KeymanagerKind: v2.Direct,
 	}
 	w, err := NewWallet(ctx, cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
 	keymanager, err := w.InitializeKeymanager(ctx, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
-	if _, err := keymanager.CreateAccount(ctx, password); err != nil {
-		t.Fatalf("Could not create account in wallet: %v", err)
-	}
-
-	assert.NoError(t, err)
+	_, err = keymanager.CreateAccount(ctx, password)
+	require.NoError(t, err)
 	return w
 }
 
@@ -57,20 +54,20 @@ func TestZipAndUnzip(t *testing.T) {
 	wallet := setupWallet(t, testDir)
 
 	accounts, err := wallet.AccountNames()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	if len(accounts) == 0 {
 		t.Fatal("Expected more accounts, received 0")
 	}
 	err = wallet.zipAccounts(accounts, exportDir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
 
 	importedAccounts, err := unzipArchiveToTarget(exportDir, importDir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	allAccountsStr := strings.Join(accounts, " ")
 	for _, importedAccount := range importedAccounts {
@@ -104,8 +101,7 @@ func TestExport_Noninteractive(t *testing.T) {
 	assert.NoError(t, set.Set(flags.AccountsFlag.Name, accounts))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	err := ExportAccount(cliCtx)
-	assert.NoError(t, err)
+	require.NoError(t, ExportAccount(cliCtx))
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
