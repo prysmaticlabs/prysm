@@ -26,8 +26,8 @@ const (
 )
 
 var keymanagerKindSelections = map[v2keymanager.Kind]string{
-	v2keymanager.Direct:  "Direct, On-Disk Wallet (Recommended)",
-	v2keymanager.Derived: "Derived HD Wallet (Advanced)",
+	v2keymanager.Direct:  "Non-HD Wallet (Basic)",
+	v2keymanager.Derived: "Derived HD Wallet (Recommended)",
 	v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 }
 
@@ -48,8 +48,8 @@ func NewAccount(cliCtx *cli.Context) error {
 	}
 
 	// Only direct keymanagers can create accounts for now.
-	if keymanagerKind != v2keymanager.Direct {
-		log.Fatalf("cannot create a new account for a %s keymanager", keymanagerKind)
+	if keymanagerKind == v2keymanager.Remote {
+		log.Fatal("Cannot create a new account for a remote keymanager")
 	}
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
