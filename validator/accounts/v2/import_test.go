@@ -36,7 +36,7 @@ func TestImport_Noninteractive(t *testing.T) {
 
 	accounts, err := wallet.AccountNames()
 	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
+	assert.Equal(t, len(accounts), 1)
 
 	require.NoError(t, wallet.zipAccounts(accounts, exportDir))
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
