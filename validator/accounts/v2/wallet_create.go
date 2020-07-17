@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
@@ -51,7 +52,13 @@ func CreateWallet(cliCtx *cli.Context) error {
 				"Make a new validator account with ./prysm.sh validator accounts-2 new",
 		)
 	case v2keymanager.Derived:
-		log.Fatal("Derived keymanager is not yet supported")
+		if err = initializeDerivedWallet(cliCtx, walletDir); err != nil {
+			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
+		}
+		log.WithField("wallet-path", walletDir).Infof(
+			"Successfully created HD wallet and saved configuration to disk. " +
+				"Make a new validator account with ./prysm.sh validator accounts-2 new",
+		)
 	case v2keymanager.Remote:
 		if err = initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
@@ -79,6 +86,29 @@ func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
 		return errors.Wrap(err, "could not create new wallet")
 	}
 	keymanagerConfig, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
+	if err != nil {
+		return errors.Wrap(err, "could not marshal keymanager config file")
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return errors.Wrap(err, "could not write keymanager config to disk")
+	}
+	return nil
+}
+
+func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
+	passwordsDirPath := inputPasswordsDirectory(cliCtx)
+	walletConfig := &WalletConfig{
+		PasswordsDir:      passwordsDirPath,
+		WalletDir:         walletDir,
+		KeymanagerKind:    v2keymanager.Derived,
+		CanUnlockAccounts: true,
+	}
+	ctx := context.Background()
+	wallet, err := NewWallet(ctx, walletConfig)
+	if err != nil {
+		return errors.Wrap(err, "could not create new wallet")
+	}
+	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}

@@ -212,6 +212,20 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 	return accountName, nil
 }
 
+// WriteFileAtPath --
+func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName string, data []byte) error {
+	accountPath := path.Join(w.accountsPath, filePath)
+	fullPath := path.Join(accountPath, fileName)
+	if err := ioutil.WriteFile(fullPath, data, os.ModePerm); err != nil {
+		return errors.Wrapf(err, "could not write %s", filePath)
+	}
+	log.WithFields(logrus.Fields{
+		"path":     fullPath,
+		"fileName": fileName,
+	}).Debug("Wrote new file at path")
+	return nil
+}
+
 // WriteFileForAccount stores a unique file and its data under an account namespace
 // in the wallet's directory on-disk. Creates the file if it does not exist
 // and writes over it otherwise.
@@ -267,6 +281,29 @@ func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 		return "", errors.Wrapf(err, "could not read data from password file: %s", passwordFilePath)
 	}
 	return string(password), nil
+}
+
+// ReadFileForAccount from the wallet's accounts directory.
+func (w *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
+	accountPath := path.Join(w.accountsPath, accountName)
+	exists, err := hasDir(accountPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if account exists in directory: %s", w.accountsPath)
+	}
+	if !exists {
+		return nil, errors.Wrapf(err, "account does not exist in wallet directory: %s", w.accountsPath)
+	}
+	filePath := path.Join(accountPath, fileName)
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read file for account: %s", filePath)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Errorf("Could not close file after writing: %s", filePath)
+		}
+	}()
+	return ioutil.ReadAll(f)
 }
 
 func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
@@ -350,29 +387,6 @@ func (w *Wallet) keystoreForAccount(accountName string) (*direct.Keystore, error
 		return nil, errors.Wrap(err, "could not decode json")
 	}
 	return keystoreJSON, nil
-}
-
-// ReadFileForAccount from the wallet's accounts directory.
-func (w *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
-	accountPath := path.Join(w.accountsPath, accountName)
-	exists, err := hasDir(accountPath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not check if account exists in directory: %s", w.accountsPath)
-	}
-	if !exists {
-		return nil, errors.Wrapf(err, "account does not exist in wallet directory: %s", w.accountsPath)
-	}
-	filePath := path.Join(accountPath, fileName)
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read file for account: %s", filePath)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Errorf("Could not close file after writing: %s", filePath)
-		}
-	}()
-	return ioutil.ReadAll(f)
 }
 
 // Writes the password file for an account namespace in the wallet's passwords directory.
