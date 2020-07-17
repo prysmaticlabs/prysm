@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/logrusorgru/aurora"
 
 	petname "github.com/dustinkirkland/golang-petname"
@@ -308,6 +310,10 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 
 			attemptingPassword = false
 		}
+	}
+
+	if err := os.MkdirAll(w.passwordsDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+		return err
 	}
 	if err := w.writePasswordToFile(accountName, password); err != nil {
 		return errors.Wrap(err, "could not write password to disk")
