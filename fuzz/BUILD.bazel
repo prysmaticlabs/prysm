@@ -215,6 +215,20 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
+    name = "state_fuzz_test",
+    srcs = [
+        "state_fuzz.go",
+    ] + COMMON_SRCS,
+    corpus = "@sigp_beacon_fuzz_corpora//:0_11_0_mainnet_beaconstate",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/beaconstate",
+    func = "BeaconStateFuzz",
+    importpath = IMPORT_PATH,
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+    ] + COMMON_DEPS,
+)
+
+go_fuzz_test(
     name = "voluntary_exit_fuzz_test",
     srcs = [
         "voluntary_exit_fuzz.go",

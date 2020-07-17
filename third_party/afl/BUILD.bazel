@@ -27,18 +27,20 @@ CFLAGS = [
 LDFLAGS = ["-ldl"]
 
 cc_library(
-    name = "afl-fuzz",
+    name = "lib-afl-fuzz",
     srcs = ["afl-fuzz.c"],
     copts = CFLAGS,
     linkopts = LDFLAGS,
+    visibility = ["//visibility:private"],
     deps = [":comm_hdr"],
 )
 
 cc_library(
-    name = "afl-showmap",
+    name = "lib-afl-showmap",
     srcs = ["afl-showmap.c"],
     copts = CFLAGS,
     linkopts = LDFLAGS,
+    visibility = ["//visibility:private"],
     deps = [":comm_hdr"],
 )
 
@@ -56,4 +58,22 @@ cc_library(
     copts = ["-fsanitize=address -O3"],
     linkopts = ["-fsanitize=address"],
     deps = [":afl-llvm-rt"],
+)
+
+genrule(
+    name = "libs",
+    srcs = [
+        ":lib-afl-fuzz",
+        ":lib-afl-showmap",
+    ],
+    outs = [
+        "afl-fuzz",
+        "afl-showmap",
+    ],
+    cmd = """
+cp $(locations :lib-afl-fuzz) .
+cp $(locations :lib-afl-showmap) .
+mv liblib-afl-fuzz.a $(location afl-fuzz)
+mv liblib-afl-showmap.a $(location afl-showmap)
+""",
 )

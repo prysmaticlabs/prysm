@@ -121,9 +121,39 @@ def go_fuzz_test(
         additional_args += ["-max_len=%s" % input_size]
 
     native.cc_test(
+        name = name + "_with_afl",
+        linkopts = [
+            "-fsanitize=address",
+            "-fsanitize-coverage=trace-pc-guard",
+        ],
+        linkstatic = 1,
+        testonly = 1,
+        srcs = [":" + name],
+        deps = [
+            "@herumi_bls_eth_go_binary//:lib",
+            "//third_party/afl:fuzzing_engine",
+        ],
+        tags = ["manual", "fuzzer"] + tags,
+    )
+
+    native.genrule(
+        name = name + "_with_afl_bundle",
+        outs = [name + "_afl_bundle.zip"],
+        srcs = [
+            "//third_party/afl:libs",
+            ":" + name + "_with_afl",
+        ],
+        cmd = "cp $(location :" + name + "_with_afl) fuzzer; $(location @bazel_tools//tools/zip:zipper) cf $@ $(locations //third_party/afl:libs) fuzzer",
+        tools = [
+            "@bazel_tools//tools/zip:zipper",
+        ],
+        testonly = 1,
+    )
+
+    native.cc_test(
         name = name + "_with_libfuzzer",
         linkopts = ["-fsanitize=fuzzer,address"],
-        copts = ["-fsantize=fuzzer,address"],
+        copts = ["-fsanitize=fuzzer,address"],
         linkstatic = 1,
         testonly = 1,
         srcs = [":" + name],
