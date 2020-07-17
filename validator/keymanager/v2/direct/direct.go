@@ -85,12 +85,14 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:            wallet,
-		cfg:               cfg,
-		mnemonicGenerator: &EnglishMnemonicGenerator{},
-		keysCache:         make(map[[48]byte]bls.SecretKey),
+		wallet: wallet,
+		cfg:    cfg,
+		mnemonicGenerator: &EnglishMnemonicGenerator{
+			skipMnemonicConfirm: skipMnemonicConfirm,
+		},
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys
@@ -121,6 +123,11 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+// MarshalConfigFile returns a marshaled configuration file for a keymanager.
+func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+	return json.MarshalIndent(cfg, "", "\t")
 }
 
 // CreateAccount for a direct keymanager implementation. This utilizes
@@ -195,11 +202,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		"path": dr.wallet.AccountsDir(),
 	}).Info("Successfully created new validator account")
 	return accountName, nil
-}
-
-// MarshalConfigFile returns a marshaled configuration file for a direct keymanager.
-func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return json.MarshalIndent(dr.cfg, "", "\t")
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.

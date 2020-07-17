@@ -126,17 +126,59 @@ var (
 		Usage: "Path to a directory on-disk where wallet passwords are stored",
 		Value: DefaultValidatorDir(),
 	}
+	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
+	PasswordFileFlag = &cli.StringFlag{
+		Name:  "password-file",
+		Usage: "File to retrieve password for writing to the password dir when making a new account",
+	}
+	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
+	SkipMnemonicConfirmFlag = &cli.BoolFlag{
+		Name:  "skip-mnemonic-confirm",
+		Usage: "Skip the withdrawal key mnemonic phrase prompt confirmation",
+	}
 	// ShowDepositDataFlag for accounts-v2.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",
 		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
 		Value: false,
 	}
+	// AccountsFlag for non-interactive usage of accounts exporting, sets a list of account names or all to be exported.
+	AccountsFlag = &cli.StringSliceFlag{
+		Name:  "accounts",
+		Usage: "List of account names to export, or \"all\" to backup all accounts",
+	}
 	// BackupPathFlag defines the path for the zip backup of the wallet will be created.
 	BackupPathFlag = &cli.StringFlag{
 		Name:  "backup-path",
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
+	}
+	// GrpcRemoteAddressFlag defines the host:port address for a remote keymanager to connect to.
+	GrpcRemoteAddressFlag = &cli.StringFlag{
+		Name:  "grpc-remote-address",
+		Usage: "Host:port of a gRPC server for a remote keymanager",
+		Value: "",
+	}
+	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
+	// a secure signer via TLS and gRPC.
+	RemoteSignerCertPathFlag = &cli.StringFlag{
+		Name:  "remote-signer-crt-path",
+		Usage: "/path/to/client.crt for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
+	}
+	// RemoteSignerKeyPathFlag defines the path to a client.key file for a wallet to connect to
+	// a secure signer via TLS and gRPC.
+	RemoteSignerKeyPathFlag = &cli.StringFlag{
+		Name:  "remote-signer-key-path",
+		Usage: "/path/to/client.key for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
+	}
+	// RemoteSignerCACertPathFlag defines the path to a ca.crt file for a wallet to connect to
+	// a secure signer via TLS and gRPC.
+	RemoteSignerCACertPathFlag = &cli.StringFlag{
+		Name:  "remote-signer-ca-crt-path",
+		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
 	}
 )
 

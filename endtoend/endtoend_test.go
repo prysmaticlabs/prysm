@@ -155,6 +155,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		return
 	}
 
+	// Sleep a slot to make sure the synced state is made.
+	time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	syncEvaluators := []types.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 	for _, evaluator := range syncEvaluators {
 		t.Run(evaluator.Name, func(t *testing.T) {

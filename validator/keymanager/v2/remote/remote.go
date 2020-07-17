@@ -5,10 +5,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -104,12 +107,12 @@ func NewKeymanager(ctx context.Context, maxMessageSize int, cfg *Config) (*Keyma
 	return k, nil
 }
 
-// UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
+// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
 // configuration file into the *Config{} struct.
 func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not read config")
 	}
 	defer func() {
 		if err := r.Close(); err != nil {
@@ -118,19 +121,52 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 	}()
 	cfg := &Config{}
 	if err := json.Unmarshal(enc, cfg); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not JSON unmarshal")
 	}
 	return cfg, nil
+}
+
+// MarshalConfigFile for the keymanager.
+func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+	return json.MarshalIndent(cfg, "", "\t")
+}
+
+// String pretty-print of a remote keymanager configuration.
+func (c *Config) String() string {
+	au := aurora.NewAurora(true)
+	var b strings.Builder
+	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("Remote gRPC address"), c.RemoteAddr)
+	if _, err := b.WriteString(strAddr); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strCrt := fmt.Sprintf(
+		"%s: %s\n", au.BrightMagenta("Client cert path"), c.RemoteCertificate.ClientCertPath,
+	)
+	if _, err := b.WriteString(strCrt); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strKey := fmt.Sprintf(
+		"%s: %s\n", au.BrightMagenta("Client key path"), c.RemoteCertificate.ClientKeyPath,
+	)
+	if _, err := b.WriteString(strKey); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strCa := fmt.Sprintf(
+		"%s: %s\n", au.BrightMagenta("CA cert path"), c.RemoteCertificate.CACertPath,
+	)
+	if _, err := b.WriteString(strCa); err != nil {
+		log.Error(err)
+		return ""
+	}
+	return b.String()
 }
 
 // CreateAccount based on the keymanager's logic. Returns the account name.
 func (k *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	return "", errors.New("a remote validator account cannot be created from the client")
-}
-
-// MarshalConfigFile for the keymanager's options.
-func (k *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return json.MarshalIndent(k.cfg, "", "\t")
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.

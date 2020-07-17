@@ -3,13 +3,14 @@ package encoder_test
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
@@ -31,13 +32,9 @@ func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
 		Bar: 9001,
 	}
 	_, err := e.EncodeWithMaxLength(buf, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	decoded := &testpb.TestSimpleMessage{}
-	if err := e.DecodeWithMaxLength(buf, decoded); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, e.DecodeWithMaxLength(buf, decoded))
 	if !proto.Equal(decoded, msg) {
 		t.Logf("decoded=%+v\n", decoded)
 		t.Error("Decoded message is not the same as original")
@@ -51,13 +48,9 @@ func testRoundTripWithGossip(t *testing.T, e *encoder.SszNetworkEncoder) {
 		Bar: 9001,
 	}
 	_, err := e.EncodeGossip(buf, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	decoded := &testpb.TestSimpleMessage{}
-	if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, e.DecodeGossip(buf.Bytes(), decoded))
 	if !proto.Equal(decoded, msg) {
 		t.Logf("decoded=%+v\n", decoded)
 		t.Error("Decoded message is not the same as original")
@@ -77,12 +70,7 @@ func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeWithMaxLength(buf, msg)
 	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", params.BeaconNetworkConfig().MaxChunkSize)
-	if err == nil {
-		t.Fatalf("wanted this error %s but got nothing", wanted)
-	}
-	if !strings.Contains(err.Error(), wanted) {
-		t.Errorf("error did not contain wanted message. Wanted: %s but Got: %s", wanted, err.Error())
-	}
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
@@ -98,16 +86,9 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 	c.MaxChunkSize = maxChunkSize
 	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeGossip(buf, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	decoded := &testpb.TestSimpleMessage{}
 	err = e.DecodeWithMaxLength(buf, decoded)
 	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxChunkSize)
-	if err == nil {
-		t.Fatalf("wanted this error %s but got nothing", wanted)
-	}
-	if !strings.Contains(err.Error(), wanted) {
-		t.Errorf("error did not contain wanted message. Wanted: %s but Got: %s", wanted, err.Error())
-	}
+	assert.ErrorContains(t, wanted, err)
 }
