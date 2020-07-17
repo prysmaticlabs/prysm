@@ -21,11 +21,11 @@ import (
 // streams when the beacon chain is node does not respond.
 var reconnectPeriod = 5 * time.Second
 
-// receiveBlocks starts a gRPC client stream listener to obtain
+// ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other services in slasher to subscribe to.
-func (bs *Service) receiveBlocks(ctx context.Context) {
-	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveBlocks")
+func (bs *Service) ReceiveBlocks(ctx context.Context) {
+	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveBlocks")
 	defer span.End()
 	stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
 	if err != nil {
@@ -81,11 +81,11 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 	}
 }
 
-// receiveAttestations starts a gRPC client stream listener to obtain
+// ReceiveAttestations starts a gRPC client stream listener to obtain
 // attestations from the beacon node. Upon receiving an attestation, the service
 // broadcasts it to a feed for other services in slasher to subscribe to.
-func (bs *Service) receiveAttestations(ctx context.Context) {
-	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveAttestations")
+func (bs *Service) ReceiveAttestations(ctx context.Context) {
+	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveAttestations")
 	defer span.End()
 	stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 	if err != nil {

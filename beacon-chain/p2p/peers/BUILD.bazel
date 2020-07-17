@@ -22,14 +22,19 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["status_test.go"],
+    srcs = [
+        "benchmark_test.go",
+        "status_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
-        "@com_github_libp2p_go_libp2p_peer//:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

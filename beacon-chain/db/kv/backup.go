@@ -30,13 +30,13 @@ func (kv *Store) Backup(ctx context.Context) error {
 		return errors.New("no head block")
 	}
 	// Ensure the backups directory exists.
-	if err := os.MkdirAll(backupsDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(backupsDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
 	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
 
-	copyDB, err := bolt.Open(backupPath, params.BeaconIoConfig().ReadWritePermissions, nil)
+	copyDB, err := bolt.Open(backupPath, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		panic(err)
 	}

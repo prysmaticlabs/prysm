@@ -21,6 +21,7 @@ go_library(
         "//shared/benchutil/benchmark_files:__subpackages__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",
+        "//shared/depositutil:__pkg__",
         "//shared/p2putils:__pkg__",
         "//shared/attestationutil:__pkg__",
         "//shared/testutil:__pkg__",

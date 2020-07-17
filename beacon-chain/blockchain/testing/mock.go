@@ -46,6 +46,7 @@ type ChainService struct {
 	opNotifier                  opfeed.Notifier
 	ValidAttestation            bool
 	ForkChoiceStore             *protoarray.Store
+	VerifyBlkDescendantErr      error
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -139,11 +140,6 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 	return mon.feed
 }
 
-// ReceiveBlock mocks ReceiveBlock method in chain service.
-func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	return nil
-}
-
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
 func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	if ms.State == nil {
@@ -171,8 +167,37 @@ func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethp
 	return nil
 }
 
-// ReceiveBlockNoPubsub mocks ReceiveBlockNoPubsub method in chain service.
-func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+// ReceiveBlockBatch processes blocks in batches from initial-sync.
+func (ms *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte) error {
+	if ms.State == nil {
+		ms.State = &stateTrie.BeaconState{}
+	}
+	for _, block := range blks {
+		if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
+			return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
+		}
+		if err := ms.State.SetSlot(block.Block.Slot); err != nil {
+			return err
+		}
+		ms.BlocksReceived = append(ms.BlocksReceived, block)
+		signingRoot, err := stateutil.BlockRoot(block.Block)
+		if err != nil {
+			return err
+		}
+		if ms.DB != nil {
+			if err := ms.DB.SaveBlock(ctx, block); err != nil {
+				return err
+			}
+			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
+		}
+		ms.Root = signingRoot[:]
+		ms.Block = block
+	}
+	return nil
+}
+
+// ReceiveBlock mocks ReceiveBlock method in chain service.
+func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	if ms.State == nil {
 		ms.State = &stateTrie.BeaconState{}
 	}
@@ -322,4 +347,9 @@ func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
 // HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
 func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
 	return [32]byte{}
+}
+
+// VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
+func (ms *ChainService) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
+	return ms.VerifyBlkDescendantErr
 }

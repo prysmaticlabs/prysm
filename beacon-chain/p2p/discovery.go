@@ -1,8 +1,10 @@
 package p2p
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"net"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -12,6 +14,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -27,10 +31,72 @@ type Listener interface {
 	LocalNode() *enode.LocalNode
 }
 
+// RefreshENR uses an epoch to refresh the enr entry for our node
+// with the tracked committee ids for the epoch, allowing our node
+// to be dynamically discoverable by others given our tracked committee ids.
+func (s *Service) RefreshENR() {
+	// return early if discv5 isnt running
+	if s.dv5Listener == nil {
+		return
+	}
+	bitV := bitfield.NewBitvector64()
+	committees := cache.SubnetIDs.GetAllSubnets()
+	for _, idx := range committees {
+		bitV.SetBitAt(idx, true)
+	}
+	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+	if err != nil {
+		log.Errorf("Could not retrieve bitfield: %v", err)
+		return
+	}
+	if bytes.Equal(bitV, currentBitV) {
+		// return early if bitfield hasn't changed
+		return
+	}
+	s.updateSubnetRecordWithMetadata(bitV)
+	// ping all peers to inform them of new metadata
+	s.pingPeers()
+}
+
+// listen for new nodes watches for new nodes in the network and adds them to the peerstore.
+func (s *Service) listenForNewNodes() {
+	iterator := s.dv5Listener.RandomNodes()
+	iterator = enode.Filter(iterator, s.filterPeer)
+	defer iterator.Close()
+	for {
+		// Exit if service's context is canceled
+		if s.ctx.Err() != nil {
+			break
+		}
+		if s.isPeerAtLimit() {
+			// Pause the main loop for a period to stop looking
+			// for new peers.
+			log.Trace("Not looking for peers, at peer limit")
+			time.Sleep(pollingPeriod)
+			continue
+		}
+		exists := iterator.Next()
+		if !exists {
+			break
+		}
+		node := iterator.Node()
+		peerInfo, _, err := convertToAddrInfo(node)
+		if err != nil {
+			log.WithError(err).Error("Could not convert to peer info")
+			continue
+		}
+		go func(info *peer.AddrInfo) {
+			if err := s.connectWithPeer(*info); err != nil {
+				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+			}
+		}(peerInfo)
+	}
+}
+
 func (s *Service) createListener(
 	ipAddr net.IP,
 	privKey *ecdsa.PrivateKey,
-) *discover.UDPv5 {
+) (*discover.UDPv5, error) {
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
 		Port: int(s.cfg.UDPPort),
@@ -44,7 +110,7 @@ func (s *Service) createListener(
 	}
 	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not listen to UDP")
 	}
 	localNode, err := s.createLocalNode(
 		privKey,
@@ -53,7 +119,7 @@ func (s *Service) createListener(
 		int(s.cfg.TCPPort),
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not create local node")
 	}
 	if s.cfg.HostAddress != "" {
 		hostIP := net.ParseIP(s.cfg.HostAddress)
@@ -71,16 +137,16 @@ func (s *Service) createListener(
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
-			log.Fatal(err)
+			return nil, errors.Wrap(err, "could not bootstrap addr")
 		}
 		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
 	}
 
 	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.Wrap(err, "could not listen to discV5")
 	}
-	return network
+	return network, nil
 }
 
 func (s *Service) createLocalNode(
@@ -114,7 +180,10 @@ func (s *Service) startDiscoveryV5(
 	addr net.IP,
 	privKey *ecdsa.PrivateKey,
 ) (*discover.UDPv5, error) {
-	listener := s.createListener(addr, privKey)
+	listener, err := s.createListener(addr, privKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create listener")
+	}
 	record := listener.Self()
 	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil

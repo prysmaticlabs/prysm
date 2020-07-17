@@ -20,6 +20,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.BeaconState) {
@@ -43,40 +45,26 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 		},
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := state.SetSlot(
-		state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch),
-	); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	err = state.SetSlot(state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, err)
 	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(exit.Exit, domain)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	priv := bls.RandKey()
 
 	sig := priv.Sign(signingRoot[:])
 	exit.Signature = sig.Marshal()
 
 	val, err := state.ValidatorAtIndex(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()[:]
-	if err := state.UpdateValidatorAtIndex(0, val); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
 
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		t.Fatal(err)
-	}
+	_, err = rand.Read(b)
+	require.NoError(t, err)
 
 	return exit, state
 }
@@ -88,9 +76,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	c, err := lru.New(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r := &Service{
 		p2p: p,
 		chain: &mock.ChainService{
@@ -101,9 +87,8 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, exit); err != nil {
-		t.Fatal(err)
-	}
+	_, err = p.Encoding().EncodeGossip(buf, exit)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -113,13 +98,8 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		},
 	}
 	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
-	if !valid {
-		t.Error("Failed validation")
-	}
-
-	if m.ValidatorData == nil {
-		t.Error("Decoded message was not set on the message validator data")
-	}
+	assert.Equal(t, true, valid, "Failed validation")
+	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
 func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
@@ -136,9 +116,8 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, exit); err != nil {
-		t.Fatal(err)
-	}
+	_, err := p.Encoding().EncodeGossip(buf, exit)
+	require.NoError(t, err)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data: buf.Bytes(),
@@ -148,7 +127,5 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 		},
 	}
 	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
-	if valid {
-		t.Error("Validation should have failed")
-	}
+	assert.Equal(t, false, valid, "Validation should have failed")
 }

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -20,10 +22,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -131,6 +135,14 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
 		})
 	}()
+
+	// Broadcast the new block to the network.
+	if err := vs.P2P.Broadcast(ctx, blk); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"blockRoot": hex.EncodeToString(root[:]),
+	}).Debug("Broadcasting block")
 
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
@@ -284,19 +296,9 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
-	depositData := [][]byte{}
-	for _, dep := range upToEth1DataDeposits {
-		depHash, err := ssz.HashTreeRoot(dep.Data)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not hash deposit data")
-		}
-		depositData = append(depositData, depHash[:])
-	}
-
-	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := vs.depositTrie(ctx, canonicalEth1DataHeight)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+		return nil, errors.Wrap(err, "could not retrieve deposit trie")
 	}
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
@@ -351,6 +353,47 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
+}
+
+func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+	var depositTrie *trieutil.SparseMerkleTrie
+
+	var finalizedDeposits *depositcache.FinalizedDeposits
+	if featureconfig.Get().EnableFinalizedDepositsCache {
+		finalizedDeposits = vs.DepositFetcher.FinalizedDeposits(ctx)
+		depositTrie = finalizedDeposits.Deposits
+		upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+		insertIndex := finalizedDeposits.MerkleTrieIndex + 1
+
+		for _, dep := range upToEth1DataDeposits {
+			depHash, err := ssz.HashTreeRoot(dep.Data)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash deposit data")
+			}
+			depositTrie.Insert(depHash[:], int(insertIndex))
+			insertIndex++
+		}
+
+		return depositTrie, nil
+	}
+
+	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
+	depositData := [][]byte{}
+	for _, dep := range upToEth1DataDeposits {
+		depHash, err := ssz.HashTreeRoot(dep.Data)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not hash deposit data")
+		}
+		depositData = append(depositData, depHash[:])
+	}
+
+	var err error
+	depositTrie, err = trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+	}
+
+	return depositTrie, nil
 }
 
 // in case no vote for new eth1data vote considered best vote we

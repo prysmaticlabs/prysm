@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-
+	mock "github.com/prysmaticlabs/prysm/validator/keymanager/v2/testing"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,18 +23,6 @@ func init() {
 }
 
 var _ = direct.Wallet(&Wallet{})
-
-type mockKeymanager struct {
-	configFileContents []byte
-}
-
-func (m *mockKeymanager) CreateAccount(ctx context.Context, password string) error {
-	return nil
-}
-
-func (m *mockKeymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return m.configFileContents, nil
-}
 
 func setupWalletDir(t testing.TB) (string, string) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
@@ -62,7 +50,7 @@ func setupWalletDir(t testing.TB) (string, string) {
 
 func TestCreateAndReadWallet(t *testing.T) {
 	ctx := context.Background()
-	if _, err := CreateWallet(ctx, &WalletConfig{
+	if _, err := NewWallet(ctx, &WalletConfig{
 		PasswordsDir: "",
 		WalletDir:    "",
 	}); err == nil {
@@ -70,7 +58,7 @@ func TestCreateAndReadWallet(t *testing.T) {
 	}
 	walletDir, passwordsDir := setupWalletDir(t)
 	keymanagerKind := v2keymanager.Direct
-	wallet, err := CreateWallet(ctx, &WalletConfig{
+	wallet, err := NewWallet(ctx, &WalletConfig{
 		PasswordsDir:   passwordsDir,
 		WalletDir:      walletDir,
 		KeymanagerKind: keymanagerKind,
@@ -79,8 +67,8 @@ func TestCreateAndReadWallet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keymanager := &mockKeymanager{
-		configFileContents: []byte("hello-world"),
+	keymanager := &mock.MockKeymanager{
+		ConfigFileContents: []byte("hello-world"),
 	}
 	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
 	if err != nil {
@@ -97,7 +85,7 @@ func TestCreateAndReadWallet(t *testing.T) {
 	}
 
 	// We should be able to now read the wallet as well.
-	if _, err := CreateWallet(ctx, &WalletConfig{
+	if _, err := NewWallet(ctx, &WalletConfig{
 		PasswordsDir: passwordsDir,
 		WalletDir:    walletDir,
 	}); err != nil {

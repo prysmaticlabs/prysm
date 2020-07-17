@@ -131,7 +131,7 @@ func computeCommittees(
 	activeIndices []uint64,
 	attesterSeed [32]byte,
 ) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, error) {
-	committeesListsBySlot := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
+	committeesListsBySlot := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {

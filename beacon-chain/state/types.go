@@ -1,6 +1,3 @@
-// Package state defines how the beacon chain state for eth2
-// functions in the running beacon node, using an advanced,
-// immutable implementation of the state data structure.
 package state
 
 import (
@@ -12,7 +9,7 @@ import (
 )
 
 func init() {
-	fieldMap = make(map[fieldIndex]dataType)
+	fieldMap = make(map[fieldIndex]dataType, fieldCount)
 
 	// Initialize the fixed sized arrays.
 	fieldMap[blockRoots] = basicArray
@@ -118,11 +115,10 @@ func (r *reference) AddRef() {
 
 func (r *reference) MinusRef() {
 	r.lock.Lock()
-	defer r.lock.Unlock()
 	// Do not reduce further if object
 	// already has 0 reference to prevent underflow.
-	if r.refs == 0 {
-		return
+	if r.refs > 0 {
+		r.refs--
 	}
-	r.refs--
+	r.lock.Unlock()
 }

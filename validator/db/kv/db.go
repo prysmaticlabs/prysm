@@ -4,9 +4,9 @@ package kv
 import (
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -60,11 +60,11 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
-	if err := os.MkdirAll(dirPath, 0700); err != nil {
+	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return nil, err
 	}
 	datafile := filepath.Join(dirPath, databaseFileName)
-	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		if err == bolt.ErrTimeout {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
@@ -98,7 +98,7 @@ func GetKVStore(directory string) (*Store, error) {
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		return nil, nil
 	}
-	boltDb, err := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	boltDb, err := bolt.Open(fileName, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		if err == bolt.ErrTimeout {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")

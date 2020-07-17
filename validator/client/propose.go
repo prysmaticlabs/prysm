@@ -7,10 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -62,38 +61,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	var slotBits bitfield.Bitlist
-	if featureconfig.Get().ProtectProposer {
-		slotBits, err = v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
-		if err != nil {
-			log.WithError(err).Error("Failed to get proposal history")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-
-		// If the bit for the current slot is marked, do not propose.
-		if slotBits.BitAt(slot % params.BeaconConfig().SlotsPerEpoch) {
-			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		bh, err := blockutil.BeaconBlockHeaderFromBlock(b)
-		if err != nil {
-			log.WithError(err).Error("Failed to get block header from block")
-		}
-		if !v.protector.VerifyBlock(ctx, bh) {
-			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
+	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
+		log.WithField("slot", b.Slot).WithError(err).Error("Failed block safety check")
+		return
 	}
 
 	// Sign returned block from beacon node
@@ -110,6 +80,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk); err != nil {
+		log.WithField("slot", blk.Block.Slot).WithError(err).Error("Failed post block signing validations")
+		return
+	}
+
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
 	if err != nil {
@@ -118,34 +93,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
-	}
-
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
-		if err != nil {
-			log.WithError(err).Error("Failed to get block header from block")
-		}
-		if !v.protector.CommitBlock(ctx, sbh) {
-			log.WithField("epoch", epoch).Fatal("Tried to sign a double proposal, rejected by external slasher")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-	if featureconfig.Get().ProtectProposer {
-		slotBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
-		if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
-			log.WithError(err).Error("Failed to save updated proposal history")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-
-	if v.emitAccountMetrics {
-		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
 
 	span.AddAttributes(
@@ -161,6 +108,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
 	}).Info("Submitted new block")
+
+	if v.emitAccountMetrics {
+		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
 }
 
 // ProposeExit --
@@ -175,7 +126,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
 
-	randaoReveal, err := v.signObject(pubKey, epoch, domain.SignatureDomain)
+	randaoReveal, err := v.signObject(ctx, pubKey, epoch, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}
@@ -189,6 +140,21 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
 	var sig bls.Signature
+
+	if featureconfig.Get().EnableAccountsV2 {
+		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get signing root")
+		}
+		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey:   pubKey[:],
+			SigningRoot: blockRoot[:],
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "could not sign block proposal")
+		}
+		return sig.Marshal(), nil
+	}
 	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
 		bodyRoot, err := stateutil.BlockBodyRoot(b.Body)
 		if err != nil {

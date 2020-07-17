@@ -2,7 +2,6 @@ package attestations
 
 import (
 	"context"
-	"reflect"
 	"sort"
 	"testing"
 
@@ -11,13 +10,13 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBatchAttestations_Multiple(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	sk := bls.RandKey()
 	sig := sk.Sign([]byte("dummy_test_data"))
@@ -99,18 +98,12 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	}
 
 	wanted, err := attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[0], blockAtts[0]})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	aggregated, err := attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[1], blockAtts[1]})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wanted = append(wanted, aggregated...)
 	aggregated, err = attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[2], blockAtts[2]})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted = append(wanted, aggregated...)
 	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
@@ -125,16 +118,12 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 		return wanted[i].Data.Slot < wanted[j].Data.Slot
 	})
 
-	if !reflect.DeepEqual(wanted, received) {
-		t.Error("Did not aggregation and save for batch")
-	}
+	assert.DeepEqual(t, wanted, received)
 }
 
 func TestBatchAttestations_Single(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	sk := bls.RandKey()
 	sig := sk.Sign([]byte("dummy_test_data"))
@@ -175,26 +164,18 @@ func TestBatchAttestations_Single(t *testing.T) {
 	}
 
 	wanted, err := attaggregation.Aggregate(append(aggregatedAtts, unaggregatedAtts...))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted, err = attaggregation.Aggregate(append(wanted, blockAtts...))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	got := s.pool.ForkchoiceAttestations()
-	if !reflect.DeepEqual(wanted, got) {
-		t.Error("Did not aggregate and save for batch")
-	}
+	assert.DeepEqual(t, wanted, got)
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	sk := bls.RandKey()
 	sig := sk.Sign([]byte("dummy_test_data"))
@@ -213,20 +194,13 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	}
 
 	wanted, err := attaggregation.Aggregate(atts)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(wanted, s.pool.ForkchoiceAttestations()) {
-		t.Error("Did not aggregation and save")
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, wanted, s.pool.ForkchoiceAttestations())
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	sk := bls.RandKey()
 	sig := sk.Sign([]byte("dummy_test_data"))
@@ -270,13 +244,9 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	}
 
 	wanted, err := attaggregation.Aggregate(atts1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	aggregated, err := attaggregation.Aggregate(atts2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted = append(wanted, aggregated...)
 	wanted = append(wanted, att3...)
@@ -285,40 +255,30 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	sort.Slice(received, func(i, j int) bool {
 		return received[i].Data.Slot < received[j].Data.Slot
 	})
-	if !reflect.DeepEqual(wanted, received) {
-		t.Error("Did not aggregation and save")
-	}
+	assert.DeepEqual(t, wanted, received)
 }
 
 func TestSeenAttestations_PresentInCache(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x13} /* 0b00010011 */}
 	got, err := s.seen(att1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if got {
 		t.Error("Wanted false, got true")
 	}
 
 	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
 	got, err = s.seen(att2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if got {
 		t.Error("Wanted false, got true")
 	}
 
 	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
 	got, err = s.seen(att3)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !got {
 		t.Error("Wanted true, got false")
 	}
@@ -375,17 +335,11 @@ func TestService_seen(t *testing.T) {
 	}
 
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	for i, tt := range tests {
+	for _, tt := range tests {
 		got, err := s.seen(tt.att)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got != tt.want {
-			t.Errorf("Test %d failed. Got=%v want=%v", i, got, tt.want)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, got)
 	}
 }

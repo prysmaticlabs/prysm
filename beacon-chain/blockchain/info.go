@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/emicklei/dot"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const template = `<html>
@@ -63,7 +64,8 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if nodes[i].Slot == s.headSlot() &&
-			nodes[i].BestDescendant == ^uint64(0) {
+			nodes[i].BestDescendant == ^uint64(0) &&
+			nodes[i].Parent != ^uint64(0) {
 			dotN = dotN.Attr("color", "green")
 		}
 
@@ -81,4 +83,12 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := fmt.Fprintf(w, template, graph.String()); err != nil {
 		log.WithError(err).Error("Failed to render p2p info page")
 	}
+}
+
+func averageBalance(balances []uint64) float64 {
+	total := uint64(0)
+	for i := 0; i < len(balances); i++ {
+		total += balances[i]
+	}
+	return float64(total) / float64(len(balances)) / float64(params.BeaconConfig().GweiPerEth)
 }

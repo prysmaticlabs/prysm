@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -75,28 +77,17 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 	s, err := NewService(&Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	s.started = true
 	s.dv5Listener = &mockListener{}
-	if err := s.Stop(); err != nil {
-		t.Error(err)
-	}
-
-	if s.started != false {
-		t.Error("Expected Service.started to be false, got true")
-	}
+	assert.NoError(t, s.Stop())
+	assert.Equal(t, false, s.started)
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
 	s, err := NewService(&Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Stop(); err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
+	assert.NoError(t, s.Stop())
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
@@ -107,9 +98,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		UDPPort: 2000,
 	}
 	s, err := NewService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	s.stateNotifier = &mock.MockStateNotifier{}
 	s.dv5Listener = &mockListener{}
 	exitRoutine := make(chan bool)
@@ -128,23 +117,17 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		})
 	}
 	time.Sleep(time.Second * 2)
-	if s.started != true {
-		t.Error("Expected service to be started")
-	}
+	assert.Equal(t, true, s.started, "Expected service to be started")
 	s.Start()
 	testutil.AssertLogsContain(t, hook, "Attempted to start p2p service when it was already started")
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
 
 func TestService_Status_NotRunning(t *testing.T) {
 	s := &Service{started: false}
 	s.dv5Listener = &mockListener{}
-	if s.Status().Error() != "not running" {
-		t.Errorf("Status returned wrong error, got %v", s.Status())
-	}
+	assert.ErrorContains(t, "not running", s.Status(), "Status returned wrong error")
 }
 
 func TestListenForNewNodes(t *testing.T) {
@@ -161,7 +144,8 @@ func TestListenForNewNodes(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	bootListener := s.createListener(ipAddr, pkey)
+	bootListener, err := s.createListener(ipAddr, pkey)
+	require.NoError(t, err)
 	defer bootListener.Close()
 
 	// Use shorter period for testing.
@@ -191,9 +175,7 @@ func TestListenForNewNodes(t *testing.T) {
 			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
-		if err != nil {
-			t.Errorf("Could not start discovery for node: %v", err)
-		}
+		assert.NoError(t, err, "Could not start discovery for node")
 		listeners = append(listeners, listener)
 		hosts = append(hosts, h)
 	}
@@ -216,10 +198,8 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 
-	s, err := NewService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s, err = NewService(cfg)
+	require.NoError(t, err)
 	s.stateNotifier = &mock.MockStateNotifier{}
 	exitRoutine := make(chan bool)
 	go func() {
@@ -238,12 +218,8 @@ func TestListenForNewNodes(t *testing.T) {
 	}
 	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
-	if len(peers) != 5 {
-		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
-	}
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
-	}
+	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
+	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
 
@@ -267,26 +243,34 @@ func TestPeer_Disconnect(t *testing.T) {
 	}()
 
 	h2Addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipaddr, 5001, h2.ID()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(h2Addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.host.Connect(context.Background(), *addrInfo); err != nil {
-		t.Fatal(err)
-	}
-	if len(s.host.Network().Peers()) != 1 {
-		t.Fatalf("Number of peers is %d when it was supposed to be %d", len(s.host.Network().Peers()), 1)
-	}
-	if len(s.host.Network().Conns()) != 1 {
-		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 1)
-	}
-	if err := s.Disconnect(h2.ID()); err != nil {
-		t.Fatal(err)
-	}
-	if len(s.host.Network().Conns()) != 0 {
-		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 0)
-	}
+	require.NoError(t, err)
+	require.NoError(t, s.host.Connect(context.Background(), *addrInfo))
+	assert.Equal(t, 1, len(s.host.Network().Peers()), "Invalid number of peers")
+	assert.Equal(t, 1, len(s.host.Network().Conns()), "Invalid number of connections")
+	require.NoError(t, s.Disconnect(h2.ID()))
+	assert.Equal(t, 0, len(s.host.Network().Conns()), "Invalid number of connections")
+}
+
+func TestService_JoinLeaveTopic(t *testing.T) {
+	s, err := NewService(&Config{})
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(s.joinedTopics))
+
+	topic := fmt.Sprintf(AttestationSubnetTopicFormat, 42, 42)
+	topicHandle, err := s.JoinTopic(topic)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(s.joinedTopics))
+
+	sub, err := topicHandle.Subscribe()
+	assert.NoError(t, err)
+
+	// Try leaving topic that has subscriptions.
+	want := "cannot close topic: outstanding event handlers or subscriptions"
+	assert.ErrorContains(t, want, s.LeaveTopic(topic))
+
+	// After subscription is cancelled, leaving topic should not result in error.
+	sub.Cancel()
+	assert.NoError(t, s.LeaveTopic(topic))
 }

@@ -27,6 +27,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const (
@@ -169,8 +170,7 @@ func storeNewRandomKey(ks keyStore, password string) error {
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
-	const dirPerm = 0700
-	if err := os.MkdirAll(filepath.Dir(file), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return err
 	}
 	// Atomic write: create a temporary hidden file first

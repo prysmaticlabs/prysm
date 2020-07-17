@@ -18,14 +18,19 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
-	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
+	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
+		return s.beaconDB.State(ctx, blockRoot)
+	}
+
+	// Short cut if the cachedState is already in the DB.
+	if s.beaconDB.HasState(ctx, blockRoot) {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get state summary")
+		return nil, errors.Wrap(err, "could not get cachedState summary")
 	}
 
 	if summary.Slot < s.finalizedInfo.slot {
@@ -38,6 +43,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 // StateByRootInitialSync retrieves the state from the DB for the initial syncing phase.
 // It assumes initial syncing using a block list rather than a block tree hence the returned
 // state is not copied.
+// It invalidates cache for parent root because pre state will get mutated.
 // Do not use this method for anything other than initial syncing purpose or block tree is applied.
 func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
@@ -49,8 +55,12 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
 	}
 
-	if s.beaconDB.HasState(ctx, blockRoot) {
-		return s.beaconDB.State(ctx, blockRoot)
+	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return cachedInfo.state, nil
 	}
 
 	startState, err := s.lastAncestorState(ctx, blockRoot)
@@ -76,6 +86,9 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 	}
+
+	// To invalidate cache for parent root because pre state will get mutated.
+	s.hotStateCache.Delete(blockRoot)
 
 	return startState, nil
 }

@@ -5,8 +5,10 @@ package attestations
 
 import (
 	"context"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var forkChoiceProcessedRootsSize = 1 << 16
@@ -19,11 +21,13 @@ type Service struct {
 	err                      error
 	forkChoiceProcessedRoots *lru.Cache
 	genesisTime              uint64
+	pruneInterval            time.Duration
 }
 
 // Config options for the service.
 type Config struct {
-	Pool Pool
+	Pool          Pool
+	pruneInterval time.Duration
 }
 
 // NewService instantiates a new attestation pool service instance that will
@@ -34,12 +38,19 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
+	pruneInterval := cfg.pruneInterval
+	if pruneInterval == 0 {
+		// Prune expired attestations from the pool every slot interval.
+		pruneInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                      ctx,
 		cancel:                   cancel,
 		pool:                     cfg.Pool,
 		forkChoiceProcessedRoots: cache,
+		pruneInterval:            pruneInterval,
 	}, nil
 }
 

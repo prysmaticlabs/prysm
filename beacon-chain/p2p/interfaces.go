@@ -22,6 +22,7 @@ type P2P interface {
 	SetStreamHandler
 	EncodingProvider
 	PubSubProvider
+	PubSubTopicUser
 	PeerManager
 	Sender
 	ConnectionHandler
@@ -40,9 +41,17 @@ type SetStreamHandler interface {
 	SetStreamHandler(topic string, handler network.StreamHandler)
 }
 
+// PubSubTopicUser provides way to join, use and leave PubSub topics.
+type PubSubTopicUser interface {
+	JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error)
+	LeaveTopic(topic string) error
+	PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error
+	SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error)
+}
+
 // ConnectionHandler configures p2p to handle connections with a peer.
 type ConnectionHandler interface {
-	AddConnectionHandler(f func(ctx context.Context, id peer.ID) error, g func(context.Context, peer.ID) error)
+	AddConnectionHandler(f func(ctx context.Context, id peer.ID) error)
 	AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error)
 	connmgr.ConnectionGater
 }

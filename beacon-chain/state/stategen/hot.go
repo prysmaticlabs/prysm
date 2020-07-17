@@ -2,14 +2,14 @@ package stategen
 
 import (
 	"context"
-	"encoding/hex"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -20,6 +20,16 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	}
 
 	return s.beaconDB.HasState(ctx, blockRoot)
+}
+
+// SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
+// state summary cache.
+func (s *State) SaveStateSummary(ctx context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
+	// Save State summary
+	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
+		Slot: blk.Block.Slot,
+		Root: blockRoot[:],
+	})
 }
 
 // This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,
@@ -34,14 +44,11 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 		return nil
 	}
 
-	// Only on an epoch boundary slot, saves the whole state.
+	// Only on an epoch boundary slot, saves epoch boundary state in epoch boundary root state cache.
 	if helpers.IsEpochStart(state.Slot()) {
-		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
+		if err := s.epochBoundaryStateCache.put(blockRoot, state); err != nil {
 			return err
 		}
-		log.WithFields(logrus.Fields{
-			"slot":      state.Slot(),
-			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on epoch boundary")
 	}
 
 	// On an intermediate slots, save the hot state summary.
@@ -50,36 +57,41 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 		Root: blockRoot[:],
 	})
 
-	// Store the copied state in the cache.
+	// Store the copied state in the hot state cache.
 	s.hotStateCache.Put(blockRoot, state)
 
 	return nil
 }
 
 // This loads a post finalized beacon state from the hot section of the DB. If necessary it will
-// replay blocks starting from the nearest epoch boundary. It returns the beacon state that
+// replay blocks starting from the nearest epoch boundary state or last finalized state. It returns the beacon state that
 // corresponds to the input block root.
 func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateByRoot")
 	defer span.End()
 
-	// Load the hot state from cache.
+	// First, it checks if the state exists in hot state cache.
 	cachedState := s.hotStateCache.Get(blockRoot)
 	if cachedState != nil {
 		return cachedState, nil
 	}
 
-	// Load the hot state from DB.
-	if s.beaconDB.HasState(ctx, blockRoot) {
-		return s.beaconDB.State(ctx, blockRoot)
+	// Second, it checks if the state exits in epoch boundary state cache.
+	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return cachedInfo.state, nil
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
+	targetSlot := summary.Slot
 
-	// Since the hot state is not in cache nor DB, start replaying using the parent state which is
+	// Since the requested state is not in caches, start replaying using the last available ancestor state which is
 	// retrieved using input block's parent root.
 	startState, err := s.lastAncestorState(ctx, blockRoot)
 	if err != nil {
@@ -89,26 +101,12 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errUnknownBoundaryState
 	}
 
-	// Don't need to replay the blocks if start state is the same state for the block root.
-	var hotState *state.BeaconState
-	targetSlot := summary.Slot
-	if targetSlot == startState.Slot() {
-		hotState = startState
-	} else {
-		blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not load blocks for hot state using root")
-		}
-		hotState, err = s.ReplayBlocks(ctx, startState, blks, targetSlot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
-		}
+	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 	}
 
-	// Save the copied state because the reference also returned in the end.
-	s.hotStateCache.Put(blockRoot, hotState.Copy())
-
-	return hotState, nil
+	return s.ReplayBlocks(ctx, startState, blks, targetSlot)
 }
 
 // This loads a hot state by slot where the slot lies between the epoch boundary points.
@@ -142,12 +140,21 @@ func (s *State) loadHotStateBySlot(ctx context.Context, slot uint64) (*state.Bea
 	return s.ReplayBlocks(ctx, startState, replayBlks, slot)
 }
 
-// This returns the last saved in DB ancestor state of the input block root.
+// This returns the highest available ancestor state of the input block root.
 // It recursively look up block's parent until a corresponding state of the block root
-// is found in the DB.
+// is found in the caches or DB.
+//
+// There's three ways to derive block parent state:
+// 1.) block parent state is the last finalized state
+// 2.) block parent state is the epoch boundary state and exists in epoch boundary cache.
+// 3.) block parent state is in DB.
 func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastAncestorState")
 	defer span.End()
+
+	if s.isFinalizedRoot(root) && s.finalizedState() != nil {
+		return s.finalizedState(), nil
+	}
 
 	b, err := s.beaconDB.Block(ctx, root)
 	if err != nil {
@@ -161,11 +168,30 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
+		// Is the state a genesis state.
 		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
+		if parentRoot == params.BeaconConfig().ZeroHash {
+			return s.beaconDB.GenesisState(ctx)
+		}
+
+		// Does the state exist in finalized info cache.
+		if s.isFinalizedRoot(parentRoot) {
+			return s.finalizedState(), nil
+		}
+
+		// Does the state exist in epoch boundary cache.
+		cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(parentRoot)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			return cachedInfo.state, nil
+		}
+
+		// Does the state exists in DB.
 		if s.beaconDB.HasState(ctx, parentRoot) {
 			return s.beaconDB.State(ctx, parentRoot)
 		}
-
 		b, err = s.beaconDB.Block(ctx, parentRoot)
 		if err != nil {
 			return nil, err

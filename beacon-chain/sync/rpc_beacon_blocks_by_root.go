@@ -6,6 +6,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -30,7 +31,8 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {
-		blk, err := ReadChunkedBlock(stream, s.p2p)
+		isFirstChunk := i == 0
+		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
 		// Return error until #6408 is resolved.
 		if err == io.EOF {
 			return err
@@ -73,12 +75,13 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 		return err
 	}
 	defer func() {
-		if err := helpers.FullClose(stream); err != nil {
+		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
 			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {
-		blk, err := ReadChunkedBlock(stream, s.p2p)
+		isFirstChunk := i == 0
+		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
 		if err == io.EOF {
 			break
 		}

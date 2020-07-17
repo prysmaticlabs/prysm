@@ -51,6 +51,10 @@ const (
 	PeerConnecting
 )
 
+// Additional buffer beyond current peer limit, from which we can store
+// the relevant peer statuses.
+const maxLimitBuffer = 150
+
 var (
 	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
 	ErrPeerUnknown = errors.New("peer unknown")
@@ -61,6 +65,7 @@ type Status struct {
 	lock            sync.RWMutex
 	maxBadResponses int
 	status          map[peer.ID]*peerStatus
+	maxLimit        int
 }
 
 // peerStatus is the status of an individual peer at the protocol level.
@@ -76,16 +81,23 @@ type peerStatus struct {
 }
 
 // NewStatus creates a new status entity.
-func NewStatus(maxBadResponses int) *Status {
+func NewStatus(maxBadResponses int, peerLimit int) *Status {
 	return &Status{
 		maxBadResponses: maxBadResponses,
 		status:          make(map[peer.ID]*peerStatus),
+		maxLimit:        maxLimitBuffer + peerLimit,
 	}
 }
 
 // MaxBadResponses returns the maximum number of bad responses a peer can provide before it is considered bad.
 func (p *Status) MaxBadResponses() int {
 	return p.maxBadResponses
+}
+
+// MaxPeerLimit returns the max peer limit stored in
+// the current peer store.
+func (p *Status) MaxPeerLimit() int {
+	return p.maxLimit
 }
 
 // Add adds a peer.
@@ -421,6 +433,58 @@ func (p *Status) Decay() {
 	}
 }
 
+// Prune clears out and removes outdated and disconnected peers.
+func (p *Status) Prune() {
+	currSize := p.totalSize()
+	// Exit early if there is nothing
+	// to prune.
+	if currSize <= p.maxLimit {
+		return
+	}
+	disconnected := p.Disconnected()
+
+	type peerResp struct {
+		pid     peer.ID
+		badResp int
+	}
+	peersToPrune := make([]*peerResp, 0, len(disconnected))
+	p.lock.RLock()
+	// Select disconnected peers with a smaller
+	// bad response count.
+	for _, pid := range disconnected {
+		if p.status[pid].badResponses < p.maxBadResponses {
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:     pid,
+				badResp: p.status[pid].badResponses,
+			})
+		}
+	}
+	p.lock.RUnlock()
+
+	// Sort peers in ascending order, so the peers with the
+	// least amount of bad responses are pruned first. This
+	// is to protect the node from malicious/lousy peers so
+	// that their memory is still kept.
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].badResp < peersToPrune[j].badResp
+	})
+
+	limitDiff := currSize - p.maxLimit
+
+	if limitDiff > len(peersToPrune) {
+		limitDiff = len(peersToPrune)
+	}
+
+	peersToPrune = peersToPrune[:limitDiff]
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	// Delete peers from map.
+	for _, peerRes := range peersToPrune {
+		delete(p.status, peerRes.pid)
+	}
+}
+
 // BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed upon by the majority of peers.
 // This method may not return the absolute highest finalized, but the finalized epoch in which most peers can serve blocks.
 // Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their own latency, or because of
@@ -429,7 +493,7 @@ func (p *Status) Decay() {
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
-	pidEpoch := make(map[peer.ID]uint64)
+	pidEpoch := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -492,8 +556,14 @@ func (p *Status) HighestEpoch() uint64 {
 	return helpers.SlotToEpoch(highestSlot)
 }
 
+func (p *Status) totalSize() int {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return len(p.status)
+}
+
 func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
-	committeeIdxs := []uint64{}
+	committeeIdxs := make([]uint64, 0, bitV.Count())
 	for i := uint64(0); i < 64; i++ {
 		if bitV.BitAt(i) {
 			committeeIdxs = append(committeeIdxs, i)

@@ -233,7 +233,7 @@ func (b *BeaconNode) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
+				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic")
 			}
 		}
 		panic("Panic closing the beacon node")
@@ -292,18 +292,22 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not create new database")
 		}
 	} else {
-		if !featureconfig.Get().SkipRegenHistoricalStates {
-			// Only check if historical states were deleted and needed to recompute when
-			// user doesn't want to skip.
-			if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
-				return err
-			}
+		// Only check if historical states were deleted and needed to recompute when
+		// user doesn't want to skip.
+		if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
+			return err
 		}
 	}
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
-	b.depositCache = depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	if err != nil {
+		return errors.Wrap(err, "could not create deposit cache")
+	}
+
+	b.depositCache = depositCache
 	return nil
 }
 
@@ -406,7 +410,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	maxRoutines := b.cliCtx.Int64(cmd.MaxGoroutines.Name)
+	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,
@@ -618,7 +622,7 @@ func (b *BeaconNode) registerPrometheusService() error {
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int64(flags.MonitoringPortFlag.Name)),
+		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
 	)

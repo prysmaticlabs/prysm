@@ -67,7 +67,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    return set(index for i, index in enumerate(committee) if bits[i])
 func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
-	indices := make([]uint64, 0, len(committee))
+	indices := make([]uint64, 0, bf.Count())
 	for _, idx := range bf.BitIndices() {
 		if idx < len(committee) {
 			indices = append(indices, committee[idx])
@@ -154,7 +154,7 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
 		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}
-	set := make(map[uint64]bool)
+	set := make(map[uint64]bool, len(indices))
 	setIndices := make([]uint64, 0, len(indices))
 	for _, i := range indices {
 		if ok := set[i]; ok {

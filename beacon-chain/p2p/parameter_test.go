@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 const (
@@ -27,27 +28,14 @@ const (
 )
 
 func TestOverlayParameters(t *testing.T) {
-	if pubsub.GossipSubD != gossipSubD {
-		t.Errorf("gossipSubD, wanted: %d, got: %d", gossipSubD, pubsub.GossipSubD)
-	}
-
-	if pubsub.GossipSubDlo != gossipSubDlo {
-		t.Errorf("gossipSubDlo, wanted: %d, got: %d", gossipSubDlo, pubsub.GossipSubDlo)
-	}
-
-	if pubsub.GossipSubDhi != gossipSubDhi {
-		t.Errorf("gossipSubDhi, wanted: %d, got: %d", gossipSubDhi, pubsub.GossipSubDhi)
-	}
+	assert.Equal(t, gossipSubD, pubsub.GossipSubD, "gossipSubD")
+	assert.Equal(t, gossipSubDlo, pubsub.GossipSubDlo, "gossipSubDlo")
+	assert.Equal(t, gossipSubDhi, pubsub.GossipSubDhi, "gossipSubDhi")
 }
 
 func TestGossipParameters(t *testing.T) {
-	if pubsub.GossipSubHistoryLength != gossipSubHistoryLength {
-		t.Errorf("gossipSubHistoryLength, wanted: %d, got: %d", gossipSubHistoryLength, pubsub.GossipSubHistoryLength)
-	}
-
-	if pubsub.GossipSubHistoryGossip != gossipSubHistoryGossip {
-		t.Errorf("gossipSubHistoryGossip, wanted: %d, got: %d", gossipSubHistoryGossip, pubsub.GossipSubDlo)
-	}
+	assert.Equal(t, gossipSubHistoryLength, pubsub.GossipSubHistoryLength, "gossipSubHistoryLength")
+	assert.Equal(t, gossipSubHistoryGossip, pubsub.GossipSubHistoryGossip, "gossipSubHistoryGossip")
 }
 
 func TestFanoutParameters(t *testing.T) {
@@ -63,7 +51,5 @@ func TestHeartbeatParameters(t *testing.T) {
 }
 
 func TestMiscParameters(t *testing.T) {
-	if pubsub.RandomSubD != randomSubD {
-		t.Errorf("randomSubD, wanted: %d, got: %d", randomSubD, pubsub.RandomSubD)
-	}
+	assert.Equal(t, randomSubD, pubsub.RandomSubD, "randomSubD")
 }

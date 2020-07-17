@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
+	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
@@ -30,9 +31,11 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
 )
+
+// connTimeout defines a period after which connection to beacon node is cancelled.
+const connTimeout = 10 * time.Second
 
 var log = logrus.WithField("prefix", "main")
 
@@ -67,6 +70,8 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
+	flags.WalletPasswordsDirFlag,
+	flags.WalletDirFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -102,7 +107,8 @@ func main() {
 	app.Version = version.GetVersion()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
-		v2.Commands,
+		v2.WalletCommands,
+		v2.AccountCommands,
 		{
 			Name:     "accounts",
 			Category: "accounts",
@@ -171,7 +177,11 @@ contract in order to activate the validator client`,
 						var err error
 						var pubKeys [][]byte
 						if cliCtx.String(flags.KeyManager.Name) != "" {
-							pubKeysBytes48, success := node.ExtractPublicKeysFromKeyManager(cliCtx)
+							pubKeysBytes48, success := node.ExtractPublicKeysFromKeymanager(
+								cliCtx,
+								nil, /* nil v1 keymanager */
+								nil, /* nil v2 keymanager */
+							)
 							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success
 						} else {
 							keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
@@ -183,8 +193,7 @@ contract in order to activate the validator client`,
 						if err != nil {
 							return err
 						}
-						ctx, cancel := context.WithTimeout(
-							context.Background(), 10*time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
+						ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
 						defer cancel()
 						dialOpts := client.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),

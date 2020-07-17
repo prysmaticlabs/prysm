@@ -15,8 +15,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -30,9 +33,18 @@ var (
 
 // DepositFetcher defines a struct which can retrieve deposit information from a store.
 type DepositFetcher interface {
-	AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit
+	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
 	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
 	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
+	FinalizedDeposits(ctx context.Context) *FinalizedDeposits
+	NonFinalizedDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
+}
+
+// FinalizedDeposits stores the trie of deposits that have been included
+// in the beacon state up to the latest finalized checkpoint.
+type FinalizedDeposits struct {
+	Deposits        *trieutil.SparseMerkleTrie
+	MerkleTrieIndex int64
 }
 
 // DepositCache stores all in-memory deposit objects. This
@@ -41,19 +53,28 @@ type DepositCache struct {
 	// Beacon chain deposits in memory.
 	pendingDeposits    []*dbpb.DepositContainer
 	deposits           []*dbpb.DepositContainer
+	finalizedDeposits  *FinalizedDeposits
 	depositsLock       sync.RWMutex
 	chainStartDeposits []*ethpb.Deposit
 	chainStartPubkeys  map[string]bool
 }
 
 // NewDepositCache instantiates a new deposit cache
-func NewDepositCache() *DepositCache {
+func NewDepositCache() (*DepositCache, error) {
+	finalizedDepositsTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, err
+	}
+
+	// finalizedDeposits.MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
+	// Inserting the first item into the trie will set the value of the index to 0.
 	return &DepositCache{
 		pendingDeposits:    []*dbpb.DepositContainer{},
 		deposits:           []*dbpb.DepositContainer{},
+		finalizedDeposits:  &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 		chainStartPubkeys:  make(map[string]bool),
 		chainStartDeposits: make([]*ethpb.Deposit, 0),
-	}
+	}, nil
 }
 
 // InsertDeposit into the database. If deposit or block number are nil
@@ -91,9 +112,40 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*dbp
 	historicalDepositsCount.Add(float64(len(ctrs)))
 }
 
-// AllDepositContainers returns a list of deposits all historical deposit containers until the given block number.
+// InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
+func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
+	defer span.End()
+	dc.depositsLock.Lock()
+	defer dc.depositsLock.Unlock()
+
+	depositTrie := dc.finalizedDeposits.Deposits
+	insertIndex := dc.finalizedDeposits.MerkleTrieIndex + 1
+	for _, d := range dc.deposits {
+		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
+			continue
+		}
+		if d.Index > eth1DepositIndex {
+			break
+		}
+		depHash, err := ssz.HashTreeRoot(d.Deposit.Data)
+		if err != nil {
+			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
+			return
+		}
+		depositTrie.Insert(depHash[:], int(insertIndex))
+		insertIndex++
+	}
+
+	dc.finalizedDeposits = &FinalizedDeposits{
+		Deposits:        depositTrie,
+		MerkleTrieIndex: eth1DepositIndex,
+	}
+}
+
+// AllDepositContainers returns all historical deposit containers.
 func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.DepositContainer {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDepositContainers")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.AllDepositContainers")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -119,9 +171,9 @@ func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) b
 	return false
 }
 
-// AllDeposits returns a list of deposits all historical deposits until the given block number
+// AllDeposits returns a list of historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
-func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
+func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.AllDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
@@ -129,7 +181,7 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*
 
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range dc.deposits {
-		if beforeBlk == nil || beforeBlk.Uint64() >= ctnr.Eth1BlockHeight {
+		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			deposits = append(deposits, ctnr.Deposit)
 		}
 	}
@@ -170,4 +222,40 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 		}
 	}
 	return deposit, blockNum
+}
+
+// FinalizedDeposits returns the finalized deposits trie.
+func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
+	defer span.End()
+	dc.depositsLock.RLock()
+	defer dc.depositsLock.RUnlock()
+
+	return &FinalizedDeposits{
+		Deposits:        dc.finalizedDeposits.Deposits.Copy(),
+		MerkleTrieIndex: dc.finalizedDeposits.MerkleTrieIndex,
+	}
+}
+
+// NonFinalizedDeposits returns the list of non-finalized deposits until the given block number (inclusive).
+// If no block is specified then this method returns all non-finalized deposits.
+func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.NonFinalizedDeposits")
+	defer span.End()
+	dc.depositsLock.RLock()
+	defer dc.depositsLock.RUnlock()
+
+	if dc.finalizedDeposits == nil {
+		return dc.AllDeposits(ctx, untilBlk)
+	}
+
+	lastFinalizedDepositIndex := dc.finalizedDeposits.MerkleTrieIndex
+	var deposits []*ethpb.Deposit
+	for _, d := range dc.deposits {
+		if (d.Index > lastFinalizedDepositIndex) && (untilBlk == nil || untilBlk.Uint64() >= d.Eth1BlockHeight) {
+			deposits = append(deposits, d.Deposit)
+		}
+	}
+
+	return deposits
 }
