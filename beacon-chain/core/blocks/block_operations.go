@@ -58,6 +58,52 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	return nil
 }
 
+func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain []byte) error {
+	if len(deps) == 0 {
+		return nil
+	}
+	pks := make([]bls.PublicKey, len(deps))
+	sigs := make([]bls.Signature, len(deps))
+	msgs := make([][32]byte, len(deps))
+	for i, dep := range deps {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if dep == nil || dep.Data == nil {
+			return errors.New("nil deposit")
+		}
+
+		dpk, err := bls.PublicKeyFromBytes(dep.Data.PublicKey)
+		if err != nil {
+			return err
+		}
+		pks[i] = dpk
+		dsig, err := bls.SignatureFromBytes(dep.Data.Signature)
+		if err != nil {
+			return err
+		}
+		sigs[i] = dsig
+		root, err := ssz.SigningRoot(dep.Data)
+		if err != nil {
+			return errors.Wrap(err, "could not get signing root")
+		}
+		signingData := &pb.SigningData{
+			ObjectRoot: root[:],
+			Domain:     domain,
+		}
+		ctrRoot, err := ssz.HashTreeRoot(signingData)
+		if err != nil {
+			return errors.Wrap(err, "could not get container root")
+		}
+		msgs[i] = ctrRoot
+	}
+	as := bls.AggregateSignatures(sigs)
+	if !as.AggregateVerify(pks, msgs) {
+		return errors.New("one or more deposit data signatures did not verify")
+	}
+	return nil
+}
+
 func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
@@ -112,7 +158,11 @@ func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.Bea
 	return beaconState, nil
 }
 
-func areEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+// AreEth1DataEqual checks equality between two eth1 data objects.
+func AreEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+	if a == nil && b == nil {
+		return true
+	}
 	if a == nil || b == nil {
 		return false
 	}
@@ -130,7 +180,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 	data = stateTrie.CopyETH1Data(data)
 
 	for _, vote := range beaconState.Eth1DataVotes() {
-		if areEth1DataEqual(vote, data) {
+		if AreEth1DataEqual(vote, data) {
 			voteCount++
 		}
 	}
@@ -758,19 +808,16 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return err
 	}
 	indices := indexedAtt.AttestingIndices
-	pubkeys := []*bls.PublicKey{}
-	if len(indices) > 0 {
-		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
-			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-			if err != nil {
-				return errors.Wrap(err, "could not deserialize validator public key")
-			}
-			pubkeys = append(pubkeys, pk)
+	pubkeys := []bls.PublicKey{}
+	for i := 0; i < len(indices); i++ {
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+		if err != nil {
+			return errors.Wrap(err, "could not deserialize validator public key")
 		}
+		pubkeys = append(pubkeys, pk)
 	}
 	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
-
 }
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
@@ -847,8 +894,8 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 		return nil
 	}
 
-	sigs := make([]*bls.Signature, len(atts))
-	pks := make([]*bls.PublicKey, len(atts))
+	sigs := make([]bls.Signature, len(atts))
+	pks := make([]bls.PublicKey, len(atts))
 	msgs := make([][32]byte, len(atts))
 	for i, a := range atts {
 		sig, err := bls.SignatureFromBytes(a.Signature)
@@ -862,7 +909,7 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 		}
 		ia := attestationutil.ConvertToIndexed(ctx, a, c)
 		indices := ia.AttestingIndices
-		var pk *bls.PublicKey
+		var pk bls.PublicKey
 		for i := 0; i < len(indices); i++ {
 			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 			p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
@@ -900,15 +947,28 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	deposits []*ethpb.Deposit,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	deposits := body.Deposits
+
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
+	// individual deposits with signature verification enabled.
+	var verifySignature bool
+	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
+		log.WithError(err).Debug("Failed to verify deposit data, verifying signatures individually")
+		verifySignature = true
+	}
+
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, err = ProcessDeposit(beaconState, deposit)
+		beaconState, err = ProcessDeposit(beaconState, deposit, verifySignature)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
@@ -916,39 +976,42 @@ func ProcessDeposits(
 	return beaconState, nil
 }
 
-// ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
-func ProcessPreGenesisDeposit(
+// ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
+func ProcessPreGenesisDeposits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	deposit *ethpb.Deposit,
+	deposits []*ethpb.Deposit,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	beaconState, err = ProcessDeposit(beaconState, deposit)
+	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
-	pubkey := deposit.Data.PublicKey
-	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
-	if !ok {
-		return beaconState, nil
+	for _, deposit := range deposits {
+		pubkey := deposit.Data.PublicKey
+		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
+		if !ok {
+			return beaconState, nil
+		}
+		balance, err := beaconState.BalanceAtIndex(index)
+		if err != nil {
+			return nil, err
+		}
+		validator, err := beaconState.ValidatorAtIndex(index)
+		if err != nil {
+			return nil, err
+		}
+		validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+		if validator.EffectiveBalance ==
+			params.BeaconConfig().MaxEffectiveBalance {
+			validator.ActivationEligibilityEpoch = 0
+			validator.ActivationEpoch = 0
+		}
+		if err := beaconState.UpdateValidatorAtIndex(index, validator); err != nil {
+			return nil, err
+		}
 	}
-	balance, err := beaconState.BalanceAtIndex(index)
-	if err != nil {
-		return nil, err
-	}
-	validator, err := beaconState.ValidatorAtIndex(index)
-	if err != nil {
-		return nil, err
-	}
-	validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
-	if validator.EffectiveBalance ==
-		params.BeaconConfig().MaxEffectiveBalance {
-		validator.ActivationEligibilityEpoch = 0
-		validator.ActivationEpoch = 0
-	}
-	if err := beaconState.UpdateValidatorAtIndex(index, validator); err != nil {
-		return nil, err
-	}
+
 	return beaconState, nil
 }
 
@@ -991,10 +1054,7 @@ func ProcessPreGenesisDeposit(
 //        # Increase balance by deposit amount
 //        index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //        increase_balance(state, index, amount)
-func ProcessDeposit(
-	beaconState *stateTrie.BeaconState,
-	deposit *ethpb.Deposit,
-) (*stateTrie.BeaconState, error) {
+func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (*stateTrie.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
 			return nil, err
@@ -1008,15 +1068,17 @@ func ProcessDeposit(
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
-		domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		depositSig := deposit.Data.Signature
-		if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
-			// Ignore this error as in the spec pseudo code.
-			log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
-			return beaconState, nil
+		if verifySignature {
+			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			if err != nil {
+				return nil, err
+			}
+			depositSig := deposit.Data.Signature
+			if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
+				// Ignore this error as in the spec pseudo code.
+				log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
+				return beaconState, nil
+			}
 		}
 
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
@@ -1108,7 +1170,7 @@ func ProcessVoluntaryExits(
 		if exit == nil || exit.Exit == nil {
 			return nil, errors.New("nil voluntary exit in block body")
 		}
-		if int(exit.Exit.ValidatorIndex) >= beaconState.NumValidators() {
+		if exit.Exit.ValidatorIndex >= uint64(beaconState.NumValidators()) {
 			return nil, fmt.Errorf(
 				"validator index out of bound %d > %d",
 				exit.Exit.ValidatorIndex,

@@ -56,9 +56,9 @@ const (
 type Key struct {
 	ID uuid.UUID // Version 4 "random" for unique id not derived from key data
 
-	PublicKey *bls.PublicKey // Represents the public key of the user.
+	PublicKey bls.PublicKey // Represents the public key of the user.
 
-	SecretKey *bls.SecretKey // Represents the private key of the user.
+	SecretKey bls.SecretKey // Represents the private key of the user.
 }
 
 type keyStore interface {
@@ -138,7 +138,7 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 }
 
 // NewKeyFromBLS creates a new keystore Key type using a BLS private key.
-func NewKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
+func NewKeyFromBLS(blsKey bls.SecretKey) (*Key, error) {
 	id := uuid.NewRandom()
 	pubkey := blsKey.PublicKey()
 	key := &Key{

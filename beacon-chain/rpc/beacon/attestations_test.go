@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -29,11 +28,11 @@ import (
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"google.golang.org/grpc/status"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -501,9 +500,9 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
-	exceedsMax := int32(flags.Get().MaxPageSize + 1)
+	exceedsMax := int32(cmd.Get().MaxRPCPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -604,44 +603,8 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	}
 }
 
-func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
-	db, sc := dbTest.SetupDB(t)
-	ctx := context.Background()
-	numValidators := uint64(128)
-	state, _ := testutil.DeterministicGenesisState(t, numValidators)
-
-	bs := &Server{
-		BeaconDB:           db,
-		GenesisTimeFetcher: &chainMock.ChainService{State: state},
-		StateGen:           stategen.New(db, sc),
-	}
-	_, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
-		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
-			GenesisEpoch: true,
-		},
-	})
-
-	if err == nil {
-		t.Error("Expecting error if new state management is off")
-	}
-	expectedErrString := "New state management must be turned on"
-	if e, ok := status.FromError(err); ok {
-		if !strings.Contains(e.Message(), expectedErrString) {
-			t.Errorf("expecting error message to contain %s", expectedErrString)
-		}
-	}
-}
-
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.UseMainnetConfig()
 	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
@@ -696,13 +659,6 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	// We setup 128 validators.
 	numValidators := uint64(128)
 	state, _ := testutil.DeterministicGenesisState(t, numValidators)
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	if err := state.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
 
 	// Next up we convert the test attestations to indexed form:
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2), len(atts)+len(atts2))
@@ -887,9 +843,9 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
-	exceedsMax := int32(flags.Get().MaxPageSize + 1)
+	exceedsMax := int32(cmd.Get().MaxRPCPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.AttestationPoolRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)

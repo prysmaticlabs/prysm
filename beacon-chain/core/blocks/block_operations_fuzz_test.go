@@ -90,8 +90,8 @@ func TestFuzzareEth1DataEqual_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(eth1data)
 		fuzzer.Fuzz(eth1data2)
-		areEth1DataEqual(eth1data, eth1data2)
-		areEth1DataEqual(eth1data, eth1data)
+		AreEth1DataEqual(eth1data, eth1data2)
+		AreEth1DataEqual(eth1data, eth1data)
 	}
 }
 
@@ -323,7 +323,7 @@ func TestFuzzProcessDeposits_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(blockBody)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		r, err := ProcessDeposits(ctx, s, blockBody)
+		r, err := ProcessDeposits(ctx, s, blockBody.Deposits)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, blockBody)
 		}
@@ -340,7 +340,7 @@ func TestFuzzProcessPreGenesisDeposit_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(deposit)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		r, err := ProcessPreGenesisDeposit(ctx, s, deposit)
+		r, err := ProcessPreGenesisDeposits(ctx, s, []*eth.Deposit{deposit})
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
 		}
@@ -356,7 +356,7 @@ func TestFuzzProcessDeposit_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(deposit)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		r, err := ProcessDeposit(s, deposit)
+		r, err := ProcessDeposit(s, deposit, true)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
 		}

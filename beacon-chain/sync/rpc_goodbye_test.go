@@ -74,13 +74,13 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	failureCode := codeClientShutdown
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != failureCode {
@@ -121,13 +121,13 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	failureCode := codeClientShutdown
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != failureCode {

@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func FakeDeposits(n int) []*ethpb.Eth1Data {
+func FakeDeposits(n uint64) []*ethpb.Eth1Data {
 	deposits := make([]*ethpb.Eth1Data, n)
-	for i := 0; i < n; i++ {
+	for i := uint64(0); i < n; i++ {
 		deposits[i] = &ethpb.Eth1Data{
 			DepositCount: 1,
 			DepositRoot:  []byte("root"),
@@ -30,7 +30,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 		votingPeriodLength uint64
 	}{
 		{
-			stateVotes: FakeDeposits(4 * int(params.BeaconConfig().SlotsPerEpoch)),
+			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
@@ -38,7 +38,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			hasSupport:         true,
 			votingPeriodLength: 7,
 		}, {
-			stateVotes: FakeDeposits(4 * int(params.BeaconConfig().SlotsPerEpoch)),
+			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
@@ -46,7 +46,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			hasSupport:         false,
 			votingPeriodLength: 8,
 		}, {
-			stateVotes: FakeDeposits(4 * int(params.BeaconConfig().SlotsPerEpoch)),
+			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),

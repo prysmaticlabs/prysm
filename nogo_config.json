@@ -13,8 +13,7 @@
   },
   "lostcancel": {
     "exclude_files": {
-      "validator/client/streaming/runner.go": "No need to cancel right when goroutines begin",
-      "validator/client/polling/runner.go": "No need to cancel right when goroutines begin",
+      "validator/client/runner.go": "No need to cancel right when goroutines begin",
       "external/.*": "Third party code"
     }
   },
@@ -34,7 +33,7 @@
     "exclude_files": {
       "external/.*": "Third party code"
     }
-  }, 
+  },
   "copylocks": {
     "exclude_files": {
       "external/.*": "Third party code"
@@ -44,7 +43,7 @@
     "exclude_files": {
       "external/.*": "Third party code"
     }
-  }, 
+  },
   "cgocall": {
     "exclude_files": {
       "external/.*": "Third party code"
@@ -70,8 +69,8 @@
   },
   "roughtime": {
     "only_files": {
-      "beacon-chain/.*":  "",
-      "shared/.*":  "",
+      "beacon-chain/.*": "",
+      "shared/.*": "",
       "validator/.*": ""
     },
     "exclude_files": {
@@ -96,7 +95,19 @@
   },
   "featureconfig": {
     "only_files": {
-      ".*_test\\.go":  "Only tests"
+      ".*_test\\.go": "Only tests"
+    }
+  },
+  "cryptorand": {
+    "only_files": {
+      "beacon-chain/.*": "",
+      "shared/.*": "",
+      "validator/.*": ""
+    },
+    "exclude_files": {
+      ".*/.*_test\\.go": "Tests are OK to use weak crypto",
+      "shared/rand/rand\\.go": "Abstracts CSPRNGs for common use",
+      "shared/aggregation/testing/bitlistutils.go": "Test-only package"
     }
   }
 }

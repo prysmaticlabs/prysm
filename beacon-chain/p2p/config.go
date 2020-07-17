@@ -25,7 +25,5 @@ type Config struct {
 	MaxPeers            uint
 	AllowListCIDR       string
 	DenyListCIDR        []string
-	Encoding            string
 	StateNotifier       statefeed.Notifier
-	PubSub              string
 }

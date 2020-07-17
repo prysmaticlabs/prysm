@@ -22,13 +22,10 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestBlocksFetcher_InitStartStop(t *testing.T) {
@@ -392,23 +389,6 @@ func TestBlocksFetcher_scheduleRequest(t *testing.T) {
 	})
 }
 func TestBlocksFetcher_handleRequest(t *testing.T) {
-	// Handle using default configuration.
-	t.Run("default config", func(t *testing.T) {
-		_handleRequest(t)
-	})
-
-	// Now handle using previous implementation, w/o WRR.
-	t.Run("previous config", func(t *testing.T) {
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-			EnableInitSyncWeightedRoundRobin: false,
-		})
-		defer resetCfg()
-		_handleRequest(t)
-	})
-}
-
-// TODO(6024): Move to TestBlocksFetcher_handleRequest when EnableInitSyncWeightedRoundRobin is released.
-func _handleRequest(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	chainConfig := struct {
 		expectedBlockSlots []uint64
@@ -512,7 +492,6 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 		},
 	}
 
-	hook := logTest.NewGlobal()
 	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -524,9 +503,13 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 			p2p:         p2p,
 		})
 
-	root, _, peers := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
-
-	blocks, err := fetcher.requestBeaconBlocksByRange(context.Background(), peers[0], root, 1, 1, blockBatchLimit)
+	_, peers := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
+	req := &p2ppb.BeaconBlocksByRangeRequest{
+		StartSlot: 1,
+		Step:      1,
+		Count:     blockBatchLimit,
+	}
+	blocks, err := fetcher.requestBlocks(ctx, req, peers[0])
 	if err != nil {
 		t.Errorf("error: %v", err)
 	}
@@ -534,32 +517,10 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 		t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(blocks))
 	}
 
-	if !featureconfig.Get().EnableInitSyncWeightedRoundRobin {
-		// Test request fail over (success).
-		err = fetcher.p2p.Disconnect(peers[0])
-		if err != nil {
-			t.Error(err)
-		}
-		blocks, err = fetcher.requestBeaconBlocksByRange(context.Background(), peers[0], root, 1, 1, blockBatchLimit)
-		if err != nil {
-			t.Errorf("error: %v", err)
-		}
-
-		// Test request fail over (error).
-		err = fetcher.p2p.Disconnect(peers[1])
-		ctx, cancel = context.WithTimeout(context.Background(), time.Second*1)
-		defer cancel()
-		blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[1], root, 1, 1, blockBatchLimit)
-		testutil.AssertLogsContain(t, hook, "Request failed, trying to forward request to another peer")
-		if err == nil || err.Error() != "context deadline exceeded" {
-			t.Errorf("expected context closed error, got: %v", err)
-		}
-	}
-
 	// Test context cancellation.
 	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
-	blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[0], root, 1, 1, blockBatchLimit)
+	blocks, err = fetcher.requestBlocks(ctx, req, peers[0])
 	if err == nil || err.Error() != "context canceled" {
 		t.Errorf("expected context closed error, got: %v", err)
 	}
@@ -609,11 +570,22 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "Two peers available",
+			name: "Two peers available, excluded first",
 			args: args{
 				excludedPID: "abc",
 				peers: []peer.ID{
 					"abc", "cde",
+				},
+			},
+			want:    "cde",
+			wantErr: nil,
+		},
+		{
+			name: "Two peers available, excluded second",
+			args: args{
+				excludedPID: "abc",
+				peers: []peer.ID{
+					"cde", "abc",
 				},
 			},
 			want:    "cde",
@@ -731,9 +703,6 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 }
 
 func TestBlocksFetcher_filterPeers(t *testing.T) {
-	if !featureconfig.Get().EnableInitSyncWeightedRoundRobin {
-		t.Skip("Test is run only when EnableInitSyncWeightedRoundRobin = true")
-	}
 	type weightedPeer struct {
 		peer.ID
 		usedCapacity int64

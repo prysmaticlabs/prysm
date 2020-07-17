@@ -27,6 +27,7 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

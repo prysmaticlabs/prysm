@@ -14,6 +14,9 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -22,14 +25,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/client/polling"
-	"github.com/prysmaticlabs/prysm/validator/client/streaming"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -107,6 +107,13 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
+			if dataDir == "" {
+				log.Fatal(
+					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+						"to use for your validator data",
+				)
+			}
+
 		}
 		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
 			return nil, err
@@ -197,27 +204,7 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 	if err := s.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
-	if featureconfig.Get().EnableStreamDuties {
-		v, err := streaming.NewValidatorService(context.Background(), &streaming.Config{
-			Endpoint:                   endpoint,
-			DataDir:                    dataDir,
-			KeyManager:                 keyManager,
-			LogValidatorBalances:       logValidatorBalances,
-			EmitAccountMetrics:         emitAccountMetrics,
-			CertFlag:                   cert,
-			GraffitiFlag:               graffiti,
-			GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
-			GrpcRetriesFlag:            grpcRetries,
-			GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
-			Protector:                  protector,
-		})
-
-		if err != nil {
-			return errors.Wrap(err, "could not initialize client service")
-		}
-		return s.services.RegisterService(v)
-	}
-	v, err := polling.NewValidatorService(context.Background(), &polling.Config{
+	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
@@ -341,7 +328,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := db.NewKVStore(dataDir, pubkeys)
+		valDB, err := kv.NewKVStore(dataDir, pubkeys)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}

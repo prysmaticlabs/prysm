@@ -2,12 +2,15 @@ package helpers
 
 import (
 	"encoding/binary"
+	"fmt"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // SlotSignature returns the signed signature of the hash tree root of input slot.
@@ -17,7 +20,7 @@ import (
 //    domain = get_domain(state, DOMAIN_SELECTION_PROOF, compute_epoch_at_slot(slot))
 //    signing_root = compute_signing_root(slot, domain)
 //    return bls.Sign(privkey, signing_root)
-func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
+func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey bls.SecretKey) (bls.Signature, error) {
 	d, err := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
@@ -54,8 +57,8 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 //   def get_aggregate_signature(attestations: Sequence[Attestation]) -> BLSSignature:
 //    signatures = [attestation.signature for attestation in attestations]
 //    return bls_aggregate_signatures(signatures)
-func AggregateSignature(attestations []*ethpb.Attestation) (*bls.Signature, error) {
-	sigs := make([]*bls.Signature, len(attestations))
+func AggregateSignature(attestations []*ethpb.Attestation) (bls.Signature, error) {
+	sigs := make([]bls.Signature, len(attestations))
 	var err error
 	for i := 0; i < len(sigs); i++ {
 		sigs[i], err = bls.SignatureFromBytes(attestations[i].Signature)
@@ -107,4 +110,49 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) u
 	commsSinceStart := comCount * slotSinceStart
 	computedSubnet := (commsSinceStart + comIdx) % params.BeaconNetworkConfig().AttestationSubnetCount
 	return computedSubnet
+}
+
+// ValidateAttestationTime Validates that the incoming attestation is in the desired time range.
+// An attestation is valid only if received within the last ATTESTATION_PROPAGATION_SLOT_RANGE
+// slots.
+//
+// Example:
+//   ATTESTATION_PROPAGATION_SLOT_RANGE = 5
+//   current_slot = 100
+//   invalid_attestation_slot = 92
+//   invalid_attestation_slot = 101
+//   valid_attestation_slot = 98
+// In the attestation must be within the range of 95 to 100 in the example above.
+func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
+	attTime := genesisTime.Add(time.Duration(attSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
+	currentSlot := SlotsSince(genesisTime)
+
+	// A clock disparity allows for minor tolerances outside of the expected range. This value is
+	// usually small, less than 1 second.
+	clockDisparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
+
+	// An attestation cannot be from the future, so the upper bounds is set to now, with a minor
+	// tolerance for peer clock disparity.
+	upperBounds := roughtime.Now().Add(clockDisparity)
+
+	// An attestation cannot be older than the current slot - attestation propagation slot range
+	// with a minor tolerance for peer clock disparity.
+	lowerBoundsSlot := uint64(0)
+	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
+		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
+	}
+	lowerBounds := genesisTime.Add(
+		time.Duration(lowerBoundsSlot*params.BeaconConfig().SecondsPerSlot) * time.Second,
+	).Add(-clockDisparity)
+
+	// Verify attestation slot within the time range.
+	if attTime.Before(lowerBounds) || attTime.After(upperBounds) {
+		return fmt.Errorf(
+			"attestation slot %d not within attestation propagation range of %d to %d (current slot)",
+			attSlot,
+			currentSlot-params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+			currentSlot,
+		)
+	}
+	return nil
 }

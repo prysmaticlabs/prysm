@@ -210,7 +210,10 @@ func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
 
 // This returns the head state.
 // It does a full copy on head state for immutability.
-func (s *Service) headState() *state.BeaconState {
+func (s *Service) headState(ctx context.Context) *stateTrie.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "blockchain.headState")
+	defer span.End()
+
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -236,6 +239,9 @@ func (s *Service) hasHeadState() bool {
 // This updates recent canonical block mapping. It uses input head root and retrieves
 // all the canonical block roots that are ancestor of the input head block root.
 func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockchain.updateRecentCanonicalBlocks")
+	defer span.End()
+
 	s.recentCanonicalBlocksLock.Lock()
 	defer s.recentCanonicalBlocksLock.Unlock()
 
