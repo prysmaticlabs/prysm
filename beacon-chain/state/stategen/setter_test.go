@@ -9,6 +9,8 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -23,23 +25,14 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 
 	// This goes to cold section.
 	slot := uint64(1)
-	if err := beaconState.SetSlot(slot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(slot))
 	service.finalizedInfo.slot = slot + 1
 
 	r := [32]byte{'a'}
-	if err := service.SaveState(ctx, r, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.SaveState(ctx, r, beaconState))
 
-	if !service.beaconDB.HasArchivedPoint(ctx, 1) {
-		t.Error("Did not save cold state")
-	}
-
-	if service.beaconDB.ArchivedPointRoot(ctx, 1) != r {
-		t.Error("Did not get wanted root")
-	}
+	assert.Equal(t, true, service.beaconDB.HasArchivedPoint(ctx, 1), "Did not save cold state")
+	assert.Equal(t, r, service.beaconDB.ArchivedPointRoot(ctx, 1), "Did not get wanted root")
 
 	testutil.AssertLogsContain(t, hook, "Saved full state on archived point")
 }
@@ -52,26 +45,16 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
-	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	r := [32]byte{'a'}
-	if err := service.SaveState(ctx, r, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.SaveState(ctx, r, beaconState))
 
 	// Should save both state and state summary.
 	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !ok {
-		t.Error("Should have saved the state")
-	}
-	if !service.stateSummaryCache.Has(r) {
-		t.Error("Should have saved the state summary")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, ok, "Should have saved the state")
+	assert.Equal(t, true, service.stateSummaryCache.Has(r), "Should have saved the state summary")
 }
 
 func TestSaveState_HotStateCached(t *testing.T) {
@@ -82,23 +65,15 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	// Cache the state prior.
 	r := [32]byte{'a'}
 	service.hotStateCache.Put(r, beaconState)
-	if err := service.SaveState(ctx, r, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.SaveState(ctx, r, beaconState))
 
 	// Should not save the state and state summary.
-	if service.beaconDB.HasState(ctx, r) {
-		t.Error("Should not have saved the state")
-	}
-	if service.beaconDB.HasStateSummary(ctx, r) {
-		t.Error("Should have saved the state summary")
-	}
+	assert.Equal(t, false, service.beaconDB.HasState(ctx, r) , "Should not have saved the state")
+	assert.Equal(t, false, service.beaconDB.HasStateSummary(ctx, r) , "Should have saved the state summary")
 	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 }
