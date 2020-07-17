@@ -20,8 +20,8 @@ import (
 func CreateWallet(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
-	if !errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "could not parse wallet directory")
+	if err != nil && !errors.Is(err, ErrNoWalletFound) {
+		log.Fatalf("Could not parse wallet directory: %v", err)
 	}
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
@@ -46,7 +46,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		if err = initializeDirectWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
 		}
-		log.Infof(
+		log.WithField("wallet-path", walletDir).Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
 				"Make a new validator account with ./prysm.sh validator accounts-2 new",
 		)
@@ -56,7 +56,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		if err = initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
 		}
-		log.Infof(
+		log.WithField("wallet-path", walletDir).Infof(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
