@@ -180,6 +180,12 @@ var (
 		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
 		Value: "",
 	}
+	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
+	KeymanagerKindFlag = &cli.StringFlag{
+		Name:  "keymanager-kind",
+		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
+		Value: "",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
