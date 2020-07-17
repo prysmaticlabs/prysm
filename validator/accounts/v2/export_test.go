@@ -2,24 +2,30 @@ package v2
 
 import (
 	"context"
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
-func setupWallet(t *testing.T) *Wallet {
-	testDir := testutil.TempDir()
+func setupWallet(t *testing.T, testDir string) *Wallet {
+	walletDir := filepath.Join(testDir, "/wallet")
+	passwordsDir := filepath.Join(testDir, "/walletpasswords")
 	ctx := context.Background()
-	if err := initializeDirectWallet(testDir, testDir); err != nil {
+	if err := initializeDirectWallet(walletDir, passwordsDir); err != nil {
 		t.Fatal(err)
 	}
 	cfg := &WalletConfig{
-		PasswordsDir:   testDir,
-		WalletDir:      testDir,
+		WalletDir:      walletDir,
+		PasswordsDir:   passwordsDir,
 		KeymanagerKind: v2.Direct,
 	}
 	w, err := NewWallet(ctx, cfg)
@@ -39,7 +45,8 @@ func setupWallet(t *testing.T) *Wallet {
 
 func TestZipAndUnzip(t *testing.T) {
 	testDir := testutil.TempDir()
-	wallet := setupWallet(t)
+	exportDir := filepath.Join(testDir, "/export")
+	wallet := setupWallet(t, testDir)
 
 	accounts, err := wallet.AccountNames()
 	if err != nil {
@@ -48,17 +55,17 @@ func TestZipAndUnzip(t *testing.T) {
 	if len(accounts) == 0 {
 		t.Fatal("Expected more accounts, received 0")
 	}
-	if err := wallet.zipAccounts(accounts, testDir); err != nil {
+	if err := wallet.zipAccounts(accounts, exportDir); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(testDir, archiveFilename)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
 
-	exportFolder := "export"
-	exportDir := filepath.Join(testDir, exportFolder)
-	importedAccounts, err := unzipArchiveToTarget(testDir, exportDir)
+	importFolder := "import"
+	importDir := filepath.Join(testDir, importFolder)
+	importedAccounts, err := unzipArchiveToTarget(exportDir, importDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,5 +75,37 @@ func TestZipAndUnzip(t *testing.T) {
 		if !strings.Contains(allAccountsStr, importedAccount) {
 			t.Fatalf("Expected %s to be in %s", importedAccount, allAccountsStr)
 		}
+	}
+}
+
+func TestExport_Noninteractive(t *testing.T) {
+	testDir := testutil.TempDir()
+	walletDir := filepath.Join(testDir, "/wallet")
+	passwordsDir := filepath.Join(testDir, "/walletpasswords")
+	exportDir := filepath.Join(testDir, "/export")
+	accounts := "all"
+	defer func() {
+		assert.NoError(t, os.RemoveAll(walletDir))
+		assert.NoError(t, os.RemoveAll(passwordsDir))
+		assert.NoError(t, os.RemoveAll(exportDir))
+	}()
+	setupWallet(t, testDir)
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, walletDir, "")
+	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
+	set.String(flags.BackupPathFlag.Name, exportDir, "")
+	set.String(flags.AccountsFlag.Name, accounts, "")
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
+	assert.NoError(t, set.Set(flags.BackupPathFlag.Name, exportDir))
+	assert.NoError(t, set.Set(flags.AccountsFlag.Name, accounts))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	if err := ExportAccount(cliCtx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
+		t.Fatal("Expected file to exist")
 	}
 }

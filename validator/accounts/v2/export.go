@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -25,7 +27,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
-		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+		log.Fatal("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
 		log.WithError(err).Fatal("Could not parse wallet directory")
 	}
@@ -43,22 +45,32 @@ func ExportAccount(cliCtx *cli.Context) error {
 		log.WithError(err).Fatal("Could not open wallet")
 	}
 
+	fmt.Println("fuck2")
+
 	allAccounts, err := wallet.AccountNames()
 	if err != nil {
-		log.WithError(err).Fatal("Could not get account names")
+		log.WithError(err).Error("Could not get account names")
 	}
+	fmt.Println("fuck3")
 	accounts, err := selectAccounts(cliCtx, allAccounts)
 	if err != nil {
 		log.WithError(err).Fatal("Could not select accounts")
 	}
+	if len(accounts) == 0 {
+		return errors.New("no accounts to export")
+	}
+	fmt.Println("fuck4")
 
 	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
 		log.WithError(err).Error("Could not export accounts")
 	}
 
+	fmt.Println("fuck5")
 	if err := logAccountsExported(wallet, accounts); err != nil {
 		log.WithError(err).Fatal("Could not log out exported accounts")
 	}
+
+	fmt.Println("fuck6")
 	return nil
 }
 
@@ -119,6 +131,9 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 	sourcePath := w.accountsPath
 	archivePath := filepath.Join(targetPath, archiveFilename)
+	if err := os.MkdirAll(targetPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+		return errors.Wrap(err, "could not create target folder")
+	}
 	zipfile, err := os.Create(archivePath)
 	if err != nil {
 		return errors.Wrap(err, "could not create zip file")
