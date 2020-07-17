@@ -189,7 +189,7 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm)
+		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, "hello world")
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize keymanager")
 		}
@@ -280,6 +280,15 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 	}
 	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
 	return nil
+}
+
+// ReadEncryptedSeedFromDisk --
+func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
+	if !fileExists(path.Join(w.accountsPath, encryptedSeedFileName)) {
+		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
+	}
+	configFilePath := path.Join(w.accountsPath, encryptedSeedFileName)
+	return os.Open(configFilePath)
 }
 
 // ReadPasswordForAccount when given an account name from the wallet's passwords' path.

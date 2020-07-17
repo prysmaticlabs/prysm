@@ -108,7 +108,7 @@ func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 	if err != nil {
 		return err
 	}
-	seedConfig, err := derived.MarshalEncryptedSeedFile(ctx, walletSeed)
+	seedConfig, err := derived.MarshalEncryptedSeedFile(ctx, walletSeed, "hello world" /* change pass */)
 	if err != nil {
 		return err
 	}

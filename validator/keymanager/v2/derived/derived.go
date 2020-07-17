@@ -41,6 +41,7 @@ type Wallet interface {
 	AccountsDir() string
 	CanUnlockAccounts() bool
 	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
+	ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error)
 }
 
 // Config for a derived keymanager.
@@ -57,6 +58,7 @@ type Keymanager struct {
 	keysCache         map[[48]byte]bls.SecretKey
 	lock              sync.RWMutex
 	accountNum        uint64
+	seedCfg           *SeedConfig
 	seed              []byte
 }
 
@@ -69,6 +71,15 @@ type Keystore struct {
 	Name    string                 `json:"name"`
 }
 
+// SeedConfig json file representation as a Go struct.
+type SeedConfig struct {
+	Crypto      map[string]interface{} `json:"crypto"`
+	ID          string                 `json:"uuid"`
+	NextAccount uint64                 `json:"next_account"`
+	Version     uint                   `json:"version"`
+	Name        string                 `json:"name"`
+}
+
 // DefaultConfig for a derived keymanager implementation.
 func DefaultConfig() *Config {
 	return &Config{
@@ -78,13 +89,45 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
+func NewKeymanager(
+	ctx context.Context,
+	wallet Wallet,
+	cfg *Config,
+	skipMnemonicConfirm bool,
+	password string,
+) (*Keymanager, error) {
+	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+	if err != nil {
+		return nil, err
+	}
+	enc, err := ioutil.ReadAll(seedConfigFile)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := seedConfigFile.Close(); err != nil {
+			log.Errorf("Could not close keymanager config file: %v", err)
+		}
+	}()
+	seedConfig := &SeedConfig{}
+	log.Info(enc)
+	if err := json.Unmarshal(enc, cfg); err != nil {
+		return nil, err
+	}
+	decryptor := keystorev4.New()
+	seed, err := decryptor.Derypt(seedConfig.Crypto, []byte(password))
+	if err != nil {
+		return nil, err
+	}
 	k := &Keymanager{
 		wallet: wallet,
 		cfg:    cfg,
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: skipMnemonicConfirm,
 		},
+		seedCfg:    seedConfig,
+		seed:       seed,
+		accountNum: seedConfig.NextAccount - 1, // TODO: Check for underflow.
 	}
 	return k, nil
 }
@@ -122,11 +165,36 @@ func InitializeWalletSeed(ctx context.Context) ([]byte, error) {
 	if n != len(walletSeed) {
 		return nil, errors.New("could not randomly create seed")
 	}
+	m := &EnglishMnemonicGenerator{
+		skipMnemonicConfirm: false,
+	}
+	phrase, err := m.Generate(walletSeed)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.ConfirmAcknowledgement(phrase); err != nil {
+		return nil, err
+	}
 	return walletSeed, nil
 }
 
-func MarshalEncryptedSeedFile(ctx context.Context, seed []byte) ([]byte, error) {
-	return nil, nil
+func MarshalEncryptedSeedFile(ctx context.Context, seed []byte, password string) ([]byte, error) {
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(seed, []byte(password))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
+	}
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	seedFile := &SeedConfig{}
+	seedFile.Crypto = cryptoFields
+	seedFile.ID = id.String()
+	seedFile.NextAccount = 1
+	seedFile.Version = encryptor.Version()
+	seedFile.Name = encryptor.Name()
+	return json.MarshalIndent(seedFile, "", "\t")
 }
 
 // CreateAccount for a derived keymanager implementation. This utilizes
