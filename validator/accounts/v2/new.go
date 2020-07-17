@@ -111,7 +111,10 @@ func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	return walletPath, nil
 }
 
-func inputKeymanagerKind(_ *cli.Context) (v2keymanager.Kind, error) {
+func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
+	if cliCtx.IsSet(flags.KeymanagerKindFlag.Name) {
+		return v2keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))
+	}
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
