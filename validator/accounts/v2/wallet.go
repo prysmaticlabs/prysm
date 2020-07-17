@@ -48,8 +48,8 @@ var (
 // WalletConfig for a wallet struct, containing important information
 // such as the passwords directory, the wallet's directory, and keymanager.
 type WalletConfig struct {
-	PasswordsDir      string
 	WalletDir         string
+	PasswordsDir      string
 	KeymanagerKind    v2keymanager.Kind
 	CanUnlockAccounts bool
 }

@@ -10,11 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -65,7 +64,6 @@ func ExportAccount(cliCtx *cli.Context) error {
 		log.WithError(err).Fatal("Could not log out exported accounts")
 	}
 
-	fmt.Println("fuck6")
 	return nil
 }
 
