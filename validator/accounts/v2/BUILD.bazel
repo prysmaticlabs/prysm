@@ -42,6 +42,7 @@ go_test(
     srcs = [
         "list_test.go",
         "new_test.go",
+        "wallet_create_test.go",
         "wallet_edit_test.go",
         "wallet_test.go",
     ],
@@ -51,6 +52,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/direct:go_default_library",
