@@ -2,8 +2,6 @@ package stategen
 
 import (
 	"context"
-	"reflect"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -12,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSaveColdState_NonArchivedPoint(t *testing.T) {
@@ -21,13 +21,8 @@ func TestSaveColdState_NonArchivedPoint(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := service.saveColdState(ctx, [32]byte{}, beaconState); err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, beaconState.SetSlot(1))
+	assert.NoError(t, service.saveColdState(ctx, [32]byte{}, beaconState))
 }
 
 func TestSaveColdState_CanSave(t *testing.T) {
@@ -37,22 +32,13 @@ func TestSaveColdState_CanSave(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(1))
 
 	r := [32]byte{'a'}
-	if err := service.saveColdState(ctx, r, beaconState); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.saveColdState(ctx, r, beaconState))
 
-	if !service.beaconDB.HasArchivedPoint(ctx, 1) {
-		t.Error("Did not save cold state")
-	}
-
-	if service.beaconDB.ArchivedPointRoot(ctx, 1) != r {
-		t.Error("Did not get wanted root")
-	}
+	assert.Equal(t, true, service.beaconDB.HasArchivedPoint(ctx, 1), "Did not save cold state")
+	assert.Equal(t, r, service.beaconDB.ArchivedPointRoot(ctx, 1), "Did not get wanted root")
 }
 
 func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
@@ -60,9 +46,8 @@ func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-	if _, err := service.loadColdStateByRoot(ctx, [32]byte{'a'}); !strings.Contains(err.Error(), errUnknownStateSummary.Error()) {
-		t.Fatal("Did not get correct error")
-	}
+	_, err := service.loadColdStateByRoot(ctx, [32]byte{'a'})
+	require.ErrorContains(t, errUnknownStateSummary.Error(), err, "Did not get correct error")
 }
 
 func TestLoadStateByRoot_CanGet(t *testing.T) {
@@ -75,18 +60,10 @@ func TestLoadStateByRoot_CanGet(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if service.beaconDB.SaveBlock(ctx, blk) != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, blkRoot))
 
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Root: blkRoot[:],
@@ -96,12 +73,8 @@ func TestLoadStateByRoot_CanGet(t *testing.T) {
 	}
 
 	loadedState, err := service.StateByRoot(ctx, blkRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not correctly save state")
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, beaconState.InnerStateUnsafe(), loadedState.InnerStateUnsafe(), "Did not correctly save state")
 }
 
 func TestLoadColdStateBySlot_CanGet(t *testing.T) {
@@ -113,24 +86,12 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if service.beaconDB.SaveBlock(ctx, blk) != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, blkRoot))
 
 	loadedState, err := service.loadColdStateBySlot(ctx, 200)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if loadedState.Slot() != 200 {
-		t.Error("Did not correctly save state")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(200), loadedState.Slot(), "Did not correctly save state")
 }

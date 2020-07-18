@@ -2,7 +2,6 @@ package stategen
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -17,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
@@ -27,24 +28,14 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := service.beaconDB.SaveState(ctx, beaconState, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, gRoot))
 
 	s, err := service.ComputeStateUpToSlot(ctx, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if !proto.Equal(s.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
 		t.Error("Did not receive correct genesis state")
@@ -59,29 +50,16 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := service.beaconDB.SaveState(ctx, beaconState, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, gRoot))
 
 	s, err := service.ComputeStateUpToSlot(ctx, params.BeaconConfig().SlotsPerEpoch+1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
-		t.Log(s.Slot())
-		t.Error("Did not receive correct processed state")
-	}
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, s.Slot(), "Did not receive correct processed state")
 }
 
 func TestReplayBlocks_AllSkipSlots(t *testing.T) {
@@ -90,42 +68,27 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)))
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	mockRoot := [32]byte{}
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
-	if err := beaconState.SetCurrentJustifiedCheckpoint(cp); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
+	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
 	service := New(db, cache.NewStateSummaryCache())
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
 	newState, err := service.ReplayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if newState.Slot() != targetSlot {
-		t.Error("Did not advance slots")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
 
 func TestReplayBlocks_SameSlot(t *testing.T) {
@@ -134,42 +97,27 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)))
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	mockRoot := [32]byte{}
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
-	if err := beaconState.SetCurrentJustifiedCheckpoint(cp); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
+	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
 	service := New(db, cache.NewStateSummaryCache())
 	targetSlot := beaconState.Slot()
 	newState, err := service.ReplayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if newState.Slot() != targetSlot {
-		t.Error("Did not advance slots")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
 
 func TestLoadBlocks_FirstBranch(t *testing.T) {
@@ -180,14 +128,10 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 	}
 
 	roots, savedBlocks, err := tree1(db, bytesutil.PadTo([]byte{'A'}, 32))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 8, roots[len(roots)-1])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
 		savedBlocks[8],
@@ -213,14 +157,10 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 	}
 
 	roots, savedBlocks, err := tree1(db, []byte{'A'})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 5, roots[5])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
 		savedBlocks[5],
@@ -244,14 +184,10 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 	}
 
 	roots, savedBlocks, err := tree1(db, []byte{'A'})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 7, roots[7])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
 		savedBlocks[7],
@@ -277,14 +213,10 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 	}
 
 	roots, savedBlocks, err := tree2(db, []byte{'A'})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 3, roots[6])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
 		savedBlocks[6],
@@ -308,14 +240,10 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 	}
 
 	roots, savedBlocks, err := tree3(db, bytesutil.PadTo([]byte{'A'}, 32))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 2, roots[2])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
 		savedBlocks[2],
@@ -338,14 +266,10 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 	}
 
 	roots, savedBlocks, err := tree4(db, bytesutil.PadTo([]byte{'A'}, 32))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 2, roots[1])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
 		savedBlocks[1],
@@ -367,13 +291,9 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 	}
 
 	roots, _, err := tree1(db, bytesutil.PadTo([]byte{'A'}, 32))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, err = s.LoadBlocks(ctx, 0, 5, roots[8])
-	if err.Error() != "end block roots don't match" {
-		t.Error("Did not get wanted error")
-	}
+	assert.ErrorContains(t, "end block roots don't match", err)
 }
 
 func TestLastSavedBlock_Genesis(t *testing.T) {
@@ -386,26 +306,14 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.SaveBlock(ctx, gBlk); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, gBlk))
+	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
 	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if savedSlot != 0 {
-		t.Error("Did not save genesis slot")
-	}
-	if savedRoot != savedRoot {
-		t.Error("Did not save genesis root")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), savedSlot, "Did not save genesis slot")
+	assert.Equal(t, savedRoot, savedRoot, "Did not save genesis root")
 }
 
 func TestLastSavedBlock_CanGet(t *testing.T) {
@@ -417,32 +325,18 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
-	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, b1))
 	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 10}}
-	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, b2))
 	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 20}}
-	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, b3))
 
 	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+100)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if savedSlot != s.finalizedInfo.slot+20 {
-		t.Error("Did not save correct slot")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, s.finalizedInfo.slot+20, savedSlot)
 	wantedRoot, err := stateutil.BlockRoot(b3.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if savedRoot != wantedRoot {
-		t.Error("Did not save correct root")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, wantedRoot, savedRoot, "Did not save correct root")
 }
 
 func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
@@ -454,9 +348,7 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 	}
 
 	root, slot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if slot != 0 && root != [32]byte{} {
 		t.Error("Did not get wanted block")
 	}
@@ -472,20 +364,12 @@ func TestLastSavedState_Genesis(t *testing.T) {
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.SaveBlock(ctx, gBlk); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, gBlk))
+	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
 	savedRoot, err := s.lastSavedState(ctx, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if savedRoot != savedRoot {
 		t.Error("Did not save genesis root")
 	}
@@ -500,34 +384,20 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
-	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, b1))
 	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 10}}
-	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, b2))
 	b2Root, err := stateutil.BlockRoot(b2.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	if err := st.SetSlot(s.finalizedInfo.slot + 10); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.SetSlot(s.finalizedInfo.slot+10))
 
-	if err := s.beaconDB.SaveState(ctx, st, b2Root); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveState(ctx, st, b2Root))
 	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 20}}
-	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, b3))
 
 	savedState, err := s.lastSavedState(ctx, s.finalizedInfo.slot+100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(st.InnerStateUnsafe(), savedState.InnerStateUnsafe()) {
 		t.Error("Did not save correct root")
 	}
@@ -542,14 +412,10 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
-	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.beaconDB.SaveBlock(ctx, b1))
 
 	_, err := s.lastSavedState(ctx, s.finalizedInfo.slot+1)
-	if err != errUnknownState {
-		t.Error("Did not get wanted error")
-	}
+	assert.ErrorContains(t, errUnknownState.Error(), err)
 }
 
 func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
@@ -559,23 +425,13 @@ func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 
 	r := [32]byte{'a'}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := db.SaveState(ctx, beaconState, r); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, beaconState, r))
 	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(got.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not get wanted state")
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, beaconState.InnerStateUnsafe(), got.InnerStateUnsafe(), "Did not get wanted state")
 	got, err = service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(got.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not get wanted state")
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, beaconState.InnerStateUnsafe(), got.InnerStateUnsafe(), "Did not get wanted state")
 }
 
 func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
@@ -584,17 +440,11 @@ func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
 
 	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
 	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
-		t.Error("Did not receive correct processed state")
-	}
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, s.Slot(), "Did not receive correct processed state")
 }
 
 func TestProcessStateUpToSlot_CanProcess(t *testing.T) {
@@ -605,13 +455,9 @@ func TestProcessStateUpToSlot_CanProcess(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 
 	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch+1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
-		t.Error("Did not receive correct processed state")
-	}
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, s.Slot(), "Did not receive correct processed state")
 }
 
 // tree1 constructs the following tree:
