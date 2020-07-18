@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
@@ -139,9 +140,7 @@ func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
 			sort.Slice(*tt.want, func(i, j int) bool {
 				return (*tt.want)[i].key < (*tt.want)[j].key
 			})
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("filter() unexpected result, got: %v, want: %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want)
 		})
 	}
 }
@@ -672,9 +671,7 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				t.Errorf("newMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Cover() got: %v, want: %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want)
 		})
 	}
 }

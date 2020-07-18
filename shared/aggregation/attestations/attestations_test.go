@@ -1,7 +1,6 @@
 package attestations
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +14,8 @@ import (
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,12 +53,8 @@ func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	}
 	for _, tt := range tests {
 		got, err := AggregatePair(tt.a1, tt.a2)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ssz.DeepEqual(got, tt.want) {
-			t.Errorf("AggregatePair() = %v, want %v", got, tt.want)
-		}
+		require.NoError(t, err)
+		require.Equal(t, ssz.DeepEqual(got, tt.want), true)
 	}
 }
 
@@ -77,9 +74,7 @@ func TestAggregateAttestations_AggregatePair_OverlapFails(t *testing.T) {
 	}
 	for _, tt := range tests {
 		_, err := AggregatePair(tt.a1, tt.a2)
-		if err != aggregation.ErrBitsOverlap {
-			t.Error("Did not receive wanted error")
-		}
+		require.ErrorContains(t, aggregation.ErrBitsOverlap.Error(), err)
 	}
 }
 
@@ -95,9 +90,7 @@ func TestAggregateAttestations_AggregatePair_DiffLengthFails(t *testing.T) {
 	}
 	for _, tt := range tests {
 		_, err := AggregatePair(tt.a1, tt.a2)
-		if err != aggregation.ErrBitsDifferentLen {
-			t.Error("Did not receive wanted error")
-		}
+		require.ErrorContains(t, aggregation.ErrBitsDifferentLen.Error(), err)
 	}
 }
 
@@ -221,23 +214,16 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 	for _, tt := range tests {
 		runner := func() {
 			got, err := Aggregate(aggtesting.MakeAttestationsFromBitlists(t, tt.inputs))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			sort.Slice(got, func(i, j int) bool {
 				return got[i].AggregationBits.Bytes()[0] < got[j].AggregationBits.Bytes()[0]
 			})
 			sort.Slice(tt.want, func(i, j int) bool {
 				return tt.want[i].Bytes()[0] < tt.want[j].Bytes()[0]
 			})
-			if len(got) != len(tt.want) {
-				t.Logf("got=%v", got)
-				t.Fatalf("Wrong number of responses. Got %d, wanted %d", len(got), len(tt.want))
-			}
+			assert.Equal(t, len(got), len(tt.want))
 			for i, w := range tt.want {
-				if !bytes.Equal(got[i].AggregationBits.Bytes(), w.Bytes()) {
-					t.Errorf("Unexpected bitlist at index %d, got %b, wanted %b", i, got[i].AggregationBits.Bytes(), w.Bytes())
-				}
+				assert.DeepEqual(t, got[i].AggregationBits.Bytes(), w.Bytes())
 			}
 		}
 		t.Run(fmt.Sprintf("%s/%s", tt.name, NaiveAggregation), func(t *testing.T) {
