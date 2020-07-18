@@ -369,3 +369,12 @@ func TestHighestBitIndexBelow(t *testing.T) {
 		}
 	}
 }
+
+func TestUint64ToBytes_RoundTrip(t *testing.T) {
+	for i := uint64(0); i < 10000; i++ {
+		b := bytesutil.Uint64ToBytesBigEndian(i)
+		if got := bytesutil.BytesToUint64BigEndian(b); got != i {
+			t.Error("Round trip did not match original value")
+		}
+	}
+}

@@ -418,54 +418,12 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	assert.ErrorContains(t, errUnknownState.Error(), err)
 }
 
-func TestArchivedRoot_CanGetSpecificIndex(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
-
-	r := [32]byte{'a'}
-	require.NoError(t, db.SaveArchivedPointRoot(ctx, r, 1))
-	got, err := service.archivedRoot(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
-	require.NoError(t, err)
-	assert.Equal(t, r, got, "Did not get wanted root")
-}
-
-func TestArchivedRoot_CanGetOlderOlder(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
-
-	r := [32]byte{'a'}
-	require.NoError(t, db.SaveArchivedPointRoot(ctx, r, 10))
-	r = [32]byte{'b'}
-	require.NoError(t, db.SaveArchivedPointRoot(ctx, r, 11))
-	got, err := service.archivedRoot(ctx, 100000)
-	require.NoError(t, err)
-	assert.Equal(t, r, got, "Did not get wanted root")
-}
-
-func TestArchivedRoot_CanGetGenesisIndex(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
-
-	gBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := stateutil.BlockRoot(gBlock.Block)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, gBlock))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	got, err := service.archivedRoot(ctx, 100000)
-	require.NoError(t, err)
-	assert.Equal(t, gRoot, got, "Did not get wanted root")
-}
-
 func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
-	require.NoError(t, db.SaveArchivedPointRoot(ctx, r, 1))
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, db.SaveState(ctx, beaconState, r))
 	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
