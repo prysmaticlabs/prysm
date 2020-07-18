@@ -367,6 +367,38 @@ func TestPeerConnectionStatuses(t *testing.T) {
 	assert.Equal(t, numPeersAll, len(p.All()), "Unexpected number of peers")
 }
 
+func TestDecay(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
+
+	// Peer 1 has 0 bad responses.
+	pid1 := addPeer(t, p, peers.PeerConnected)
+	// Peer 2 has 1 bad response.
+	pid2 := addPeer(t, p, peers.PeerConnected)
+	p.IncrementBadResponses(pid2)
+	// Peer 3 has 2 bad response.
+	pid3 := addPeer(t, p, peers.PeerConnected)
+	p.IncrementBadResponses(pid3)
+	p.IncrementBadResponses(pid3)
+
+	// Decay the values
+	p.Decay()
+
+	// Ensure the new values are as expected
+	badResponses1, err := p.BadResponses(pid1)
+	require.NoError(t, err)
+	assert.Equal(t, 0, badResponses1, "Unexpected bad responses for peer 1")
+	badResponses2, err := p.BadResponses(pid2)
+	require.NoError(t, err)
+	assert.Equal(t, 0, badResponses2, "Unexpected bad responses for peer 2")
+	badResponses3, err := p.BadResponses(pid3)
+	require.NoError(t, err)
+	assert.Equal(t, 1, badResponses3, "Unexpected bad responses for peer 3")
+}
+
 func TestPrune(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
