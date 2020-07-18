@@ -7,54 +7,32 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBlockRoot(t *testing.T) {
 	genState, keys := testutil.DeterministicGenesisState(t, 100)
 	blk, err := testutil.GenerateFullBlock(genState, keys, testutil.DefaultBlockGenConfig(), 10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	expectedRoot, err := ssz.HashTreeRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	receivedRoot, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if receivedRoot != expectedRoot {
-		t.Fatalf("Wanted %#x but got %#x", expectedRoot, receivedRoot)
-	}
+	require.NoError(t, err)
+	require.Equal(t, expectedRoot, receivedRoot)
 	blk, err = testutil.GenerateFullBlock(genState, keys, testutil.DefaultBlockGenConfig(), 100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	expectedRoot, err = ssz.HashTreeRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	receivedRoot, err = stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if receivedRoot != expectedRoot {
-		t.Fatalf("Wanted %#x but got %#x", expectedRoot, receivedRoot)
-	}
+	require.NoError(t, err)
+	require.Equal(t, expectedRoot, receivedRoot)
 }
 
 func TestBlockBodyRoot_NilIsSameAsEmpty(t *testing.T) {
 	a, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	b, err := stateutil.BlockBodyRoot(nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if a != b {
-		t.Log(a)
-		t.Log(b)
-		t.Error("A nil and empty block body do not generate the same root")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, a, b, "A nil and empty block body do not generate the same root")
 }
