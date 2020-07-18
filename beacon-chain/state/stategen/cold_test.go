@@ -61,7 +61,6 @@ func TestLoadStateByRoot_CanGet(t *testing.T) {
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveArchivedPointRoot(ctx, blkRoot, 0))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, blkRoot))
@@ -88,7 +87,6 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveArchivedPointRoot(ctx, blkRoot, 0))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, blkRoot))

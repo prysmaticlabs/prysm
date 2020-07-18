@@ -3,6 +3,8 @@ package kv
 import (
 	"context"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
@@ -15,8 +17,11 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 	if r1 == received {
 		t.Fatal("Should not have been saved")
 	}
-
-	if err := db.SaveArchivedPointRoot(ctx, r1, i1); err != nil {
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(i1); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, st, r1); err != nil {
 		t.Fatal(err)
 	}
 	received = db.ArchivedPointRoot(ctx, i1)
@@ -28,7 +33,7 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	i, err := db.LastArchivedIndex(ctx)
+	i, err := db.LastArchivedSlot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,29 +41,36 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 		t.Error("Did not get correct index")
 	}
 
-	if err := db.SaveArchivedPointRoot(ctx, [32]byte{'A'}, 1); err != nil {
-		t.Fatal(err)
+	st := testutil.NewBeaconState()
+	if err := db.SaveState(ctx, st, [32]byte{'A'}); err != nil {
+		t.Error(err)
 	}
 
-	if err := db.SaveArchivedPointRoot(ctx, [32]byte{'B'}, 3); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := db.SaveLastArchivedIndex(ctx, 1); err != nil {
-		t.Fatal(err)
-	}
-	if db.LastArchivedIndexRoot(ctx) != [32]byte{'A'} {
+	if db.LastArchivedRoot(ctx) != [32]byte{'A'} {
 		t.Error("Did not get wanted root")
 	}
 
-	if err := db.SaveLastArchivedIndex(ctx, 3); err != nil {
-		t.Fatal(err)
+	if err := st.SetSlot(2); err != nil {
+		t.Error(err)
 	}
-	if db.LastArchivedIndexRoot(ctx) != [32]byte{'B'} {
+
+	if err := db.SaveState(ctx, st, [32]byte{'B'}); err != nil {
+		t.Error(err)
+	}
+
+	if db.LastArchivedRoot(ctx) != [32]byte{'B'} {
 		t.Error("Did not get wanted root")
 	}
 
-	i, err = db.LastArchivedIndex(ctx)
+	if err := st.SetSlot(3); err != nil {
+		t.Error(err)
+	}
+
+	if err := db.SaveState(ctx, st, [32]byte{'C'}); err != nil {
+		t.Fatal(err)
+	}
+
+	i, err = db.LastArchivedSlot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
