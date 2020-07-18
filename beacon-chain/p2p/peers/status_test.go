@@ -524,7 +524,7 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	maxBadResponses := 2
 	maxPeers := 10
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
-		PeerLimit: 30,
+		PeerLimit:       30,
 		MaxBadResponses: maxBadResponses,
 	})
 
@@ -543,7 +543,7 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 func TestStatus_CurrentEpoch(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
-		PeerLimit: 30,
+		PeerLimit:       30,
 		MaxBadResponses: maxBadResponses,
 	})
 	// Peer 1
