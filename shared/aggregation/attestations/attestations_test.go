@@ -221,7 +221,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 			sort.Slice(tt.want, func(i, j int) bool {
 				return tt.want[i].Bytes()[0] < tt.want[j].Bytes()[0]
 			})
-			assert.Equal(t, len(got), len(tt.want))
+			assert.Equal(t, len(tt.want), len(got))
 			for i, w := range tt.want {
 				assert.DeepEqual(t, w.Bytes(), got[i].AggregationBits.Bytes())
 			}
