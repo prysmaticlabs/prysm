@@ -30,7 +30,6 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(1))
-	require.NoError(t, service.beaconDB.SaveArchivedPointRoot(ctx, bRoot, 0))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
@@ -189,11 +188,9 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	bRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
-	require.NoError(t, service.beaconDB.SaveArchivedPointRoot(ctx, bRoot, 0))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, bRoot))
 
 	r := [32]byte{}
-	require.NoError(t, service.beaconDB.SaveArchivedPointRoot(ctx, r, 1))
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot: service.slotsPerArchivedPoint,
 		Root: r[:],

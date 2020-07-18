@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -309,35 +308,14 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 	return stateutil.BlockRoot(b.Block)
 }
 
-// This returns the highest archived root based on input slot in the DB.
-// If the archived root is not available at that exact input slot due to an event of skip block,
-// this will look back and return the last available archived root (ie. the one with the highest slot below input slot).
-func (s *State) archivedRoot(ctx context.Context, slot uint64) ([32]byte, error) {
-	archivedIndex := slot / params.BeaconConfig().SlotsPerArchivedPoint
-	for archivedIndex > 0 {
-		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
-		}
-		if s.beaconDB.HasArchivedPoint(ctx, archivedIndex) {
-			return s.beaconDB.ArchivedPointRoot(ctx, archivedIndex), nil
-		}
-		archivedIndex--
-	}
-
-	if archivedIndex == 0 {
-		return s.genesisRoot(ctx)
-	}
-
-	return [32]byte{}, errUnknownArchivedState
-}
-
 // This retrieves the archived state in the DB.
 func (s *State) archivedState(ctx context.Context, slot uint64) (*state.BeaconState, error) {
-	archivedRoot, err := s.archivedRoot(ctx, slot)
-	if err != nil {
-		return nil, err
+	var st *state.BeaconState
+	sts, err := s.beaconDB.HighestSlotStatesBelow(ctx, slot+1)
+	if len(sts) > 0 {
+		st = sts[0]
 	}
-	return s.beaconDB.State(ctx, archivedRoot)
+	return st, err
 }
 
 // This recomputes a state given the block root.
