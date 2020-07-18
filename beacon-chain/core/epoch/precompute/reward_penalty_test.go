@@ -368,7 +368,7 @@ func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proposerIndex := validatorCount + 1
+	proposerIndex := validatorCount
 	b := &Balance{ActiveCurrentEpoch: 1000}
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
