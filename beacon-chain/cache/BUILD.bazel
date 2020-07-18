@@ -6,14 +6,20 @@ go_library(
     srcs = [
         "attestation_data.go",
         "checkpoint_state.go",
-        "committee.go",
         "common.go",
         "doc.go",
         "hot_state_cache.go",
         "skip_slot_cache.go",
         "state_summary.go",
         "subnet_ids.go",
-    ],
+    ] + select({
+        "//fuzz:fuzzing_enabled": [
+            "committee_disabled.go",
+        ],
+        "//conditions:default": [
+            "committee.go",
+        ],
+    }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
     visibility = [
         "//beacon-chain:__subpackages__",

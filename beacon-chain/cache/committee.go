@@ -1,3 +1,5 @@
+// -build libfuzzer
+
 package cache
 
 import (
@@ -215,6 +217,12 @@ func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
 	}
 
 	return item.ProposerIndices, nil
+}
+
+// HasEntry returns true if the committee cache has a value.
+func (c *CommitteeCache) HasEntry(seed string) bool {
+	_, ok, err := c.CommitteeCache.GetByKey(seed)
+	return err == nil && ok
 }
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {

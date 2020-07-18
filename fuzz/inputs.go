@@ -2,12 +2,13 @@ package fuzz
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // InputBlockHeader for fuzz testing beacon block headers.
 type InputBlockHeader struct {
-	StateID uint16
-	Block   *ethpb.BeaconBlock
+	State *pb.BeaconState
+	Block *ethpb.SignedBeaconBlock
 }
 
 // InputAttesterSlashingWrapper for fuzz testing attester slashing.

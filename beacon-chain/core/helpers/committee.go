@@ -286,7 +286,8 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 		if err != nil {
 			return err
 		}
-		if _, exists, err := committeeCache.CommitteeCache.GetByKey(string(seed[:])); err == nil && exists {
+
+		if committeeCache.HasEntry(string(seed[:])) {
 			return nil
 		}
 
