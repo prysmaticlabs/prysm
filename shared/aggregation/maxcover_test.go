@@ -140,7 +140,7 @@ func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
 			sort.Slice(*tt.want, func(i, j int) bool {
 				return (*tt.want)[i].key < (*tt.want)[j].key
 			})
-			assert.DeepEqual(t, got, tt.want)
+			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }
@@ -671,7 +671,7 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				t.Errorf("newMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
 				return
 			}
-			assert.DeepEqual(t, got, tt.want)
+			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }

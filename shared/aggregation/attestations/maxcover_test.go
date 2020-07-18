@@ -95,7 +95,7 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 				t.Errorf("NewMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
 				return
 			}
-			assert.DeepEqual(t, got, tt.want)
+			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }

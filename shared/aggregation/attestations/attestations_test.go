@@ -223,7 +223,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 			})
 			assert.Equal(t, len(got), len(tt.want))
 			for i, w := range tt.want {
-				assert.DeepEqual(t, got[i].AggregationBits.Bytes(), w.Bytes())
+				assert.DeepEqual(t, w.Bytes(), got[i].AggregationBits.Bytes())
 			}
 		}
 		t.Run(fmt.Sprintf("%s/%s", tt.name, NaiveAggregation), func(t *testing.T) {

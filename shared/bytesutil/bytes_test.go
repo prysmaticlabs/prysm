@@ -46,7 +46,7 @@ func TestToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.ToBytes(tt.a, len(tt.b))
-		assert.DeepEqual(t, b[:], tt.b)
+		assert.DeepEqual(t, tt.b, b[:])
 	}
 }
 
@@ -64,7 +64,7 @@ func TestBytes1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes1(tt.a)
-		assert.DeepEqual(t, b[:], tt.b)
+		assert.DeepEqual(t, tt.b, b[:])
 	}
 }
 
@@ -82,7 +82,7 @@ func TestBytes2(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes2(tt.a)
-		assert.DeepEqual(t, b[:], tt.b)
+		assert.DeepEqual(t, tt.b, b[:])
 	}
 }
 
@@ -100,7 +100,7 @@ func TestBytes3(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes3(tt.a)
-		assert.DeepEqual(t, b[:], tt.b)
+		assert.DeepEqual(t, tt.b, b[:])
 	}
 }
 
@@ -118,7 +118,7 @@ func TestBytes4(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes4(tt.a)
-		assert.DeepEqual(t, b[:], tt.b)
+		assert.DeepEqual(t, tt.b, b[:])
 	}
 }
 
@@ -136,7 +136,7 @@ func TestBytes8(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes8(tt.a)
-		assert.DeepEqual(t, b[:], tt.b)
+		assert.DeepEqual(t, tt.b, b[:])
 	}
 }
 
