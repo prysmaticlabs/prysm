@@ -359,6 +359,26 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	}
 }
 
+func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := uint64(10)
+	base := buildState(e, validatorCount)
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposerIndex := validatorCount
+	b := &Balance{ActiveCurrentEpoch: 1000}
+	v := []*Validator{
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
+	}
+	_, err = ProposersDelta(state, b, v)
+	if err == nil {
+		t.Fatal("Expected an error with invalid proposer index")
+	}
+}
+
 func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
