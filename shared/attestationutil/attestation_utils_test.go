@@ -2,15 +2,14 @@ package attestationutil_test
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestAttestingIndices(t *testing.T) {
@@ -43,9 +42,7 @@ func TestAttestingIndices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AttestingIndices() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }
@@ -251,10 +248,7 @@ func TestAttDataIsEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			areEqual := attestationutil.AttDataIsEqual(tt.attData1, tt.attData2)
-			if areEqual != tt.equal {
-				t.Errorf("Expected %t, received %t", tt.equal, areEqual)
-			}
+			assert.Equal(t, tt.equal, attestationutil.AttDataIsEqual(tt.attData1, tt.attData2))
 		})
 	}
 }
@@ -306,10 +300,7 @@ func TestCheckPtIsEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			areEqual := attestationutil.CheckPointIsEqual(tt.checkPt1, tt.checkPt2)
-			if areEqual != tt.equal {
-				t.Errorf("Expected %t, received %t", tt.equal, areEqual)
-			}
+			assert.Equal(t, tt.equal, attestationutil.CheckPointIsEqual(tt.checkPt1, tt.checkPt2))
 		})
 	}
 }
@@ -345,20 +336,14 @@ func BenchmarkAttDataIsEqual(b *testing.B) {
 	b.Run("fast", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			areEqual := attestationutil.AttDataIsEqual(attData1, attData2)
-			if !areEqual {
-				b.Error(areEqual)
-			}
+			assert.Equal(b, true, attestationutil.AttDataIsEqual(attData1, attData2))
 		}
 	})
 
 	b.Run("proto.Equal", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			areEqual := proto.Equal(attData1, attData2)
-			if !areEqual {
-				b.Error(areEqual)
-			}
+			assert.Equal(b, true, attestationutil.AttDataIsEqual(attData1, attData2))
 		}
 	})
 }
