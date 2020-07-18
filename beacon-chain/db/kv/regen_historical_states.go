@@ -8,7 +8,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
@@ -37,12 +37,12 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 	// Restore from last archived point if this process was previously interrupted.
 	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
-	lastArchivedIndex, err := kv.LastArchivedIndex(ctx)
+	lastArchivedSlot, err := kv.LastArchivedSlot(ctx)
 	if err != nil {
 		return err
 	}
-	if lastArchivedIndex > 0 {
-		archivedIndexStart := lastArchivedIndex - 1
+	if lastArchivedSlot > 0 {
+		archivedIndexStart := lastArchivedSlot - 1
 		archivedRoot := kv.ArchivedPointRoot(ctx, archivedIndexStart)
 		currentState, err := kv.State(ctx, archivedRoot)
 		if err != nil {
@@ -51,7 +51,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		startSlot = currentState.Slot()
 	}
 
-	lastSavedBlockArchivedIndex, err := kv.lastSavedBlockArchivedIndex(ctx)
+	lastSavedBlockArchivedSlot, err := kv.lastSavedBlockArchivedSlot(ctx)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for i := lastArchivedIndex; i <= lastSavedBlockArchivedIndex; i++ {
+	for slot := lastArchivedSlot; slot <= lastSavedBlockArchivedSlot; slot++ {
 		// This is an expensive operation, so we check if the context was canceled
 		// at any point in the iteration.
 		if err := ctx.Err(); err != nil {
@@ -115,12 +115,12 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 		if len(blocks) > 0 {
 			// Save the historical root, state and highest index to the DB.
-			if helpers.IsEpochStart(currentState.Slot()) && currentState.Slot()%slotsPerArchivedPoint == 0 {
-				if err := kv.saveArchivedInfo(ctx, currentState.Copy(), blocks, i); err != nil {
+			if currentState.Slot()%slotsPerArchivedPoint == 0 {
+				if err := kv.saveArchivedInfo(ctx, currentState, blocks); err != nil {
 					return err
 				}
 				log.WithFields(log.Fields{
-					"currentArchivedIndex/totalArchivedIndices": fmt.Sprintf("%d/%d", i, lastSavedBlockArchivedIndex),
+					"currentArchivedIndex/totalArchivedIndices": fmt.Sprintf("%d/%d", slot, lastSavedBlockArchivedSlot),
 					"archivedStateSlot":                         currentState.Slot()}).Info("Saved historical state")
 			}
 		}
@@ -194,46 +194,44 @@ func regenHistoricalStateProcessSlots(ctx context.Context, state *stateTrie.Beac
 	return state, nil
 }
 
-// This retrieves the last saved block's archived index.
-func (kv *Store) lastSavedBlockArchivedIndex(ctx context.Context) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.lastSavedBlockArchivedIndex")
+// This retrieves the last saved block's archived slot.
+func (kv *Store) lastSavedBlockArchivedSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.lastSavedBlockArchivedSlot")
 	defer span.End()
-	b, err := kv.HighestSlotBlocks(ctx)
-	if err != nil {
+
+	var slot uint64
+	if err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blockSlotIndicesBucket)
+		// This index is sorted in byte order so accessing the last value would represent the
+		// highest slot stored in this index bucket.
+		s, _ := bkt.Cursor().Last()
+		slot = bytesutil.BytesToUint64BigEndian(s)
+		return nil
+	}); err != nil {
 		return 0, err
 	}
-	if len(b) == 0 {
-		return 0, errors.New("blocks can't be empty")
-	}
-	if b[0] == nil {
-		return 0, errors.New("nil last block")
-	}
-	lastSavedBlockSlot := b[0].Block.Slot
-	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
-	lastSavedBlockArchivedIndex := lastSavedBlockSlot/slotsPerArchivedPoint - 1
 
-	return lastSavedBlockArchivedIndex, nil
+	return slot, nil
 }
 
-// This saved archived info (state, root, index) into the db.
+// This saved archived info (state, root) into the db.
 func (kv *Store) saveArchivedInfo(ctx context.Context,
 	currentState *stateTrie.BeaconState,
 	blocks []*ethpb.SignedBeaconBlock,
-	archivedIndex uint64,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.saveArchivedInfo")
 	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(currentState.Slot())))
+
+	if len(blocks) == 0 {
+		return errors.New("no blocks provided")
+	}
+
 	lastBlocksRoot, err := stateutil.BlockRoot(blocks[len(blocks)-1].Block)
 	if err != nil {
 		return nil
 	}
 	if err := kv.SaveState(ctx, currentState, lastBlocksRoot); err != nil {
-		return err
-	}
-	if err := kv.SaveArchivedPointRoot(ctx, lastBlocksRoot, archivedIndex); err != nil {
-		return err
-	}
-	if err := kv.SaveLastArchivedIndex(ctx, archivedIndex); err != nil {
 		return err
 	}
 	return nil
