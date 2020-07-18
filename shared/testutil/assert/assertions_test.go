@@ -35,7 +35,7 @@ func TestAssert_Equal(t *testing.T) {
 				expected: 42,
 				actual:   41,
 			},
-			expectedErr: "Values are not equal, got: 41, want: 42",
+			expectedErr: "Values are not equal, x: 41, y: 42",
 		},
 		{
 			name: "custom error message",
@@ -45,7 +45,7 @@ func TestAssert_Equal(t *testing.T) {
 				actual:   41,
 				msg:      []string{"Custom values are not equal"},
 			},
-			expectedErr: "Custom values are not equal, got: 41, want: 42",
+			expectedErr: "Custom values are not equal, x: 41, y: 42",
 		},
 	}
 	for _, tt := range tests {
@@ -85,7 +85,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 				expected: struct{ i int }{42},
 				actual:   struct{ i int }{41},
 			},
-			expectedErr: "Values are not equal, got: {41}, want: {42}",
+			expectedErr: "Values are not equal, x: {41}, y: {42}",
 		},
 		{
 			name: "custom error message",
@@ -95,7 +95,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 				actual:   struct{ i int }{41},
 				msg:      []string{"Custom values are not equal"},
 			},
-			expectedErr: "Custom values are not equal, got: {41}, want: {42}",
+			expectedErr: "Custom values are not equal, x: {41}, y: {42}",
 		},
 	}
 	for _, tt := range tests {
