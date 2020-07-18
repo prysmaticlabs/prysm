@@ -24,6 +24,10 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		}
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
+	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
+		return err
+	}
+	s.rateLimiter.add(stream, 1)
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		if err := stream.Close(); err != nil {
