@@ -93,7 +93,7 @@ func Test_deleteValueForIndices(t *testing.T) {
 			outputIndices: map[string][]byte{
 				"blocks":      {0xff, 0x32, 0x45, 0x25, 0x24},
 				"state":       {0x01, 0x02, 0x03, 0x04},
-				"check-point": {},
+				"check-point": nil,
 				"powchain":    {0xba, 0xad, 0xb0, 0x00, 0xff},
 			},
 			wantErr: false,
