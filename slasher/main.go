@@ -66,7 +66,6 @@ var appFlags = []cli.Flag{
 	flags.RPCHost,
 	flags.CertFlag,
 	flags.KeyFlag,
-	flags.RebuildSpanMapsFlag,
 	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
 }
