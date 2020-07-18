@@ -54,7 +54,7 @@ func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	for _, tt := range tests {
 		got, err := AggregatePair(tt.a1, tt.a2)
 		require.NoError(t, err)
-		require.Equal(t, ssz.DeepEqual(got, tt.want), true)
+		require.Equal(t, true, ssz.DeepEqual(got, tt.want))
 	}
 }
 
