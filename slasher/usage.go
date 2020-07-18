@@ -82,6 +82,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RPCPort,
 			flags.RPCHost,
 			flags.BeaconRPCProviderFlag,
+			flags.EnableHistoricalDetectionFlag,
 		},
 	},
 	{

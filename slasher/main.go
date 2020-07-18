@@ -68,6 +68,7 @@ var appFlags = []cli.Flag{
 	flags.KeyFlag,
 	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
+	flags.EnableHistoricalDetectionFlag,
 }
 
 func init() {
