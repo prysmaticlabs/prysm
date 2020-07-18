@@ -80,7 +80,6 @@ go_test(
         "receive_attestation_test.go",
         "receive_block_test.go",
         "service_test.go",
-        "info_test.go"
     ],
     embed = [":go_default_library"],
     deps = [

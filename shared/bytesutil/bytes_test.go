@@ -1,11 +1,11 @@
 package bytesutil_test
 
 import (
-	"bytes"
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestToBytes(t *testing.T) {
@@ -46,9 +46,7 @@ func TestToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.ToBytes(tt.a, len(tt.b))
-		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Bytes1(%d) = %v, want = %d", tt.a, b, tt.b)
-		}
+		assert.DeepEqual(t, b[:], tt.b)
 	}
 }
 
@@ -66,9 +64,7 @@ func TestBytes1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes1(tt.a)
-		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Bytes1(%d) = %v, want = %d", tt.a, b, tt.b)
-		}
+		assert.DeepEqual(t, b[:], tt.b)
 	}
 }
 
@@ -86,9 +82,7 @@ func TestBytes2(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes2(tt.a)
-		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Bytes2(%d) = %v, want = %d", tt.a, b, tt.b)
-		}
+		assert.DeepEqual(t, b[:], tt.b)
 	}
 }
 
@@ -106,9 +100,7 @@ func TestBytes3(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes3(tt.a)
-		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Bytes3(%d) = %v, want = %d", tt.a, b, tt.b)
-		}
+		assert.DeepEqual(t, b[:], tt.b)
 	}
 }
 
@@ -126,9 +118,7 @@ func TestBytes4(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes4(tt.a)
-		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Bytes4(%d) = %v, want = %d", tt.a, b, tt.b)
-		}
+		assert.DeepEqual(t, b[:], tt.b)
 	}
 }
 
@@ -146,9 +136,7 @@ func TestBytes8(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Bytes8(tt.a)
-		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Bytes8(%d) = %v, want = %d", tt.a, b, tt.b)
-		}
+		assert.DeepEqual(t, b[:], tt.b)
 	}
 }
 
@@ -160,9 +148,7 @@ func TestFromBool(t *testing.T) {
 	for _, tt := range tests {
 		b := bytesutil.ToBool(tt)
 		c := bytesutil.FromBool(b)
-		if c != tt {
-			t.Errorf("Wanted %d but got %d", tt, c)
-		}
+		assert.Equal(t, c, tt)
 	}
 }
 
@@ -176,9 +162,7 @@ func TestFromBytes2(t *testing.T) {
 	for _, tt := range tests {
 		b := bytesutil.ToBytes(tt, 2)
 		c := bytesutil.FromBytes2(b)
-		if c != uint16(tt) {
-			t.Errorf("Wanted %d but got %d", tt, c)
-		}
+		assert.Equal(t, uint16(tt), c)
 	}
 }
 
@@ -198,6 +182,7 @@ func TestFromBytes4(t *testing.T) {
 		if c != tt {
 			t.Errorf("Wanted %d but got %d", tt, c)
 		}
+		assert.Equal(t, tt, c)
 	}
 }
 
@@ -214,9 +199,7 @@ func TestFromBytes8(t *testing.T) {
 	for _, tt := range tests {
 		b := bytesutil.ToBytes(tt, 8)
 		c := bytesutil.FromBytes8(b)
-		if c != tt {
-			t.Errorf("Wanted %d but got %d", tt, c)
-		}
+		assert.Equal(t, tt, c)
 	}
 }
 
@@ -233,9 +216,7 @@ func TestTruncate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.Trunc(tt.a)
-		if !bytes.Equal(b, tt.b) {
-			t.Errorf("Trunc(%d) = %v, want = %d", tt.a, b, tt.b)
-		}
+		assert.DeepEqual(t, tt.b, b)
 	}
 }
 
@@ -252,9 +233,7 @@ func TestReverse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.ReverseBytes32Slice(tt.input)
-		if !reflect.DeepEqual(b, tt.output) {
-			t.Errorf("Reverse(%d) = %v, want = %d", tt.input, b, tt.output)
-		}
+		assert.DeepEqual(t, tt.output, b)
 	}
 }
 
@@ -272,9 +251,7 @@ func TestSetBit(t *testing.T) {
 		{[]byte{0b10000010, 0b00000000}, 31, []byte{0b10000010, 0b00000000, 0b00000000, 0b10000000}},
 	}
 	for _, tt := range tests {
-		if !bytes.Equal(bytesutil.SetBit(tt.a, tt.b), tt.c) {
-			t.Errorf("Setbit(%d) = %v, want = %d", tt.b, tt.c, bytesutil.SetBit(tt.a, tt.b))
-		}
+		assert.DeepEqual(t, tt.c, bytesutil.SetBit(tt.a, tt.b))
 	}
 }
 
@@ -292,9 +269,7 @@ func TestClearBit(t *testing.T) {
 		{[]byte{0b10000010, 0b00001111}, 10, []byte{0b10000010, 0b00001011}},
 	}
 	for _, tt := range tests {
-		if !bytes.Equal(bytesutil.ClearBit(tt.a, tt.b), tt.c) {
-			t.Errorf("ClearBit(%d) = %v, want = %d", tt.b, tt.c, bytesutil.ClearBit(tt.a, tt.b))
-		}
+		assert.DeepEqual(t, tt.c, bytesutil.ClearBit(tt.a, tt.b))
 	}
 }
 
@@ -314,9 +289,7 @@ func TestMakeEmptyBitfields(t *testing.T) {
 		{104, 14},
 	}
 	for _, tt := range tests {
-		if len(bytesutil.MakeEmptyBitlists(tt.a)) != tt.b {
-			t.Errorf("MakeEmptyBitlists(%d) = %v, want = %d", tt.a, len(bytesutil.MakeEmptyBitlists(tt.a)), tt.b)
-		}
+		assert.DeepEqual(t, tt.b, len(bytesutil.MakeEmptyBitlists(tt.a)))
 	}
 }
 
@@ -341,13 +314,10 @@ func TestHighestBitIndex(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if i != tt.b {
-				t.Errorf("HighestBitIndex(%d) = %v, want = %d", tt.a, i, tt.b)
-			}
+			require.NoError(t, err)
+			assert.DeepEqual(t, tt.b, i)
 		} else {
-			if err.Error() != "input list can't be empty or nil" {
-				t.Error("Did not get wanted error")
-			}
+			assert.ErrorContains(t, "input list can't be empty or nil", err)
 		}
 	}
 }
@@ -392,16 +362,10 @@ func TestHighestBitIndexBelow(t *testing.T) {
 	for _, tt := range tests {
 		i, err := bytesutil.HighestBitIndexAt(tt.a, tt.b)
 		if !tt.error {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if i != tt.c {
-				t.Errorf("HighestBitIndexAt(%0.8b, %d) = %v, want = %d", tt.a, tt.b, i, tt.c)
-			}
+			require.NoError(t, err)
+			assert.DeepEqual(t, tt.c, i)
 		} else {
-			if err.Error() != "input list can't be empty or nil" {
-				t.Error("Did not get wanted error")
-			}
+			assert.ErrorContains(t, "input list can't be empty or nil", err)
 		}
 	}
 }
