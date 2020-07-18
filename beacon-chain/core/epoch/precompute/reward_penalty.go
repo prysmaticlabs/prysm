@@ -162,7 +162,7 @@ func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
 	for _, v := range vp {
-		if v.ProposerIndex > uint64(len(rewards)) {
+		if v.ProposerIndex >= uint64(len(rewards)) {
 			// This should never happen with a valid state / validator.
 			return nil, errors.New("proposer index out of range")
 		}
