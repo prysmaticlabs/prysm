@@ -171,11 +171,11 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, epoch)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
-			continue
+			return
 		}
 		if err := ds.slasherDB.SaveIndexedAttestations(ctx, indexedAtts); err != nil {
 			log.WithError(err).Error("could not save indexed attestations")
-			continue
+			return
 		}
 
 		for _, att := range indexedAtts {
@@ -205,7 +205,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			currentChainHead, err = ds.chainFetcher.ChainHead(ctx)
 			if err != nil {
 				log.WithError(err).Error("Cannot retrieve chain head from beacon node")
-				continue
+				return
 			}
 			if epoch != currentChainHead.HeadEpoch-1 {
 				log.Infof("Continuing historical detection from epoch %d to %d", epoch, currentChainHead.HeadEpoch)

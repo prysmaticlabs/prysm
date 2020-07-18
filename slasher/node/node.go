@@ -12,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -61,6 +63,13 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		cliCtx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
+	}
+
+	if cliCtx.IsSet(flags.EnableHistoricalDetectionFlag.Name) {
+		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.
+		cmdConfig := cmd.Get()
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
+		cmd.Init(cmdConfig)
 	}
 
 	cmd.ConfigureSlasher(cliCtx)

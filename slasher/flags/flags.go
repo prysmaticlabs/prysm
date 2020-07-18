@@ -51,4 +51,9 @@ var (
 		Name:  "rebuild-span-maps",
 		Usage: "Rebuild span maps from indexed attestations in db",
 	}
+	// EnableHistoricalDetectionFlag is a flag to enable historical detection for the slasher. Requires --historical-slasher-node on the beacon node.
+	EnableHistoricalDetectionFlag = &cli.BoolFlag{
+		Name:  "enable-historical-detection",
+		Usage: "Enables historical attestation detection for the slasher. Requires --historical-slasher-node on the beacon node.",
+	}
 )
