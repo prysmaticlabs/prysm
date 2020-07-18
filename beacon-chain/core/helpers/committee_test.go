@@ -85,6 +85,16 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	}
 }
 
+func TestComputeCommittee_RegressionTest(t *testing.T) {
+	indices := []uint64{1, 3, 8, 16, 18, 19, 20, 23, 30, 35, 43, 46, 47, 54, 56, 58, 69, 70, 71, 83, 84, 85, 91, 96, 100, 103, 105, 106, 112, 121, 127, 128, 129, 140, 142, 144, 146, 147, 149, 152, 153, 154, 157, 160, 173, 175, 180, 182, 188, 189, 191, 194, 201, 204, 217, 221, 226, 228, 230, 231, 239, 241, 249, 250, 255}
+	seed := [32]byte{68, 110, 161, 250, 98, 230, 161, 172, 227, 226, 99, 11, 138, 124, 201, 134, 38, 197, 0, 120, 6, 165, 122, 34, 19, 216, 43, 226, 210, 114, 165, 183}
+	index := uint64(215)
+	count := uint64(32)
+	if _, err := ComputeCommittee(indices, seed, index, count); err == nil {
+		t.Fatal("expected an error")
+	}
+}
+
 func TestVerifyBitfieldLength_OK(t *testing.T) {
 	bf := bitfield.Bitlist{0xFF, 0x01}
 	committeeSize := uint64(8)
