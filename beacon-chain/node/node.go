@@ -268,6 +268,8 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
+	log.WithField("database-path", dbPath).Info("Checking DB")
+
 	d, err := db.NewDB(dbPath, b.stateSummaryCache)
 	if err != nil {
 		return err
@@ -299,7 +301,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		}
 	}
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	if err := d.RunMigrations(b.ctx); err != nil {
+		return err
+	}
+
 	b.db = d
 
 	depositCache, err := depositcache.NewDepositCache()

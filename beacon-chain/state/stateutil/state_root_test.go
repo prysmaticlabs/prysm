@@ -12,6 +12,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestState_FieldCount(t *testing.T) {
@@ -24,9 +26,7 @@ func TestState_FieldCount(t *testing.T) {
 		}
 		numFields++
 	}
-	if numFields != count {
-		t.Errorf("Expected state to have %d fields, received %d", count, numFields)
-	}
+	assert.Equal(t, count, numFields)
 }
 
 func BenchmarkHashTreeRootState_Custom_512(b *testing.B) {
@@ -34,9 +34,8 @@ func BenchmarkHashTreeRootState_Custom_512(b *testing.B) {
 	genesisState := setupGenesisState(b, 512)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
-			b.Fatal(err)
-		}
+		_, err := stateutil.HashTreeRootState(genesisState)
+		require.NoError(b, err)
 	}
 }
 
@@ -45,9 +44,8 @@ func BenchmarkHashTreeRootState_Custom_16384(b *testing.B) {
 	genesisState := setupGenesisState(b, 16384)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
-			b.Fatal(err)
-		}
+		_, err := stateutil.HashTreeRootState(genesisState)
+		require.NoError(b, err)
 	}
 }
 
@@ -56,9 +54,8 @@ func BenchmarkHashTreeRootState_Custom_300000(b *testing.B) {
 	genesisState := setupGenesisState(b, 300000)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
-			b.Fatal(err)
-		}
+		_, err := stateutil.HashTreeRootState(genesisState)
+		require.NoError(b, err)
 	}
 }
 
@@ -67,9 +64,8 @@ func BenchmarkHashTreeRoot_Generic_512(b *testing.B) {
 	genesisState := setupGenesisState(b, 512)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
-			b.Fatal(err)
-		}
+		_, err := ssz.HashTreeRoot(genesisState)
+		require.NoError(b, err)
 	}
 }
 
@@ -78,9 +74,8 @@ func BenchmarkHashTreeRoot_Generic_16384(b *testing.B) {
 	genesisState := setupGenesisState(b, 16384)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
-			b.Fatal(err)
-		}
+		_, err := ssz.HashTreeRoot(genesisState)
+		require.NoError(b, err)
 	}
 }
 
@@ -89,17 +84,14 @@ func BenchmarkHashTreeRoot_Generic_300000(b *testing.B) {
 	genesisState := setupGenesisState(b, 300000)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
-			b.Fatal(err)
-		}
+		_, err := ssz.HashTreeRoot(genesisState)
+		require.NoError(b, err)
 	}
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {
 	genesisState, _, err := interop.GenerateGenesisState(0, 1)
-	if err != nil {
-		tb.Fatalf("Could not generate genesis beacon state: %v", err)
-	}
+	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
 		someKey := [48]byte{}

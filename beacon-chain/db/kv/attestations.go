@@ -203,7 +203,7 @@ func createAttestationIndicesFromData(ctx context.Context, attData *ethpb.Attest
 	indices := make([][]byte, 0)
 	if attData.Source != nil {
 		buckets = append(buckets, attestationSourceEpochIndicesBucket)
-		indices = append(indices, bytesutil.Uint64ToBytes(attData.Source.Epoch))
+		indices = append(indices, bytesutil.Uint64ToBytesLittleEndian(attData.Source.Epoch))
 		if attData.Source.Root != nil && len(attData.Source.Root) > 0 {
 			buckets = append(buckets, attestationSourceRootIndicesBucket)
 			indices = append(indices, attData.Source.Root)
@@ -211,7 +211,7 @@ func createAttestationIndicesFromData(ctx context.Context, attData *ethpb.Attest
 	}
 	if attData.Target != nil {
 		buckets = append(buckets, attestationTargetEpochIndicesBucket)
-		indices = append(indices, bytesutil.Uint64ToBytes(attData.Target.Epoch))
+		indices = append(indices, bytesutil.Uint64ToBytesLittleEndian(attData.Target.Epoch))
 		if attData.Target.Root != nil && len(attData.Target.Root) > 0 {
 			buckets = append(buckets, attestationTargetRootIndicesBucket)
 			indices = append(indices, attData.Target.Root)
@@ -258,13 +258,13 @@ func createAttestationIndicesFromFilters(ctx context.Context, f *filters.QueryFi
 			if !ok {
 				return nil, errors.New("sourceEpoch is not type uint64")
 			}
-			indicesByBucket[string(attestationSourceEpochIndicesBucket)] = bytesutil.Uint64ToBytes(sourceEpoch)
+			indicesByBucket[string(attestationSourceEpochIndicesBucket)] = bytesutil.Uint64ToBytesLittleEndian(sourceEpoch)
 		case filters.TargetEpoch:
 			targetEpoch, ok := v.(uint64)
 			if !ok {
 				return nil, errors.New("targetEpoch is not type uint64")
 			}
-			indicesByBucket[string(attestationTargetEpochIndicesBucket)] = bytesutil.Uint64ToBytes(targetEpoch)
+			indicesByBucket[string(attestationTargetEpochIndicesBucket)] = bytesutil.Uint64ToBytesLittleEndian(targetEpoch)
 		case filters.TargetRoot:
 			targetRoot, ok := v.([]byte)
 			if !ok {

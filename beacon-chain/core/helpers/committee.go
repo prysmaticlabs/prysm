@@ -133,6 +133,10 @@ func ComputeCommittee(
 	start := sliceutil.SplitOffset(validatorCount, count, index)
 	end := sliceutil.SplitOffset(validatorCount, count, index+1)
 
+	if start > validatorCount || end > validatorCount {
+		return nil, errors.New("index out of range")
+	}
+
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
 	shuffledIndices := make([]uint64, len(indices))
 	copy(shuffledIndices, indices)

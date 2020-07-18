@@ -938,10 +938,10 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 		active bool
 	}
 	pubKeys := [][]byte{
-		bytesutil.Uint64ToBytes(0),
-		bytesutil.Uint64ToBytes(1),
-		bytesutil.Uint64ToBytes(2),
-		bytesutil.Uint64ToBytes(3),
+		bytesutil.Uint64ToBytesLittleEndian(0),
+		bytesutil.Uint64ToBytesLittleEndian(1),
+		bytesutil.Uint64ToBytesLittleEndian(2),
+		bytesutil.Uint64ToBytesLittleEndian(3),
 	}
 	tests := []statusTest{
 		{
