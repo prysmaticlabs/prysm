@@ -571,7 +571,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
-	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
 

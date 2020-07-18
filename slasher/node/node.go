@@ -231,6 +231,7 @@ func (s *SlasherNode) registerDetectionService() error {
 		ChainFetcher:          bs,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
+		HistoricalDetection:   s.cliCtx.IsSet(flags.EnableHistoricalDetectionFlag.Name),
 	})
 	return s.services.RegisterService(ds)
 }
