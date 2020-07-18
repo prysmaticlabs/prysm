@@ -148,7 +148,7 @@ func TestFromBool(t *testing.T) {
 	for _, tt := range tests {
 		b := bytesutil.ToBool(tt)
 		c := bytesutil.FromBool(b)
-		assert.Equal(t, c, tt)
+		assert.Equal(t, tt, c)
 	}
 }
 
