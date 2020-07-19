@@ -5,13 +5,13 @@ import (
 )
 
 // Equal compares values using comparison operator.
-func Equal(tb assertions.AssertionTestingTB, x, y interface{}, msg ...string) {
-	assertions.Equal(tb.Errorf, x, y, msg...)
+func Equal(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...string) {
+	assertions.Equal(tb.Errorf, expected, actual, msg...)
 }
 
 // DeepEqual compares values using DeepEqual.
-func DeepEqual(tb assertions.AssertionTestingTB, x, y interface{}, msg ...string) {
-	assertions.DeepEqual(tb.Errorf, x, y, msg...)
+func DeepEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...string) {
+	assertions.DeepEqual(tb.Errorf, expected, actual, msg...)
 }
 
 // NoError asserts that error is nil.
