@@ -149,7 +149,10 @@ func NewService(cfg *Config) (*Service, error) {
 	}
 	s.pubsub = gs
 
-	s.peers = peers.NewStatus(maxBadResponses, int(s.cfg.MaxPeers))
+	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
+		PeerLimit:       int(s.cfg.MaxPeers),
+		MaxBadResponses: maxBadResponses,
+	})
 
 	return s, nil
 }

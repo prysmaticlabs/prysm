@@ -1,78 +1,49 @@
 package stategen
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestEpochBoundaryStateCache_BadSlotKey(t *testing.T) {
-	if _, err := slotKeyFn("sushi"); err == nil || err.Error() != errNotSlotRootInfo.Error() {
-		t.Error("Did not get wanted error")
-	}
+	_, err := slotKeyFn("sushi")
+	assert.ErrorContains(t, errNotSlotRootInfo.Error(), err, "Did not get wanted error")
 }
 
 func TestEpochBoundaryStateCache_BadRootKey(t *testing.T) {
-	if _, err := rootKeyFn("noodle"); err == nil || err.Error() != errNotRootStateInfo.Error() {
-		t.Error("Did not get wanted error")
-	}
+	_, err := rootKeyFn("noodle")
+	assert.ErrorContains(t, errNotRootStateInfo.Error(), err, "Did not get wanted error")
 }
 
 func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	e := newBoundaryStateCache()
 	s := testutil.NewBeaconState()
-	if err := s.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.SetSlot(1))
 	r := [32]byte{'a'}
-	if err := e.put(r, s); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, e.put(r, s))
 
 	got, exists, err := e.getByRoot([32]byte{'b'})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Error("Should not exist")
-	}
-	if got != nil {
-		t.Error("Should not exist")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, false, exists, "Should not exist")
+	assert.Equal(t, (*rootStateInfo)(nil), got, "Should not exist")
 
 	got, exists, err = e.getByRoot([32]byte{'a'})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !exists {
-		t.Error("Should exist")
-	}
-	if !reflect.DeepEqual(got.state.InnerStateUnsafe(), s.InnerStateUnsafe()) {
-		t.Error("Should have the same state")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, exists, "Should exist")
+	assert.DeepEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
 
 	got, exists, err = e.getBySlot(2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Error("Should not exist")
-	}
-	if got != nil {
-		t.Error("Should not exist")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, false, exists, "Should not exist")
+	assert.Equal(t, (*rootStateInfo)(nil), got, "Should not exist")
 
 	got, exists, err = e.getBySlot(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !exists {
-		t.Error("Should exist")
-	}
-	if !reflect.DeepEqual(got.state.InnerStateUnsafe(), s.InnerStateUnsafe()) {
-		t.Error("Should have the same state")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, exists, "Should exist")
+	assert.DeepEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
 }
 
 func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
@@ -80,26 +51,16 @@ func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 	offSet := uint64(10)
 	for i := uint64(0); i < maxCacheSize+offSet; i++ {
 		s := testutil.NewBeaconState()
-		if err := s.SetSlot(i); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, s.SetSlot(i))
 		r := [32]byte{byte(i)}
-		if err := e.put(r, s); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, e.put(r, s))
 	}
 
-	if len(e.rootStateCache.ListKeys()) != int(maxCacheSize) {
-		t.Error("Did not trim to the correct amount")
-	}
-	if len(e.slotRootCache.ListKeys()) != int(maxCacheSize) {
-		t.Error("Did not trim to the correct amount")
-	}
+	assert.Equal(t, int(maxCacheSize), len(e.rootStateCache.ListKeys()), "Did not trim to the correct amount")
+	assert.Equal(t, int(maxCacheSize), len(e.slotRootCache.ListKeys()), "Did not trim to the correct amount")
 	for _, l := range e.rootStateCache.List() {
 		i, ok := l.(*rootStateInfo)
-		if !ok {
-			t.Fatal("Bad type assertion")
-		}
+		require.Equal(t, true, ok, "Bad type assertion")
 		if i.state.Slot() < offSet {
 			t.Error("Did not trim the correct state")
 		}

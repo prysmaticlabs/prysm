@@ -45,8 +45,10 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
+	r := &Service{p2p: p1, db: d, rateLimiter: newRateLimiter(p1)}
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -105,11 +107,14 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
-		blocksRateLimiter:   leakybucket.NewCollector(10000, 10000, false),
+		rateLimiter:         newRateLimiter(p1),
 	}
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -124,6 +129,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
 			assert.NoError(t, err, "Could not send response back")
 		}
+		assert.NoError(t, stream.Close())
 	})
 
 	p1.Connect(p2)

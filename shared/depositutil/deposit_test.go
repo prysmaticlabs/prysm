@@ -1,7 +1,6 @@
 package depositutil_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -11,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
@@ -21,37 +22,21 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(result.PublicKey, k1.PublicKey().Marshal()) {
-		t.Errorf(
-			"Mismatched pubkeys in deposit input. Want = %x, got = %x",
-			result.PublicKey,
-			k1.PublicKey().Marshal(),
-		)
-	}
+	assert.DeepEqual(t, k1.PublicKey().Marshal(), result.PublicKey)
 
 	sig, err := bls.SignatureFromBytes(result.Signature)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	sr, err := ssz.SigningRoot(result)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
 		nil, /*forkVersion*/
 		nil, /*genesisValidatorsRoot*/
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain[:]})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !sig.Verify(k1.PublicKey(), root[:]) {
-		t.Error("Invalid proof of deposit input signature")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, sig.Verify(k1.PublicKey(), root[:]))
 }
 
 func TestVerifyDepositSignature_ValidSig(t *testing.T) {
