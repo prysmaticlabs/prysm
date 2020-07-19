@@ -14,4 +14,8 @@ go_test(
     srcs = ["external_ip_test.go"],
     embed = [":go_default_library"],
     tags = ["requires-network"],
+    deps = [
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
+    ],
 )

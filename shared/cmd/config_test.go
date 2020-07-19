@@ -4,6 +4,7 @@ import (
 	"flag"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/urfave/cli/v2"
 )
 
@@ -12,9 +13,8 @@ func TestInitFeatureConfig(t *testing.T) {
 		MinimalConfig: true,
 	}
 	Init(cfg)
-	if c := Get(); !c.MinimalConfig {
-		t.Errorf("MinimalConfig in cmd flags incorrect. Wanted true, got false")
-	}
+	c := Get()
+	assert.Equal(t, true, c.MinimalConfig)
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {
@@ -23,7 +23,6 @@ func TestConfigureBeaconConfig(t *testing.T) {
 	set.Bool(MinimalConfigFlag.Name, true, "test")
 	context := cli.NewContext(&app, set, nil)
 	ConfigureBeaconChain(context)
-	if c := Get(); !c.MinimalConfig {
-		t.Errorf("MinimalConfig in cmd flags incorrect. Wanted true, got false")
-	}
+	c := Get()
+	assert.Equal(t, true, c.MinimalConfig)
 }
