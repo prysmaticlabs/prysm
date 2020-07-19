@@ -731,7 +731,7 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &pb.BeaconState{
 		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
