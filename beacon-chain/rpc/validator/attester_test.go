@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"math/rand"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -27,7 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"google.golang.org/grpc/status"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProposeAttestation_OK(t *testing.T) {
@@ -45,13 +45,9 @@ func TestProposeAttestation_OK(t *testing.T) {
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 999
 	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	if err := db.SaveBlock(ctx, head); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, head))
 	root, err := stateutil.BlockRoot(head.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	validators := make([]*ethpb.Validator, 64)
 	for i := 0; i < len(validators); i++ {
@@ -62,19 +58,10 @@ func TestProposeAttestation_OK(t *testing.T) {
 	}
 
 	state := testutil.NewBeaconState()
-	if err := state.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
-		t.Fatal(err)
-	}
-	if err := state.SetValidators(validators); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := db.SaveState(ctx, state, root); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+	require.NoError(t, state.SetValidators(validators))
+	require.NoError(t, db.SaveState(ctx, state, root))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
 	sk := bls.RandKey()
 	sig := sk.Sign([]byte("dummy_test_data"))
@@ -86,9 +73,8 @@ func TestProposeAttestation_OK(t *testing.T) {
 			Target:          &ethpb.Checkpoint{},
 		},
 	}
-	if _, err := attesterServer.ProposeAttestation(context.Background(), req); err != nil {
-		t.Errorf("Could not attest head correctly: %v", err)
-	}
+	_, err = attesterServer.ProposeAttestation(context.Background(), req)
+	assert.NoError(t, err)
 }
 
 func TestProposeAttestation_IncorrectSignature(t *testing.T) {
@@ -110,9 +96,8 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 		},
 	}
 	wanted := "Incorrect attestation signature"
-	if _, err := attesterServer.ProposeAttestation(context.Background(), req); err == nil || !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Did not get wanted error")
-	}
+	_, err := attesterServer.ProposeAttestation(context.Background(), req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestGetAttestationData_OK(t *testing.T) {
@@ -129,36 +114,25 @@ func TestGetAttestationData_OK(t *testing.T) {
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
 	blockRoot, err := stateutil.BlockRoot(block)
-	if err != nil {
-		t.Fatalf("Could not hash beacon block: %v", err)
-	}
+	require.NoError(t, err, "Could not hash beacon block")
 	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
-	if err != nil {
-		t.Fatalf("Could not get signing root for justified block: %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root for justified block")
 	targetRoot, err := stateutil.BlockRoot(targetBlock)
-	if err != nil {
-		t.Fatalf("Could not get signing root for target block: %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root for target block")
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	beaconState := testutil.NewBeaconState()
-	if err := beaconState.SetSlot(slot); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	require.NoError(t, beaconState.SetSlot(slot))
+	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 2,
 		Root:  justifiedRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -178,24 +152,16 @@ func TestGetAttestationData_OK(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 	}
-	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
+	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
 		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
 	res, err := attesterServer.GetAttestationData(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Could not get attestation info at slot: %v", err)
-	}
+	require.NoError(t, err, "Could not get attestation info at slot")
 
 	expectedInfo := &ethpb.AttestationData{
 		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -220,9 +186,7 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
-	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
-		t.Error("Did not get wanted error")
-	}
+	assert.ErrorContains(t, "Syncing to latest head", err)
 }
 
 func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
@@ -252,36 +216,25 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
 	}
 	blockRoot, err := stateutil.BlockRoot(block)
-	if err != nil {
-		t.Fatalf("Could not hash beacon block: %v", err)
-	}
+	require.NoError(t, err, "Could not hash beacon block")
 	justifiedBlockRoot, err := stateutil.BlockRoot(justifiedBlock)
-	if err != nil {
-		t.Fatalf("Could not hash justified block: %v", err)
-	}
+	require.NoError(t, err, "Could not hash justified block")
 	epochBoundaryRoot, err := stateutil.BlockRoot(epochBoundaryBlock)
-	if err != nil {
-		t.Fatalf("Could not hash justified block: %v", err)
-	}
+	require.NoError(t, err, "Could not hash justified block")
 	slot := uint64(10000)
 
 	beaconState := testutil.NewBeaconState()
-	if err := beaconState.SetSlot(slot); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	require.NoError(t, beaconState.SetSlot(slot))
+	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: helpers.SlotToEpoch(1500),
 		Root:  justifiedBlockRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -297,24 +250,16 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:      chainService.StateNotifier(),
 	}
-	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
+	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
 		Slot:           10000,
 	}
 	res, err := attesterServer.GetAttestationData(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Could not get attestation info at slot: %v", err)
-	}
+	require.NoError(t, err, "Could not get attestation info at slot")
 
 	expectedInfo := &ethpb.AttestationData{
 		Slot:            req.Slot,
@@ -337,9 +282,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &pbp2p.BeaconState{Slot: 100}
 	state, err := beaconstate.InitializeFromProto(s)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ctx := context.Background()
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
@@ -362,9 +305,7 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 55},
 	}
 
-	if err := server.AttestationCache.MarkInProgress(req); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, server.AttestationCache.MarkInProgress(req))
 
 	var wg sync.WaitGroup
 
@@ -372,9 +313,7 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		response, err := server.GetAttestationData(ctx, req)
-		if err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, err)
 		if !proto.Equal(res, response) {
 			t.Error("Expected  equal responses from cache")
 		}
@@ -384,12 +323,8 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		if err := server.AttestationCache.Put(ctx, req, res); err != nil {
-			t.Error(err)
-		}
-		if err := server.AttestationCache.MarkNotInProgress(req); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, server.AttestationCache.Put(ctx, req, res))
+		assert.NoError(t, server.AttestationCache.MarkNotInProgress(req))
 	}()
 
 	wg.Wait()
@@ -408,9 +343,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 		Slot: 1000000000000,
 	}
 	_, err := attesterServer.GetAttestationData(ctx, req)
-	if s, ok := status.FromError(err); !ok || !strings.Contains(s.Message(), "invalid request") {
-		t.Fatalf("Wrong error. Wanted error to start with %v, got %v", "invalid request", err)
-	}
+	assert.ErrorContains(t, "invalid request", err)
 }
 
 func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testing.T) {
@@ -433,61 +366,39 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
 	blockRoot, err := stateutil.BlockRoot(block)
-	if err != nil {
-		t.Fatalf("Could not hash beacon block: %v", err)
-	}
+	require.NoError(t, err, "Could not hash beacon block")
 	blockRoot2, err := ssz.HashTreeRoot(block2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block2}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block2}))
 	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
-	if err != nil {
-		t.Fatalf("Could not get signing root for justified block: %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root for justified block")
 	targetRoot, err := stateutil.BlockRoot(targetBlock)
-	if err != nil {
-		t.Fatalf("Could not get signing root for target block: %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root for target block")
 
 	beaconState := testutil.NewBeaconState()
-	if err := beaconState.SetSlot(slot); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix() - int64(slot*params.BeaconConfig().SecondsPerSlot))); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	require.NoError(t, beaconState.SetSlot(slot))
+	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix()-int64(slot*params.BeaconConfig().SecondsPerSlot))))
+	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		ParentRoot: blockRoot2[:],
 		StateRoot:  make([]byte, 32),
 		BodyRoot:   make([]byte, 32),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	})
+	require.NoError(t, err)
+	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 2,
 		Root:  justifiedRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	blockRoots[3*params.BeaconConfig().SlotsPerEpoch] = blockRoot2[:]
-	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 
 	beaconState2 := beaconState.Copy()
-	if err := beaconState2.SetSlot(beaconState2.Slot() - 1); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState2, blockRoot2); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState2.SetSlot(beaconState2.Slot()-1))
+	require.NoError(t, db.SaveState(ctx, beaconState2, blockRoot2))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -502,24 +413,16 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		StateNotifier:       chainService.StateNotifier(),
 		StateGen:            stategen.New(db, sc),
 	}
-	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
+	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
 		Slot:           slot - 1,
 	}
 	res, err := attesterServer.GetAttestationData(ctx, req)
-	if err != nil {
-		t.Fatalf("Could not get attestation info at slot: %v", err)
-	}
+	require.NoError(t, err, "Could not get attestation info at slot")
 
 	expectedInfo := &ethpb.AttestationData{
 		Slot:            slot - 1,
@@ -554,35 +457,24 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		Slot: 0,
 	}
 	blockRoot, err := stateutil.BlockRoot(block)
-	if err != nil {
-		t.Fatalf("Could not hash beacon block: %v", err)
-	}
+	require.NoError(t, err, "Could not hash beacon block")
 	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
-	if err != nil {
-		t.Fatalf("Could not get signing root for justified block: %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root for justified block")
 	targetRoot, err := stateutil.BlockRoot(targetBlock)
-	if err != nil {
-		t.Fatalf("Could not get signing root for target block: %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root for target block")
 
 	beaconState := testutil.NewBeaconState()
-	if err := beaconState.SetSlot(slot); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	require.NoError(t, beaconState.SetSlot(slot))
+	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 0,
 		Root:  justifiedRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -600,24 +492,16 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: roughtime.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:      chainService.StateNotifier(),
 	}
-	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
+	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
 		Slot:           5,
 	}
 	res, err := attesterServer.GetAttestationData(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Could not get attestation info at slot: %v", err)
-	}
+	require.NoError(t, err, "Could not get attestation info at slot")
 
 	expectedInfo := &ethpb.AttestationData{
 		Slot:            slot,
@@ -654,9 +538,7 @@ func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
 		CommitteeIds: nil,
 		IsAggregator: nil,
 	})
-	if err == nil || !strings.Contains(err.Error(), "no attester slots provided") {
-		t.Fatalf("Expected no attester slots provided error, received: %v", err)
-	}
+	assert.ErrorContains(t, "no attester slots provided", err)
 }
 
 func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
@@ -693,9 +575,7 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 		CommitteeIds: comIdxs,
 		IsAggregator: isAggregator,
 	})
-	if err == nil || !strings.Contains(err.Error(), "request fields are not the same length") {
-		t.Fatalf("Expected request fields are not the same length error, received: %v", err)
-	}
+	assert.ErrorContains(t, "request fields are not the same length", err)
 }
 
 func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
@@ -713,9 +593,7 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 	}
 
 	state := testutil.NewBeaconState()
-	if err := state.SetValidators(validators); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, state.SetValidators(validators))
 
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{State: state},
@@ -742,19 +620,13 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		CommitteeIds: comIdxs,
 		IsAggregator: isAggregator,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for i := uint64(100); i < 200; i++ {
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(i)
-		if len(subnets) != 1 {
-			t.Errorf("Wanted subnets of length 1 but got %d", len(subnets))
-		}
+		assert.Equal(t, 1, len(subnets))
 		if isAggregator[i-100] {
 			subnets = cache.SubnetIDs.GetAggregatorSubnetIDs(i)
-			if len(subnets) != 1 {
-				t.Errorf("Wanted subnets of length 1 but got %d", len(subnets))
-			}
+			assert.Equal(t, 1, len(subnets))
 		}
 	}
 }
