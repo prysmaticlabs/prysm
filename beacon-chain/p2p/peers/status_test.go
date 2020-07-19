@@ -1,6 +1,7 @@
 package peers_test
 
 import (
+	"context"
 	"crypto/rand"
 	"testing"
 
@@ -18,14 +19,20 @@ import (
 
 func TestStatus(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 	require.NotNil(t, p, "p not created")
 	assert.Equal(t, maxBadResponses, p.MaxBadResponses(), "maxBadResponses incorrect value")
 }
 
 func TestPeerExplicitAdd(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -59,7 +66,10 @@ func TestPeerExplicitAdd(t *testing.T) {
 
 func TestPeerNoENR(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -76,7 +86,10 @@ func TestPeerNoENR(t *testing.T) {
 
 func TestPeerNoOverwriteENR(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -96,7 +109,10 @@ func TestPeerNoOverwriteENR(t *testing.T) {
 
 func TestErrUnknownPeer(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -122,7 +138,10 @@ func TestErrUnknownPeer(t *testing.T) {
 
 func TestPeerCommitteeIndices(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -152,7 +171,10 @@ func TestPeerCommitteeIndices(t *testing.T) {
 
 func TestPeerSubscribedToSubnet(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	// Add some peers with different states
 	numPeers := 2
@@ -189,7 +211,10 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 
 func TestPeerImplicitAdd(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -205,7 +230,10 @@ func TestPeerImplicitAdd(t *testing.T) {
 
 func TestPeerChainState(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -233,7 +261,10 @@ func TestPeerChainState(t *testing.T) {
 
 func TestPeerBadResponses(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -275,7 +306,10 @@ func TestPeerBadResponses(t *testing.T) {
 
 func TestAddMetaData(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	// Add some peers with different states
 	numPeers := 5
@@ -297,7 +331,10 @@ func TestAddMetaData(t *testing.T) {
 
 func TestPeerConnectionStatuses(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	// Add some peers with different states
 	numPeersDisconnected := 11
@@ -332,7 +369,10 @@ func TestPeerConnectionStatuses(t *testing.T) {
 
 func TestDecay(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	// Peer 1 has 0 bad responses.
 	pid1 := addPeer(t, p, peers.PeerConnected)
@@ -361,7 +401,10 @@ func TestDecay(t *testing.T) {
 
 func TestPrune(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	for i := 0; i < p.MaxPeerLimit()+100; i++ {
 		if i%7 == 0 {
@@ -403,7 +446,10 @@ func TestPrune(t *testing.T) {
 }
 
 func TestTrimmedOrderedPeers(t *testing.T) {
-	p := peers.NewStatus(1, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: 1,
+	})
 
 	expectedTarget := uint64(2)
 	maxPeers := 3
@@ -461,7 +507,10 @@ func TestBestPeer(t *testing.T) {
 	expectedFinEpoch := uint64(4)
 	expectedRoot := [32]byte{'t', 'e', 's', 't'}
 	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	// Peer 1
 	pid1 := addPeer(t, p, peers.PeerConnected)
@@ -506,7 +555,10 @@ func TestBestPeer(t *testing.T) {
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	maxBadResponses := 2
 	maxPeers := 10
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 
 	for i := 0; i <= maxPeers+100; i++ {
 		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
@@ -522,7 +574,10 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 
 func TestStatus_CurrentEpoch(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit:       30,
+		MaxBadResponses: maxBadResponses,
+	})
 	// Peer 1
 	pid1 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid1, &pb.Status{
