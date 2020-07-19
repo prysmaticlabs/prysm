@@ -3,7 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["status.go"],
+    srcs = [
+        "status.go",
+        "store.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [

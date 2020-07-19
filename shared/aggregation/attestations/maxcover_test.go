@@ -2,12 +2,12 @@ package attestations
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
@@ -95,9 +95,7 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 				t.Errorf("NewMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewMaxCoverProblem() got: %v, want: %v", got, tt.want)
-			}
+			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }

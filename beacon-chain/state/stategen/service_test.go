@@ -22,8 +22,6 @@ func TestResume(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, root))
-	require.NoError(t, service.beaconDB.SaveArchivedPointRoot(ctx, root, 1))
-	require.NoError(t, service.beaconDB.SaveLastArchivedIndex(ctx, 1))
 
 	resumeState, err := service.Resume(ctx)
 	require.NoError(t, err)
