@@ -76,5 +76,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
+	minimalConfig.HeadOfVotingPeriodLength = 5
+
 	return minimalConfig
 }

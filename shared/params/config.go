@@ -99,6 +99,7 @@ type BeaconChainConfig struct {
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
 	SlotsPerArchivedPoint     uint64        // SlotsPerArchivedPoint defines the number of slots per one archived point.
 	GenesisCountdownInterval  time.Duration // How often to log the countdown until the genesis time is reached.
+	HeadOfVotingPeriodLength  uint64        // The number of initial slots per voting period that are considered the head of the voting period.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
