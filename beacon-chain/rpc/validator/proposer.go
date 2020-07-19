@@ -272,9 +272,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 	}
 
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	// TODO: Can this be negative?
 	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
-	// TODO: Can this be positive?
 	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
 
 	var inRangeVotes []eth1DataSingleVote
