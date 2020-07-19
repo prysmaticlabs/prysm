@@ -1619,7 +1619,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
+	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, InclusionDelay: 1}}
 	headState := testutil.NewBeaconState()
 	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
 		t.Fatal(err)
@@ -2194,11 +2194,11 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	}
 	att2.Data.Target.Root = rt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}})
+	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf, InclusionDelay: 1}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf}})
+	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf, InclusionDelay: 1}})
 	if err != nil {
 		t.Fatal(err)
 	}
