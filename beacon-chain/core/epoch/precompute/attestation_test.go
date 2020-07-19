@@ -224,11 +224,11 @@ func TestProcessAttestations(t *testing.T) {
 	}
 	att2.Data.Target.Root = newRt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}})
+	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf, InclusionDelay: 1}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf}})
+	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf, InclusionDelay: 1}})
 	if err != nil {
 		t.Fatal(err)
 	}
