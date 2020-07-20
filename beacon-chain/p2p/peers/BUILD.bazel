@@ -4,6 +4,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "score_bad_responses.go",
+        "scorer.go",
         "status.go",
         "store.go",
     ],
@@ -27,6 +29,8 @@ go_test(
     name = "go_default_test",
     srcs = [
         "benchmark_test.go",
+        "score_bad_responses_test.go",
+        "scorer_test.go",
         "status_test.go",
     ],
     embed = [":go_default_library"],

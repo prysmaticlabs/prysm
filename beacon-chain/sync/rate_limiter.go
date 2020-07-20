@@ -76,7 +76,7 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	key := stream.Conn().RemotePeer().String()
 	remaining := collector.Remaining(key)
 	if amt > uint64(remaining) {
-		l.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		l.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 		if l.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			log.Debug("Disconnecting bad peer")
 			defer func() {
