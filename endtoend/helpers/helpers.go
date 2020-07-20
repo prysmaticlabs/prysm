@@ -8,15 +8,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
@@ -152,20 +150,9 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 // WriteHeapFile writes a heap file to the test path.
 func WriteHeapFile(testDir string, index int) error {
 	url := fmt.Sprintf("http://localhost:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	dataInBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	if err := resp.Body.Close(); err != nil {
-		return err
-	}
-
 	filePath := filepath.Join(testDir, fmt.Sprintf(heapFileName, index))
-	if err := ioutil.WriteFile(filePath, dataInBytes, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	cmd := exec.Command("curl", url, fmt.Sprintf("-o %s", filePath))
+	if err := cmd.Run(); err != nil {
 		return err
 	}
 	return nil
