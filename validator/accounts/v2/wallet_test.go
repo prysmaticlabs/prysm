@@ -79,7 +79,7 @@ func TestCreateAndReadWallet(t *testing.T) {
 	}
 
 	walletPath := path.Join(walletDir, keymanagerKind.String())
-	configFilePath := path.Join(walletPath, keymanagerConfigFileName)
+	configFilePath := path.Join(walletPath, KeymanagerConfigFileName)
 	if !fileExists(configFilePath) {
 		t.Fatalf("Expected config file to have been created at path: %s", configFilePath)
 	}

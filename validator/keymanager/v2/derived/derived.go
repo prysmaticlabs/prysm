@@ -28,10 +28,10 @@ const (
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore.json"
-	// SeedFileName defines a json file storing an encrypted derived wallet seed.
-	SeedFileName = "seed.json"
-	eipVersion   = "EIP-2334"
+	KeystoreFileName                    = "keystore.json"
+	eipVersion                          = "EIP-2334"
+	withdrawalKeyDerivationPathTemplate = "m/12381/3600/%d/0"
+	validatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
 )
 
 // Wallet defines a struct which has capabilities and knowledge of how
@@ -203,10 +203,8 @@ func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte,
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
-	// TODO: needs better formatting at the top
-	withdrawalKeyPath := fmt.Sprintf("m/12381/3600/%d/0", dr.seedCfg.NextAccount)
-	validatingKeyPath := fmt.Sprintf("m/12381/3600/%d/0/0", dr.seedCfg.NextAccount)
-
+	withdrawalKeyPath := fmt.Sprintf(withdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
+	validatingKeyPath := fmt.Sprintf(validatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
@@ -254,8 +252,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 	log.WithFields(logrus.Fields{
 		"accountNumber":       dr.seedCfg.NextAccount,
+		"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
 		"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
-		"path":                path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
+		"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
+		"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
 	}).Info("Successfully created new validator account")
 	dr.seedCfg.NextAccount++
 	encodedCfg, err := MarshalEncryptedSeedFile(ctx, dr.seedCfg)

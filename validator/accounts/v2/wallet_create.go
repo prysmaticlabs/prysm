@@ -104,7 +104,11 @@ func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 		CanUnlockAccounts: true,
 	}
 	ctx := context.Background()
-	seedConfig, err := derived.InitializeWalletSeedFile(ctx, "hello world")
+	walletPassword, err := inputNewWalletPassword()
+	if err != nil {
+		return err
+	}
+	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword)
 	if err != nil {
 		return err
 	}

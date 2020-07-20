@@ -130,6 +130,53 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	return v2keymanager.Kind(selection), nil
 }
 
+func inputNewWalletPassword() (string, error) {
+	var hasValidPassword bool
+	var walletPassword string
+	var err error
+	for !hasValidPassword {
+		prompt := promptui.Prompt{
+			Label:    "New wallet password",
+			Validate: validatePasswordInput,
+			Mask:     '*',
+		}
+
+		walletPassword, err = prompt.Run()
+		if err != nil {
+			return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
+		}
+
+		prompt = promptui.Prompt{
+			Label: "Confirm password",
+			Mask:  '*',
+		}
+		confirmPassword, err := prompt.Run()
+		if err != nil {
+			return "", fmt.Errorf("could not read password confirmation: %v", formatPromptError(err))
+		}
+		if walletPassword != confirmPassword {
+			log.Error("Passwords do not match")
+			continue
+		}
+		hasValidPassword = true
+	}
+	return walletPassword, nil
+}
+
+func inputExistingWalletPassword() (string, error) {
+	prompt := promptui.Prompt{
+		Label:    "Wallet password",
+		Validate: validatePasswordInput,
+		Mask:     '*',
+	}
+
+	walletPassword, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
+	}
+	return walletPassword, nil
+}
+
 func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
 	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
 		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
@@ -156,7 +203,7 @@ func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
 
 		walletPassword, err = prompt.Run()
 		if err != nil {
-			return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
+			return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
 		}
 
 		prompt = promptui.Prompt{
