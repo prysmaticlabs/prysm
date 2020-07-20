@@ -446,8 +446,8 @@ func ProcessBlockNoVerifyAttSigs(
 ) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
-
-	state, err := b.ProcessBlockHeader(state, signed)
+	var err error
+	state, err = b.ProcessBlockHeader(state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
@@ -493,8 +493,8 @@ func ProcessBlockNoVerifyAnySig(
 ) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
-
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	var err error
+	state, err = b.ProcessBlockHeaderNoVerify(state, signed.Block)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block header")
@@ -570,8 +570,8 @@ func ProcessOperations(
 	if err := verifyOperationLengths(state, body); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
-
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
+	var err error
+	state, err = b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
@@ -633,8 +633,8 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err := verifyOperationLengths(state, body); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
-
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
+	var err error
+	state, err = b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
@@ -646,6 +646,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
+	fmt.Println("Pre state balance list ", state.BalancesLength())
 	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")

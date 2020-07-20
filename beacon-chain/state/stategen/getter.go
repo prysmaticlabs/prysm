@@ -87,8 +87,8 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 	}
 
-	// To invalidate cache for parent root because pre state will get mutated.
-	s.hotStateCache.Delete(blockRoot)
+	//// To invalidate cache for parent root because pre state will get mutated.
+	//s.hotStateCache.Delete(blockRoot)
 
 	return startState, nil
 }

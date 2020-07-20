@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -179,6 +180,7 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 			return nil, err
 		}
 	} else {
+		fmt.Println("Getting  ", hex.EncodeToString(pubKey), index)
 		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
 			return nil, err
 		}
