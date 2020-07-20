@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -147,7 +146,7 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	if !ok {
+	if !ok || index >= uint64(beaconState.BalancesLength()) {
 		if verifySignature {
 			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 			if err != nil {
@@ -180,7 +179,6 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 			return nil, err
 		}
 	} else {
-		fmt.Println("Getting  ", hex.EncodeToString(pubKey), index)
 		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
 			return nil, err
 		}
