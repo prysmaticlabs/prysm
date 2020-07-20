@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir := testutil.TempDir() + "/wallet"
+	walletDir := filepath.Join(testutil.TempDir(), walletDirName)
 	defer func() {
 		assert.NoError(t, os.RemoveAll(walletDir))
 	}()
