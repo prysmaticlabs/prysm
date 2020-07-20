@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
@@ -225,6 +226,39 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 	}
 }
 
+func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := uint64(2048)
+	base := buildState(e+2, validatorCount)
+	atts := make([]*pb.PendingAttestation, 3)
+	var emptyRoot [32]byte
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{
+					Root: emptyRoot[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Root: emptyRoot[:],
+				},
+				BeaconBlockRoot: emptyRoot[:],
+			},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			// Inclusion delay of 0 is not possible in a valid state and could cause a divide by
+			// zero panic.
+			InclusionDelay: 0,
+		}
+	}
+	base.PreviousEpochAttestations = atts
+	state, err := state.InitializeFromProto(base)
+	require.NoError(t, err)
+
+	pVals, pBal, err := New(context.Background(), state)
+	require.NoError(t, err)
+	pVals, pBal, err = ProcessAttestations(context.Background(), state, pVals, pBal)
+	require.ErrorContains(t, "attestation with inclusion delay of 0", err)
+}
+
 func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
@@ -356,6 +390,26 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 
 	if r[proposerIndex] != proposerReward {
 		t.Errorf("Wanted proposer reward %d, got %d", proposerReward, r[proposerIndex])
+	}
+}
+
+func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := uint64(10)
+	base := buildState(e, validatorCount)
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposerIndex := validatorCount
+	b := &Balance{ActiveCurrentEpoch: 1000}
+	v := []*Validator{
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
+	}
+	_, err = ProposersDelta(state, b, v)
+	if err == nil {
+		t.Fatal("Expected an error with invalid proposer index")
 	}
 }
 

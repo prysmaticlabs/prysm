@@ -33,6 +33,9 @@ func ProcessAttestations(
 	var err error
 
 	for _, a := range append(state.PreviousEpochAttestations(), state.CurrentEpochAttestations()...) {
+		if a.InclusionDelay == 0 {
+			return nil, nil, errors.New("attestation with inclusion delay of 0")
+		}
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
