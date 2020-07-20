@@ -371,8 +371,6 @@ github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uG
 github.com/hashicorp/hcl v0.0.0-20170914154624-68e816d1c783/go.mod h1:oZtUIOe8dh44I2q6ScRibXws4Ajl+d+nod3AaR9vL5w=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/herumi/bls-eth-go-binary v0.0.0-20200428020417-6dd0e5634b87/go.mod h1:luAnRm3OsMQeokhGzpYmc0ZKwawY7o87PUEP11Z7r7U=
-github.com/herumi/bls-eth-go-binary v0.0.0-20200522010937-01d282b5380b h1:mu+F5uA3Y68oB6KXZqWlASKMetbNufhQx2stMI+sD+Y=
-github.com/herumi/bls-eth-go-binary v0.0.0-20200522010937-01d282b5380b/go.mod h1:luAnRm3OsMQeokhGzpYmc0ZKwawY7o87PUEP11Z7r7U=
 github.com/herumi/bls-eth-go-binary v0.0.0-20200706085701-832d8c2c0f7d h1:P8yaFmLwc5ZlUx2sHuawcdQvpv5/0GM+WEGJ07ljN3g=
 github.com/herumi/bls-eth-go-binary v0.0.0-20200706085701-832d8c2c0f7d/go.mod h1:luAnRm3OsMQeokhGzpYmc0ZKwawY7o87PUEP11Z7r7U=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
@@ -925,8 +923,6 @@ github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65 h1:hJfAW
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963 h1:Th5ufPIaL5s/7i3gXHTgiTwfsUhWDP/PwFRiI6qV6v0=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963/go.mod h1:VecIJZrewdAuhVckySLFt2wAAHRME934bSDurP8ftkc=
-github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0 h1:V4o7uJqGXAuz6ZpwxhT4cnVjRb/XxpBmTKp/lVVr05k=
-github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0/go.mod h1:VecIJZrewdAuhVckySLFt2wAAHRME934bSDurP8ftkc=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae h1:7qd0Af1ozWKBU3c93YW2RH+/09hJns9+ftqWUZyts9c=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae/go.mod h1:VecIJZrewdAuhVckySLFt2wAAHRME934bSDurP8ftkc=
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796 h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=
@@ -1302,8 +1298,6 @@ golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200427175716-29b57079015a/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200519105757-fe76b779f299/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200523222454-059865788121 h1:rITEj+UZHYC927n8GT97eC3zrpzXdb/voyeOuVKS46o=
-golang.org/x/sys v0.0.0-20200523222454-059865788121/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae h1:Ih9Yo4hSPImZOpfGuA4bR/ORKTAbhZo2AbWNRCnevdo=
 golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.0.0-20160726164857-2910a502d2bf/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
