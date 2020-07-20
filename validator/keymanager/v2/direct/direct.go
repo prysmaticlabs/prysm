@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -41,19 +42,6 @@ const (
 	eipVersion          = "EIP-2335"
 )
 
-// Wallet defines a struct which has capabilities and knowledge of how
-// to read and write important accounts-related files to the filesystem.
-// Useful for keymanager to have persistent capabilities for accounts on-disk.
-type Wallet interface {
-	AccountsDir() string
-	CanUnlockAccounts() bool
-	AccountNames() ([]string, error)
-	ReadPasswordForAccount(accountName string) (string, error)
-	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
-	WriteAccountToDisk(ctx context.Context, password string) (string, error)
-	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
-}
-
 // Config for a direct keymanager.
 type Config struct {
 	EIPVersion string `json:"direct_eip_version"`
@@ -61,7 +49,7 @@ type Config struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet            Wallet
+	wallet            iface.Wallet
 	cfg               *Config
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
@@ -85,7 +73,7 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet: wallet,
 		cfg:    cfg,

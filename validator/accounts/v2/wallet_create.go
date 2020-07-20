@@ -44,7 +44,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 	}
 	switch keymanagerKind {
 	case v2keymanager.Direct:
-		if err = initializeDirectWallet(cliCtx, walletDir); err != nil {
+		if err = createDirectWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
 		}
 		log.WithField("wallet-path", walletDir).Infof(
@@ -52,7 +52,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 				"Make a new validator account with ./prysm.sh validator accounts-2 new",
 		)
 	case v2keymanager.Derived:
-		if err = initializeDerivedWallet(cliCtx, walletDir); err != nil {
+		if err = createDerivedWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with derived keymanager: %v", err)
 		}
 		log.WithField("wallet-path", walletDir).Infof(
@@ -60,7 +60,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 				"Make a new validator account with ./prysm.sh validator accounts-2 new",
 		)
 	case v2keymanager.Remote:
-		if err = initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
+		if err = createRemoteWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
 		}
 		log.WithField("wallet-path", walletDir).Infof(
@@ -72,7 +72,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 	return nil
 }
 
-func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
+func createDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 	walletConfig := &WalletConfig{
 		PasswordsDir:      passwordsDirPath,
@@ -95,7 +95,7 @@ func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	return nil
 }
 
-func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
+func createDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 	walletConfig := &WalletConfig{
 		PasswordsDir:      passwordsDirPath,
@@ -133,7 +133,7 @@ func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 	return nil
 }
 
-func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
+func createRemoteWallet(cliCtx *cli.Context, walletDir string) error {
 	conf, err := inputRemoteKeymanagerConfig(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not input remote keymanager config")

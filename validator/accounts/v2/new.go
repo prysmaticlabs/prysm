@@ -26,7 +26,7 @@ const (
 )
 
 var keymanagerKindSelections = map[v2keymanager.Kind]string{
-	v2keymanager.Derived: "Derived, HD Wallet (Recommended)",
+	v2keymanager.Derived: "HD Wallet (Recommended)",
 	v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
 	v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 }

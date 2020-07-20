@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/sirupsen/logrus"
 	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -41,17 +42,6 @@ const (
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
 )
 
-// Wallet defines a struct which has capabilities and knowledge of how
-// to read and write important accounts-related files to the filesystem.
-// Useful for keymanager to have persistent capabilities for accounts on-disk.
-type Wallet interface {
-	AccountsDir() string
-	CanUnlockAccounts() bool
-	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
-	ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error)
-	WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error
-}
-
 // Config for a derived keymanager.
 type Config struct {
 	DerivedPathStructure string
@@ -60,7 +50,7 @@ type Config struct {
 
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
 type Keymanager struct {
-	wallet            Wallet
+	wallet            iface.Wallet
 	cfg               *Config
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
@@ -98,7 +88,7 @@ func DefaultConfig() *Config {
 // NewKeymanager instantiates a new derived keymanager from configuration options.
 func NewKeymanager(
 	ctx context.Context,
-	wallet Wallet,
+	wallet iface.Wallet,
 	cfg *Config,
 	skipMnemonicConfirm bool,
 	password string,

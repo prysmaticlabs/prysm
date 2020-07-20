@@ -21,6 +21,7 @@ go_library(
         "//shared/depositutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
+        "//validator/accounts/v2/iface:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",
