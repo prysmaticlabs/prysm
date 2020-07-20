@@ -5,16 +5,16 @@ go 1.14
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.0
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
-	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
-	github.com/bazelbuild/rules_go v0.23.2
+	github.com/aristanetworks/goarista 95bcf8053598
+	github.com/bazelbuild/buildtools b1667ff58f71
+	github.com/bazelbuild/rules_go v0.23.5
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cespare/cp v1.1.1 // indirect
-	github.com/cloudflare/roughtime v0.0.0-20200205191924-a69ef1dab727
+	github.com/cloudflare/roughtime bacff06d032d
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/d4l3k/messagediff v1.2.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
-	github.com/dgraph-io/ristretto v0.0.2
+	github.com/dgraph-io/ristretto v0.0.3
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.5 // indirect
@@ -25,9 +25,9 @@ require (
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-yaml/yaml v2.1.0+incompatible
+	github.com/go-yaml/yaml v2.3.0+incompatible
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
+	github.com/golang/gddo 051695c33a3f
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.1
@@ -38,7 +38,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/herumi/bls-eth-go-binary v0.0.0-20200522010937-01d282b5380b
+	github.com/herumi/bls-eth-go-binary 3e30d132e8f6
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-cid v0.0.6 // indirect
@@ -46,22 +46,22 @@ require (
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.1
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
-	github.com/json-iterator/go v1.1.9
+	github.com/json-iterator/go v1.1.10
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/kr/pretty v0.2.0
-	github.com/libp2p/go-libp2p v0.9.2
-	github.com/libp2p/go-libp2p-blankhost v0.1.6
-	github.com/libp2p/go-libp2p-circuit v0.2.3
-	github.com/libp2p/go-libp2p-core v0.5.6
+	github.com/libp2p/go-libp2p v0.10.0
+	github.com/libp2p/go-libp2p-blankhost v0.2.0
+	github.com/libp2p/go-libp2p-circuit v0.3.0
+	github.com/libp2p/go-libp2p-core v0.6.0
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-host v0.1.0
 	github.com/libp2p/go-libp2p-kad-dht v0.8.2
 	github.com/libp2p/go-libp2p-net v0.1.0
 	github.com/libp2p/go-libp2p-noise v0.1.1
-	github.com/libp2p/go-libp2p-pubsub v0.3.1
+	github.com/libp2p/go-libp2p-pubsub v0.3.2
 	github.com/libp2p/go-libp2p-secio v0.2.2
-	github.com/libp2p/go-libp2p-swarm v0.2.5
+	github.com/libp2p/go-libp2p-swarm v0.2.8
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
 	github.com/libp2p/go-maddr-filter v0.1.0 // indirect
@@ -80,41 +80,41 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
-	github.com/prometheus/client_golang v1.6.0
+	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/protolambda/zssz v0.1.4
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20200617012222-f52a0eff2886
+	github.com/protolambda/zssz v0.1.5
+	github.com/prysmaticlabs/ethereumapis e8095222f77b
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
-	github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0
+	github.com/prysmaticlabs/go-ssz 6d5c9aa213ae
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
-	github.com/wealdtech/eth2-signer-api v1.3.0
+	github.com/wealdtech/eth2-signer-api v1.5.1
 	github.com/wealdtech/go-bytesutil v1.1.1
-	github.com/wealdtech/go-eth2-wallet v1.9.4
+	github.com/wealdtech/go-eth2-wallet v1.11.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.0.0
 	github.com/wealdtech/go-eth2-wallet-nd v1.8.0
-	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.7.3
-	github.com/wealdtech/go-eth2-wallet-types/v2 v2.0.2
+	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.16.1
+	github.com/wealdtech/go-eth2-wallet-types/v2 v2.5.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
-	go.etcd.io/bbolt v1.3.4
-	go.opencensus.io v0.22.3
+	go.etcd.io/bbolt v1.3.5
+	go.opencensus.io v0.22.4
 	go.uber.org/automaxprocs v1.3.0
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+	golang.org/x/crypto 948cd5f35899
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/net v0.0.0-20200528225125-3c3fba18258b // indirect
 	golang.org/x/sys v0.0.0-20200523222454-059865788121 // indirect
-	golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e
-	google.golang.org/genproto v0.0.0-20200528191852-705c0b31589b
-	google.golang.org/grpc v1.29.1
+	golang.org/x/tools 6ddee64345a6
+	google.golang.org/genproto 11fb19a81f2c
+	google.golang.org/grpc v1.30.0
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
-	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.18.3
-	k8s.io/apimachinery v0.18.3
+	gopkg.in/yaml.v2 v2.3.0
+	k8s.io/api v0.18.6
+	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v0.18.3
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
