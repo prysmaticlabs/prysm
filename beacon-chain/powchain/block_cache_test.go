@@ -6,6 +6,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestHashKeyFn_OK(t *testing.T) {
@@ -14,19 +16,13 @@ func TestHashKeyFn_OK(t *testing.T) {
 	}
 
 	key, err := hashKeyFn(bInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if key != bInfo.Hash.Hex() {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, bInfo.Hash.Hex())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, bInfo.Hash.Hex(), key)
 }
 
 func TestHashKeyFn_InvalidObj(t *testing.T) {
 	_, err := hashKeyFn("bad")
-	if err != ErrNotABlockInfo {
-		t.Errorf("Expected error %v, got %v", ErrNotABlockInfo, err)
-	}
+	assert.Equal(t, ErrNotABlockInfo, err)
 }
 
 func TestHeightKeyFn_OK(t *testing.T) {
@@ -35,19 +31,13 @@ func TestHeightKeyFn_OK(t *testing.T) {
 	}
 
 	key, err := heightKeyFn(bInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if key != bInfo.Number.String() {
-		t.Errorf("Incorrect height key: %s, expected %s", key, bInfo.Number.String())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, bInfo.Number.String(), key)
 }
 
 func TestHeightKeyFn_InvalidObj(t *testing.T) {
 	_, err := heightKeyFn("bad")
-	if err != ErrNotABlockInfo {
-		t.Errorf("Expected error %v, got %v", ErrNotABlockInfo, err)
-	}
+	assert.Equal(t, ErrNotABlockInfo, err)
 }
 
 func TestBlockCache_byHash(t *testing.T) {
@@ -59,38 +49,18 @@ func TestBlockCache_byHash(t *testing.T) {
 	}
 
 	exists, _, err := cache.BlockInfoByHash(header.Hash())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Error("Expected block info not to exist in empty cache")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, false, exists, "Expected block info not to exist in empty cache")
 
-	if err := cache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
-		t.Fatal(err)
-	}
+	err = cache.AddBlock(gethTypes.NewBlockWithHeader(header))
+	require.NoError(t, err)
 
 	exists, fetchedInfo, err := cache.BlockInfoByHash(header.Hash())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !exists {
-		t.Error("Expected blockInfo to exist")
-	}
-	if fetchedInfo.Number.Cmp(header.Number) != 0 {
-		t.Errorf(
-			"Expected fetched info number to be %v, got %v",
-			header.Number,
-			fetchedInfo.Number,
-		)
-	}
-	if fetchedInfo.Hash != header.Hash() {
-		t.Errorf(
-			"Expected fetched info hash to be %v, got %v",
-			header.Hash(),
-			fetchedInfo.Hash,
-		)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, exists, "Expected blockInfo to exist")
+	assert.Equal(t, 0, fetchedInfo.Number.Cmp(header.Number), "Expected fetched info number to be equal")
+	assert.Equal(t, header.Hash(), fetchedInfo.Hash, "Expected hash to be equal")
+
 }
 
 func TestBlockCache_byHeight(t *testing.T) {
@@ -102,38 +72,19 @@ func TestBlockCache_byHeight(t *testing.T) {
 	}
 
 	exists, _, err := cache.BlockInfoByHeight(header.Number)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Error("Expected block info not to exist in empty cache")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, false, exists, "Expected block info not to exist in empty cache")
 
-	if err := cache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
-		t.Fatal(err)
-	}
+	err = cache.AddBlock(gethTypes.NewBlockWithHeader(header))
+	require.NoError(t, err)
 
 	exists, fetchedInfo, err := cache.BlockInfoByHeight(header.Number)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !exists {
-		t.Error("Expected blockInfo to exist")
-	}
-	if fetchedInfo.Number.Cmp(header.Number) != 0 {
-		t.Errorf(
-			"Expected fetched info number to be %v, got %v",
-			header.Number,
-			fetchedInfo.Number,
-		)
-	}
-	if fetchedInfo.Hash != header.Hash() {
-		t.Errorf(
-			"Expected fetched info hash to be %v, got %v",
-			header.Hash(),
-			fetchedInfo.Hash,
-		)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, exists, "Expected blockInfo to exist")
+
+	assert.Equal(t, 0, fetchedInfo.Number.Cmp(header.Number), "Expected fetched info number to be equal")
+	assert.Equal(t, header.Hash(), fetchedInfo.Hash, "Expected hash to be equal")
+
 }
 
 func TestBlockCache_maxSize(t *testing.T) {
@@ -143,23 +94,11 @@ func TestBlockCache_maxSize(t *testing.T) {
 		header := &gethTypes.Header{
 			Number: big.NewInt(i),
 		}
-		if err := cache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
-			t.Fatal(err)
-		}
+		err := cache.AddBlock(gethTypes.NewBlockWithHeader(header))
+		require.NoError(t, err)
+
 	}
 
-	if uint64(len(cache.hashCache.ListKeys())) != maxCacheSize {
-		t.Errorf(
-			"Expected hash cache key size to be %d, got %d",
-			maxCacheSize,
-			len(cache.hashCache.ListKeys()),
-		)
-	}
-	if uint64(len(cache.heightCache.ListKeys())) != maxCacheSize {
-		t.Errorf(
-			"Expected height cache key size to be %d, got %d",
-			maxCacheSize,
-			len(cache.heightCache.ListKeys()),
-		)
-	}
+	assert.Equal(t, maxCacheSize, len(cache.hashCache.ListKeys()))
+	assert.Equal(t, maxCacheSize, len(cache.heightCache.ListKeys()))
 }
