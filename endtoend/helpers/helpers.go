@@ -8,11 +8,15 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
@@ -21,6 +25,7 @@ import (
 const (
 	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
 	filePollingInterval = 500 * time.Millisecond
+	heapFileName        = "node_heap_%d.out"
 )
 
 // KillProcesses finds the passed in process IDs and kills the process.
@@ -142,4 +147,25 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 		}
 		t.Log(err)
 	}
+}
+
+func WriteHeapFile(testDir string, index int) error {
+	url := fmt.Sprintf("http://localhost:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	dataInBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if err := resp.Body.Close(); err != nil {
+		return err
+	}
+
+	filePath := filepath.Join(testDir, fmt.Sprintf(heapFileName, index))
+	if err := ioutil.WriteFile(filePath, dataInBytes, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return err
+	}
+	return nil
 }
