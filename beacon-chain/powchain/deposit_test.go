@@ -229,7 +229,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 		valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
 		require.NoError(t, err)
-		require.Equal(t, 0, valcount, "Did not get correct active validator count")
+		require.Equal(t, int(0), int(valcount), "Did not get correct active validator count")
 	}
 }
 
