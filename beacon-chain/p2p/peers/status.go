@@ -68,7 +68,9 @@ type Status struct {
 
 // StatusConfig represents peer status service params.
 type StatusConfig struct {
+	// PeerLimit specifies maximum amount of concurrent peers that are expected to be connect to the node.
 	PeerLimit    int
+	// ScorerParams holds peer scorer configuration params.
 	ScorerParams *PeerScorerConfig
 }
 
@@ -193,8 +195,8 @@ func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
 	p.store.Lock()
 	defer p.store.Unlock()
 
-	status := p.fetch(pid)
-	status.metaData = metaData
+	peerData := p.fetch(pid)
+	peerData.metaData = metaData
 }
 
 // Metadata returns a copy of the metadata corresponding to the provided
@@ -397,13 +399,9 @@ func (p *Status) Prune() {
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.peers {
 		if peerData.connState == PeerDisconnected && !p.scorer.isBadPeer(pid) {
-			badResp, err := p.scorer.badResponses(pid)
-			if err != nil {
-				badResp = 0
-			}
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
-				badResp: badResp,
+				badResp: p.store.peers[pid].badResponsesCount,
 			})
 		}
 	}
@@ -424,8 +422,8 @@ func (p *Status) Prune() {
 	peersToPrune = peersToPrune[:limitDiff]
 
 	// Delete peers from map.
-	for _, peerRes := range peersToPrune {
-		delete(p.store.peers, peerRes.pid)
+	for _, peerData := range peersToPrune {
+		delete(p.store.peers, peerData.pid)
 	}
 }
 

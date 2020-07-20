@@ -26,6 +26,7 @@ type PeerScorer struct {
 
 // PeerScorerConfig holds configuration parameters for scoring service.
 type PeerScorerConfig struct {
+	// BadResponsesThreshold specifies number of bad responses tolerated, before peer is banned.
 	BadResponsesThreshold     int
 	BadResponsesWeight        float64
 	BadResponsesDecayInterval time.Duration

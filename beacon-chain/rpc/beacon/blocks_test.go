@@ -1,11 +1,9 @@
 package beacon
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -26,6 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
@@ -45,9 +45,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 			Slot: 0,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
@@ -56,9 +54,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 			Slot: 0,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
@@ -67,9 +63,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 			Root: make([]byte, 32),
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
@@ -84,28 +78,21 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	}
 
 	// Should throw an error if no genesis block is found.
-	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+	_, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
-	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
-		t.Fatal(err)
-	}
+	})
+	require.ErrorContains(t, "Could not find genesis", err)
 
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{'a'}
 	blk := testutil.NewBeaconBlock()
 	blk.Block.ParentRoot = parentRoot[:]
 	root, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: []*ethpb.BeaconBlockContainer{
 			{
@@ -121,9 +108,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 			Genesis: true,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
@@ -145,15 +130,9 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 		},
 	}
 	root, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := uint64(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
@@ -165,24 +144,19 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 			},
 		}
 		root, err := stateutil.BlockRoot(b.Block)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		blks[i] = b
 		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
-	if err := db.SaveBlocks(ctx, blks); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlocks(ctx, blks))
 
 	// Should throw an error if more than one blk returned.
-	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+	_, err = bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 }
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
@@ -196,24 +170,18 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		root, err := stateutil.BlockRoot(b.Block)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		blks[i] = b
 		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
-	if err := db.SaveBlocks(ctx, blks); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlocks(ctx, blks))
 
 	bs := &Server{
 		BeaconDB: db,
 	}
 
 	root6, err := stateutil.BlockRoot(blks[6].Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		req *ethpb.ListBlocksRequest
@@ -317,9 +285,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
 			res, err := bs.ListBlocks(ctx, test.req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			if !proto.Equal(res, test.res) {
 				t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
 			}
@@ -336,66 +302,37 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.ListBlocksRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.ListBlocks(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 
 	wanted = "Must specify a filter criteria for fetching"
 	req = &ethpb.ListBlocksRequest{}
-	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err = bs.ListBlocks(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 0}}
 	res, err := bs.ListBlocks(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.BlockContainers) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
-	}
-	if res.TotalSize != 0 {
-		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
+	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
 	res, err = bs.ListBlocks(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.BlockContainers) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
-	}
-	if res.TotalSize != 0 {
-		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
-
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
+	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
 	res, err = bs.ListBlocks(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.BlockContainers) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
-	}
-	if res.TotalSize != 0 {
-		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
-
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
+	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
 	res, err = bs.ListBlocks(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.BlockContainers) != 0 {
-		t.Errorf("wanted empty list, got a list of %d", len(res.BlockContainers))
-	}
-	if res.TotalSize != 0 {
-		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
-
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
+	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 }
 
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
@@ -407,22 +344,14 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
-	if err := db.SaveBlock(context.Background(), genBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
 	gRoot, err := stateutil.BlockRoot(genBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(context.Background(), gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
 	bs := &Server{
 		BeaconDB:    db,
@@ -433,23 +362,16 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 	}
 
-	if _, err := bs.GetChainHead(context.Background(), nil); !strings.Contains(err.Error(), "Could not get finalized block") {
-		t.Fatal("Did not get wanted error")
-	}
+	_, err = bs.GetChainHead(context.Background(), nil)
+	require.ErrorContains(t, "Could not get finalized block", err)
 }
 
 func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 	bs := &Server{
 		HeadFetcher: &chainMock.ChainService{Block: nil},
 	}
-	if _, err := bs.GetChainHead(context.Background(), nil); err != nil && !strings.Contains(
-		err.Error(),
-		"Head block of chain was nil",
-	) {
-		t.Fatal("Did not get wanted error")
-	} else if err == nil {
-		t.Error("Expected error, received nil")
-	}
+	_, err := bs.GetChainHead(context.Background(), nil)
+	assert.ErrorContains(t, "Head block of chain was nil", err)
 }
 
 func TestServer_GetChainHead(t *testing.T) {
@@ -457,49 +379,31 @@ func TestServer_GetChainHead(t *testing.T) {
 
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
-	if err := db.SaveBlock(context.Background(), genBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
 	gRoot, err := stateutil.BlockRoot(genBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(context.Background(), gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
 	finalizedBlock := testutil.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 1
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
-	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), finalizedBlock))
 	fRoot, err := stateutil.BlockRoot(finalizedBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
-	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), justifiedBlock))
 	jRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 3
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
-	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), prevJustifiedBlock))
 	pjRoot, err := stateutil.BlockRoot(prevJustifiedBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
@@ -507,9 +411,7 @@ func TestServer_GetChainHead(t *testing.T) {
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
 	bs := &Server{
@@ -522,45 +424,16 @@ func TestServer_GetChainHead(t *testing.T) {
 	}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if head.PreviousJustifiedEpoch != 3 {
-		t.Errorf("Wanted PreviousJustifiedEpoch: %d, got: %d",
-			3*params.BeaconConfig().SlotsPerEpoch, head.PreviousJustifiedEpoch)
-	}
-	if head.JustifiedEpoch != 2 {
-		t.Errorf("Wanted JustifiedEpoch: %d, got: %d",
-			2*params.BeaconConfig().SlotsPerEpoch, head.JustifiedEpoch)
-	}
-	if head.FinalizedEpoch != 1 {
-		t.Errorf("Wanted FinalizedEpoch: %d, got: %d",
-			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedEpoch)
-	}
-	if head.PreviousJustifiedSlot != 24 {
-		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
-			3, head.PreviousJustifiedSlot)
-	}
-	if head.JustifiedSlot != 16 {
-		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
-			2, head.JustifiedSlot)
-	}
-	if head.FinalizedSlot != 8 {
-		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
-			1, head.FinalizedSlot)
-	}
-	if !bytes.Equal(pjRoot[:], head.PreviousJustifiedBlockRoot) {
-		t.Errorf("Wanted PreviousJustifiedBlockRoot: %v, got: %v",
-			pjRoot[:], head.PreviousJustifiedBlockRoot)
-	}
-	if !bytes.Equal(jRoot[:], head.JustifiedBlockRoot) {
-		t.Errorf("Wanted JustifiedBlockRoot: %v, got: %v",
-			jRoot[:], head.JustifiedBlockRoot)
-	}
-	if !bytes.Equal(fRoot[:], head.FinalizedBlockRoot) {
-		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
-			fRoot[:], head.FinalizedBlockRoot)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
+	assert.Equal(t, uint64(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")
+	assert.Equal(t, uint64(1), head.FinalizedEpoch, "Unexpected FinalizedEpoch")
+	assert.Equal(t, uint64(24), head.PreviousJustifiedSlot, "Unexpected PreviousJustifiedSlot")
+	assert.Equal(t, uint64(16), head.JustifiedSlot, "Unexpected JustifiedSlot")
+	assert.Equal(t, uint64(8), head.FinalizedSlot, "Unexpected FinalizedSlot")
+	assert.DeepEqual(t, pjRoot[:], head.PreviousJustifiedBlockRoot, "Unexpected PreviousJustifiedBlockRoot")
+	assert.DeepEqual(t, jRoot[:], head.JustifiedBlockRoot, "Unexpected JustifiedBlockRoot")
+	assert.DeepEqual(t, fRoot[:], head.FinalizedBlockRoot, "Unexpected FinalizedBlockRoot")
 }
 
 func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
@@ -581,9 +454,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamChainHeadServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.ErrorContains(tt, "Context canceled", server.StreamChainHead(&ptypes.Empty{}, mockStream))
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -595,49 +466,31 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	params.UseMainnetConfig()
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
-	if err := db.SaveBlock(context.Background(), genBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
 	gRoot, err := stateutil.BlockRoot(genBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(context.Background(), gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
 	finalizedBlock := testutil.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 32
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
-	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), finalizedBlock))
 	fRoot, err := stateutil.BlockRoot(finalizedBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 64
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
-	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), justifiedBlock))
 	jRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 96
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
-	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), prevJustifiedBlock))
 	pjRoot, err := stateutil.BlockRoot(prevJustifiedBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
@@ -645,15 +498,11 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
 	hRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	chainService := &chainMock.ChainService{}
 	ctx := context.Background()
@@ -692,9 +541,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.NoError(tt, server.StreamChainHead(&ptypes.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
@@ -726,9 +573,7 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamBlocksServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		if err := server.StreamBlocks(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ptypes.Empty{}, mockStream))
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -758,9 +603,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		if err := server.StreamBlocks(&ptypes.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.NoError(tt, server.StreamBlocks(&ptypes.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).

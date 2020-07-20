@@ -17,25 +17,25 @@ type AssertionTestingTB interface {
 type assertionLoggerFn func(string, ...interface{})
 
 // Equal compares values using comparison operator.
-func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...string) {
+func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
 	errMsg := parseMsg("Values are not equal", msg...)
 	if expected != actual {
 		_, file, line, _ := runtime.Caller(2)
-		loggerFn("%s:%d %s, x: %v, y: %v", filepath.Base(file), line, errMsg, actual, expected)
+		loggerFn("%s:%d %s, got: %v, want: %v", filepath.Base(file), line, errMsg, actual, expected)
 	}
 }
 
 // DeepEqual compares values using DeepEqual.
-func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...string) {
+func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
 	errMsg := parseMsg("Values are not equal", msg...)
 	if !reflect.DeepEqual(expected, actual) {
 		_, file, line, _ := runtime.Caller(2)
-		loggerFn("%s:%d %s, x: %v, y: %v", filepath.Base(file), line, errMsg, actual, expected)
+		loggerFn("%s:%d %s, got: %v, want: %v", filepath.Base(file), line, errMsg, actual, expected)
 	}
 }
 
 // NoError asserts that error is nil.
-func NoError(loggerFn assertionLoggerFn, err error, msg ...string) {
+func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 	errMsg := parseMsg("Unexpected error", msg...)
 	if err != nil {
 		_, file, line, _ := runtime.Caller(2)
@@ -44,7 +44,7 @@ func NoError(loggerFn assertionLoggerFn, err error, msg ...string) {
 }
 
 // ErrorContains asserts that actual error contains wanted message.
-func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...string) {
+func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...interface{}) {
 	errMsg := parseMsg("Expected error not returned", msg...)
 	if err == nil || !strings.Contains(err.Error(), want) {
 		_, file, line, _ := runtime.Caller(2)
@@ -53,7 +53,7 @@ func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...st
 }
 
 // NotNil asserts that passed value is not nil.
-func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...string) {
+func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...interface{}) {
 	errMsg := parseMsg("Unexpected nil value", msg...)
 	if obj == nil {
 		_, file, line, _ := runtime.Caller(2)
@@ -61,12 +61,15 @@ func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...string) {
 	}
 }
 
-func parseMsg(defaultMsg string, msg ...string) string {
-	msgString := defaultMsg
-	if len(msg) == 1 {
-		msgString = msg[0]
+func parseMsg(defaultMsg string, msg ...interface{}) string {
+	if len(msg) >= 1 {
+		msgFormat, ok := msg[0].(string)
+		if !ok {
+			return defaultMsg
+		}
+		return fmt.Sprintf(msgFormat, msg[1:]...)
 	}
-	return msgString
+	return defaultMsg
 }
 
 // TBMock exposes enough testing.TB methods for assertions.
