@@ -12,14 +12,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	"github.com/sirupsen/logrus"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
@@ -153,7 +154,7 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 
 // InitializeWalletSeedFile creates a new, encrypted seed using a password input
 // and persists its encrypted file metadata to disk under the wallet path.
-func InitializeWalletSeedFile(ctx context.Context, password string) (*SeedConfig, error) {
+func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonicConfirm bool) (*SeedConfig, error) {
 	walletSeed := make([]byte, 32)
 	n, err := rand.NewGenerator().Read(walletSeed)
 	if err != nil {
@@ -163,14 +164,14 @@ func InitializeWalletSeedFile(ctx context.Context, password string) (*SeedConfig
 		return nil, errors.New("could not randomly create seed")
 	}
 	m := &EnglishMnemonicGenerator{
-		skipMnemonicConfirm: false,
+		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
 	phrase, err := m.Generate(walletSeed)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not generate wallet seed")
 	}
 	if err := m.ConfirmAcknowledgement(phrase); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not confirm mnemonic acknowledgement")
 	}
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
@@ -179,15 +180,15 @@ func InitializeWalletSeedFile(ctx context.Context, password string) (*SeedConfig
 	}
 	id, err := uuid.NewRandom()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not generate unique UUID")
 	}
-	seedFile := &SeedConfig{}
-	seedFile.Crypto = cryptoFields
-	seedFile.ID = id.String()
-	seedFile.NextAccount = 0
-	seedFile.Version = encryptor.Version()
-	seedFile.Name = encryptor.Name()
-	return seedFile, nil
+	return &SeedConfig{
+		Crypto:      cryptoFields,
+		ID:          id.String(),
+		NextAccount: 0,
+		Version:     encryptor.Version(),
+		Name:        encryptor.Name(),
+	}, nil
 }
 
 // MarshalEncryptedSeedFile json encodes the seed configuration for a derived keymanager.
@@ -287,11 +288,12 @@ func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate new, random UUID for keystore")
 	}
-	keystoreFile := &Keystore{}
-	keystoreFile.Crypto = cryptoFields
-	keystoreFile.ID = id.String()
-	keystoreFile.Pubkey = fmt.Sprintf("%x", publicKey)
-	keystoreFile.Version = encryptor.Version()
-	keystoreFile.Name = encryptor.Name()
+	keystoreFile := &Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Pubkey:  fmt.Sprintf("%x", publicKey),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
 }
