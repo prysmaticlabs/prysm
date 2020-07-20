@@ -69,7 +69,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
 	require.NoError(t, err)
 	assert.Equal(t, true, blockInfoExistsInCache, "Expected block info to exist in cache")
-	assert.Equal(t, info.Hash, bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
+	assert.Equal(t, bytesutil.ToBytes32(info.Hash[:]), bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
 
 }
 
@@ -97,7 +97,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 	hash, err := web3Service.BlockHashByHeight(ctx, big.NewInt(0))
 	require.NoError(t, err, "Could not get block hash with given height")
-	require.Equal(t, wanted.Bytes(), hash.Bytes(), "Block hash did not equal expected hash")
+	require.DeepEqual(t, wanted.Bytes(), hash.Bytes(), "Block hash did not equal expected hash")
 
 	exists, _, err := web3Service.blockCache.BlockInfoByHash(wanted)
 	require.NoError(t, err)
