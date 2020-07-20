@@ -15,6 +15,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -53,8 +54,8 @@ var (
 // WalletConfig for a wallet struct, containing important information
 // such as the passwords directory, the wallet's directory, and keymanager.
 type WalletConfig struct {
-	PasswordsDir      string
 	WalletDir         string
+	PasswordsDir      string
 	KeymanagerKind    v2keymanager.Kind
 	CanUnlockAccounts bool
 }
@@ -386,6 +387,10 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 
 			attemptingPassword = false
 		}
+	}
+
+	if err := os.MkdirAll(w.passwordsDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+		return err
 	}
 	if err := w.writePasswordToFile(accountName, password); err != nil {
 		return errors.Wrap(err, "could not write password to disk")

@@ -72,11 +72,15 @@ func CreateWallet(cliCtx *cli.Context) error {
 	return nil
 }
 
+<<<<<<< HEAD
 func createDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
+=======
+func initializeDirectWallet(walletDir string, passwordsDir string) error {
+>>>>>>> 93bbb86a3004c70ab33dc2191b4539f252c1ef4d
 	walletConfig := &WalletConfig{
-		PasswordsDir:      passwordsDirPath,
 		WalletDir:         walletDir,
+		PasswordsDir:      passwordsDir,
 		KeymanagerKind:    v2keymanager.Direct,
 		CanUnlockAccounts: true,
 	}
