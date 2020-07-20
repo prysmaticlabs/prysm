@@ -150,8 +150,12 @@ func NewService(cfg *Config) (*Service, error) {
 	s.pubsub = gs
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
-		PeerLimit:       int(s.cfg.MaxPeers),
-		MaxBadResponses: maxBadResponses,
+		PeerLimit: int(s.cfg.MaxPeers),
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesThreshold:     maxBadResponses,
+			BadResponsesWeight:        -100,
+			BadResponsesDecayInterval: time.Hour,
+		},
 	})
 
 	return s, nil
@@ -212,7 +216,6 @@ func (s *Service) Start() {
 	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
-	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
 	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
 	runutil.RunEvery(s.ctx, refreshRate, func() {
@@ -394,7 +397,7 @@ func (s *Service) connectWithPeer(info peer.AddrInfo) error {
 	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
 	defer cancel()
 	if err := s.host.Connect(ctx, info); err != nil {
-		s.Peers().IncrementBadResponses(info.ID)
+		s.Peers().Scorer().IncrementBadResponses(info.ID)
 		return err
 	}
 	return nil
