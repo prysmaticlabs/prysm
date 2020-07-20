@@ -81,8 +81,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeyFlag,
 			flags.RPCPort,
 			flags.RPCHost,
-			flags.RebuildSpanMapsFlag,
 			flags.BeaconRPCProviderFlag,
+			flags.EnableHistoricalDetectionFlag,
 		},
 	},
 	{
