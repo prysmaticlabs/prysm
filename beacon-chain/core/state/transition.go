@@ -59,7 +59,9 @@ func ExecuteStateTransition(
 	defer span.End()
 	var err error
 	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+	state, err
+
+	= ProcessSlots(ctx, state, signed.Block.Slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slot")
 	}
@@ -493,8 +495,7 @@ func ProcessBlockNoVerifyAnySig(
 ) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
-	var err error
-	state, err = b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block header")
@@ -509,7 +510,7 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
 	}
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
+	state, err = b.ProcessRandaoNoVerstate, err = b.ProcessProposerSlashings(ctx, state, body)ify(state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not verify and process randao")
@@ -570,8 +571,7 @@ func ProcessOperations(
 	if err := verifyOperationLengths(state, body); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
-	var err error
-	state, err = b.ProcessProposerSlashings(ctx, state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
@@ -633,8 +633,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err := verifyOperationLengths(state, body); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
-	var err error
-	state, err = b.ProcessProposerSlashings(ctx, state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
