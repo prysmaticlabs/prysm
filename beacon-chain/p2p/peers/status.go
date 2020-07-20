@@ -51,8 +51,7 @@ const (
 	PeerConnecting
 )
 
-// Additional buffer beyond current peer limit, from which we can store
-// the relevant peer statuses.
+// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 const maxLimitBuffer = 150
 
 var (
@@ -63,16 +62,16 @@ var (
 // Status is the structure holding the peer status information.
 type Status struct {
 	ctx    context.Context
+	scorer *PeerScorer
 	store  *peerDataStore
-	config *StatusConfig
 }
 
 // StatusConfig represents peer status service params.
 type StatusConfig struct {
 	// PeerLimit specifies maximum amount of concurrent peers that are expected to be connect to the node.
 	PeerLimit int
-	// MaxBadResponses specifies number of bad responses tolerated, before peer is banned.
-	MaxBadResponses int
+	// ScorerParams holds peer scorer configuration params.
+	ScorerParams *PeerScorerConfig
 }
 
 // NewStatus creates a new status entity.
@@ -83,13 +82,13 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 	return &Status{
 		ctx:    ctx,
 		store:  store,
-		config: config,
+		scorer: newPeerScorer(ctx, store, config.ScorerParams),
 	}
 }
 
-// MaxBadResponses returns the maximum number of bad responses a peer can provide before it is considered bad.
-func (p *Status) MaxBadResponses() int {
-	return p.config.MaxBadResponses
+// Scorer exposes peer scoring service.
+func (p *Status) Scorer() *PeerScorer {
+	return p.scorer
 }
 
 // MaxPeerLimit returns the max peer limit stored in the current peer store.
@@ -282,37 +281,10 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	return roughtime.Now(), ErrPeerUnknown
 }
 
-// IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-func (p *Status) IncrementBadResponses(pid peer.ID) {
-	p.store.Lock()
-	defer p.store.Unlock()
-
-	peerData := p.fetch(pid)
-	peerData.badResponsesCount++
-}
-
-// BadResponses obtains the number of bad responses we have received from the given remote peer.
-// This will error if the peer does not exist.
-func (p *Status) BadResponses(pid peer.ID) (int, error) {
-	p.store.RLock()
-	defer p.store.RUnlock()
-
-	if peerData, ok := p.store.peers[pid]; ok {
-		return peerData.badResponsesCount, nil
-	}
-	return -1, ErrPeerUnknown
-}
-
 // IsBad states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	p.store.RLock()
-	defer p.store.RUnlock()
-
-	if peerData, ok := p.store.peers[pid]; ok {
-		return peerData.badResponsesCount >= p.config.MaxBadResponses
-	}
-	return false
+	return p.scorer.IsBadPeer(pid)
 }
 
 // Connecting returns the peers that are connecting.
@@ -395,15 +367,7 @@ func (p *Status) Inactive() []peer.ID {
 
 // Bad returns the peers that are bad.
 func (p *Status) Bad() []peer.ID {
-	p.store.RLock()
-	defer p.store.RUnlock()
-	peers := make([]peer.ID, 0)
-	for pid, peerData := range p.store.peers {
-		if peerData.badResponsesCount >= p.config.MaxBadResponses {
-			peers = append(peers, pid)
-		}
-	}
-	return peers
+	return p.scorer.BadPeers()
 }
 
 // All returns all the peers regardless of state.
@@ -415,19 +379,6 @@ func (p *Status) All() []peer.ID {
 		pids = append(pids, pid)
 	}
 	return pids
-}
-
-// Decay reduces the bad responses of all peers, giving reformed peers a chance to join the network.
-// This can be run periodically, although note that each time it runs it does give all bad peers another chance as well to clog up
-// the network with bad responses, so should not be run too frequently; once an hour would be reasonable.
-func (p *Status) Decay() {
-	p.store.Lock()
-	defer p.store.Unlock()
-	for _, peerData := range p.store.peers {
-		if peerData.badResponsesCount > 0 {
-			peerData.badResponsesCount--
-		}
-	}
 }
 
 // Prune clears out and removes outdated and disconnected peers.
@@ -445,10 +396,9 @@ func (p *Status) Prune() {
 		badResp int
 	}
 	peersToPrune := make([]*peerResp, 0)
-	// Select disconnected peers with a smaller
-	// bad response count.
+	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.peers {
-		if peerData.connState == PeerDisconnected && peerData.badResponsesCount < p.config.MaxBadResponses {
+		if peerData.connState == PeerDisconnected && !p.scorer.isBadPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
 				badResp: p.store.peers[pid].badResponsesCount,
@@ -465,7 +415,6 @@ func (p *Status) Prune() {
 	})
 
 	limitDiff := len(p.store.peers) - p.store.config.maxPeers
-
 	if limitDiff > len(peersToPrune) {
 		limitDiff = len(peersToPrune)
 	}
