@@ -619,6 +619,9 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 
 // AppendValidator for the beacon state. Appends the new value
 // to the the end of list.
+// This only adds input validator's public key to validator ID mapping.
+// To reconstruct the whole validator public key to ID mapping, please
+// use `SetValidators`.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
