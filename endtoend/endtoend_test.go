@@ -34,6 +34,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
+	t.Logf("Test Path: %s\n\n", e2e.TestParams.TestPath)
 
 	keystorePath, eth1PID := components.StartEth1Node(t)
 	bootnodeENR, bootnodePID := components.StartBootnode(t)
@@ -95,6 +96,9 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if err := helpers.WriteHeapFile(e2e.TestParams.TestPath, 0); err != nil {
+		t.Error(err)
 	}
 
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
