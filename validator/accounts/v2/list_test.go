@@ -46,7 +46,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		// Generate a directory for the account name and
 		// write its associated password to disk.
 		accountPath := path.Join(wallet.accountsPath, name)
-		if err := os.MkdirAll(accountPath, directoryPermissions); err != nil {
+		if err := os.MkdirAll(accountPath, DirectoryPermissions); err != nil {
 			t.Fatal(err)
 		}
 		if err := wallet.writePasswordToFile(name, password); err != nil {

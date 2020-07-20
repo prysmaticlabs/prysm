@@ -146,7 +146,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 			if strings.Contains(path, accountName) {
 				// Add all files under the account folder to the archive.
 				isAccount = true
-			} else if !info.IsDir() && info.Name() == keymanagerConfigFileName {
+			} else if !info.IsDir() && info.Name() == KeymanagerConfigFileName {
 				// Add the keymanager config file to the archive as well.
 				isAccount = true
 			}
