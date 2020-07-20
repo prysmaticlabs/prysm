@@ -26,10 +26,6 @@ func BeaconStateFuzz(input []byte)  {
 	if err != nil {
 		panic(err)
 	}
-	if _, err := s.HashTreeRoot(context.Background()); err != nil {
-		_ = err
-		return
-	}
 	nextEpoch := helpers.SlotToEpoch(s.Slot())+1
 	if _, err := stateutil.ProcessSlots(context.Background(), s, helpers.StartSlot(nextEpoch)); err != nil {
 		_ = err
