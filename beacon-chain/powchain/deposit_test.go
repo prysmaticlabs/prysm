@@ -41,7 +41,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 	valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
 	require.NoError(t, err)
-	require.Equal(t, 1, valcount, "Did not get correct active validator count")
+	require.Equal(t, int(1), int(valcount), "Did not get correct active validator count")
 }
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
