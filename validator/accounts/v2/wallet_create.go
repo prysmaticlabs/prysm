@@ -53,7 +53,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		)
 	case v2keymanager.Derived:
 		if err = initializeDerivedWallet(cliCtx, walletDir); err != nil {
-			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
+			log.Fatalf("Could not initialize wallet with derived keymanager: %v", err)
 		}
 		log.WithField("wallet-path", walletDir).Infof(
 			"Successfully created HD wallet and saved configuration to disk. " +
@@ -106,15 +106,15 @@ func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 	ctx := context.Background()
 	walletPassword, err := inputNewWalletPassword()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not input new wallet password")
 	}
 	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not initialize new wallet seed file")
 	}
 	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
 	}
 	wallet, err := NewWallet(ctx, walletConfig)
 	if err != nil {

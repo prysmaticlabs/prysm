@@ -191,7 +191,7 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
 	case v2keymanager.Derived:
-		walletPassword, err := inputExistingWalletPassword()
+		seedPassword, err := inputExistingWalletPassword()
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +199,7 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, walletPassword)
+		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, seedPassword)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
@@ -229,7 +229,7 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 	return accountName, nil
 }
 
-// WriteFileAtPath --
+// WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
 func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName string, data []byte) error {
 	accountPath := path.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
@@ -281,7 +281,8 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	return nil
 }
 
-// WriteEncryptedSeedToDisk --
+// WriteEncryptedSeedToDisk writes the encrypted wallet seed configuration
+// within the wallet path.
 func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
 	seedFilePath := path.Join(w.accountsPath, EncryptedSeedFileName)
 	// Write the config file to disk.
@@ -292,7 +293,8 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 	return nil
 }
 
-// ReadEncryptedSeedFromDisk --
+// ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
+// within the wallet path.
 func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
 	if !fileExists(path.Join(w.accountsPath, EncryptedSeedFileName)) {
 		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
