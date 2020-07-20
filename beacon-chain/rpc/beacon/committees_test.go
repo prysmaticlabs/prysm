@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"encoding/binary"
-	"reflect"
 	"testing"
 	"time"
 
@@ -22,6 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -44,32 +45,18 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 		StateGen:           stategen.New(db, sc),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	committees, err := computeCommittees(0, activeIndices, attesterSeed)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := &ethpb.BeaconCommittees{
 		Epoch:                0,
@@ -79,9 +66,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	res, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
 		QueryFilter: &ethpb.ListCommitteesRequest_Genesis{Genesis: true},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(res, wanted) {
 		t.Errorf("Expected %v, received %v", wanted, res)
 	}
@@ -101,27 +86,15 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	for i := 0; i < len(mixes); i++ {
 		mixes[i] = make([]byte, 32)
 	}
-	if err := headState.SetRandaoMixes(mixes); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, headState.SetRandaoMixes(mixes))
+	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, gRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 
 	m := &mock.ChainService{
 		State:   headState,
@@ -134,18 +107,12 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	startSlot := helpers.StartSlot(1)
 	wanted, err := computeCommittees(startSlot, activeIndices, attesterSeed)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		req *ethpb.ListCommitteesRequest
@@ -165,9 +132,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	helpers.ClearCache()
 	for i, test := range tests {
 		res, err := bs.ListBeaconCommittees(context.Background(), test.req)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if !proto.Equal(res, test.res) {
 			diff, _ := messagediff.PrettyDiff(res, test.res)
 			t.Errorf("%d/ Diff between responses %s", i, diff)
@@ -195,49 +160,29 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 		StateGen:           stategen.New(db, sc),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 	stateSummary := &pbp2p.StateSummary{
 		Slot: 0,
 		Root: gRoot[:],
 	}
-	if err := db.SaveStateSummary(ctx, stateSummary); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveStateSummary(ctx, stateSummary))
 
 	// Store the genesis seed.
 	seed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 10); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted, err := computeCommittees(0, activeIndices, seed)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	committees, activeIndices, err := bs.retrieveCommitteesForRoot(context.Background(), gRoot[:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wantedRes := &ethpb.BeaconCommittees{
 		Epoch:                0,
@@ -249,10 +194,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 		Committees:           committees,
 		ActiveValidatorCount: uint64(len(activeIndices)),
 	}
-	if !reflect.DeepEqual(wantedRes, receivedRes) {
-		t.Errorf("Wanted %v", wantedRes)
-		t.Errorf("Received %v", receivedRes)
-	}
+	assert.DeepEqual(t, wantedRes, receivedRes)
 }
 
 func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.BeaconState {
