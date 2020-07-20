@@ -28,10 +28,17 @@ const (
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName                    = "keystore.json"
-	eipVersion                          = "EIP-2334"
-	withdrawalKeyDerivationPathTemplate = "m/12381/3600/%d/0"
-	validatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
+	KeystoreFileName = "keystore.json"
+	// EIPVersion used by this derived keymanager implementation.
+	EIPVersion = "EIP-2334"
+	// WithdrawalKeyDerivationPathTemplate defining the hierarchical path for withdrawal
+	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
+	// m / purpose / coin_type / account_index / withdrawal_key
+	WithdrawalKeyDerivationPathTemplate = "m/12381/3600/%d/0"
+	// ValidatingKeyDerivationPathTemplate defining the hierarchical path for validating
+	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
+	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
+	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
 )
 
 // Wallet defines a struct which has capabilities and knowledge of how
@@ -84,11 +91,11 @@ type SeedConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		DerivedPathStructure: "m / purpose / coin_type / account / withdrawal_key / validating_key",
-		DerivedEIPNumber:     eipVersion,
+		DerivedEIPNumber:     EIPVersion,
 	}
 }
 
-// NewKeymanager instantiates a new direct keymanager from configuration options.
+// NewKeymanager instantiates a new derived keymanager from configuration options.
 func NewKeymanager(
 	ctx context.Context,
 	wallet Wallet,
@@ -98,11 +105,11 @@ func NewKeymanager(
 ) (*Keymanager, error) {
 	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not read encrypted seed configuration file from disk")
 	}
 	enc, err := ioutil.ReadAll(seedConfigFile)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not read seed configuration file contents")
 	}
 	defer func() {
 		if err := seedConfigFile.Close(); err != nil {
@@ -111,12 +118,12 @@ func NewKeymanager(
 	}()
 	seedConfig := &SeedConfig{}
 	if err := json.Unmarshal(enc, seedConfig); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
 	decryptor := keystorev4.New()
 	seed, err := decryptor.Decrypt(seedConfig.Crypto, []byte(password))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
 	k := &Keymanager{
 		wallet: wallet,
@@ -154,7 +161,8 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
-// InitializeWalletSeedFile --
+// InitializeWalletSeedFile creates a new, encrypted seed using a password input
+// and persists its encrypted file metadata to disk under the wallet path.
 func InitializeWalletSeedFile(ctx context.Context, password string) (*SeedConfig, error) {
 	walletSeed := make([]byte, 32)
 	n, err := rand.NewGenerator().Read(walletSeed)
@@ -192,7 +200,7 @@ func InitializeWalletSeedFile(ctx context.Context, password string) (*SeedConfig
 	return seedFile, nil
 }
 
-// MarshalEncryptedSeedFile --
+// MarshalEncryptedSeedFile json encodes the seed configuration for a derived keymanager.
 func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte, error) {
 	return json.MarshalIndent(seedCfg, "", "\t")
 }
@@ -203,8 +211,8 @@ func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte,
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
-	withdrawalKeyPath := fmt.Sprintf(withdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
-	validatingKeyPath := fmt.Sprintf(validatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
+	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
+	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
@@ -221,7 +229,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		password,
 	)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "could not generate keystore file for withdrawal account")
 	}
 	encodedValidatingKeystore, err := dr.generateKeystoreFile(
 		validatingKey.Marshal(),
@@ -229,7 +237,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		password,
 	)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "could not generate keystore file for validating account")
 	}
 
 	// Write both keystores to disk at their respective derived paths.
@@ -260,10 +268,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	dr.seedCfg.NextAccount++
 	encodedCfg, err := MarshalEncryptedSeedFile(ctx, dr.seedCfg)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "could not marshal encrypted seed file")
 	}
 	if err := dr.wallet.WriteEncryptedSeedToDisk(ctx, encodedCfg); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "could not write encrypted seed file to disk")
 	}
 	return fmt.Sprintf("%d", dr.seedCfg.NextAccount), nil
 }
@@ -286,7 +294,7 @@ func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, 
 	}
 	id, err := uuid.NewRandom()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not generate new, random UUID for keystore")
 	}
 	keystoreFile := &Keystore{}
 	keystoreFile.Crypto = cryptoFields
