@@ -258,8 +258,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		return "", errors.Wrapf(err, "could not write timestamp file for account %d", dr.seedCfg.NextAccount)
 	}
 
+	newAccountNumber := dr.seedCfg.NextAccount
 	log.WithFields(logrus.Fields{
-		"accountNumber":       dr.seedCfg.NextAccount,
+		"accountNumber":       newAccountNumber,
 		"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
 		"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
 		"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
@@ -273,7 +274,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	if err := dr.wallet.WriteEncryptedSeedToDisk(ctx, encodedCfg); err != nil {
 		return "", errors.Wrap(err, "could not write encrypted seed file to disk")
 	}
-	return fmt.Sprintf("%d", dr.seedCfg.NextAccount), nil
+	return fmt.Sprintf("%d", newAccountNumber), nil
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.

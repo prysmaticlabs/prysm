@@ -4,34 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
-	"github.com/tyler-smith/go-bip39"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-type mockMnemonicGenerator struct {
-	generatedMnemonics []string
-}
-
-func (m *mockMnemonicGenerator) Generate(data []byte) (string, error) {
-	newMnemonic, err := bip39.NewMnemonic(data)
-	if err != nil {
-		return "", err
-	}
-	m.generatedMnemonics = append(m.generatedMnemonics, newMnemonic)
-	return newMnemonic, nil
-}
-
-func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
-	return nil
-}
-
 func TestDerivedKeymanager_CreateAccount(t *testing.T) {
+	hook := logTest.NewGlobal()
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -68,7 +54,6 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 
 	validatingKey, err := bls.SecretKeyFromBytes(rawValidatingKey)
 	require.NoError(t, err, "Could not instantiate bls secret key from bytes")
-	_ = validatingKey
 
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
@@ -86,16 +71,23 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 
 	withdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalKey)
 	require.NoError(t, err, "Could not instantiate bls secret key from bytes")
-	_ = withdrawalKey
 
-	//// We ensure the mnemonic phrase has successfully been generated.
-	//if len(mnemonicGenerator.generatedMnemonics) != 1 {
-	//	t.Fatal("Expected to have generated new mnemonic for private key")
-	//}
-	//mnemonicPhrase := mnemonicGenerator.generatedMnemonics[0]
-	//rawWithdrawalBytes, err := bip39.EntropyFromMnemonic(mnemonicPhrase)
-	//require.NoError(t, err)
-	//withdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalBytes)
-	//require.NoError(t, err, "Could not instantiate bls secret key from bytes")
-	//_ = withdrawalKey
+	// Assert the new value for next account increased and also
+	// check the config file was updated on disk with this new value.
+	assert.Equal(t, uint64(1), dr.seedCfg.NextAccount, "Wrong value for next account")
+	encryptedSeedFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+	require.NoError(t, err)
+	enc, err := ioutil.ReadAll(encryptedSeedFile)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, encryptedSeedFile.Close())
+	}()
+	seedConfig := &SeedConfig{}
+	require.NoError(t, json.Unmarshal(enc, seedConfig))
+	assert.Equal(t, uint64(1), seedConfig.NextAccount, "Wrong value for next account")
+
+	// Ensure the new account information is displayed to stdout.
+	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()))
 }

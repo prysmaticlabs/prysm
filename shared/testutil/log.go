@@ -31,6 +31,15 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 		if strings.Contains(msg, want) {
 			match = true
 		}
+		for _, field := range e.Data {
+			fieldStr, ok := field.(string)
+			if !ok {
+				continue
+			}
+			if strings.Contains(fieldStr, want) {
+				match = true
+			}
+		}
 		t.Logf("log: %s", msg)
 	}
 

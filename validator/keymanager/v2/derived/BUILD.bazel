@@ -36,9 +36,11 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/bls:go_default_library",
+        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//validator/accounts/v2/testing:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_tyler_smith_go_bip39//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
     ],
