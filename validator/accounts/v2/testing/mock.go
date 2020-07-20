@@ -101,12 +101,14 @@ func (m *Wallet) WriteFileAtPath(ctx context.Context, pathName string, fileName 
 	return nil
 }
 
+// ReadEncryptedSeedFromDisk --
 func (m *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return ioutil.NopCloser(bytes.NewReader(m.EncryptedSeedFile)), nil
 }
 
+// WriteEncryptedSeedToDisk --
 func (m *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
