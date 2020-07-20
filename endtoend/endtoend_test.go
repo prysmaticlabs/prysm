@@ -42,13 +42,13 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	valProcessIDs := components.StartValidatorClients(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
 	processIDs = append(processIDs, []int{eth1PID, bootnodePID}...)
+	defer helpers.LogOutput(t, config)
+	defer helpers.KillProcesses(t, processIDs)
 	defer func() {
 		if err := helpers.WriteHeapFile(e2e.TestParams.TestPath, 0); err != nil {
 			t.Error(err)
 		}
 	}()
-	defer helpers.LogOutput(t, config)
-	defer helpers.KillProcesses(t, processIDs)
 
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
 	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
