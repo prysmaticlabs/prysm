@@ -287,12 +287,13 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	if err != nil {
 		return nil, err
 	}
-	keystoreFile := &v2keymanager.Keystore{}
-	keystoreFile.Crypto = cryptoFields
-	keystoreFile.ID = id.String()
-	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
-	keystoreFile.Version = encryptor.Version()
-	keystoreFile.Name = encryptor.Name()
+	keystoreFile := &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
 }
 

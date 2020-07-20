@@ -10,12 +10,11 @@ import (
 	"path"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	mock "github.com/prysmaticlabs/prysm/validator/keymanager/v2/testing"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
