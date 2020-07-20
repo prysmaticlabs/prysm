@@ -7,7 +7,7 @@ import (
 
 // Wallet defines a struct which has capabilities and knowledge of how
 // to read and write important accounts-related files to the filesystem.
-// Useful for keymanager to have persistent capabilities for accounts on-disk.
+// Useful for keymanagers to have persistent capabilities for accounts on-disk.
 type Wallet interface {
 	AccountsDir() string
 	CanUnlockAccounts() bool
