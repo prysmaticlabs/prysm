@@ -104,11 +104,11 @@ func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 		CanUnlockAccounts: true,
 	}
 	ctx := context.Background()
-	walletSeed, err := derived.InitializeWalletSeed(ctx)
+	seedConfig, err := derived.InitializeWalletSeedFile(ctx, "hello world")
 	if err != nil {
 		return err
 	}
-	seedConfig, err := derived.MarshalEncryptedSeedFile(ctx, walletSeed, "hello world" /* change pass */)
+	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func initializeDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfig); err != nil {
+	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
 		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
 	return nil
