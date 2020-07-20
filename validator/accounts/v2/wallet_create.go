@@ -108,7 +108,8 @@ func createDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not input new wallet password")
 	}
-	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword)
+	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
+	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword, skipMnemonicConfirm)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
 	}
