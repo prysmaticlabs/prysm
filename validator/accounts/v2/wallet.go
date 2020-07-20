@@ -103,11 +103,15 @@ func NewWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
+	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keymanager kind for wallet")
+	}
+	walletPath := path.Join(cfg.WalletDir, keymanagerKind.String())
 	return &Wallet{
 		accountsPath:      walletPath,
 		passwordsDir:      cfg.PasswordsDir,
-		keymanagerKind:    cfg.KeymanagerKind,
+		keymanagerKind:    keymanagerKind,
 		canUnlockAccounts: cfg.CanUnlockAccounts,
 	}, nil
 }

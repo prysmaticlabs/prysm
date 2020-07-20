@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
@@ -40,11 +41,15 @@ func ListAccounts(cliCtx *cli.Context) error {
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
 		if err := listDirectKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
-			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
+			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)
 		}
 	case v2keymanager.Derived:
-		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
-			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)
+		km, ok := keymanager.(*derived.Keymanager)
+		if !ok {
+			log.Fatal("Could not assert keymanager interface to concrete type")
+		}
+		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, km); err != nil {
+			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
 		}
 	default:
 		log.Fatalf("Keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
@@ -125,7 +130,15 @@ func listDirectKeymanagerAccounts(
 func listDerivedKeymanagerAccounts(
 	showDepositData bool,
 	wallet *Wallet,
-	keymanager v2keymanager.IKeymanager,
+	keymanager *derived.Keymanager,
 ) error {
+	au := aurora.NewAurora(true)
+	fmt.Println(
+		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
+			"by running `validator accounts-v2 list --show-deposit-data"),
+	)
+	dirPath := au.BrightCyan("(wallet dir)")
+	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
+	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 	return nil
 }
