@@ -143,7 +143,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	}
 	require.NoError(t, db.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.stateGen.SaveState(ctx, blkRoots[0], firstState))
-	_, _, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
+	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
 }
 
