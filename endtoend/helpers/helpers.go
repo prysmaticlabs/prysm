@@ -149,6 +149,7 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 	}
 }
 
+// WriteHeapFile writes a heap file to the test path.
 func WriteHeapFile(testDir string, index int) error {
 	url := fmt.Sprintf("http://localhost:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
 	resp, err := http.Get(url)
