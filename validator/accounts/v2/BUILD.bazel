@@ -22,6 +22,7 @@ go_library(
     ],
     deps = [
         "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/direct:go_default_library",
@@ -40,6 +41,9 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "consts_test.go",
+        "export_test.go",
+        "import_test.go",
         "list_test.go",
         "new_test.go",
         "wallet_create_test.go",

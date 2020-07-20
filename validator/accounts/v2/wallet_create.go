@@ -43,7 +43,8 @@ func CreateWallet(cliCtx *cli.Context) error {
 	}
 	switch keymanagerKind {
 	case v2keymanager.Direct:
-		if err = initializeDirectWallet(cliCtx, walletDir); err != nil {
+		passwordsDirPath := inputPasswordsDirectory(cliCtx)
+		if err = initializeDirectWallet(walletDir, passwordsDirPath); err != nil {
 			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
 		}
 		log.WithField("wallet-path", walletDir).Infof(
@@ -65,11 +66,10 @@ func CreateWallet(cliCtx *cli.Context) error {
 	return nil
 }
 
-func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
+func initializeDirectWallet(walletDir string, passwordsDir string) error {
 	walletConfig := &WalletConfig{
-		PasswordsDir:      passwordsDirPath,
 		WalletDir:         walletDir,
+		PasswordsDir:      passwordsDir,
 		KeymanagerKind:    v2keymanager.Direct,
 		CanUnlockAccounts: true,
 	}

@@ -32,7 +32,6 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	numAccounts := 5
 	accountNames := make([]string, numAccounts)
 	pubKeys := make([][48]byte, numAccounts)
-	password := "passw0rd2020%%"
 	depositDataForAccounts := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		// Generate a new account name and write the account
