@@ -584,7 +584,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	require.NoError(t, err, "Failed to obtain peer connection state")
 	assert.Equal(t, peers.PeerDisconnected, connectionState, "Expected peer to be disconnected")
 
-	badResponses, err := p1.Peers().BadResponses(p2.PeerID())
+	badResponses, err := p1.Peers().Scorer().BadResponses(p2.PeerID())
 	require.NoError(t, err, "Failed to obtain peer connection state")
 	assert.Equal(t, 1, badResponses, "Bad response was not bumped to one")
 }
