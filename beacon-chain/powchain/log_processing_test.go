@@ -159,7 +159,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	require.NoError(t, err)
 
 	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
-	require.Equal(t, 2, len(pendingDeposits), "Unexpected number of deposits")
+	require.Equal(t, int(2), len(pendingDeposits), "Unexpected number of deposits")
 
 	hook.Reset()
 }
@@ -209,7 +209,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	loggedPubkey, withCreds, _, loggedSig, index, err := contracts.UnpackDepositLogData(logz[0].Data)
 	require.NoError(t, err, "Unable to unpack logs")
 
-	require.Equal(t, 0, binary.LittleEndian.Uint64(index), "Retrieved merkle tree index is incorrect")
+	require.Equal(t, uint64(0), binary.LittleEndian.Uint64(index), "Retrieved merkle tree index is incorrect")
 	require.Equal(t, data.PublicKey, loggedPubkey, "Pubkey is not the same as the data that was put in")
 	require.Equal(t, data.Signature, loggedSig, "Proof of Possession is not the same as the data that was put in")
 	require.Equal(t, data.WithdrawalCredentials, withCreds, "Withdrawal Credentials is not the same as the data that was put in")
