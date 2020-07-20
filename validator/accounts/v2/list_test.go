@@ -13,6 +13,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	mock "github.com/prysmaticlabs/prysm/validator/keymanager/v2/testing"
@@ -27,9 +28,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		WalletDir:      walletDir,
 		KeymanagerKind: keymanagerKind,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	numAccounts := 5
 	accountNames := make([]string, numAccounts)
 	pubKeys := make([][48]byte, numAccounts)
@@ -39,31 +38,21 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		// Generate a new account name and write the account
 		// to disk using the wallet.
 		name, err := wallet.generateAccountName()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		accountNames[i] = name
 		// Generate a directory for the account name and
 		// write its associated password to disk.
 		accountPath := path.Join(wallet.accountsPath, name)
-		if err := os.MkdirAll(accountPath, directoryPermissions); err != nil {
-			t.Fatal(err)
-		}
-		if err := wallet.writePasswordToFile(name, password); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, os.MkdirAll(accountPath, directoryPermissions))
+		require.NoError(t, wallet.writePasswordToFile(name, password))
 
 		// Write the deposit data for each account.
 		depositData := []byte(strconv.Itoa(i))
 		depositDataForAccounts[i] = depositData
-		if err := wallet.WriteFileForAccount(ctx, name, direct.DepositTransactionFileName, depositData); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.DepositTransactionFileName, depositData))
 
 		// Write the creation timestamp for the account with unix timestamp 0.
-		if err := wallet.WriteFileForAccount(ctx, name, direct.TimestampFileName, []byte("0")); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.TimestampFileName, []byte("0")))
 
 		// Create public keys for the accounts.
 		key := bls.RandKey()
@@ -71,30 +60,18 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	}
 	rescueStdout := os.Stdout
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	os.Stdout = w
 
 	keymanager := &mock.MockKeymanager{
 		PublicKeys: pubKeys,
 	}
 	// We call the list direct keymanager accounts function.
-	if err := listDirectKeymanagerAccounts(
-		true, /* show deposit data */
-		wallet,
-		keymanager,
-	); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, listDirectKeymanagerAccounts(true /* show deposit data */, wallet, keymanager))
 
-	if err := w.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
 	// Assert the keymanager kind is printed to stdout.
