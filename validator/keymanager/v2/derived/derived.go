@@ -42,6 +42,7 @@ type Wallet interface {
 	CanUnlockAccounts() bool
 	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
 	ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error)
+	WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error
 }
 
 // Config for a derived keymanager.
@@ -57,7 +58,7 @@ type Keymanager struct {
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
 	lock              sync.RWMutex
-	accountNum        uint64
+	nextAccount       uint64
 	seedCfg           *SeedConfig
 	seed              []byte
 }
@@ -110,12 +111,11 @@ func NewKeymanager(
 		}
 	}()
 	seedConfig := &SeedConfig{}
-	log.Info(enc)
-	if err := json.Unmarshal(enc, cfg); err != nil {
+	if err := json.Unmarshal(enc, seedConfig); err != nil {
 		return nil, err
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Derypt(seedConfig.Crypto, []byte(password))
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, []byte(password))
 	if err != nil {
 		return nil, err
 	}
@@ -125,9 +125,9 @@ func NewKeymanager(
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: skipMnemonicConfirm,
 		},
-		seedCfg:    seedConfig,
-		seed:       seed,
-		accountNum: seedConfig.NextAccount - 1, // TODO: Check for underflow.
+		seedCfg:     seedConfig,
+		seed:        seed,
+		nextAccount: seedConfig.NextAccount,
 	}
 	return k, nil
 }
@@ -204,19 +204,16 @@ func MarshalEncryptedSeedFile(ctx context.Context, seed []byte, password string)
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// TODO: needs better formatting at the top
-	withdrawalKeyPath := fmt.Sprintf("m/12381/3600/%d/0", dr.accountNum)
-	validatingKeyPath := fmt.Sprintf("m/12381/3600/%d/0/0", dr.accountNum)
-	// TODO: better seed.
-	seed := make([]byte, 32)
-	copy(seed, "hello world")
+	withdrawalKeyPath := fmt.Sprintf("m/12381/3600/%d/0", dr.nextAccount)
+	validatingKeyPath := fmt.Sprintf("m/12381/3600/%d/0/0", dr.nextAccount)
 
-	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(seed, withdrawalKeyPath)
+	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.accountNum)
+		return "", errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.nextAccount)
 	}
-	validatingKey, err := util.PrivateKeyFromSeedAndPath(seed, validatingKeyPath)
+	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to create validating key for account %d", dr.accountNum)
+		return "", errors.Wrapf(err, "failed to create validating key for account %d", dr.nextAccount)
 	}
 
 	// Create encrypted keystores for both the withdrawal and validating keys.
@@ -256,12 +253,13 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	}
 
 	log.WithFields(logrus.Fields{
-		"accountNumber":       dr.accountNum,
+		"accountNumber":       dr.nextAccount,
 		"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
 		"path":                path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
 	}).Info("Successfully created new validator account")
-	dr.accountNum++
-	return fmt.Sprintf("%d", dr.accountNum), nil
+	dr.nextAccount++
+	// TODO: Edit the written seed file for the wallet.
+	return fmt.Sprintf("%d", dr.nextAccount), nil
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
