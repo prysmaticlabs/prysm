@@ -42,6 +42,10 @@ func ListAccounts(cliCtx *cli.Context) error {
 		if err := listDirectKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
 			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
 		}
+	case v2keymanager.Derived:
+		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
+			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)
+		}
 	default:
 		log.Fatalf("Keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
 	}
@@ -115,5 +119,13 @@ func listDirectKeymanagerAccounts(
 		fmt.Println("")
 	}
 	fmt.Println("")
+	return nil
+}
+
+func listDerivedKeymanagerAccounts(
+	showDepositData bool,
+	wallet *Wallet,
+	keymanager v2keymanager.IKeymanager,
+) error {
 	return nil
 }
