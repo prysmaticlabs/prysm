@@ -158,15 +158,22 @@ func listDerivedKeymanagerAccounts(
 	if nextAccountNumber > 0 {
 		currentAccountNumber--
 	}
-	for i := 0; i < currentAccountNumber; i++ {
+	accountNames, err := keymanager.AccountNames(ctx)
+	if err != nil {
+		return err
+	}
+	for i := uint64(0); i < currentAccountNumber; i++ {
 		fmt.Println("")
 		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
-		fmt.Printf("%s\n", au.BrightGreen(validatingKeyPath).Bold())
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), validatingPubKeys[i])
 
-		// Retrieve the validating key account metadata.
-		createdAtBytes, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, derived.TimestampFileName)
+		// Retrieve the withdrawal key account metadata.
+		fmt.Printf("%s\n", au.BrightGreen(accountNames[i]).Bold())
+		fmt.Printf("%s\n", au.BrightGreen(withdrawalKeyPath).Bold())
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
+
+		// Retrieve the account creation timestamp.
+		createdAtBytes, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.TimestampFileName)
 		if err != nil {
 			return errors.Wrapf(err, "could not read file for account: %s", derived.TimestampFileName)
 		}
@@ -177,11 +184,10 @@ func listDerivedKeymanagerAccounts(
 		unixTimestampStr := time.Unix(unixTimestamp, 0)
 		fmt.Printf("%s %v\n", au.BrightCyan("[created at]").Bold(), unixTimestampStr.String())
 
-		// Retrieve the withdrawal key account metadata.
-		fmt.Printf("%s\n", au.BrightGreen(withdrawalKeyPath).Bold())
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
-		// Retrieve the account creation timestamp.
-		createdAtBytes, err = wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.TimestampFileName)
+		fmt.Printf("%s\n", au.BrightGreen(validatingKeyPath).Bold())
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), validatingPubKeys[i])
+		// Retrieve the validating key account metadata.
+		createdAtBytes, err = wallet.ReadFileAtPath(ctx, validatingKeyPath, derived.TimestampFileName)
 		if err != nil {
 			return errors.Wrapf(err, "could not read file for account: %s", derived.TimestampFileName)
 		}
@@ -210,7 +216,6 @@ func listDerivedKeymanagerAccounts(
 		//%#x
 		//
 		//===================================================================`, enc)
-		fmt.Println("")
 	}
 	return nil
 }

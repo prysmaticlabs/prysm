@@ -2,6 +2,7 @@ package derived
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -188,8 +191,18 @@ func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte,
 }
 
 // NextAccountNumber managed by the derived keymanager.
-func (dr *Keymanager) NextAccountNumber(ctx context.Context) int {
-	return int(dr.seedCfg.NextAccount)
+func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
+	return dr.seedCfg.NextAccount
+}
+
+// AccountNames
+func (dr *Keymanager) AccountNames(ctx context.Context) ([]string, error) {
+	names := make([]string, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
+		names = append(names, petnames.DeterministicName([]byte(withdrawalKeyPath), "-"))
+	}
+	return nil, nil
 }
 
 // CreateAccount for a derived keymanager implementation. This utilizes
@@ -271,12 +284,46 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return nil, errors.New("unimplemented")
+	publicKeys := make([][48]byte, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
+		if err != nil {
+			return nil, err
+		}
+		keystoreFile := &v2keymanager.Keystore{}
+		if err := json.Unmarshal(validatingKeystore, keystoreFile); err != nil {
+			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", validatingKeyPath)
+		}
+		pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode pubkey bytes: %#x", keystoreFile.Pubkey)
+		}
+		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
+	}
+	return publicKeys, nil
 }
 
 // FetchWithdrawalPublicKeys fetches the list of withdrawal public keys from keymanager
 func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return nil, errors.New("unimplemented")
+	publicKeys := make([][48]byte, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
+		withdrawalKeystore, err := dr.wallet.ReadFileAtPath(ctx, withdrawalKeyPath, KeystoreFileName)
+		if err != nil {
+			return nil, err
+		}
+		keystoreFile := &v2keymanager.Keystore{}
+		if err := json.Unmarshal(withdrawalKeystore, keystoreFile); err != nil {
+			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", withdrawalKeyPath)
+		}
+		pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode pubkey bytes: %#x", keystoreFile.Pubkey)
+		}
+		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
+	}
+	return publicKeys, nil
 }
 
 func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
