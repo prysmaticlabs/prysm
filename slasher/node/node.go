@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -61,6 +62,13 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		cliCtx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
+	}
+
+	if cliCtx.IsSet(flags.EnableHistoricalDetectionFlag.Name) {
+		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.
+		cmdConfig := cmd.Get()
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
+		cmd.Init(cmdConfig)
 	}
 
 	cmd.ConfigureSlasher(cliCtx)
@@ -222,6 +230,7 @@ func (s *SlasherNode) registerDetectionService() error {
 		ChainFetcher:          bs,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
+		HistoricalDetection:   s.cliCtx.IsSet(flags.EnableHistoricalDetectionFlag.Name),
 	})
 	return s.services.RegisterService(ds)
 }
