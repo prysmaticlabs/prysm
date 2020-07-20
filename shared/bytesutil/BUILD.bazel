@@ -13,4 +13,8 @@ go_test(
     size = "small",
     srcs = ["bytes_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
+    ],
 )

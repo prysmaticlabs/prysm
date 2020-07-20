@@ -9,23 +9,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func BenchmarkBlockHTR(b *testing.B) {
 	genState, keys := testutil.DeterministicGenesisState(b, 200)
 	conf := testutil.DefaultBlockGenConfig()
 	blk, err := testutil.GenerateFullBlock(genState, keys, conf, 10)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	atts := make([]*ethpb.Attestation, 0, 128)
 	for i := 0; i < 128; i++ {
 		atts = append(atts, blk.Block.Body.Attestations[0])
 	}
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(16)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	blk.Block.Body.Attestations = atts
 	blk.Block.Body.Deposits = deposits
 
@@ -33,9 +30,8 @@ func BenchmarkBlockHTR(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			if _, err := stateutil.BlockRoot(blk.Block); err != nil {
-				b.Fatal(err)
-			}
+			_, err := stateutil.BlockRoot(blk.Block)
+			require.NoError(b, err)
 		}
 	})
 
@@ -43,9 +39,8 @@ func BenchmarkBlockHTR(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			if _, err := stateutil.BlockRoot(blk.Block); err != nil {
-				b.Fatal(err)
-			}
+			_, err := stateutil.BlockRoot(blk.Block)
+			require.NoError(b, err)
 		}
 	})
 }
@@ -75,9 +70,7 @@ func BenchmarkMerkleize(b *testing.B) {
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
 			_, err := oldMerkleize(roots, 8192, 8192)
-			if err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, err)
 		}
 	})
 
@@ -87,9 +80,7 @@ func BenchmarkMerkleize(b *testing.B) {
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
 			_, err := newMerkleize(roots, 8192, 8192)
-			if err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, err)
 		}
 	})
 
