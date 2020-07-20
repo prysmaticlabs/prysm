@@ -29,7 +29,16 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["mnemonic_test.go"],
+    srcs = [
+        "derived_test.go",
+        "mnemonic_test.go",
+    ],
     embed = [":go_default_library"],
-    deps = ["@com_github_tyler_smith_go_bip39//:go_default_library"],
+    deps = [
+        "//shared/bls:go_default_library",
+        "//shared/testutil/require:go_default_library",
+        "//validator/accounts/v2/testing:go_default_library",
+        "@com_github_tyler_smith_go_bip39//:go_default_library",
+        "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
+    ],
 )
