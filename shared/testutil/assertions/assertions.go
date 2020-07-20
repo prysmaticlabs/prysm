@@ -21,7 +21,7 @@ func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...inte
 	errMsg := parseMsg("Values are not equal", msg...)
 	if expected != actual {
 		_, file, line, _ := runtime.Caller(2)
-		loggerFn("%s:%d %s, got: %v, want: %v", filepath.Base(file), line, errMsg, actual, expected)
+		loggerFn("%s:%d %s, got: %[4]v (%[4]T), want: %[5]v (%[5]T)", filepath.Base(file), line, errMsg, actual, expected)
 	}
 }
 
@@ -30,7 +30,7 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 	errMsg := parseMsg("Values are not equal", msg...)
 	if !reflect.DeepEqual(expected, actual) {
 		_, file, line, _ := runtime.Caller(2)
-		loggerFn("%s:%d %s, got: %v, want: %v", filepath.Base(file), line, errMsg, actual, expected)
+		loggerFn("%s:%d %s, got: %[4]v (%[4]T), want: %[5]v (%[5]T)", filepath.Base(file), line, errMsg, actual, expected)
 	}
 }
 
