@@ -61,8 +61,8 @@ func (s *PeerScorer) BadPeers() []peer.ID {
 	defer s.store.RUnlock()
 
 	badPeers := make([]peer.ID, 0)
-	for pid, peerData := range s.store.peers {
-		if peerData.badResponsesCount >= s.config.BadResponsesThreshold {
+	for pid := range s.store.peers {
+		if s.isBadPeer(pid) {
 			badPeers = append(badPeers, pid)
 		}
 	}
