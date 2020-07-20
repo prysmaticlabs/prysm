@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -42,7 +43,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	validatingAccount0 := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, 0)
 	encodedKeystore, ok := wallet.Files[validatingAccount0][KeystoreFileName]
 	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFileName))
-	keystoreFile := &Keystore{}
+	keystoreFile := &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We extract the validator signing private key from the keystore
@@ -60,7 +61,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	withdrawalAccount0 := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, 0)
 	encodedKeystore, ok = wallet.Files[withdrawalAccount0][KeystoreFileName]
 	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFileName))
-	keystoreFile = &Keystore{}
+	keystoreFile = &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We extract the validator signing private key from the keystore

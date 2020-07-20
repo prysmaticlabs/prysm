@@ -1,5 +1,8 @@
-package v2
+package v2_test
 
-import "github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+import (
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+)
 
-var _ = IKeymanager(&direct.Keymanager{})
+var _ = v2keymanager.IKeymanager(&direct.Keymanager{})

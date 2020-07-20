@@ -11,9 +11,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/logrusorgru/aurora"
-
 	petname "github.com/dustinkirkland/golang-petname"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -419,12 +418,12 @@ func (w *Wallet) publicKeyForAccount(accountName string) ([48]byte, error) {
 	return bytesutil.ToBytes48(pubKey), nil
 }
 
-func (w *Wallet) keystoreForAccount(accountName string) (*direct.Keystore, error) {
+func (w *Wallet) keystoreForAccount(accountName string) (*v2keymanager.Keystore, error) {
 	encoded, err := w.ReadFileForAccount(accountName, direct.KeystoreFileName)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keystore file")
 	}
-	keystoreJSON := &direct.Keystore{}
+	keystoreJSON := &v2keymanager.Keystore{}
 	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
 		return nil, errors.Wrap(err, "could not decode json")
 	}

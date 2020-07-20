@@ -12,15 +12,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/sirupsen/logrus"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
@@ -58,15 +58,6 @@ type Keymanager struct {
 	lock              sync.RWMutex
 	seedCfg           *SeedConfig
 	seed              []byte
-}
-
-// Keystore json file representation as a Go struct.
-type Keystore struct {
-	Crypto  map[string]interface{} `json:"crypto"`
-	ID      string                 `json:"uuid"`
-	Pubkey  string                 `json:"pubkey"`
-	Version uint                   `json:"version"`
-	Name    string                 `json:"name"`
 }
 
 // SeedConfig json file representation as a Go struct.
@@ -288,7 +279,7 @@ func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate new, random UUID for keystore")
 	}
-	keystoreFile := &Keystore{
+	keystoreFile := &v2keymanager.Keystore{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Pubkey:  fmt.Sprintf("%x", publicKey),

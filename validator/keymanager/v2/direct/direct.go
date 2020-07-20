@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -54,15 +55,6 @@ type Keymanager struct {
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
 	lock              sync.RWMutex
-}
-
-// Keystore json file representation as a Go struct.
-type Keystore struct {
-	Crypto  map[string]interface{} `json:"crypto"`
-	ID      string                 `json:"uuid"`
-	Pubkey  string                 `json:"pubkey"`
-	Version uint                   `json:"version"`
-	Name    string                 `json:"name"`
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -218,7 +210,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &Keystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -261,7 +253,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		if err != nil {
 			return errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &Keystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -295,7 +287,7 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	if err != nil {
 		return nil, err
 	}
-	keystoreFile := &Keystore{}
+	keystoreFile := &v2keymanager.Keystore{}
 	keystoreFile.Crypto = cryptoFields
 	keystoreFile.ID = id.String()
 	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
