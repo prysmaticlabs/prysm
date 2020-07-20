@@ -637,10 +637,10 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	// it to the validator map
 	b.state.Validators = append(vals, val)
 	valIdx := uint64(len(b.state.Validators) - 1)
-	b.valIdxMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
 
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{valIdx})
+	b.valIdxMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
 
 	return nil
 }
