@@ -187,6 +187,11 @@ func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte,
 	return json.MarshalIndent(seedCfg, "", "\t")
 }
 
+// NextAccountNumber managed by the derived keymanager.
+func (dr *Keymanager) NextAccountNumber(ctx context.Context) int {
+	return int(dr.seedCfg.NextAccount)
+}
+
 // CreateAccount for a derived keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It uses the EIP-2333 and EIP-2334
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
@@ -259,13 +264,18 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	return fmt.Sprintf("%d", newAccountNumber), nil
 }
 
-// FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
+// Sign signs a message using a validator key.
+func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	return nil, errors.New("unimplemented")
+}
+
+// FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return nil, errors.New("unimplemented")
 }
 
-// Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+// FetchWithdrawalPublicKeys fetches the list of withdrawal public keys from keymanager
+func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return nil, errors.New("unimplemented")
 }
 

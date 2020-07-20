@@ -250,6 +250,20 @@ func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName 
 	return nil
 }
 
+// ReadFileAtPath within the wallet directory given the desired path and filename.
+func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error) {
+	accountPath := path.Join(w.accountsPath, filePath)
+	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
+		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
+	}
+	fullPath := path.Join(accountPath, fileName)
+	rawData, err := ioutil.ReadFile(fullPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read %s", filePath)
+	}
+	return rawData, nil
+}
+
 // WriteFileForAccount stores a unique file and its data under an account namespace
 // in the wallet's directory on-disk. Creates the file if it does not exist
 // and writes over it otherwise.
