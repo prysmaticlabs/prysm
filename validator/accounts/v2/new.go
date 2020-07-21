@@ -265,7 +265,7 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	}
 	passwordsPath, err := prompt.Run()
 	if err != nil {
-		log.Errorf("Could not determine passwords directory: %v", formatPromptError(err))
+		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
 	}
 	return passwordsPath
 }
