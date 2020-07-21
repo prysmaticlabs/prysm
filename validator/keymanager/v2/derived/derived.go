@@ -2,6 +2,7 @@ package derived
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,10 +11,18 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
+	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -41,6 +50,11 @@ const (
 	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
+	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
+	// for a validator account.
+	DepositTransactionFileName = "deposit_transaction.rlp"
+	// DepositDataFileName for the raw, ssz-encoded deposit data object.
+	DepositDataFileName = "deposit_data.ssz"
 )
 
 // Config for a derived keymanager.
@@ -72,7 +86,7 @@ type SeedConfig struct {
 // DefaultConfig for a derived keymanager implementation.
 func DefaultConfig() *Config {
 	return &Config{
-		DerivedPathStructure: "m / purpose / coin_type / account / withdrawal_key / validating_key",
+		DerivedPathStructure: "m / purpose / coin_type / account_index / withdrawal_key / validating_key",
 		DerivedEIPNumber:     EIPVersion,
 	}
 }
@@ -187,6 +201,26 @@ func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte,
 	return json.MarshalIndent(seedCfg, "", "\t")
 }
 
+// Config --
+func (dr *Keymanager) Config() *Config {
+	return dr.cfg
+}
+
+// NextAccountNumber managed by the derived keymanager.
+func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
+	return dr.seedCfg.NextAccount
+}
+
+// AccountNames --
+func (dr *Keymanager) AccountNames(ctx context.Context) ([]string, error) {
+	names := make([]string, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
+		names = append(names, petnames.DeterministicName([]byte(withdrawalKeyPath), "-"))
+	}
+	return names, nil
+}
+
 // CreateAccount for a derived keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It uses the EIP-2333 and EIP-2334
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
@@ -230,6 +264,30 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
 	}
 
+	// Upon confirmation of the withdrawal key, proceed to display
+	// and write associated deposit data to disk.
+	tx, depositData, err := generateDepositTransaction(validatingKey.Marshal(), withdrawalKey.Marshal())
+	if err != nil {
+		return "", errors.Wrap(err, "could not generate deposit transaction data")
+	}
+
+	// Log the deposit transaction data to the user.
+	logDepositTransaction(tx)
+
+	// We write the raw deposit transaction as an .rlp encoded file.
+	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositTransactionFileName, tx.Data()); err != nil {
+		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, DepositTransactionFileName)
+	}
+
+	// We write the ssz-encoded deposit data to disk as a .ssz file.
+	encodedDepositData, err := ssz.Marshal(depositData)
+	if err != nil {
+		return "", errors.Wrap(err, "could not marshal deposit data")
+	}
+	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositDataFileName, encodedDepositData); err != nil {
+		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, encodedDepositData)
+	}
+
 	// Finally, write the account creation timestamps as a files.
 	createdAt := roughtime.Now().Unix()
 	createdAtStr := strconv.FormatInt(createdAt, 10)
@@ -259,14 +317,53 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	return fmt.Sprintf("%d", newAccountNumber), nil
 }
 
-// FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
-func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return nil, errors.New("unimplemented")
-}
-
 // Sign signs a message using a validator key.
 func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, errors.New("unimplemented")
+}
+
+// FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
+func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	publicKeys := make([][48]byte, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
+		if err != nil {
+			return nil, err
+		}
+		keystoreFile := &v2keymanager.Keystore{}
+		if err := json.Unmarshal(validatingKeystore, keystoreFile); err != nil {
+			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", validatingKeyPath)
+		}
+		pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode pubkey bytes: %#x", keystoreFile.Pubkey)
+		}
+		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
+	}
+	return publicKeys, nil
+}
+
+// FetchWithdrawalPublicKeys fetches the list of withdrawal public keys from keymanager
+func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte, error) {
+	publicKeys := make([][48]byte, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
+		withdrawalKeystore, err := dr.wallet.ReadFileAtPath(ctx, withdrawalKeyPath, KeystoreFileName)
+		if err != nil {
+			return nil, err
+		}
+		keystoreFile := &v2keymanager.Keystore{}
+		if err := json.Unmarshal(withdrawalKeystore, keystoreFile); err != nil {
+			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", withdrawalKeyPath)
+		}
+		pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode pubkey bytes: %#x", keystoreFile.Pubkey)
+		}
+		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
+	}
+	return publicKeys, nil
 }
 
 func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
@@ -287,4 +384,53 @@ func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, 
 		Name:    encryptor.Name(),
 	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
+}
+
+func generateDepositTransaction(
+	validatingKey []byte,
+	withdrawalKey []byte,
+) (*types.Transaction, *ethpb.Deposit_Data, error) {
+	validatingPrivateKey, err := bls.SecretKeyFromBytes(validatingKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	withdrawalPrivateKey, err := bls.SecretKeyFromBytes(withdrawalKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	depositData, depositRoot, err := depositutil.DepositInput(
+		validatingPrivateKey, withdrawalPrivateKey, params.BeaconConfig().MaxEffectiveBalance,
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not generate deposit input")
+	}
+	testAcc, err := contract.Setup()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not load deposit contract")
+	}
+	testAcc.TxOpts.GasLimit = 1000000
+
+	tx, err := testAcc.Contract.Deposit(
+		testAcc.TxOpts,
+		depositData.PublicKey,
+		depositData.WithdrawalCredentials,
+		depositData.Signature,
+		depositRoot,
+	)
+	return tx, depositData, nil
+}
+
+func logDepositTransaction(tx *types.Transaction) {
+	log.Info(
+		"Copy + paste the deposit data below when using the " +
+			"eth1 deposit contract")
+	fmt.Printf(`
+========================Deposit Data===============================
+
+%#x
+
+===================================================================`, tx.Data())
+	fmt.Printf(`
+***Enter the above deposit data into step 3 on https://prylabs.net/participate***
+`)
 }
