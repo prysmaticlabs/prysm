@@ -102,12 +102,12 @@ func listDirectKeymanagerAccounts(
 		if err != nil {
 			return errors.Wrapf(err, "could not read file for account: %s", direct.TimestampFileName)
 		}
-		unixTimestamp, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
+		unixTimestampStr, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
 		}
-		unixTimestampStr := time.Unix(unixTimestamp, 0)
-		fmt.Printf("%s %v\n", au.BrightCyan("[created at]").Bold(), unixTimestampStr.String())
+		unixTimestamp := time.Unix(unixTimestampStr, 0)
+		fmt.Printf("%s %s\n", au.BrightCyan("[created at]").Bold(), humanize.Time(unixTimestamp))
 		if !showDepositData {
 			continue
 		}
