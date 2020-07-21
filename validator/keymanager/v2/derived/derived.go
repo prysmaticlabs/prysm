@@ -130,6 +130,12 @@ func NewKeymanager(
 		seedCfg: seedConfig,
 		seed:    seed,
 	}
+	// We initialize a cache of public key -> secret keys
+	// used to retrieve secrets keys for the accounts via the unlocked wallet.
+	// This cache is needed to process Sign requests using a validating public key.
+	if err := k.initializeSecretKeysCache(); err != nil {
+		return nil, errors.Wrap(err, "could not initialize secret keys cache")
+	}
 	return k, nil
 }
 
@@ -364,6 +370,25 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
 	}
 	return publicKeys, nil
+}
+
+func (dr *Keymanager) initializeSecretKeysCache() error {
+	for i := 0; i < dr.seedCfg.NextAccount; i++ {
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
+		derivedKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
+		}
+		validatorSigningKey, err := bls.SecretKeyFromBytes(derivedKey.Marshal())
+		if err != nil {
+			return errors.Wrapf(err, "could not instantiate bls secret key from bytes for account: %s", validatingKeyPath)
+		}
+
+		// Update a simple cache of public key -> secret key utilized
+		// for fast signing access in the direct keymanager.
+		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
+	}
+	return nil
 }
 
 func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
