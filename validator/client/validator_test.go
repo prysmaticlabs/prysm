@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
-	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
@@ -80,15 +80,9 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		},
 		nil,
 	)
-	if err := v.WaitForChainStart(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if v.genesisTime != genesis {
-		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
-	}
-	if v.ticker == nil {
-		t.Error("Expected ticker to be set, received nil")
-	}
+	require.NoError(t, v.WaitForChainStart(context.Background()))
+	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
+	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 }
 
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
@@ -115,11 +109,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err := v.WaitForChainStart(ctx)
-	want := cancelledCtx
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, cancelledCtx, v.WaitForChainStart(ctx))
 }
 
 func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
@@ -138,9 +128,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForChainStart(context.Background())
 	want := "could not setup beacon chain ChainStart streaming client"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
@@ -163,9 +151,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	)
 	err := v.WaitForChainStart(context.Background())
 	want := "could not receive ChainStart from stream"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestWaitForSynced_SetsGenesisTime(t *testing.T) {
@@ -190,15 +176,9 @@ func TestWaitForSynced_SetsGenesisTime(t *testing.T) {
 		},
 		nil,
 	)
-	if err := v.WaitForSynced(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if v.genesisTime != genesis {
-		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
-	}
-	if v.ticker == nil {
-		t.Error("Expected ticker to be set, received nil")
-	}
+	require.NoError(t, v.WaitForSynced(context.Background()))
+	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
+	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 }
 
 func TestWaitForSynced_ContextCanceled(t *testing.T) {
@@ -225,11 +205,7 @@ func TestWaitForSynced_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err := v.WaitForSynced(ctx)
-	want := cancelledCtx
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, cancelledCtx, v.WaitForSynced(ctx))
 }
 
 func TestWaitForSynced_StreamSetupFails(t *testing.T) {
@@ -248,9 +224,7 @@ func TestWaitForSynced_StreamSetupFails(t *testing.T) {
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForSynced(context.Background())
 	want := "could not setup beacon chain Synced streaming client"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestWaitForSynced_ReceiveErrorFromStream(t *testing.T) {
@@ -273,9 +247,7 @@ func TestWaitForSynced_ReceiveErrorFromStream(t *testing.T) {
 	)
 	err := v.WaitForSynced(context.Background())
 	want := "could not receive Synced from stream"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestWaitActivation_ContextCanceled(t *testing.T) {
@@ -301,11 +273,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err := v.WaitForActivation(ctx)
-	want := cancelledCtx
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx))
 }
 
 func TestWaitActivation_StreamSetupFails(t *testing.T) {
@@ -326,9 +294,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForActivation(context.Background())
 	want := "could not setup validator WaitForActivation streaming client"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
@@ -353,9 +319,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	)
 	err := v.WaitForActivation(context.Background())
 	want := "could not receive validator activation from stream"
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
@@ -382,9 +346,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	if err := v.WaitForActivation(context.Background()); err != nil {
-		t.Errorf("Could not wait for activation: %v", err)
-	}
+	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
@@ -401,9 +363,8 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("failed"))
-	if _, err := v.CanonicalHeadSlot(context.Background()); !strings.Contains(err.Error(), "failed") {
-		t.Errorf("Wanted: %v, received: %v", "failed", err)
-	}
+	_, err := v.CanonicalHeadSlot(context.Background())
+	assert.ErrorContains(t, "failed", err)
 }
 
 func TestCanonicalHeadSlot_OK(t *testing.T) {
@@ -419,12 +380,8 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if headSlot != 0 {
-		t.Errorf("Mismatch slots, wanted: %v, received: %v", 0, headSlot)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), headSlot, "Mismatch slots")
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
@@ -453,9 +410,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	if err := v.WaitForActivation(context.Background()); err != nil {
-		t.Errorf("Could not wait for activation: %v", err)
-	}
+	require.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
@@ -484,9 +439,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	if err := v.WaitForActivation(context.Background()); err != nil {
-		t.Errorf("Could not wait for activation: %v", err)
-	}
+	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
 }
 
 func TestWaitSync_ContextCanceled(t *testing.T) {
@@ -506,11 +459,7 @@ func TestWaitSync_ContextCanceled(t *testing.T) {
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
 
-	err := v.WaitForSync(ctx)
-	want := cancelledCtx
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, cancelledCtx, v.WaitForSync(ctx))
 }
 
 func TestWaitSync_NotSyncing(t *testing.T) {
@@ -527,10 +476,7 @@ func TestWaitSync_NotSyncing(t *testing.T) {
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
 
-	err := v.WaitForSync(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, v.WaitForSync(context.Background()))
 }
 
 func TestWaitSync_Syncing(t *testing.T) {
@@ -552,10 +498,7 @@ func TestWaitSync_Syncing(t *testing.T) {
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
 
-	err := v.WaitForSync(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, v.WaitForSync(context.Background()))
 }
 
 func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t *testing.T) {
@@ -582,9 +525,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 		gomock.Any(),
 	).Times(0)
 
-	if err := v.UpdateDuties(context.Background(), slot); err != nil {
-		t.Errorf("Could not update assignments: %v", err)
-	}
+	assert.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
 }
 
 func TestUpdateDuties_ReturnsError(t *testing.T) {
@@ -611,12 +552,8 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, expected)
 
-	if err := v.UpdateDuties(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
-		t.Errorf("Bad error; want=%v got=%v", expected, err)
-	}
-	if v.duties != nil {
-		t.Error("Assignments should have been cleared on failure")
-	}
+	assert.ErrorContains(t, expected.Error(), v.UpdateDuties(context.Background(), params.BeaconConfig().SlotsPerEpoch))
+	assert.Equal(t, (*ethpb.DutiesResponse)(nil), v.duties, "Assignments should have been cleared on failure")
 }
 
 func TestUpdateDuties_OK(t *testing.T) {
@@ -656,37 +593,11 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, nil)
 
-	if err := v.UpdateDuties(context.Background(), slot); err != nil {
-		t.Fatalf("Could not update assignments: %v", err)
-	}
-	if v.duties.Duties[0].ProposerSlots[0] != params.BeaconConfig().SlotsPerEpoch+1 {
-		t.Errorf(
-			"Unexpected validator assignments. want=%v got=%v",
-			params.BeaconConfig().SlotsPerEpoch+1,
-			v.duties.Duties[0].ProposerSlots[0],
-		)
-	}
-	if v.duties.Duties[0].AttesterSlot != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf(
-			"Unexpected validator assignments. want=%v got=%v",
-			params.BeaconConfig().SlotsPerEpoch,
-			v.duties.Duties[0].AttesterSlot,
-		)
-	}
-	if v.duties.Duties[0].CommitteeIndex != resp.Duties[0].CommitteeIndex {
-		t.Errorf(
-			"Unexpected validator assignments. want=%v got=%v",
-			resp.Duties[0].CommitteeIndex,
-			v.duties.Duties[0].CommitteeIndex,
-		)
-	}
-	if v.duties.Duties[0].ValidatorIndex != resp.Duties[0].ValidatorIndex {
-		t.Errorf(
-			"Unexpected validator assignments. want=%v got=%v",
-			resp.Duties[0].ValidatorIndex,
-			v.duties.Duties[0].ValidatorIndex,
-		)
-	}
+	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
+	assert.Equal(t, resp.Duties[0].CommitteeIndex, v.duties.Duties[0].CommitteeIndex, "Unexpected validator assignments")
+	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
 }
 
 func TestUpdateProtections_OK(t *testing.T) {
@@ -719,9 +630,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 	histories := make(map[[48]byte]*slashpb.AttestationHistory)
 	histories[pubKey1] = history
 	histories[pubKey2] = history2
-	if err := db.SaveAttestationHistoryForPubKeys(context.Background(), histories); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveAttestationHistoryForPubKeys(context.Background(), histories))
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	duties := &ethpb.DutiesResponse{
@@ -749,15 +658,9 @@ func TestUpdateProtections_OK(t *testing.T) {
 		duties:          duties,
 	}
 
-	if err := v.UpdateProtections(context.Background(), slot); err != nil {
-		t.Fatalf("Could not update assignments: %v", err)
-	}
-	if !reflect.DeepEqual(v.attesterHistoryByPubKey[pubKey1], history) {
-		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history, v.attesterHistoryByPubKey[pubKey1])
-	}
-	if !reflect.DeepEqual(v.attesterHistoryByPubKey[pubKey2], history2) {
-		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history2, v.attesterHistoryByPubKey[pubKey2])
-	}
+	require.NoError(t, v.UpdateProtections(context.Background(), slot), "Could not update assignments")
+	require.DeepEqual(t, history, v.attesterHistoryByPubKey[pubKey1], "Unexpected retrieved history")
+	require.DeepEqual(t, history2, v.attesterHistoryByPubKey[pubKey2], "Unexpected retrieved history")
 }
 
 func TestSaveProtections_OK(t *testing.T) {
@@ -789,20 +692,12 @@ func TestSaveProtections_OK(t *testing.T) {
 	cleanHistories[pubKey2] = history2
 
 	v.attesterHistoryByPubKey = cleanHistories
-	if err := v.SaveProtections(context.Background()); err != nil {
-		t.Fatalf("Could not update assignments: %v", err)
-	}
+	require.NoError(t, v.SaveProtections(context.Background()), "Could not update assignments")
 	savedHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if !reflect.DeepEqual(savedHistories[pubKey1], history1) {
-		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history1, v.attesterHistoryByPubKey[pubKey1])
-	}
-	if !reflect.DeepEqual(savedHistories[pubKey2], history2) {
-		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history2, v.attesterHistoryByPubKey[pubKey2])
-	}
+	require.DeepEqual(t, history1, savedHistories[pubKey1], "Unexpected retrieved history")
+	require.DeepEqual(t, history2, savedHistories[pubKey2], "Unexpected retrieved history")
 }
 
 func TestRolesAt_OK(t *testing.T) {
@@ -852,28 +747,14 @@ func TestRolesAt_OK(t *testing.T) {
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != roleAttester {
-		t.Errorf("Unexpected validator role. want: roleProposer")
-	}
-	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != roleProposer {
-		t.Errorf("Unexpected validator role. want: roleAttester")
-	}
-	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != roleUnknown {
-		t.Errorf("Unexpected validator role. want: UNKNOWN")
-	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0] != roleProposer {
-		t.Errorf("Unexpected validator role. want: roleProposer")
-	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1] != roleAttester {
-		t.Errorf("Unexpected validator role. want: roleAttester")
-	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2] != roleAggregator {
-		t.Errorf("Unexpected validator role. want: roleAggregator")
-	}
+	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
+	assert.Equal(t, validatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
+	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
+	assert.Equal(t, validatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0])
+	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1])
+	assert.Equal(t, validatorRole(roleAggregator), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
@@ -914,19 +795,11 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != roleAttester {
-		t.Errorf("Unexpected validator role. want: roleProposer")
-	}
-	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != roleUnknown {
-		t.Errorf("Unexpected validator role. want: roleAttester")
-	}
-	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != roleUnknown {
-		t.Errorf("Unexpected validator role. want: UNKNOWN")
-	}
+	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
+	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
+	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
@@ -1036,10 +909,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			}
 
 			active := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
-			if active != test.active {
-				t.Fatalf("expected key to be active, expected %t, received %t", test.active, active)
-			}
-
+			require.Equal(t, test.active, active, "Expected key to be active")
 			testutil.AssertLogsContain(t, hook, test.log)
 		})
 	}

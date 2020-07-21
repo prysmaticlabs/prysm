@@ -6,7 +6,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
@@ -62,6 +61,7 @@ type Service struct {
 	proposerSlashingsFeed *event.Feed
 	minMaxSpanDetector    iface.SpanDetector
 	proposalsDetector     proposerIface.ProposalsDetector
+	historicalDetection   bool
 	status                Status
 }
 
@@ -73,6 +73,7 @@ type Config struct {
 	BeaconClient          *beaconclient.Service
 	AttesterSlashingsFeed *event.Feed
 	ProposerSlashingsFeed *event.Feed
+	HistoricalDetection   bool
 }
 
 // NewDetectionService instantiation.
@@ -91,6 +92,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
 		minMaxSpanDetector:    attestations.NewSpanDetector(cfg.SlasherDB),
 		proposalsDetector:     proposals.NewProposeDetector(cfg.SlasherDB),
+		historicalDetection:   cfg.HistoricalDetection,
 		status:                None,
 	}
 }
@@ -121,7 +123,7 @@ func (ds *Service) Start() {
 	<-ch
 	sub.Unsubscribe()
 
-	if featureconfig.Get().EnableHistoricalDetection {
+	if ds.historicalDetection {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
 		ds.status = HistoricalDetection
@@ -171,11 +173,11 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, epoch)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
-			continue
+			return
 		}
 		if err := ds.slasherDB.SaveIndexedAttestations(ctx, indexedAtts); err != nil {
 			log.WithError(err).Error("could not save indexed attestations")
-			continue
+			return
 		}
 
 		for _, att := range indexedAtts {
@@ -205,7 +207,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			currentChainHead, err = ds.chainFetcher.ChainHead(ctx)
 			if err != nil {
 				log.WithError(err).Error("Cannot retrieve chain head from beacon node")
-				continue
+				return
 			}
 			if epoch != currentChainHead.HeadEpoch-1 {
 				log.Infof("Continuing historical detection from epoch %d to %d", epoch, currentChainHead.HeadEpoch)

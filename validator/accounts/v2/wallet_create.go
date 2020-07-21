@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
@@ -43,7 +44,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 	}
 	switch keymanagerKind {
 	case v2keymanager.Direct:
-		if err = initializeDirectWallet(cliCtx, walletDir); err != nil {
+		if err = createDirectWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
 		}
 		log.WithField("wallet-path", walletDir).Infof(
@@ -51,9 +52,15 @@ func CreateWallet(cliCtx *cli.Context) error {
 				"Make a new validator account with ./prysm.sh validator accounts-2 new",
 		)
 	case v2keymanager.Derived:
-		log.Fatal("Derived keymanager is not yet supported")
+		if err = createDerivedWallet(cliCtx, walletDir); err != nil {
+			log.Fatalf("Could not initialize wallet with derived keymanager: %v", err)
+		}
+		log.WithField("wallet-path", walletDir).Infof(
+			"Successfully created HD wallet and saved configuration to disk. " +
+				"Make a new validator account with ./prysm.sh validator accounts-2 new",
+		)
 	case v2keymanager.Remote:
-		if err = initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
+		if err = createRemoteWallet(cliCtx, walletDir); err != nil {
 			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
 		}
 		log.WithField("wallet-path", walletDir).Infof(
@@ -65,11 +72,11 @@ func CreateWallet(cliCtx *cli.Context) error {
 	return nil
 }
 
-func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
+func createDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 	walletConfig := &WalletConfig{
-		PasswordsDir:      passwordsDirPath,
 		WalletDir:         walletDir,
+		PasswordsDir:      passwordsDirPath,
 		KeymanagerKind:    v2keymanager.Direct,
 		CanUnlockAccounts: true,
 	}
@@ -88,7 +95,46 @@ func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
 	return nil
 }
 
-func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
+func createDerivedWallet(cliCtx *cli.Context, walletDir string) error {
+	passwordsDirPath := inputPasswordsDirectory(cliCtx)
+	walletConfig := &WalletConfig{
+		PasswordsDir:      passwordsDirPath,
+		WalletDir:         walletDir,
+		KeymanagerKind:    v2keymanager.Derived,
+		CanUnlockAccounts: true,
+	}
+	ctx := context.Background()
+	walletPassword, err := inputNewWalletPassword()
+	if err != nil {
+		return errors.Wrap(err, "could not input new wallet password")
+	}
+	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
+	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword, skipMnemonicConfirm)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize new wallet seed file")
+	}
+	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
+	}
+	wallet, err := NewWallet(ctx, walletConfig)
+	if err != nil {
+		return errors.Wrap(err, "could not create new wallet")
+	}
+	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
+	if err != nil {
+		return errors.Wrap(err, "could not marshal keymanager config file")
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return errors.Wrap(err, "could not write keymanager config to disk")
+	}
+	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
+		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+	}
+	return nil
+}
+
+func createRemoteWallet(cliCtx *cli.Context, walletDir string) error {
 	conf, err := inputRemoteKeymanagerConfig(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not input remote keymanager config")
