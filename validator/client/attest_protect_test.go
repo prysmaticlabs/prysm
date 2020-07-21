@@ -2,13 +2,13 @@ package client
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -40,14 +40,10 @@ func TestPreSignatureValidation(t *testing.T) {
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
 	err := validator.preAttSignValidations(context.Background(), att, validatorPubKey)
-	if err == nil || !strings.Contains(err.Error(), failedPreAttSignExternalErr) {
-		t.Fatal(err)
-	}
+	require.ErrorContains(t, failedPreAttSignExternalErr, err)
 	mockProtector.AllowAttestation = true
 	err = validator.preAttSignValidations(context.Background(), att, validatorPubKey)
-	if err != nil {
-		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
-	}
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func TestPostSignatureUpdate(t *testing.T) {
@@ -78,14 +74,10 @@ func TestPostSignatureUpdate(t *testing.T) {
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
 	err := validator.postAttSignUpdate(context.Background(), att, validatorPubKey)
-	if err == nil || !strings.Contains(err.Error(), failedPostAttSignExternalErr) {
-		t.Fatalf("Expected error to be thrown when post signature update is detected as slashable. got: %v", err)
-	}
+	require.ErrorContains(t, failedPostAttSignExternalErr, err, "Expected error on post signature update is detected as slashable")
 	mockProtector.AllowAttestation = true
 	err = validator.postAttSignUpdate(context.Background(), att, validatorPubKey)
-	if err != nil {
-		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
-	}
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
@@ -100,9 +92,7 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	newAttSource := uint64(0)
 	newAttTarget := uint64(3)
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
-	if attestations.LatestEpochWritten != newAttTarget {
-		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
-	}
+	require.Equal(t, newAttTarget, attestations.LatestEpochWritten, "Unexpected latest epoch written")
 
 	// Try an attestation that should be slashable (double att) spanning epochs 1 to 3.
 	newAttSource = uint64(1)
@@ -122,9 +112,7 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	}
 
 	// Try an attestation on totally unmarked history, should not be slashable.
-	if isNewAttSlashable(attestations, 0, wsPeriod+5) {
-		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", wsPeriod+5)
-	}
+	require.Equal(t, false, isNewAttSlashable(attestations, 0, wsPeriod+5), "Should not be slashable")
 
 	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
 	prunedNewAttSource := uint64(0)
@@ -133,25 +121,17 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	newAttSource := prunedNewAttSource + 6
 	newAttTarget := prunedNewAttTarget + 6
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
-	if attestations.LatestEpochWritten != newAttTarget {
-		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
-	}
+	require.Equal(t, newAttTarget, attestations.LatestEpochWritten, "Unexpected latest epoch")
 
 	// Mark an attestation spanning epochs 54000 to 54003.
 	farNewAttSource := newAttSource + wsPeriod
 	farNewAttTarget := newAttTarget + wsPeriod
 	attestations = markAttestationForTargetEpoch(attestations, farNewAttSource, farNewAttTarget)
-	if attestations.LatestEpochWritten != farNewAttTarget {
-		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
-	}
+	require.Equal(t, farNewAttTarget, attestations.LatestEpochWritten, "Unexpected latest epoch")
 
-	if safeTargetToSource(attestations, prunedNewAttTarget) != params.BeaconConfig().FarFutureEpoch {
-		t.Fatalf("Expected attestation at target epoch %d to not be marked", prunedNewAttTarget)
-	}
-
-	if safeTargetToSource(attestations, farNewAttTarget) != farNewAttSource {
-		t.Fatalf("Expected attestation at target epoch %d to not be marked", farNewAttSource)
-	}
+	target := safeTargetToSource(attestations, prunedNewAttTarget)
+	require.Equal(t, params.BeaconConfig().FarFutureEpoch, target, "Unexpectedly marked attestation")
+	require.Equal(t, farNewAttSource, safeTargetToSource(attestations, farNewAttTarget), "Unexpectedly marked attestation")
 
 	// Try an attestation from existing source to outside prune, should slash.
 	if !isNewAttSlashable(attestations, newAttSource, farNewAttTarget) {
@@ -179,16 +159,12 @@ func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	newAttSource := uint64(0)
 	newAttTarget := uint64(3)
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
-	if attestations.LatestEpochWritten != newAttTarget {
-		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
-	}
+	require.Equal(t, newAttTarget, attestations.LatestEpochWritten)
 
 	// Try an attestation that should be slashable (being surrounded) spanning epochs 1 to 2.
 	newAttSource = uint64(1)
 	newAttTarget = uint64(2)
-	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
-		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
-	}
+	require.Equal(t, true, isNewAttSlashable(attestations, newAttSource, newAttTarget), "Expected slashable attestation")
 }
 
 func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
@@ -203,17 +179,11 @@ func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	newAttSource := uint64(1)
 	newAttTarget := uint64(2)
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
-	if attestations.LatestEpochWritten != newAttTarget {
-		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
-	}
-	if attestations.TargetToSource[newAttTarget] != newAttSource {
-		t.Fatalf("Expected source epoch to be %d, received %d", newAttSource, attestations.TargetToSource[newAttTarget])
-	}
+	require.Equal(t, newAttTarget, attestations.LatestEpochWritten)
+	require.Equal(t, newAttSource, attestations.TargetToSource[newAttTarget])
 
 	// Try an attestation that should be slashable (surrounding) spanning epochs 0 to 3.
 	newAttSource = uint64(0)
 	newAttTarget = uint64(3)
-	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
-		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
-	}
+	require.Equal(t, true, isNewAttSlashable(attestations, newAttSource, newAttTarget))
 }

@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -29,9 +31,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	}
 
 	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	cleanMap := make(map[uint64]uint64)
 	cleanMap[0] = params.BeaconConfig().FarFutureEpoch
 	clean := &slashpb.AttestationHistory{
@@ -358,8 +358,5 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	})
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
-
-	if string(sentBlock.Block.Body.Graffiti) != string(validator.graffiti) {
-		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
-	}
+	assert.Equal(t, string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
 }

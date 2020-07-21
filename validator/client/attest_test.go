@@ -16,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -138,14 +140,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	}
 
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	sig, err := validator.keyManager.Sign(validatorPubKey, root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
@@ -410,7 +408,5 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 
-	if len(generatedAttestation.AggregationBits) != 2 {
-		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBits))
-	}
+	assert.Equal(t, 2, len(generatedAttestation.AggregationBits))
 }
