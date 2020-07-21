@@ -1,8 +1,8 @@
 package encoder_test
 
 import (
-	"encoding/binary"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"testing"
 
