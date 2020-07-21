@@ -138,7 +138,6 @@ func inputNewWalletPassword(cliCtx *cli.Context) (string, error) {
 			return "", err
 		}
 		enteredPassword := string(data)
-		fmt.Println(enteredPassword)
 		if err := validatePasswordInput(enteredPassword); err != nil {
 			return "", errors.Wrap(err, "password did not pass validation")
 		}
