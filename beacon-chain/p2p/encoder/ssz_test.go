@@ -2,6 +2,7 @@ package encoder_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -19,10 +20,13 @@ func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
 	testRoundTripWithGossip(t, e)
 }
 
-func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
+func TestSszNetworkEncoder_FailsSnappyLength(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{}
-	testRoundTripWithLength(t, e)
-	testRoundTripWithGossip(t, e)
+	att := &testpb.TestSimpleMessage{}
+	data := make([]byte, 32)
+	binary.PutUvarint(data, encoder.MaxGossipSize+32)
+	err := e.DecodeGossip(data, att)
+	require.ErrorContains(t, "gossip message exceeds max gossip size", err)
 }
 
 func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
