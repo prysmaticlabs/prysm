@@ -107,8 +107,7 @@
     "exclude_files": {
       ".*/.*_test\\.go": "Tests are OK to use weak crypto",
       "shared/rand/rand\\.go": "Abstracts CSPRNGs for common use",
-      "shared/aggregation/testing/bitlistutils.go": "Test-only package",
-      "shared/petnames/names.go": "Needs deterministic randomness"
+      "shared/aggregation/testing/bitlistutils.go": "Test-only package"
     }
   }
 }
