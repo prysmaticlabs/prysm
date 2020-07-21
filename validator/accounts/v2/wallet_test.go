@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	mock "github.com/prysmaticlabs/prysm/validator/keymanager/v2/testing"
 	"github.com/sirupsen/logrus"
 )
@@ -22,8 +21,6 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 }
-
-var _ = direct.Wallet(&Wallet{})
 
 func setupWalletDir(t testing.TB) (string, string) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
@@ -64,7 +61,7 @@ func TestCreateAndReadWallet(t *testing.T) {
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig), "Could not write keymanager config file to disk")
 
 	walletPath := path.Join(walletDir, keymanagerKind.String())
-	configFilePath := path.Join(walletPath, keymanagerConfigFileName)
+	configFilePath := path.Join(walletPath, KeymanagerConfigFileName)
 	require.Equal(t, true, fileExists(configFilePath), "Expected config file to have been created at path: %s", configFilePath)
 
 	// We should be able to now read the wallet as well.
