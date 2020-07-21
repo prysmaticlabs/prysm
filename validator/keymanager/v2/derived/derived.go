@@ -211,7 +211,7 @@ func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
 	return dr.seedCfg.NextAccount
 }
 
-// AccountNames
+// AccountNames --
 func (dr *Keymanager) AccountNames(ctx context.Context) ([]string, error) {
 	names := make([]string, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
