@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/pagination"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStartAndEndPage(t *testing.T) {
@@ -60,9 +61,7 @@ func TestStartAndEndPage(t *testing.T) {
 
 	for _, test := range tests {
 		start, end, next, err := pagination.StartAndEndPage(test.token, test.pageSize, test.totalSize)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if test.start != start {
 			t.Errorf("expected start and computed start are not equal %d, %d", test.start, start)
 		}
