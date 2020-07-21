@@ -22,6 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -41,19 +43,6 @@ const (
 	eipVersion          = "EIP-2335"
 )
 
-// Wallet defines a struct which has capabilities and knowledge of how
-// to read and write important accounts-related files to the filesystem.
-// Useful for keymanager to have persistent capabilities for accounts on-disk.
-type Wallet interface {
-	AccountsDir() string
-	CanUnlockAccounts() bool
-	AccountNames() ([]string, error)
-	ReadPasswordForAccount(accountName string) (string, error)
-	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
-	WriteAccountToDisk(ctx context.Context, password string) (string, error)
-	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
-}
-
 // Config for a direct keymanager.
 type Config struct {
 	EIPVersion string `json:"direct_eip_version"`
@@ -61,20 +50,11 @@ type Config struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet            Wallet
+	wallet            iface.Wallet
 	cfg               *Config
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
 	lock              sync.RWMutex
-}
-
-// Keystore json file representation as a Go struct.
-type Keystore struct {
-	Crypto  map[string]interface{} `json:"crypto"`
-	ID      string                 `json:"uuid"`
-	Pubkey  string                 `json:"pubkey"`
-	Version uint                   `json:"version"`
-	Name    string                 `json:"name"`
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -85,7 +65,7 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet: wallet,
 		cfg:    cfg,
@@ -230,7 +210,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &Keystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -273,7 +253,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		if err != nil {
 			return errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &Keystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -307,12 +287,13 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	if err != nil {
 		return nil, err
 	}
-	keystoreFile := &Keystore{}
-	keystoreFile.Crypto = cryptoFields
-	keystoreFile.ID = id.String()
-	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
-	keystoreFile.Version = encryptor.Version()
-	keystoreFile.Name = encryptor.Name()
+	keystoreFile := &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
 }
 

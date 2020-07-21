@@ -42,7 +42,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		// Generate a directory for the account name and
 		// write its associated password to disk.
 		accountPath := path.Join(wallet.accountsPath, name)
-		require.NoError(t, os.MkdirAll(accountPath, directoryPermissions))
+		require.NoError(t, os.MkdirAll(accountPath, DirectoryPermissions))
 		require.NoError(t, wallet.writePasswordToFile(name, password))
 
 		// Write the deposit data for each account.
