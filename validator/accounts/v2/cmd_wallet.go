@@ -38,5 +38,14 @@ var WalletCommands = &cli.Command{
 			},
 			Action: EditWalletConfiguration,
 		},
+		{
+			Name:  "recover",
+			Usage: "uses a derived wallet seed recovery phase to recreate an existing HD wallet",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordsDirFlag,
+			},
+			Action: RecoverWallet,
+		},
 	},
 }

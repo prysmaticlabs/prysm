@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/tyler-smith/go-bip39"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -163,6 +165,30 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 	}
 	if err := m.ConfirmAcknowledgement(phrase); err != nil {
 		return nil, errors.Wrap(err, "could not confirm mnemonic acknowledgement")
+	}
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
+	}
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate unique UUID")
+	}
+	return &SeedConfig{
+		Crypto:      cryptoFields,
+		ID:          id.String(),
+		NextAccount: 0,
+		Version:     encryptor.Version(),
+		Name:        encryptor.Name(),
+	}, nil
+}
+
+// SeedFileFromPhrase --
+func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string) (*SeedConfig, error) {
+	walletSeed, err := bip39.MnemonicToByteArray(mnemonic)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert mnemonic to wallet seed")
 	}
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
