@@ -95,8 +95,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			passwordsDir = path.Join(passwordsDir, accountsv2.PasswordsDefaultDirName)
 		}
 		// Read the wallet from the specified path.
-		wallet, err := accountsv2.OpenWallet(context.Background(), &accountsv2.WalletConfig{
-			PasswordsDir:      passwordsDir,
+		wallet, err := accountsv2.OpenWallet(cliCtx, &accountsv2.WalletConfig{
 			WalletDir:         walletDir,
 			CanUnlockAccounts: true,
 		})
