@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestMarshalDepositWithProof(t *testing.T) {
@@ -24,13 +25,10 @@ func TestMarshalDepositWithProof(t *testing.T) {
 		[]byte("GGGGGGG"),
 	}
 	m, err := GenerateTrieFromItems(items, 32)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
+	require.NoError(t, err)
+
 	proof, err := m.MerkleProof(2)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle proof: %v", err)
-	}
+	require.NoError(t, err)
 	if len(proof) != 33 {
 		t.Errorf("Received len %d, wanted 33", len(proof))
 	}
@@ -47,13 +45,9 @@ func TestMarshalDepositWithProof(t *testing.T) {
 		},
 	}
 	enc, err := dep.MarshalSSZ()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	dec := &ethpb.Deposit{}
-	if err := dec.UnmarshalSSZ(enc); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, dec.UnmarshalSSZ(enc))
 	if !reflect.DeepEqual(dec, dep) {
 		t.Errorf("Wanted %v, received %v", dep, dec)
 	}
@@ -82,18 +76,12 @@ func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 
 func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 	trie, err := NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not create empty trie %v", err)
-	}
+	require.NoError(t, err)
 	testAccount, err := contracts.Setup()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	depRoot, err := testAccount.Contract.GetDepositRoot(&bind.CallOpts{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if depRoot != trie.HashTreeRoot() {
 		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", depRoot, trie.Root())
 	}
@@ -117,13 +105,9 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 		[]byte("H"),
 	}
 	m, err := GenerateTrieFromItems(items, 32)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
+	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle proof: %v", err)
-	}
+	require.NoError(t, err)
 	if len(proof) != 33 {
 		t.Errorf("Received len %d, wanted 33", len(proof))
 	}
@@ -132,9 +116,7 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 		t.Error("First Merkle proof did not verify")
 	}
 	proof, err = m.MerkleProof(3)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle proof: %v", err)
-	}
+	require.NoError(t, err)
 	if ok := VerifyMerkleBranch(root[:], items[3], 3, proof); !ok {
 		t.Error("Second Merkle proof did not verify")
 	}
@@ -151,13 +133,9 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 		{4},
 	}
 	m, err := GenerateTrieFromItems(items, 33)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
+	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle proof: %v", err)
-	}
+	require.NoError(t, err)
 	root := m.Root()
 	if ok := VerifyMerkleBranch(root[:], items[0], 0, proof); !ok {
 		t.Error("First Merkle proof did not verify")
@@ -166,9 +144,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	// Now we update the trie.
 	m.Insert([]byte{5}, 3)
 	proof, err = m.MerkleProof(3)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle proof: %v", err)
-	}
+	require.NoError(t, err)
 	root = m.Root()
 	if ok := VerifyMerkleBranch(root[:], []byte{5}, 3, proof); !ok {
 		t.Error("Second Merkle proof did not verify")
@@ -189,9 +165,7 @@ func TestRoundtripProto_OK(t *testing.T) {
 		{4},
 	}
 	m, err := GenerateTrieFromItems(items, 33)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
+	require.NoError(t, err)
 	protoTrie := m.ToProto()
 	depositRoot := m.HashTreeRoot()
 
@@ -210,9 +184,7 @@ func TestCopy_OK(t *testing.T) {
 		{4},
 	}
 	source, err := GenerateTrieFromItems(items, 33)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
+	require.NoError(t, err)
 
 	copy := source.Copy()
 
