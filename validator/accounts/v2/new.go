@@ -37,19 +37,19 @@ func NewAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
-		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+		return errors.New("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "could not get wallet directory")
 	}
 	ctx := context.Background()
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "could not get keymanager kind")
 	}
 
 	// Only direct keymanagers can create accounts for now.
 	if keymanagerKind == v2keymanager.Remote {
-		log.Fatal("Cannot create a new account for a remote keymanager")
+		return errors.New("Cannot create a new account for a remote keymanager")
 	}
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
@@ -60,25 +60,25 @@ func NewAccount(cliCtx *cli.Context) error {
 		KeymanagerKind:    keymanagerKind,
 	})
 	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
+		return errors.Wrap(err, "could not open wallet")
 	}
 
 	// We initialize a new keymanager depending on the wallet's keymanager kind.
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
-		log.Fatalf("Could not initialize keymanager: %v", err)
+		return errors.Wrap(err, "could not initialize keymanager")
 	}
 
 	// Read the new account's password from user input.
 	password, err := inputNewAccountPassword(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not read password: %v", err)
+		return errors.Wrap(err, "could not read password")
 	}
 
 	// Create a new validator account using the specified keymanager.
 	if _, err := keymanager.CreateAccount(ctx, password); err != nil {
-		log.Fatalf("Could not create account in wallet: %v", err)
+		return errors.Wrap(err, "could not create account in wallet")
 	}
 	return nil
 }
@@ -186,7 +186,7 @@ func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
 		}
 		enteredPassword := string(data)
 		if err := validatePasswordInput(enteredPassword); err != nil {
-			log.WithError(err).Fatal("Password did not pass validation")
+			return "", errors.Wrap(err, "password did not pass validation")
 		}
 		return enteredPassword, nil
 	}
