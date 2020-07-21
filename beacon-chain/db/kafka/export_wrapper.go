@@ -80,29 +80,6 @@ func (e Exporter) Close() error {
 	return e.db.Close()
 }
 
-// SaveAttestation publishes to the kafka topic for attestations.
-func (e Exporter) SaveAttestation(ctx context.Context, att *eth.Attestation) error {
-	go func() {
-		if err := e.publish(ctx, "beacon_attestation", att); err != nil {
-			log.WithError(err).Error("Failed to publish attestation")
-		}
-	}()
-
-	return e.db.SaveAttestation(ctx, att)
-}
-
-// SaveAttestations publishes to the kafka topic for beacon attestations.
-func (e Exporter) SaveAttestations(ctx context.Context, atts []*eth.Attestation) error {
-	go func() {
-		for _, att := range atts {
-			if err := e.publish(ctx, "beacon_attestation", att); err != nil {
-				log.WithError(err).Error("Failed to publish attestation")
-			}
-		}
-	}()
-	return e.db.SaveAttestations(ctx, atts)
-}
-
 // SaveBlock publishes to the kafka topic for beacon blocks.
 func (e Exporter) SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error {
 	go func() {
