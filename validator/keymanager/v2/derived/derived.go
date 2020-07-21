@@ -127,8 +127,9 @@ func NewKeymanager(
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: skipMnemonicConfirm,
 		},
-		seedCfg: seedConfig,
-		seed:    seed,
+		seedCfg:   seedConfig,
+		seed:      seed,
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// We initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via the unlocked wallet.
