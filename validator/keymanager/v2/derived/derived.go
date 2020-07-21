@@ -127,8 +127,15 @@ func NewKeymanager(
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: skipMnemonicConfirm,
 		},
-		seedCfg: seedConfig,
-		seed:    seed,
+		seedCfg:   seedConfig,
+		seed:      seed,
+		keysCache: make(map[[48]byte]bls.SecretKey),
+	}
+	// We initialize a cache of public key -> secret keys
+	// used to retrieve secrets keys for the accounts via the unlocked wallet.
+	// This cache is needed to process Sign requests using a validating public key.
+	if err := k.initializeSecretKeysCache(); err != nil {
+		return nil, errors.Wrap(err, "could not initialize secret keys cache")
 	}
 	return k, nil
 }
@@ -201,7 +208,7 @@ func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte,
 	return json.MarshalIndent(seedCfg, "", "\t")
 }
 
-// Config --
+// Config returns the derived keymanager configuration.
 func (dr *Keymanager) Config() *Config {
 	return dr.cfg
 }
@@ -211,8 +218,8 @@ func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
 	return dr.seedCfg.NextAccount
 }
 
-// AccountNames --
-func (dr *Keymanager) AccountNames(ctx context.Context) ([]string, error) {
+// ValidatingAccountNames for the derived keymanager.
+func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, error) {
 	names := make([]string, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
@@ -319,12 +326,34 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 // Sign signs a message using a validator key.
 func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	return nil, errors.New("unimplemented")
+	rawPubKey := req.PublicKey
+	if rawPubKey == nil {
+		return nil, errors.New("nil public key in request")
+	}
+	dr.lock.RLock()
+	defer dr.lock.RUnlock()
+	secretKey, ok := dr.keysCache[bytesutil.ToBytes48(rawPubKey)]
+	if !ok {
+		return nil, errors.New("no signing key found in keys cache")
+	}
+	return secretKey.Sign(req.SigningRoot), nil
 }
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	publicKeys := make([][48]byte, 0)
+	// Return the public keys from the cache if they match the
+	// number of accounts from the wallet.
+	publicKeys := make([][48]byte, dr.seedCfg.NextAccount)
+	dr.lock.RLock()
+	defer dr.lock.RUnlock()
+	if dr.keysCache != nil && uint64(len(dr.keysCache)) == dr.seedCfg.NextAccount {
+		var i int
+		for k := range dr.keysCache {
+			publicKeys[i] = k
+			i++
+		}
+		return publicKeys, nil
+	}
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
@@ -364,6 +393,31 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
 	}
 	return publicKeys, nil
+}
+
+func (dr *Keymanager) initializeSecretKeysCache() error {
+	dr.lock.Lock()
+	defer dr.lock.Unlock()
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		derivedKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to derive validating key for account %s", validatingKeyPath)
+		}
+		validatorSigningKey, err := bls.SecretKeyFromBytes(derivedKey.Marshal())
+		if err != nil {
+			return errors.Wrapf(
+				err,
+				"could not instantiate bls secret key from bytes for account: %s",
+				validatingKeyPath,
+			)
+		}
+
+		// Update a simple cache of public key -> secret key utilized
+		// for fast signing access in the keymanager.
+		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
+	}
+	return nil
 }
 
 func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
