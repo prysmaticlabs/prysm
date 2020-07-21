@@ -13,4 +13,5 @@ go_test(
     size = "small",
     srcs = ["math_helper_test.go"],
     embed = [":go_default_library"],
+    deps = ["//shared/testutil/require:go_default_library"],
 )

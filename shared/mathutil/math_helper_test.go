@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestIntegerSquareRoot(t *testing.T) {
@@ -70,30 +71,21 @@ func TestIntegerSquareRoot(t *testing.T) {
 	}
 
 	for _, testVals := range tt {
-		root := mathutil.IntegerSquareRoot(testVals.number)
-		if testVals.root != root {
-			t.Errorf("For %d, expected root and computed root are not equal want %d, got %d", testVals.number, testVals.root, root)
-		}
+		require.Equal(t, testVals.root, mathutil.IntegerSquareRoot(testVals.number))
 	}
 }
 
 func BenchmarkIntegerSquareRoot(b *testing.B) {
 	val := uint64(1 << 62)
 	for i := 0; i < b.N; i++ {
-		root := mathutil.IntegerSquareRoot(val)
-		if root != 1<<31 {
-			b.Fatalf("Expected root and computed root are not equal 1<<31, %d", root)
-		}
+		require.Equal(b, 1<<31, mathutil.IntegerSquareRoot(val))
 	}
 }
 
 func BenchmarkIntegerSquareRoot_WithDatatable(b *testing.B) {
 	val := uint64(1024)
 	for i := 0; i < b.N; i++ {
-		root := mathutil.IntegerSquareRoot(val)
-		if root != 32 {
-			b.Fatalf("Expected root and computed root are not equal 32, %d", root)
-		}
+		require.Equal(b, 32, mathutil.IntegerSquareRoot(val))
 	}
 }
 
@@ -125,10 +117,7 @@ func TestCeilDiv8(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		div8 := mathutil.CeilDiv8(tt.number)
-		if tt.div8 != div8 {
-			t.Fatalf("Div8 was not an expected value. Wanted: %d, got: %d", tt.div8, div8)
-		}
+		require.Equal(t, tt.div8, mathutil.CeilDiv8(tt.number))
 	}
 }
 
@@ -159,9 +148,7 @@ func TestIsPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.b != mathutil.IsPowerOf2(tt.a) {
-			t.Fatalf("IsPowerOf2(%d) = %v, wanted: %v", tt.a, mathutil.IsPowerOf2(tt.a), tt.b)
-		}
+		require.Equal(t, tt.b, mathutil.IsPowerOf2(tt.a))
 	}
 }
 
@@ -188,9 +175,7 @@ func TestPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.b != mathutil.PowerOf2(tt.a) {
-			t.Fatalf("PowerOf2(%d) = %d, wanted: %d", tt.a, mathutil.PowerOf2(tt.a), tt.b)
-		}
+		require.Equal(t, tt.b, mathutil.PowerOf2(tt.a))
 	}
 }
 
@@ -217,9 +202,7 @@ func TestClosestPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.b != mathutil.ClosestPowerOf2(tt.a) {
-			t.Fatalf("ClosestPowerOf2(%d) = %d, wanted: %d", tt.a, mathutil.ClosestPowerOf2(tt.a), tt.b)
-		}
+		require.Equal(t, tt.b, mathutil.ClosestPowerOf2(tt.a))
 	}
 }
 
@@ -256,9 +239,7 @@ func TestMaxValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.result != mathutil.Max(tt.a, tt.b) {
-			t.Fatalf("Max(%d) = %d, wanted: %d", tt.a, mathutil.Max(tt.a, tt.b), tt.result)
-		}
+		require.Equal(t, tt.result, mathutil.Max(tt.a, tt.b))
 	}
 }
 
@@ -295,8 +276,6 @@ func TestMinValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.result != mathutil.Min(tt.a, tt.b) {
-			t.Fatalf("Min(%d) = %d, wanted: %d", tt.a, mathutil.Min(tt.a, tt.b), tt.result)
-		}
+		require.Equal(t, tt.result, mathutil.Min(tt.a, tt.b))
 	}
 }
