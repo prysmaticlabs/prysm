@@ -2,11 +2,11 @@ package client
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -27,14 +27,10 @@ func TestPreBlockSignValidation(t *testing.T) {
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
 	err := validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
-	if err == nil || !strings.Contains(err.Error(), failedPreBlockSignExternalErr) {
-		t.Fatal(err)
-	}
+	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
 	mockProtector.AllowBlock = true
 	err = validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
-	if err != nil {
-		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
-	}
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func TestPostBlockSignUpdate(t *testing.T) {
@@ -56,12 +52,8 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
 	err := validator.postBlockSignUpdate(context.Background(), validatorPubKey, block)
-	if err == nil || !strings.Contains(err.Error(), failedPostBlockSignErr) {
-		t.Fatalf("Expected error to be thrown when post signature update is detected as slashable. got: %v", err)
-	}
+	require.ErrorContains(t, failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
 	mockProtector.AllowBlock = true
 	err = validator.postBlockSignUpdate(context.Background(), validatorPubKey, block)
-	if err != nil {
-		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
-	}
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
