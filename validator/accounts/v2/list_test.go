@@ -5,14 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -28,40 +24,43 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		KeymanagerKind: keymanagerKind,
 	})
 	require.NoError(t, err)
+	keymanager, err := direct.NewKeymanager(ctx, wallet, direct.DefaultConfig(), true /* skip confirm */)
+	require.NoError(t, err)
 	numAccounts := 5
 	accountNames := make([]string, numAccounts)
 	pubKeys := make([][48]byte, numAccounts)
 	depositDataForAccounts := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		// Generate a new account name and write the account
-		// to disk using the wallet.
-		name, err := wallet.generateAccountName()
+		//// Generate a new account name and write the account
+		//// to disk using the wallet.
+		//name, err := wallet.generateAccountName()
+		//require.NoError(t, err)
+		//accountNames[i] = name
+		//// Generate a directory for the account name and
+		//// write its associated password to disk.
+		//accountPath := path.Join(wallet.accountsPath, name)
+		//require.NoError(t, os.MkdirAll(accountPath, DirectoryPermissions))
+		//require.NoError(t, wallet.writePasswordToFile(name, password))
+		//
+		//// Write the deposit data for each account.
+		//depositData := []byte(strconv.Itoa(i))
+		//depositDataForAccounts[i] = depositData
+		//require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.DepositTransactionFileName, depositData))
+		//
+		//// Write the creation timestamp for the account with unix timestamp 0.
+		//require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.TimestampFileName, []byte("0")))
+		//
+		//// Create public keys for the accounts.
+		//key := bls.RandKey()
+		//pubKeys[i] = bytesutil.ToBytes48(key.PublicKey().Marshal())
+		_, err := keymanager.CreateAccount(ctx, "hello world")
 		require.NoError(t, err)
-		accountNames[i] = name
-		// Generate a directory for the account name and
-		// write its associated password to disk.
-		accountPath := path.Join(wallet.accountsPath, name)
-		require.NoError(t, os.MkdirAll(accountPath, DirectoryPermissions))
-		require.NoError(t, wallet.writePasswordToFile(name, password))
-
-		// Write the deposit data for each account.
-		depositData := []byte(strconv.Itoa(i))
-		depositDataForAccounts[i] = depositData
-		require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.DepositTransactionFileName, depositData))
-
-		// Write the creation timestamp for the account with unix timestamp 0.
-		require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.TimestampFileName, []byte("0")))
-
-		// Create public keys for the accounts.
-		key := bls.RandKey()
-		pubKeys[i] = bytesutil.ToBytes48(key.PublicKey().Marshal())
 	}
 	rescueStdout := os.Stdout
 	r, w, err := os.Pipe()
 	require.NoError(t, err)
 	os.Stdout = w
 
-	keymanager := &direct.Keymanager{}
 	// We call the list direct keymanager accounts function.
 	require.NoError(t, listDirectKeymanagerAccounts(true /* show deposit data */, wallet, keymanager))
 
@@ -105,4 +104,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 			t.Error("Did not display account creation timestamp")
 		}
 	}
+}
+
+func TestListAccounts_DerivedKeymanager(t *testing.T) {
 }
