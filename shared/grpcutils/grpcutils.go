@@ -29,3 +29,22 @@ func LogGRPCRequests(ctx context.Context, method string, req, reply interface{},
 		Debug("gRPC request finished.")
 	return err
 }
+
+func LogGRPCStream(ctx context.Context, sd *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	// Shortcut when debug logging is not enabled.
+	if logrus.GetLevel() < logrus.DebugLevel {
+		return streamer(ctx, sd, conn, method, opts...)
+	}
+
+	var header metadata.MD
+	opts = append(
+		opts,
+		grpc.Header(&header),
+	)
+	start := time.Now()
+	strm, err := streamer(ctx, sd, conn, method, opts...)
+	logrus.WithField("backend", header["x-backend"]).
+		WithField("method", method).WithField("duration", time.Now().Sub(start)).
+		Debug("gRPC stream finished.")
+	return strm, err
+}

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -51,6 +52,7 @@ type ValidatorService struct {
 	maxCallRecvMsgSize   int
 	validatingPubKeys    [][48]byte
 	grpcRetries          uint
+	grpcRetryDelay       time.Duration
 	grpcHeaders          []string
 	protector            slashingprotection.Protector
 }
@@ -68,6 +70,7 @@ type Config struct {
 	EmitAccountMetrics         bool
 	GrpcMaxCallRecvMsgSizeFlag int
 	GrpcRetriesFlag            uint
+	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
 	Protector                  slashingprotection.Protector
 }
@@ -108,6 +111,7 @@ func (v *ValidatorService) Start() {
 		v.withCert,
 		v.grpcHeaders,
 		v.grpcRetries,
+		v.grpcRetryDelay,
 		streamInterceptor,
 	)
 	if dialOpts == nil {
@@ -223,6 +227,7 @@ func ConstructDialOptions(
 	withCert string,
 	grpcHeaders []string,
 	grpcRetries uint,
+	grpcRetryDelay time.Duration,
 	extraOpts ...grpc.DialOption,
 ) []grpc.DialOption {
 	var transportSecurity grpc.DialOption
@@ -261,6 +266,7 @@ func ConstructDialOptions(
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
 			grpc_retry.WithMax(grpcRetries),
+			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(grpcRetryDelay)),
 			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
@@ -270,6 +276,12 @@ func ConstructDialOptions(
 			grpc_retry.UnaryClientInterceptor(),
 			grpcutils.LogGRPCRequests,
 		)),
+		grpc.WithChainStreamInterceptor(
+			grpc_opentracing.StreamClientInterceptor(),
+			grpc_prometheus.StreamClientInterceptor,
+			grpc_retry.StreamClientInterceptor(),
+			grpcutils.LogGRPCStream,
+		),
 	}
 
 	for _, opt := range extraOpts {

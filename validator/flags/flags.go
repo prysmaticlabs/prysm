@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/urfave/cli/v2"
 )
@@ -56,6 +57,11 @@ var (
 		Name:  "grpc-retries",
 		Usage: "Number of attempts to retry gRPC requests",
 		Value: 5,
+	}
+	GrpcRetryDelayFlag = &cli.DurationFlag{
+		Name: "grpc-retry-delay",
+		Usage: "The amount of time between gRPC retry requests.",
+		Value: 1 * time.Second,
 	}
 	// GrpcHeadersFlag defines a list of headers to send with all gRPC requests.
 	GrpcHeadersFlag = &cli.StringFlag{
