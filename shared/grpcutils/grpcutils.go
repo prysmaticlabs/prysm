@@ -41,10 +41,9 @@ func LogGRPCStream(ctx context.Context, sd *grpc.StreamDesc, conn *grpc.ClientCo
 		opts,
 		grpc.Header(&header),
 	)
-	start := time.Now()
 	strm, err := streamer(ctx, sd, conn, method, opts...)
 	logrus.WithField("backend", header["x-backend"]).
-		WithField("method", method).WithField("duration", time.Now().Sub(start)).
-		Debug("gRPC stream finished.")
+		WithField("method", method).
+		Debug("gRPC stream started.")
 	return strm, err
 }

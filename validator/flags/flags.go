@@ -59,7 +59,7 @@ var (
 		Value: 5,
 	}
 	GrpcRetryDelayFlag = &cli.DurationFlag{
-		Name: "grpc-retry-delay",
+		Name:  "grpc-retry-delay",
 		Usage: "The amount of time between gRPC retry requests.",
 		Value: 1 * time.Second,
 	}

@@ -244,7 +244,7 @@ func (s *ValidatorClient) registerClientService(
 		ValidatingPubKeys:          validatingPubKeys,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
-		GrpcRetryDelay: 			grpcRetryDelay,
+		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
 	})
@@ -269,7 +269,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
-		GrpcRetryDelay: 			grpcRetryDelay,
+		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {

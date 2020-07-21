@@ -93,6 +93,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
 		grpcRetries:          cfg.GrpcRetriesFlag,
+		grpcRetryDelay:       cfg.GrpcRetryDelay,
 		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
 		protector:            cfg.Protector,
 	}, nil
@@ -277,10 +278,10 @@ func ConstructDialOptions(
 			grpcutils.LogGRPCRequests,
 		)),
 		grpc.WithChainStreamInterceptor(
+			grpcutils.LogGRPCStream,
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
-			grpcutils.LogGRPCStream,
 		),
 	}
 
