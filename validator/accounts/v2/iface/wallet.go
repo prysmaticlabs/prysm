@@ -17,6 +17,7 @@ type Wallet interface {
 	ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error)
 	ReadPasswordForAccount(accountName string) (string, error)
 	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
+	ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error)
 	// Write methods to persist important wallet and accounts-related files to disk.
 	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
 	WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error

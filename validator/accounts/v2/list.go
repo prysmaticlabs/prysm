@@ -7,10 +7,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
@@ -39,8 +41,20 @@ func ListAccounts(cliCtx *cli.Context) error {
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
-		if err := listDirectKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
+		km, ok := keymanager.(*direct.Keymanager)
+		if !ok {
+			log.Fatal("Could not assert keymanager interface to concrete type")
+		}
+		if err := listDirectKeymanagerAccounts(showDepositData, wallet, km); err != nil {
 			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
+		}
+	case v2keymanager.Derived:
+		km, ok := keymanager.(*derived.Keymanager)
+		if !ok {
+			log.Fatal("Could not assert keymanager interface to concrete type")
+		}
+		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, km); err != nil {
+			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)
 		}
 	default:
 		log.Fatalf("Keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
@@ -51,7 +65,7 @@ func ListAccounts(cliCtx *cli.Context) error {
 func listDirectKeymanagerAccounts(
 	showDepositData bool,
 	wallet *Wallet,
-	keymanager v2keymanager.IKeymanager,
+	keymanager *direct.Keymanager,
 ) error {
 	// We initialize the wallet's keymanager.
 	accountNames, err := wallet.AccountNames()
@@ -88,12 +102,12 @@ func listDirectKeymanagerAccounts(
 		if err != nil {
 			return errors.Wrapf(err, "could not read file for account: %s", direct.TimestampFileName)
 		}
-		unixTimestamp, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
+		unixTimestampStr, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
 		}
-		unixTimestampStr := time.Unix(unixTimestamp, 0)
-		fmt.Printf("%s %v\n", au.BrightCyan("[created at]").Bold(), unixTimestampStr.String())
+		unixTimestamp := time.Unix(unixTimestampStr, 0)
+		fmt.Printf("%s %s\n", au.BrightCyan("[created at]").Bold(), humanize.Time(unixTimestamp))
 		if !showDepositData {
 			continue
 		}
@@ -115,5 +129,84 @@ func listDirectKeymanagerAccounts(
 		fmt.Println("")
 	}
 	fmt.Println("")
+	return nil
+}
+
+func listDerivedKeymanagerAccounts(
+	showDepositData bool,
+	wallet *Wallet,
+	keymanager *derived.Keymanager,
+) error {
+	au := aurora.NewAurora(true)
+	fmt.Println(
+		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
+			"by running `validator accounts-v2 list --show-deposit-data"),
+	)
+	dirPath := au.BrightCyan("(wallet dir)")
+	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
+	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.Config().DerivedPathStructure).Bold())
+	ctx := context.Background()
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	withdrawalPublicKeys, err := keymanager.FetchWithdrawalPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	nextAccountNumber := keymanager.NextAccountNumber(ctx)
+	currentAccountNumber := nextAccountNumber
+	if nextAccountNumber > 0 {
+		currentAccountNumber--
+	}
+	accountNames, err := keymanager.AccountNames(ctx)
+	if err != nil {
+		return err
+	}
+	log.Info(currentAccountNumber)
+	for i := uint64(0); i <= currentAccountNumber; i++ {
+		fmt.Println("")
+		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
+		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
+
+		// Retrieve the withdrawal key account metadata.
+		createdAtBytes, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, derived.TimestampFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not read file for account: %s", derived.TimestampFileName)
+		}
+		unixTimestampInt, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
+		if err != nil {
+			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
+		}
+		unixTimestamp := time.Unix(unixTimestampInt, 0)
+		fmt.Printf("%s | %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
+		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
+
+		// Retrieve the validating key account metadata.
+		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
+		fmt.Printf("%s %s\n", au.BrightCyan("[derivation path]").Bold(), validatingKeyPath)
+
+		if !showDepositData {
+			continue
+		}
+		enc, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.DepositTransactionFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
+		}
+		fmt.Printf(
+			"%s %s\n",
+			"(deposit tx file)",
+			path.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
+		)
+		fmt.Printf(`
+======================Deposit Transaction Data=====================
+
+%#x
+
+===================================================================`, enc)
+		fmt.Println(" ")
+	}
 	return nil
 }
