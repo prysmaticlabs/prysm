@@ -7,11 +7,11 @@ import (
 	"unicode"
 
 	"github.com/manifoldco/promptui"
+	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/urfave/cli/v2"
 )
 
 func inputWalletDir(cliCtx *cli.Context) (string, error) {
@@ -49,8 +49,8 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			keymanagerKindSelections[v2keymanager.Direct],
 			keymanagerKindSelections[v2keymanager.Derived],
+			keymanagerKindSelections[v2keymanager.Direct],
 			keymanagerKindSelections[v2keymanager.Remote],
 		},
 	}

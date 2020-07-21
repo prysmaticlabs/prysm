@@ -8,7 +8,6 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -39,26 +38,29 @@ func NewAccount(cliCtx *cli.Context) error {
 		log.Fatal(err)
 	}
 	ctx := context.Background()
-	// Read the directory for password storage from user input.
-	wallet, err := OpenWallet(ctx, &WalletConfig{
-		PasswordsDir:      "",
-		WalletDir:         walletDir,
-		CanUnlockAccounts: true,
-	})
-	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
-	}
-	configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	switch wallet.KeymanagerKind() {
+	switch keymanagerKind {
 	case v2keymanager.Remote:
 		log.Fatal("Cannot create a new account for a remote keymanager")
 	case v2keymanager.Direct:
 		passwordsDirPath := inputPasswordsDirectory(cliCtx)
-		_ = passwordsDirPath // TODO: Use it.
+		// Read the directory for password storage from user input.
+		wallet, err := OpenWallet(ctx, &WalletConfig{
+			PasswordsDir:      passwordsDirPath,
+			WalletDir:         walletDir,
+			CanUnlockAccounts: true,
+		})
+		if err != nil {
+			log.Fatalf("Could not open wallet: %v", err)
+		}
+		configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
 		cfg, err := direct.UnmarshalConfigFile(configFile)
 		if err != nil {
 			log.Fatal(err)
@@ -67,11 +69,27 @@ func NewAccount(cliCtx *cli.Context) error {
 		if err != nil {
 			log.Fatal(err)
 		}
+		password, err := inputNewAccountPassword(cliCtx)
+		if err != nil {
+			log.Fatal(err)
+		}
 		// Create a new validator account using the specified keymanager.
-		if _, err := keymanager.CreateAccount(ctx, ""); err != nil {
+		if _, err := keymanager.CreateAccount(ctx, password); err != nil {
 			log.Fatalf("Could not create account in wallet: %v", err)
 		}
 	case v2keymanager.Derived:
+		// Read the directory for password storage from user input.
+		wallet, err := OpenWallet(ctx, &WalletConfig{
+			WalletDir:         walletDir,
+			CanUnlockAccounts: true,
+		})
+		if err != nil {
+			log.Fatalf("Could not open wallet: %v", err)
+		}
+		configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
 		cfg, err := derived.UnmarshalConfigFile(configFile)
 		if err != nil {
 			log.Fatal(err)
@@ -84,7 +102,7 @@ func NewAccount(cliCtx *cli.Context) error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if _, err := keymanager.CreateAccount(ctx, ""); err != nil {
+		if _, err := keymanager.CreateAccount(ctx); err != nil {
 			log.Fatalf("Could not create account in wallet: %v", err)
 		}
 	default:

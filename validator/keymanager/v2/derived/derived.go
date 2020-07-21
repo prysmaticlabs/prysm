@@ -72,6 +72,7 @@ type Keymanager struct {
 	lock              sync.RWMutex
 	seedCfg           *SeedConfig
 	seed              []byte
+	walletPassword    string
 }
 
 // SeedConfig json file representation as a Go struct.
@@ -127,8 +128,9 @@ func NewKeymanager(
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: skipMnemonicConfirm,
 		},
-		seedCfg: seedConfig,
-		seed:    seed,
+		seedCfg:        seedConfig,
+		seed:           seed,
+		walletPassword: password,
 	}
 	return k, nil
 }
@@ -226,7 +228,7 @@ func (dr *Keymanager) AccountNames(ctx context.Context) ([]string, error) {
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
-func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
@@ -242,7 +244,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	encodedWithdrawalKeystore, err := dr.generateKeystoreFile(
 		withdrawalKey.Marshal(),
 		withdrawalKey.PublicKey().Marshal(),
-		password,
+		dr.walletPassword,
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate keystore file for withdrawal account")
@@ -250,7 +252,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	encodedValidatingKeystore, err := dr.generateKeystoreFile(
 		validatingKey.Marshal(),
 		validatingKey.PublicKey().Marshal(),
-		password,
+		dr.walletPassword,
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate keystore file for validating account")
