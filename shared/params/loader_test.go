@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestLoadConfigFile(t *testing.T) {
@@ -109,9 +110,7 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 func ConfigFilePath(t *testing.T, config string) string {
 	configFolderPath := path.Join("tests", config)
 	filepath, err := bazel.Runfile(configFolderPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	configFilePath := path.Join(filepath, "config.yaml")
 	return configFilePath
 }
