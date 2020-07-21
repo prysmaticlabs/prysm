@@ -28,31 +28,6 @@ func (e Exporter) Backup(ctx context.Context) error {
 	return e.db.Backup(ctx)
 }
 
-// AttestationsByDataRoot -- passthrough.
-func (e Exporter) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error) {
-	return e.db.AttestationsByDataRoot(ctx, attDataRoot)
-}
-
-// Attestations -- passthrough.
-func (e Exporter) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*eth.Attestation, error) {
-	return e.db.Attestations(ctx, f)
-}
-
-// HasAttestation -- passthrough.
-func (e Exporter) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
-	return e.db.HasAttestation(ctx, attDataRoot)
-}
-
-// DeleteAttestation -- passthrough.
-func (e Exporter) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
-	return e.db.DeleteAttestation(ctx, attDataRoot)
-}
-
-// DeleteAttestations -- passthrough.
-func (e Exporter) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
-	return e.db.DeleteAttestations(ctx, attDataRoots)
-}
-
 // Block -- passthrough.
 func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
 	return e.db.Block(ctx, blockRoot)
