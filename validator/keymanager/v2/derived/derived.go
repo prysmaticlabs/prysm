@@ -202,7 +202,7 @@ func (dr *Keymanager) AccountNames(ctx context.Context) ([]string, error) {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
 		names = append(names, petnames.DeterministicName([]byte(withdrawalKeyPath), "-"))
 	}
-	return nil, nil
+	return names, nil
 }
 
 // CreateAccount for a derived keymanager implementation. This utilizes
