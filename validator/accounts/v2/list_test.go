@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	mock "github.com/prysmaticlabs/prysm/validator/keymanager/v2/testing"
 )
 
 func TestListAccounts_DirectKeymanager(t *testing.T) {
@@ -62,9 +61,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = w
 
-	keymanager := &mock.MockKeymanager{
-		PublicKeys: pubKeys,
-	}
+	keymanager := &direct.Keymanager{}
 	// We call the list direct keymanager accounts function.
 	require.NoError(t, listDirectKeymanagerAccounts(true /* show deposit data */, wallet, keymanager))
 
