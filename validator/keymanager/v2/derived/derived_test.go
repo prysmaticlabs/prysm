@@ -2,12 +2,16 @@ package derived
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -91,4 +95,128 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()))
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()))
+}
+
+func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+	}
+	dr := &Keymanager{
+		wallet:    wallet,
+		keysCache: make(map[[48]byte]bls.SecretKey),
+		seedCfg: &SeedConfig{
+			NextAccount: 0,
+		},
+		seed: make([]byte, 32),
+	}
+	// First, generate accounts and their keystore.json files.
+	ctx := context.Background()
+	numAccounts := 20
+	password := "hello world"
+	wantedPublicKeys := make([][48]byte, numAccounts)
+	var err error
+	var accountName string
+	for i := 0; i < numAccounts; i++ {
+		accountName, err = dr.CreateAccount(ctx, password)
+		require.NoError(t, err)
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		enc, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
+		require.NoError(t, err)
+		keystore := &v2keymanager.Keystore{}
+		require.NoError(t, json.Unmarshal(enc, keystore))
+		pubKey, err := hex.DecodeString(keystore.Pubkey)
+		require.NoError(t, err)
+		wantedPublicKeys[i] = bytesutil.ToBytes48(pubKey)
+	}
+	assert.Equal(t, fmt.Sprintf("%d", numAccounts-1), accountName)
+
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+
+	// The results are not guaranteed to be ordered, so we ensure each
+	// key we expect exists in the results via a map.
+	keysMap := make(map[[48]byte]bool)
+	for _, key := range publicKeys {
+		keysMap[key] = true
+	}
+	for _, wanted := range wantedPublicKeys {
+		if _, ok := keysMap[wanted]; !ok {
+			t.Errorf("Could not find expected public key %#x in results", wanted)
+		}
+	}
+}
+
+func TestDerivedKeymanager_Sign(t *testing.T) {
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+	}
+	seed := make([]byte, 32)
+	copy(seed, "hello world")
+	dr := &Keymanager{
+		wallet:    wallet,
+		seed:      seed,
+		keysCache: make(map[[48]byte]bls.SecretKey),
+		seedCfg: &SeedConfig{
+			NextAccount: 0,
+		},
+	}
+
+	// First, generate some accounts.
+	numAccounts := 2
+	ctx := context.Background()
+	password := "hello world"
+	var err error
+	var accountName string
+	for i := 0; i < numAccounts; i++ {
+		accountName, err = dr.CreateAccount(ctx, password)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, fmt.Sprintf("%d", numAccounts-1), accountName)
+
+	// Initialize the secret keys cache for the keymanager.
+	require.NoError(t, dr.initializeSecretKeysCache())
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+
+	// We prepare naive data to sign.
+	data := []byte("eth2data")
+	signRequest := &validatorpb.SignRequest{
+		PublicKey:   publicKeys[0][:],
+		SigningRoot: data,
+	}
+	sig, err := dr.Sign(ctx, signRequest)
+	require.NoError(t, err)
+	pubKey, err := bls.PublicKeyFromBytes(publicKeys[0][:])
+	require.NoError(t, err)
+	wrongPubKey, err := bls.PublicKeyFromBytes(publicKeys[1][:])
+	require.NoError(t, err)
+
+	// Check if the signature verifies.
+	assert.Equal(t, true, sig.Verify(pubKey, data))
+	// Check if the bad signature fails.
+	assert.Equal(t, false, sig.Verify(wrongPubKey, data))
+}
+
+func TestDerivedKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
+	req := &validatorpb.SignRequest{
+		PublicKey: nil,
+	}
+	dr := &Keymanager{}
+	_, err := dr.Sign(context.Background(), req)
+	assert.NotNil(t, err)
+	assert.Equal(t, strings.Contains(err.Error(), "nil public key"), true)
+}
+
+func TestDerivedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
+	req := &validatorpb.SignRequest{
+		PublicKey: []byte("hello world"),
+	}
+	dr := &Keymanager{
+		keysCache: make(map[[48]byte]bls.SecretKey),
+	}
+	_, err := dr.Sign(context.Background(), req)
+	assert.NotNil(t, err)
+	assert.Equal(t, strings.Contains(err.Error(), "no signing key found"), true)
 }
