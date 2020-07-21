@@ -22,13 +22,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPathExpansion(t *testing.T) {
 	user, err := user.Current()
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	tests := map[string]string{
 		"/home/someuser/tmp": "/home/someuser/tmp",
 		"~/tmp":              user.HomeDir + "/tmp",
@@ -36,10 +35,7 @@ func TestPathExpansion(t *testing.T) {
 		"$DDDXXX/a/b":        "/tmp/a/b",
 		"/a/b/":              "/a/b",
 	}
-	err = os.Setenv("DDDXXX", "/tmp")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, os.Setenv("DDDXXX", "/tmp"))
 	for test, expected := range tests {
 		assert.Equal(t, expected, expandPath(test))
 	}
