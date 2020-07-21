@@ -101,6 +101,18 @@ func (m *Wallet) WriteFileAtPath(ctx context.Context, pathName string, fileName 
 	return nil
 }
 
+// ReadFileAtPath --
+func (m *Wallet) ReadFileAtPath(ctx context.Context, pathName string, fileName string) ([]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	for f, v := range m.Files[pathName] {
+		if f == fileName {
+			return v, nil
+		}
+	}
+	return nil, errors.New("file not found")
+}
+
 // ReadEncryptedSeedFromDisk --
 func (m *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
 	m.lock.Lock()
