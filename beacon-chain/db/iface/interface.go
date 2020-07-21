@@ -18,10 +18,6 @@ import (
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
 type ReadOnlyDatabase interface {
-	// Attestation related methods.
-	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error)
-	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*eth.Attestation, error)
-	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
 	// Block related methods.
 	Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error)
@@ -67,11 +63,6 @@ type ReadOnlyDatabase interface {
 type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
-	// Attestation related methods.
-	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
-	DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error
-	SaveAttestation(ctx context.Context, att *eth.Attestation) error
-	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
 	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
