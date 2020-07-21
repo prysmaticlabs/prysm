@@ -20,6 +20,8 @@ import (
 	"os"
 	"os/user"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestPathExpansion(t *testing.T) {
@@ -39,9 +41,6 @@ func TestPathExpansion(t *testing.T) {
 		t.Error(err)
 	}
 	for test, expected := range tests {
-		got := expandPath(test)
-		if got != expected {
-			t.Errorf("test %s, got %s, expected %s\n", test, got, expected)
-		}
+		assert.Equal(t, expected, expandPath(test))
 	}
 }

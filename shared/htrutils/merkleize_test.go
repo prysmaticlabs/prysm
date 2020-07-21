@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestGetDepth(t *testing.T) {
@@ -12,9 +13,7 @@ func TestGetDepth(t *testing.T) {
 	expected := uint8(30)
 
 	result := htrutils.GetDepth(trieSize)
-	if expected != result {
-		t.Errorf("Expected trie size to be %d, received %d", expected, result)
-	}
+	assert.Equal(t, expected, result)
 }
 
 func TestMerkleizeCountGreaterThanLimit(t *testing.T) {
@@ -44,9 +43,7 @@ func TestMerkleizeLimitAndCountAreZero(t *testing.T) {
 	}
 	expected := [32]byte{}
 	result := htrutils.Merkleize(hashFn, count, limit, leafIndexer)
-	if expected != result {
-		t.Errorf("Expected to be %d, received %d", expected, result)
-	}
+	assert.Equal(t, expected, result)
 }
 
 func TestMerkleizeNormalPath(t *testing.T) {
@@ -59,9 +56,7 @@ func TestMerkleizeNormalPath(t *testing.T) {
 	}
 	expected := [32]byte{95, 27, 253, 237, 215, 58, 147, 198, 175, 194, 180, 231, 154, 130, 205, 68, 146, 112, 225, 86, 6, 103, 186, 82, 7, 142, 33, 189, 174, 56, 199, 173}
 	result := htrutils.Merkleize(hashFn, count, limit, leafIndexer)
-	if expected != result {
-		t.Errorf("Expected to be %d, received %d", expected, result)
-	}
+	assert.Equal(t, expected, result)
 }
 
 func TestConstructProofCountGreaterThanLimit(t *testing.T) {
@@ -112,12 +107,8 @@ func TestConstructProofNormalPath(t *testing.T) {
 		{245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169, 39, 89, 251, 75},
 	}
 	result := htrutils.ConstructProof(hashFn, count, limit, leafIndexer, index)
-	if len(expected) != len(result) {
-		t.Errorf("Expected slice len to be %d, received %d", len(expected), len(result))
-	}
+	assert.Equal(t, len(expected), len(result))
 	for i, v := range expected {
-		if v != result[i] {
-			t.Errorf("Expected slice %d to be %d, received %d", i, v, result[i])
-		}
+		assert.DeepEqual(t, result[i], v)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -17,8 +18,8 @@ import (
 )
 
 func TestCreateWallet_Direct(t *testing.T) {
-	walletDir := testutil.TempDir() + "/wallet"
-	passwordsDir := testutil.TempDir() + "/walletpasswords"
+	walletDir := filepath.Join(testutil.TempDir(), walletDirName)
+	passwordsDir := filepath.Join(testutil.TempDir(), passwordDirName)
 	defer func() {
 		assert.NoError(t, os.RemoveAll(walletDir))
 		assert.NoError(t, os.RemoveAll(passwordsDir))
@@ -29,10 +30,10 @@ func TestCreateWallet_Direct(t *testing.T) {
 	keymanagerKind := "direct"
 	set.String(flags.WalletDirFlag.Name, walletDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, keymanagerKind, "")
-	set.String(flags.WalletPasswordsDirFlag.Name, keymanagerKind, "")
+	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
 	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanagerKind))
+	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.

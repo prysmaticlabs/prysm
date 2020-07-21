@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,55 +25,35 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := stateTrie.InitializeFromProto(genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	cloned, ok := proto.Clone(genesis).(*pb.BeaconState)
-	if !ok {
-		t.Error("Object is not of type *pb.BeaconState")
-	}
+	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconState")
 	custom := customState.CloneInnerState()
 	if !proto.Equal(cloned, custom) {
 		t.Fatal("Cloned states did not match")
 	}
 
 	r1, err := customState.HashTreeRoot(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	r2, err := stateutil.HashTreeRootState(genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r1 != r2 {
-		t.Fatalf("Mismatched roots, custom HTR %#x != regular HTR %#x", r1, r2)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, r1, r2, "Mismatched roots")
 
 	// We then write to the the state and compare hash tree roots again.
 	balances := genesis.Balances
 	balances[0] = 3823
-	if err := customState.SetBalances(balances); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, customState.SetBalances(balances))
 	r1, err = customState.HashTreeRoot(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	genesis.Balances = balances
 	r2, err = stateutil.HashTreeRootState(genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r1 != r2 {
-		t.Fatalf("Mismatched roots, custom HTR %#x != regular HTR %#x", r1, r2)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, r1, r2, "Mismatched roots")
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {
 	genesisState, _, err := interop.GenerateGenesisState(0, count)
-	if err != nil {
-		tb.Fatalf("Could not generate genesis beacon state: %v", err)
-	}
+	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
 		someKey := [48]byte{}
@@ -145,9 +127,7 @@ func BenchmarkStateClone_Proto(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_, ok := proto.Clone(genesis).(*pb.BeaconState)
-		if !ok {
-			b.Error("Entity is not of type *pb.BeaconState")
-		}
+		assert.Equal(b, true, ok, "Entity is not of type *pb.BeaconState")
 	}
 }
 
@@ -156,9 +136,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(b, 64)
 	st, err := stateTrie.InitializeFromProto(genesis)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_ = st.CloneInnerState()
@@ -199,51 +177,33 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(t, 64)
 	a, err := stateTrie.InitializeFromProto(genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b := a.Copy()
 
 	// Randao mixes
-	if !reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
-		t.Fatal("Test precondition failed, fields are not equal")
-	}
-	if err := a.UpdateRandaoMixesAtIndex(1, []byte("foo")); err != nil {
-		t.Fatal(err)
-	}
+	require.DeepEqual(t, a.RandaoMixes(), b.RandaoMixes(), "Test precondition failed, fields are not equal")
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(1, []byte("foo")))
 	if reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
 		t.Error("Expect a.RandaoMixes() to be different from b.RandaoMixes()")
 	}
 
 	// Validators
-	if !reflect.DeepEqual(a.Validators(), b.Validators()) {
-		t.Fatal("Test precondition failed, fields are not equal")
-	}
-	if err := a.UpdateValidatorAtIndex(1, &ethpb.Validator{Slashed: true}); err != nil {
-		t.Fatal(err)
-	}
+	require.DeepEqual(t, a.Validators(), b.Validators(), "Test precondition failed, fields are not equal")
+	require.NoError(t, a.UpdateValidatorAtIndex(1, &ethpb.Validator{Slashed: true}))
 	if reflect.DeepEqual(a.Validators(), b.Validators()) {
 		t.Error("Expect a.Validators() to be different from b.Validators()")
 	}
 
 	// State Roots
-	if !reflect.DeepEqual(a.StateRoots(), b.StateRoots()) {
-		t.Fatal("Test precondition failed, fields are not equal")
-	}
-	if err := a.UpdateStateRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))); err != nil {
-		t.Fatal(err)
-	}
+	require.DeepEqual(t, a.StateRoots(), b.StateRoots(), "Test precondition failed, fields are not equal")
+	require.NoError(t, a.UpdateStateRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))))
 	if reflect.DeepEqual(a.StateRoots(), b.StateRoots()) {
 		t.Fatal("Expected a.StateRoots() to be different from b.StateRoots()")
 	}
 
 	// Block Roots
-	if !reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
-		t.Fatal("Test precondition failed, fields are not equal")
-	}
-	if err := a.UpdateBlockRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))); err != nil {
-		t.Fatal(err)
-	}
+	require.DeepEqual(t, a.BlockRoots(), b.BlockRoots(), "Test precondition failed, fields are not equal")
+	require.NoError(t, a.UpdateBlockRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))))
 	if reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
 		t.Fatal("Expected a.BlockRoots() to be different from b.BlockRoots()")
 	}
@@ -253,17 +213,13 @@ func TestForkManualCopy_OK(t *testing.T) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(t, 64)
 	a, err := stateTrie.InitializeFromProto(genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wantedFork := &pb.Fork{
 		PreviousVersion: []byte{'a', 'b', 'c'},
 		CurrentVersion:  []byte{'d', 'e', 'f'},
 		Epoch:           0,
 	}
-	if err := a.SetFork(wantedFork); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, a.SetFork(wantedFork))
 
 	newState := a.CloneInnerState()
 	if !ssz.DeepEqual(newState.Fork, wantedFork) {
