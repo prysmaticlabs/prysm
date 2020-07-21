@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 const addr = "127.0.0.1:8989"
@@ -28,9 +30,7 @@ func TestLogrusCollector(t *testing.T) {
 	go service.Start()
 	defer func() {
 		err := service.Stop()
-		if err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, err)
 	}()
 
 	tests := []struct {
@@ -72,13 +72,9 @@ func TestLogrusCollector(t *testing.T) {
 
 func getMetrics(t *testing.T) []string {
 	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", addr))
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	return strings.Split(string(body), "\n")
 }
 
@@ -92,9 +88,7 @@ func getValueFor(t *testing.T, metrics []string, prefix string, level log.Level)
 		if strings.HasPrefix(line, pattern) {
 			parts := strings.Split(line, " ")
 			count, err := strconv.ParseFloat(parts[1], 64)
-			if err != nil {
-				t.Errorf("Failed to convert metric counter to float: %s", err)
-			}
+			assert.NoError(t, err)
 			return int(count)
 		}
 	}

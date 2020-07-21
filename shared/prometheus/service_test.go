@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,17 +27,13 @@ func TestLifecycle(t *testing.T) {
 
 	// Query the service to ensure it really started.
 	resp, err := http.Get("http://localhost:2112/metrics")
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	if resp.ContentLength == 0 {
 		t.Error("Unexpected content length 0")
 	}
 
 	err = prometheusService.Stop()
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	// Give service time to stop.
 	time.Sleep(time.Second)
 
@@ -71,9 +68,7 @@ func TestHealthz(t *testing.T) {
 	s := NewPrometheusService("" /*addr*/, registry)
 
 	req, err := http.NewRequest("GET", "/healthz", nil /*reader*/)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	handler := http.HandlerFunc(s.healthzHandler)
 
@@ -127,9 +122,7 @@ func TestContentNegotiation(t *testing.T) {
 		s := NewPrometheusService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		handler := http.HandlerFunc(s.healthzHandler)
 		rr := httptest.NewRecorder()
@@ -162,9 +155,7 @@ func TestContentNegotiation(t *testing.T) {
 		s := NewPrometheusService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		handler := http.HandlerFunc(s.healthzHandler)
 		rr := httptest.NewRecorder()
