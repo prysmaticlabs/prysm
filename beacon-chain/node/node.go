@@ -96,6 +96,15 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
+	if cliCtx.IsSet(flags.HistoricalSlasherNode.Name) {
+		c := params.BeaconConfig()
+		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch
+		params.OverrideBeaconConfig(c)
+		cmdConfig := cmd.Get()
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
+		cmd.Init(cmdConfig)
+	}
+
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig()
 		c.SlotsPerArchivedPoint = uint64(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
@@ -268,6 +277,8 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
+	log.WithField("database-path", dbPath).Info("Checking DB")
+
 	d, err := db.NewDB(dbPath, b.stateSummaryCache)
 	if err != nil {
 		return err
@@ -299,9 +310,18 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		}
 	}
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	if err := d.RunMigrations(b.ctx); err != nil {
+		return err
+	}
+
 	b.db = d
-	b.depositCache = depositcache.NewDepositCache()
+
+	depositCache, err := depositcache.NewDepositCache()
+	if err != nil {
+		return errors.Wrap(err, "could not create deposit cache")
+	}
+
+	b.depositCache = depositCache
 	return nil
 }
 

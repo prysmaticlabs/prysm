@@ -28,31 +28,6 @@ func (e Exporter) Backup(ctx context.Context) error {
 	return e.db.Backup(ctx)
 }
 
-// AttestationsByDataRoot -- passthrough.
-func (e Exporter) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error) {
-	return e.db.AttestationsByDataRoot(ctx, attDataRoot)
-}
-
-// Attestations -- passthrough.
-func (e Exporter) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*eth.Attestation, error) {
-	return e.db.Attestations(ctx, f)
-}
-
-// HasAttestation -- passthrough.
-func (e Exporter) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
-	return e.db.HasAttestation(ctx, attDataRoot)
-}
-
-// DeleteAttestation -- passthrough.
-func (e Exporter) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
-	return e.db.DeleteAttestation(ctx, attDataRoot)
-}
-
-// DeleteAttestations -- passthrough.
-func (e Exporter) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
-	return e.db.DeleteAttestations(ctx, attDataRoots)
-}
-
 // Block -- passthrough.
 func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
 	return e.db.Block(ctx, blockRoot)
@@ -283,11 +258,6 @@ func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) 
 	return e.db.SavePowchainData(ctx, data)
 }
 
-// SaveArchivedPointRoot -- passthrough
-func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
-	return e.db.SaveArchivedPointRoot(ctx, blockRoot, index)
-}
-
 // ArchivedPointRoot -- passthrough
 func (e Exporter) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 	return e.db.ArchivedPointRoot(ctx, index)
@@ -298,14 +268,9 @@ func (e Exporter) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	return e.db.HasArchivedPoint(ctx, index)
 }
 
-// LastArchivedIndexRoot -- passthrough
-func (e Exporter) LastArchivedIndexRoot(ctx context.Context) [32]byte {
-	return e.db.LastArchivedIndexRoot(ctx)
-}
-
-// HighestSlotBlocks -- passthrough
-func (e Exporter) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
-	return e.db.HighestSlotBlocks(ctx)
+// LastArchivedRoot -- passthrough
+func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
+	return e.db.LastArchivedRoot(ctx)
 }
 
 // HighestSlotBlocksBelow -- passthrough
@@ -313,27 +278,22 @@ func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*e
 	return e.db.HighestSlotBlocksBelow(ctx, slot)
 }
 
-// HighestSlotStates -- passthrough
-func (e Exporter) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
-	return e.db.HighestSlotStates(ctx)
-}
-
 // HighestSlotStatesBelow -- passthrough
 func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
 	return e.db.HighestSlotStatesBelow(ctx, slot)
 }
 
-// SaveLastArchivedIndex -- passthrough
-func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	return e.db.SaveLastArchivedIndex(ctx, index)
-}
-
-// LastArchivedIndex -- passthrough
-func (e Exporter) LastArchivedIndex(ctx context.Context) (uint64, error) {
-	return e.db.LastArchivedIndex(ctx)
+// LastArchivedSlot -- passthrough
+func (e Exporter) LastArchivedSlot(ctx context.Context) (uint64, error) {
+	return e.db.LastArchivedSlot(ctx)
 }
 
 // HistoricalStatesDeleted -- passthrough
 func (e Exporter) HistoricalStatesDeleted(ctx context.Context) error {
 	return e.db.HistoricalStatesDeleted(ctx)
+}
+
+// RunMigrations -- passthrough
+func (e Exporter) RunMigrations(ctx context.Context) error {
+	return e.db.RunMigrations(ctx)
 }

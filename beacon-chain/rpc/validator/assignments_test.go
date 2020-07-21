@@ -26,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // pubKey is a helper to generate a well-formed public key.
@@ -41,9 +43,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 
 	genesis := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root")
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -55,12 +55,15 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	chain := &mockChain.ChainService{
 		State: beaconState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
 	vs := &Server{
 		BeaconDB:           db,
 		HeadFetcher:        chain,
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		Eth1InfoFetcher:    p,
-		DepositFetcher:     depositcache.NewDepositCache(),
+		DepositFetcher:     depositCache,
 		GenesisTimeFetcher: chain,
 	}
 
@@ -80,21 +83,13 @@ func TestGetDuties_OK(t *testing.T) {
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
-	if err != nil {
-		t.Fatalf("Could not setup genesis bs: %v", err)
-	}
+	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
@@ -123,9 +118,7 @@ func TestGetDuties_OK(t *testing.T) {
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
 	}
 	res, err := vs.GetDuties(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Could not call epoch committee assignment %v", err)
-	}
+	require.NoError(t, err, "Could not call epoch committee assignment")
 	if res.CurrentEpochDuties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.CurrentEpochDuties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
@@ -137,9 +130,7 @@ func TestGetDuties_OK(t *testing.T) {
 		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.PublicKey},
 	}
 	res, err = vs.GetDuties(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Could not call epoch committee assignment %v", err)
-	}
+	require.NoError(t, err, "Could not call epoch committee assignment")
 	if res.CurrentEpochDuties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.CurrentEpochDuties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
@@ -151,13 +142,9 @@ func TestGetDuties_OK(t *testing.T) {
 		Epoch:      0,
 	}
 	res, err = vs.GetDuties(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Could not call epoch committee assignment %v", err)
-	}
+	require.NoError(t, err, "Could not call epoch committee assignment")
 	for i := 0; i < len(res.CurrentEpochDuties); i++ {
-		if res.CurrentEpochDuties[i].ValidatorIndex != uint64(i) {
-			t.Errorf("Wanted %d, received %d", i, res.CurrentEpochDuties[i].ValidatorIndex)
-		}
+		assert.Equal(t, uint64(i), res.CurrentEpochDuties[i].ValidatorIndex)
 	}
 }
 
@@ -167,26 +154,16 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
+	require.NoError(t, err, "Could not setup genesis state")
 	// Set state to non-epoch start slot.
-	if err := bState.SetSlot(5); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, bState.SetSlot(5))
 
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
@@ -210,12 +187,8 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
 	}
 	res, err := vs.GetDuties(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.CurrentEpochDuties) != 1 {
-		t.Error("Expected 1 assignment")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(res.CurrentEpochDuties), "Expected 1 assignment")
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
@@ -225,21 +198,13 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	depChainStart := uint64(64)
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
-	if err != nil {
-		t.Fatalf("Could not setup genesis bs: %v", err)
-	}
+	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
@@ -266,19 +231,10 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		PublicKeys: [][]byte{pubkey0, pubkey1},
 	}
 	res, err := vs.GetDuties(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Could not call epoch committee assignment %v", err)
-	}
-
-	if len(res.CurrentEpochDuties) != 2 {
-		t.Errorf("expected 2 assignments but got %d", len(res.CurrentEpochDuties))
-	}
-	if res.CurrentEpochDuties[0].AttesterSlot != 4 {
-		t.Errorf("Expected res.CurrentEpochDuties[0].AttesterSlot == 4, got %d", res.CurrentEpochDuties[0].AttesterSlot)
-	}
-	if res.CurrentEpochDuties[1].AttesterSlot != 4 {
-		t.Errorf("Expected res.CurrentEpochDuties[1].AttesterSlot == 4, got %d", res.CurrentEpochDuties[1].AttesterSlot)
-	}
+	require.NoError(t, err, "Could not call epoch committee assignment")
+	assert.Equal(t, 2, len(res.CurrentEpochDuties))
+	assert.Equal(t, uint64(4), res.CurrentEpochDuties[0].AttesterSlot)
+	assert.Equal(t, uint64(4), res.CurrentEpochDuties[1].AttesterSlot)
 }
 
 func TestGetDuties_SyncNotReady(t *testing.T) {
@@ -286,9 +242,7 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := vs.GetDuties(context.Background(), &ethpb.DutiesRequest{})
-	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
-		t.Error("Did not get wanted error")
-	}
+	assert.ErrorContains(t, "Syncing to latest head", err)
 }
 
 func TestStreamDuties_SyncNotReady(t *testing.T) {
@@ -298,11 +252,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mock.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
-	if err := vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream); err == nil || strings.Contains(
-		err.Error(), "syncing to latest head",
-	) {
-		t.Error("Did not get wanted error")
-	}
+	assert.ErrorContains(t, "Syncing to latest head", vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream))
 }
 
 func TestStreamDuties_OK(t *testing.T) {
@@ -311,21 +261,13 @@ func TestStreamDuties_OK(t *testing.T) {
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
-	if err != nil {
-		t.Fatalf("Could not setup genesis bs: %v", err)
-	}
+	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
@@ -356,9 +298,7 @@ func TestStreamDuties_OK(t *testing.T) {
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
 	}
 	wantedRes, err := vs.duties(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	exitRoutine := make(chan bool)
@@ -368,9 +308,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		if err := vs.StreamDuties(req, mockStream); err != nil && !strings.Contains(err.Error(), "context canceled") {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.ErrorContains(t, "context canceled", vs.StreamDuties(req, mockStream))
 	}(t)
 	<-exitRoutine
 	cancel()
@@ -382,21 +320,13 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
-	if err != nil {
-		t.Fatalf("Could not setup genesis bs: %v", err)
-	}
+	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
@@ -427,9 +357,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
 	}
 	wantedRes, err := vs.duties(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	exitRoutine := make(chan bool)
@@ -440,9 +368,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		if err := vs.StreamDuties(req, mockStream); err != nil && !strings.Contains(err.Error(), "context canceled") {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.ErrorContains(t, "context canceled", vs.StreamDuties(req, mockStream))
 	}(t)
 	// Fire a reorg event within the same epoch. This should NOT
 	// trigger a recomputation not resending of duties over the stream.
@@ -469,12 +395,8 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 
 	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
 	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
-	if !ok {
-		t.Fatal("No cache entry found for validator")
-	}
-	if uint64(len(coms)) != params.BeaconNetworkConfig().RandomSubnetsPerValidator {
-		t.Errorf("Only %d committees subscribed when %d was needed.", len(coms), params.BeaconNetworkConfig().RandomSubnetsPerValidator)
-	}
+	require.Equal(t, true, ok, "No cache entry found for validator")
+	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
 	receivedTime := exp.Round(time.Second).Sub(time.Now())
@@ -489,21 +411,13 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
-	if err != nil {
-		b.Fatalf("Could not setup genesis bs: %v", err)
-	}
+	require.NoError(b, err, "Could not setup genesis bs")
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		b.Fatalf("Could not get signing root %v", err)
-	}
+	require.NoError(b, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
@@ -530,8 +444,6 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := vs.GetDuties(context.Background(), req)
-		if err != nil {
-			b.Error(err)
-		}
+		assert.NoError(b, err)
 	}
 }

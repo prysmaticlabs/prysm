@@ -106,6 +106,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.BlockBatchLimitBurstFactor,
 			flags.EnableDebugRPCEndpoints,
 			flags.SlotsPerArchivedPoint,
+			flags.HistoricalSlasherNode,
 		},
 	},
 	{

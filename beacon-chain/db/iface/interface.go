@@ -18,10 +18,6 @@ import (
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
 type ReadOnlyDatabase interface {
-	// Attestation related methods.
-	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error)
-	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*eth.Attestation, error)
-	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
 	// Block related methods.
 	Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error)
@@ -29,7 +25,6 @@ type ReadOnlyDatabase interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
-	HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error)
 	HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
@@ -37,7 +32,6 @@ type ReadOnlyDatabase interface {
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
-	HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error)
 	HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error)
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
@@ -55,10 +49,10 @@ type ReadOnlyDatabase interface {
 	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error)
 	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
 	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error)
-	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
-	HasArchivedPoint(ctx context.Context, index uint64) bool
-	LastArchivedIndexRoot(ctx context.Context) [32]byte
-	LastArchivedIndex(ctx context.Context) (uint64, error)
+	ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte
+	HasArchivedPoint(ctx context.Context, slot uint64) bool
+	LastArchivedRoot(ctx context.Context) [32]byte
+	LastArchivedSlot(ctx context.Context) (uint64, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
@@ -69,11 +63,6 @@ type ReadOnlyDatabase interface {
 type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
-	// Attestation related methods.
-	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
-	DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error
-	SaveAttestation(ctx context.Context, att *eth.Attestation) error
-	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
 	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
@@ -98,12 +87,13 @@ type NoHeadAccessDatabase interface {
 	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
-	SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error
-	SaveLastArchivedIndex(ctx context.Context, index uint64) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
+
+	// Run any required database migrations.
+	RunMigrations(ctx context.Context) error
 }
 
 // HeadAccessDatabase defines a struct with access to reading chain head data.

@@ -9,11 +9,14 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_Broadcast(t *testing.T) {
@@ -27,6 +30,7 @@ func TestService_Broadcast(t *testing.T) {
 	p := &Service{
 		host:                  p1.BHost,
 		pubsub:                p1.PubSub(),
+		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
@@ -40,17 +44,13 @@ func TestService_Broadcast(t *testing.T) {
 	// Set a test gossip mapping for testpb.TestSimpleMessage.
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	topic = fmt.Sprintf(topic, digest)
 
 	// External peer subscribes to the topic.
 	topic += p.Encoding().ProtocolSuffix()
-	sub, err := p2.PubSub().Subscribe(topic)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sub, err := p2.SubscribeToTopic(topic)
+	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...
 
@@ -63,23 +63,17 @@ func TestService_Broadcast(t *testing.T) {
 		defer cancel()
 
 		incomingMessage, err := sub.Next(ctx)
-		if err != nil {
-			tt.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		result := &testpb.TestSimpleMessage{}
-		if err := p.Encoding().DecodeGossip(incomingMessage.Data, result); err != nil {
-			tt.Fatal(err)
-		}
+		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)
 		}
 	}(t)
 
 	// Broadcast to peers and wait.
-	if err := p.Broadcast(context.Background(), msg); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, p.Broadcast(context.Background(), msg))
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
 	}
@@ -90,9 +84,7 @@ func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
 	}
-	if err := p.Broadcast(context.Background(), &testpb.AddressBook{}); err != ErrMessageNotMapped {
-		t.Fatalf("Expected error %v, got %v", ErrMessageNotMapped, err)
-	}
+	assert.ErrorContains(t, ErrMessageNotMapped.Error(), p.Broadcast(context.Background(), &testpb.AddressBook{}))
 }
 
 func TestService_Attestation_Subnet(t *testing.T) {
@@ -134,8 +126,6 @@ func TestService_Attestation_Subnet(t *testing.T) {
 	}
 	for _, tt := range tests {
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(100, tt.att.Data.CommitteeIndex, tt.att.Data.Slot)
-		if res := attestationToTopic(subnet, [4]byte{} /* fork digest */); res != tt.topic {
-			t.Errorf("Wrong topic, got %s wanted %s", res, tt.topic)
-		}
+		assert.Equal(t, tt.topic, attestationToTopic(subnet, [4]byte{} /* fork digest */), "Wrong topic")
 	}
 }

@@ -10,6 +10,8 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPool_InsertVoluntaryExit(t *testing.T) {
@@ -214,9 +216,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 				included: tt.fields.included,
 			}
 			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			p.InsertVoluntaryExit(ctx, s, tt.args.exit)
 			if len(p.pending) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want))
@@ -324,9 +324,7 @@ func TestPool_MarkIncluded(t *testing.T) {
 					t.Errorf("Pending exit at index %d does not match expected. Got=%v wanted=%v", i, p.pending[i], tt.want.pending[i])
 				}
 			}
-			if !reflect.DeepEqual(p.included, tt.want.included) {
-				t.Errorf("Included map is not as expected. Got=%v wanted=%v", p.included, tt.want.included)
-			}
+			assert.DeepEqual(t, tt.want.included, p.included)
 		})
 	}
 }
@@ -451,9 +449,7 @@ func TestPool_PendingExits(t *testing.T) {
 				pending: tt.fields.pending,
 			}
 			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			if got := p.PendingExits(s, tt.args.slot); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
 			}

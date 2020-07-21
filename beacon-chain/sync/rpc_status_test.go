@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
+
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -24,18 +26,19 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to be connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	root := [32]byte{'C'}
 
 	r := &Service{p2p: p1,
+		rateLimiter: newRateLimiter(p1),
 		chain: &mock.ChainService{
 			Fork: &pb.Fork{
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -49,6 +52,8 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 			ValidatorsRoot: [32]byte{'A'},
 		}}
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -56,38 +61,29 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		if !bytes.Equal(out.FinalizedRoot, root[:]) {
 			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
 		}
+		assert.NoError(t, stream.Close())
 	})
 
 	pcl2 := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
+	topic = string(pcl2)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg2 sync.WaitGroup
 	wg2.Add(1)
 	p2.BHost.SetStreamHandler(pcl2, func(stream network.Stream) {
 		defer wg2.Done()
 		msg := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-			t.Error(err)
-		}
-		if *msg != codeWrongNetwork {
-			t.Errorf("Wrong goodbye code: %d", *msg)
-		}
-
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, msg))
+		assert.Equal(t, codeWrongNetwork, *msg)
+		assert.NoError(t, stream.Close())
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: []byte("fake")}, stream1)
-	if err != nil {
-		t.Errorf("Expected no error but got %v", err)
-	}
+	require.NoError(t, err)
+	assert.NoError(t, r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: []byte("fake")}, stream1))
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
@@ -96,21 +92,18 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	if len(p1.BHost.Network().Peers()) != 0 {
-		t.Error("handler did not disconnect peer")
-	}
+	assert.Equal(t, 0, len(p1.BHost.Network().Peers()), "handler did not disconnect peer")
 }
 
 func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to be connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	root := [32]byte{}
 
 	r := &Service{p2p: p1,
+		rateLimiter: newRateLimiter(p1),
 		chain: &mock.ChainService{
 			Fork: &pb.Fork{
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -124,6 +117,8 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 			ValidatorsRoot: [32]byte{'A'},
 		}}
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -131,72 +126,46 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		if !bytes.Equal(out.FinalizedRoot, root[:]) {
 			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
 		}
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	digest, err := r.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: digest[:], FinalizedRoot: params.BeaconConfig().ZeroHash[:]}, stream1)
-	if err != nil {
-		t.Errorf("Expected no error but got %v", err)
-	}
+	assert.NoError(t, err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("handler disconnected with peer")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Handler disconnected with peer")
 }
 
 func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to be connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
 	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.SetSlot(111); err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: blkSlot}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(context.Background(), finalizedRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+	require.NoError(t, db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: blkSlot}}))
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
 		Root:  finalizedRoot[:],
@@ -217,24 +186,23 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			ValidatorsRoot: [32]byte{'A'},
 			Genesis:        time.Unix(genTime, 0),
 		},
-		db: db,
+		db:          db,
+		rateLimiter: newRateLimiter(p1),
 	}
 	digest, err := r.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Setup streams
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		expected := &pb.Status{
 			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
@@ -247,18 +215,14 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		}
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = r.statusRPCHandler(context.Background(), &pb.Status{
 		ForkDigest:     digest[:],
 		FinalizedRoot:  finalizedRoot[:],
 		FinalizedEpoch: 3,
 	}, stream1)
-	if err != nil {
-		t.Errorf("Unxpected error: %v", err)
-	}
+	assert.NoError(t, err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
@@ -285,20 +249,12 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 5,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
-	if err := db.SaveBlock(context.Background(), blk); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), blk))
 	finalizedRoot, err := ssz.HashTreeRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(context.Background(), finalizedRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
@@ -311,48 +267,42 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		db:  db,
-		ctx: context.Background(),
+		db:          db,
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
 	}
 	p1.Digest, err = r.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	r2 := &Service{
 		chain: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
 		},
-		p2p: p2,
+		p2p:         p2,
+		rateLimiter: newRateLimiter(p2),
 	}
 	p2.Digest, err = r.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	r.Start()
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		log.WithField("status", out).Warn("received status")
 		resp := &pb.Status{HeadSlot: 100, ForkDigest: p2.Digest[:],
 			FinalizedRoot: finalizedRoot[:], FinalizedEpoch: 0}
-
-		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-			t.Fatal(err)
-		}
-		_, err := r.p2p.Encoding().EncodeWithMaxLength(stream, resp)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, err := stream.Write([]byte{responseCodeSuccess})
+		assert.NoError(t, err)
+		_, err = r.p2p.Encoding().EncodeWithMaxLength(stream, resp)
+		assert.NoError(t, err)
 		log.WithField("status", out).Warn("sending status")
 		if err := stream.Close(); err != nil {
 			t.Log(err)
@@ -360,24 +310,17 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	})
 
 	pcl = "/eth2/beacon_chain/req/ping/1/ssz_snappy"
+	topic = string(pcl)
+	r2.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg2 sync.WaitGroup
 	wg2.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg2.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
-		if *out != 2 {
-			t.Fatalf("Wanted 2 but got %d as our sequence number", *out)
-		}
-		err := r2.pingHandler(context.Background(), out, stream)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := stream.Close(); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.Equal(t, uint64(2), *out)
+		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
+		assert.NoError(t, stream.Close())
 	})
 
 	numInactive1 := len(p1.Peers().Inactive())
@@ -404,16 +347,10 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	numInactive2 := len(p1.Peers().Inactive())
 	numActive2 := len(p1.Peers().Active())
 
-	if numInactive2 != numInactive1 {
-		t.Errorf("Number of inactive peers changed unexpectedly: was %d, now %d", numInactive1, numInactive2)
-	}
-	if numActive2 != numActive1+1 {
-		t.Errorf("Number of active peers unexpected: wanted %d, found %d", numActive1+1, numActive2)
-	}
+	assert.Equal(t, numInactive1, numInactive1, "Number of inactive peers changed unexpectedly")
+	assert.Equal(t, numActive1+1, numActive2, "Number of active peers unexpected")
 
-	if err := p2.Disconnect(p1.PeerID()); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, p2.Disconnect(p1.PeerID()))
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerDisconnected)
 
 	// Wait for disconnect event to trigger.
@@ -421,12 +358,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 
 	numInactive3 := len(p1.Peers().Inactive())
 	numActive3 := len(p1.Peers().Active())
-	if numInactive3 != numInactive2+1 {
-		t.Errorf("Number of inactive peers unexpected: wanted %d, found %d", numInactive2+1, numInactive3)
-	}
-	if numActive3 != numActive2-1 {
-		t.Errorf("Number of active peers unexpected: wanted %d, found %d", numActive2-1, numActive3)
-	}
+	assert.Equal(t, numInactive2+1, numInactive3, "Number of inactive peers unexpected")
+	assert.Equal(t, numActive2-1, numActive3, "Number of active peers unexpected")
 }
 
 func TestStatusRPCRequest_RequestSent(t *testing.T) {
@@ -435,23 +368,13 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.SetSlot(111); err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -470,23 +393,22 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		ctx: context.Background(),
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		digest, err := r.forkDigest()
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		expected := &pb.Status{
 			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
@@ -506,9 +428,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to continue being connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to continue being connected")
 }
 
 func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
@@ -518,30 +438,16 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
 	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.SetSlot(111); err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: blkSlot}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(context.Background(), finalizedRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+	require.NoError(t, db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: blkSlot}}))
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
 		Root:  finalizedRoot[:],
@@ -561,7 +467,8 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 			Genesis:        time.Unix(genTime, 0),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		ctx: context.Background(),
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	r2 := &Service{
@@ -577,24 +484,22 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 			Genesis:        time.Unix(genTime, 0),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		db:  db,
-		ctx: context.Background(),
+		db:          db,
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
-		err := r2.validateStatusMessage(context.Background(), out)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r2.validateStatusMessage(context.Background(), out))
 	})
 
 	p1.AddConnectionHandler(r.sendRPCStatusRequest)
@@ -604,9 +509,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	if len(p1.BHost.Network().Peers()) != 1 {
-		t.Error("Expected peers to continue being connected")
-	}
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to continue being connected")
 }
 
 func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
@@ -615,23 +518,13 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.SetSlot(111); err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -650,21 +543,22 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		ctx: context.Background(),
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	r.Start()
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		expected := &pb.Status{
 			ForkDigest:     []byte{1, 1, 1, 1},
 			HeadSlot:       genesisState.Slot(),
@@ -676,9 +570,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			log.WithError(err).Error("Failed to write to stream")
 		}
 		_, err := r.p2p.Encoding().EncodeWithMaxLength(stream, expected)
-		if err != nil {
-			t.Errorf("Could not send status: %v", err)
-		}
+		assert.NoError(t, err)
 	})
 
 	p1.Connect(p2)
@@ -689,43 +581,25 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	connectionState, err := p1.Peers().ConnectionState(p2.PeerID())
-	if err != nil {
-		t.Fatal("Failed to obtain peer connection state")
-	}
-	if connectionState != peers.PeerDisconnected {
-		t.Error("Expected peer to be disconnected")
-	}
+	require.NoError(t, err, "Failed to obtain peer connection state")
+	assert.Equal(t, peers.PeerDisconnected, connectionState, "Expected peer to be disconnected")
 
-	badResponses, err := p1.Peers().BadResponses(p2.PeerID())
-	if err != nil {
-		t.Fatal("Failed to obtain peer connection state")
-	}
-	if badResponses != 1 {
-		t.Errorf("Bad response was not bumped to one, instead it is %d", badResponses)
-	}
+	badResponses, err := p1.Peers().Scorer().BadResponses(p2.PeerID())
+	require.NoError(t, err, "Failed to obtain peer connection state")
+	assert.Equal(t, 1, badResponses, "Bad response was not bumped to one")
 }
 
 func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
 	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.SetSlot(111); err != nil {
-		t.Fatal(err)
-	}
-	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -745,9 +619,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		ctx: context.Background(),
 	}
 	digest, err := r.forkDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// There should be no error for a status message
 	// with a genesis checkpoint.
 	err = r.validateStatusMessage(r.ctx, &pb.Status{
@@ -757,9 +629,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		HeadRoot:       headRoot[:],
 		HeadSlot:       111,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestShouldResync(t *testing.T) {
@@ -813,12 +683,8 @@ func TestShouldResync(t *testing.T) {
 	}
 	for _, tt := range tests {
 		headState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := headState.SetSlot(tt.args.headSlot); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
+		require.NoError(t, headState.SetSlot(tt.args.headSlot))
 		r := &Service{
 			chain: &mock.ChainService{
 				State:   headState,

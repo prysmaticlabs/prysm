@@ -43,6 +43,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 // StateByRootInitialSync retrieves the state from the DB for the initial syncing phase.
 // It assumes initial syncing using a block list rather than a block tree hence the returned
 // state is not copied.
+// It invalidates cache for parent root because pre state will get mutated.
 // Do not use this method for anything other than initial syncing purpose or block tree is applied.
 func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
@@ -85,6 +86,9 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 	}
+
+	// To invalidate cache for parent root because pre state will get mutated.
+	s.hotStateCache.Delete(blockRoot)
 
 	return startState, nil
 }

@@ -8,6 +8,7 @@ import (
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestSignVerify(t *testing.T) {
@@ -15,9 +16,7 @@ func TestSignVerify(t *testing.T) {
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
-	if !sig.Verify(pub, msg) {
-		t.Error("Signature did not verify")
-	}
+	assert.DeepEqual(t, true, sig.Verify(pub, msg))
 }
 
 func TestAggregateVerify(t *testing.T) {
@@ -34,9 +33,7 @@ func TestAggregateVerify(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 	aggSig := herumi.Aggregate(sigs)
-	if !aggSig.AggregateVerify(pubkeys, msgs) {
-		t.Error("Signature did not verify")
-	}
+	assert.DeepEqual(t, true, aggSig.AggregateVerify(pubkeys, msgs))
 }
 
 func TestFastAggregateVerify(t *testing.T) {
@@ -51,9 +48,7 @@ func TestFastAggregateVerify(t *testing.T) {
 		sigs = append(sigs, sig)
 	}
 	aggSig := herumi.AggregateSignatures(sigs)
-	if !aggSig.FastAggregateVerify(pubkeys, msg) {
-		t.Error("Signature did not verify")
-	}
+	assert.DeepEqual(t, true, aggSig.FastAggregateVerify(pubkeys, msg))
 }
 
 func TestMultipleSignatureVerification(t *testing.T) {

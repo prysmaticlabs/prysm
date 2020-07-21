@@ -20,9 +20,9 @@
 package peers
 
 import (
+	"context"
 	"errors"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -51,6 +51,9 @@ const (
 	PeerConnecting
 )
 
+// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
+const maxLimitBuffer = 150
+
 var (
 	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
 	ErrPeerUnknown = errors.New("peer unknown")
@@ -58,71 +61,76 @@ var (
 
 // Status is the structure holding the peer status information.
 type Status struct {
-	lock            sync.RWMutex
-	maxBadResponses int
-	status          map[peer.ID]*peerStatus
+	ctx    context.Context
+	scorer *PeerScorer
+	store  *peerDataStore
 }
 
-// peerStatus is the status of an individual peer at the protocol level.
-type peerStatus struct {
-	address               ma.Multiaddr
-	direction             network.Direction
-	peerState             PeerConnectionState
-	chainState            *pb.Status
-	enr                   *enr.Record
-	metaData              *pb.MetaData
-	chainStateLastUpdated time.Time
-	badResponses          int
+// StatusConfig represents peer status service params.
+type StatusConfig struct {
+	// PeerLimit specifies maximum amount of concurrent peers that are expected to be connect to the node.
+	PeerLimit int
+	// ScorerParams holds peer scorer configuration params.
+	ScorerParams *PeerScorerConfig
 }
 
 // NewStatus creates a new status entity.
-func NewStatus(maxBadResponses int) *Status {
+func NewStatus(ctx context.Context, config *StatusConfig) *Status {
+	store := newPeerDataStore(ctx, &peerDataStoreConfig{
+		maxPeers: maxLimitBuffer + config.PeerLimit,
+	})
 	return &Status{
-		maxBadResponses: maxBadResponses,
-		status:          make(map[peer.ID]*peerStatus),
+		ctx:    ctx,
+		store:  store,
+		scorer: newPeerScorer(ctx, store, config.ScorerParams),
 	}
 }
 
-// MaxBadResponses returns the maximum number of bad responses a peer can provide before it is considered bad.
-func (p *Status) MaxBadResponses() int {
-	return p.maxBadResponses
+// Scorer exposes peer scoring service.
+func (p *Status) Scorer() *PeerScorer {
+	return p.scorer
+}
+
+// MaxPeerLimit returns the max peer limit stored in the current peer store.
+func (p *Status) MaxPeerLimit() int {
+	return p.store.config.maxPeers
 }
 
 // Add adds a peer.
 // If a peer already exists with this ID its address and direction are updated with the supplied data.
 func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, direction network.Direction) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.store.Lock()
+	defer p.store.Unlock()
 
-	if status, ok := p.status[pid]; ok {
+	if peerData, ok := p.store.peers[pid]; ok {
 		// Peer already exists, just update its address info.
-		status.address = address
-		status.direction = direction
+		peerData.address = address
+		peerData.direction = direction
 		if record != nil {
-			status.enr = record
+			peerData.enr = record
 		}
 		return
 	}
-	status := &peerStatus{
+	peerData := &peerData{
 		address:   address,
 		direction: direction,
 		// Peers start disconnected; state will be updated when the handshake process begins.
-		peerState: PeerDisconnected,
+		connState: PeerDisconnected,
 	}
 	if record != nil {
-		status.enr = record
+		peerData.enr = record
 	}
-	p.status[pid] = status
+	p.store.peers[pid] = peerData
 }
 
 // Address returns the multiaddress of the given remote peer.
 // This will error if the peer does not exist.
 func (p *Status) Address(pid peer.ID) (ma.Multiaddr, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		return status.address, nil
+	if peerData, ok := p.store.peers[pid]; ok {
+		return peerData.address, nil
 	}
 	return nil, ErrPeerUnknown
 }
@@ -130,89 +138,89 @@ func (p *Status) Address(pid peer.ID) (ma.Multiaddr, error) {
 // Direction returns the direction of the given remote peer.
 // This will error if the peer does not exist.
 func (p *Status) Direction(pid peer.ID) (network.Direction, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		return status.direction, nil
+	if peerData, ok := p.store.peers[pid]; ok {
+		return peerData.direction, nil
 	}
 	return network.DirUnknown, ErrPeerUnknown
 }
 
 // ENR returns the enr for the corresponding peer id.
 func (p *Status) ENR(pid peer.ID) (*enr.Record, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		return status.enr, nil
+	if peerData, ok := p.store.peers[pid]; ok {
+		return peerData.enr, nil
 	}
 	return nil, ErrPeerUnknown
 }
 
 // SetChainState sets the chain state of the given remote peer.
 func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.store.Lock()
+	defer p.store.Unlock()
 
-	status := p.fetch(pid)
-	status.chainState = chainState
-	status.chainStateLastUpdated = roughtime.Now()
+	peerData := p.fetch(pid)
+	peerData.chainState = chainState
+	peerData.chainStateLastUpdated = roughtime.Now()
 }
 
 // ChainState gets the chain state of the given remote peer.
 // This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		return status.chainState, nil
+	if peerData, ok := p.store.peers[pid]; ok {
+		return peerData.chainState, nil
 	}
 	return nil, ErrPeerUnknown
 }
 
 // IsActive checks if a peers is active and returns the result appropriately.
 func (p *Status) IsActive(pid peer.ID) bool {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	status, ok := p.status[pid]
-	return ok && (status.peerState == PeerConnected || status.peerState == PeerConnecting)
+	peerData, ok := p.store.peers[pid]
+	return ok && (peerData.connState == PeerConnected || peerData.connState == PeerConnecting)
 }
 
 // SetMetadata sets the metadata of the given remote peer.
 func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.store.Lock()
+	defer p.store.Unlock()
 
-	status := p.fetch(pid)
-	status.metaData = metaData
+	peerData := p.fetch(pid)
+	peerData.metaData = metaData
 }
 
 // Metadata returns a copy of the metadata corresponding to the provided
 // peer id.
 func (p *Status) Metadata(pid peer.ID) (*pb.MetaData, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		return proto.Clone(status.metaData).(*pb.MetaData), nil
+	if peerData, ok := p.store.peers[pid]; ok {
+		return proto.Clone(peerData.metaData).(*pb.MetaData), nil
 	}
 	return nil, ErrPeerUnknown
 }
 
 // CommitteeIndices retrieves the committee subnets the peer is subscribed to.
 func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		if status.enr == nil || status.metaData == nil {
+	if peerData, ok := p.store.peers[pid]; ok {
+		if peerData.enr == nil || peerData.metaData == nil {
 			return []uint64{}, nil
 		}
-		return retrieveIndicesFromBitfield(status.metaData.Attnets), nil
+		return retrieveIndicesFromBitfield(peerData.metaData.Attnets), nil
 	}
 	return nil, ErrPeerUnknown
 }
@@ -220,15 +228,15 @@ func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 // SubscribedToSubnet retrieves the peers subscribed to the given
 // committee subnet.
 func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
+	for pid, peerData := range p.store.peers {
 		// look at active peers
-		connectedStatus := status.peerState == PeerConnecting || status.peerState == PeerConnected
-		if connectedStatus && status.metaData != nil && status.metaData.Attnets != nil {
-			indices := retrieveIndicesFromBitfield(status.metaData.Attnets)
+		connectedStatus := peerData.connState == PeerConnecting || peerData.connState == PeerConnected
+		if connectedStatus && peerData.metaData != nil && peerData.metaData.Attnets != nil {
+			indices := retrieveIndicesFromBitfield(peerData.metaData.Attnets)
 			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)
@@ -242,21 +250,21 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 
 // SetConnectionState sets the connection state of the given remote peer.
 func (p *Status) SetConnectionState(pid peer.ID, state PeerConnectionState) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.store.Lock()
+	defer p.store.Unlock()
 
-	status := p.fetch(pid)
-	status.peerState = state
+	peerData := p.fetch(pid)
+	peerData.connState = state
 }
 
 // ConnectionState gets the connection state of the given remote peer.
 // This will error if the peer does not exist.
 func (p *Status) ConnectionState(pid peer.ID) (PeerConnectionState, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		return status.peerState, nil
+	if peerData, ok := p.store.peers[pid]; ok {
+		return peerData.connState, nil
 	}
 	return PeerDisconnected, ErrPeerUnknown
 }
@@ -264,55 +272,28 @@ func (p *Status) ConnectionState(pid peer.ID) (PeerConnectionState, error) {
 // ChainStateLastUpdated gets the last time the chain state of the given remote peer was updated.
 // This will error if the peer does not exist.
 func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 
-	if status, ok := p.status[pid]; ok {
-		return status.chainStateLastUpdated, nil
+	if peerData, ok := p.store.peers[pid]; ok {
+		return peerData.chainStateLastUpdated, nil
 	}
 	return roughtime.Now(), ErrPeerUnknown
-}
-
-// IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-func (p *Status) IncrementBadResponses(pid peer.ID) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	status := p.fetch(pid)
-	status.badResponses++
-}
-
-// BadResponses obtains the number of bad responses we have received from the given remote peer.
-// This will error if the peer does not exist.
-func (p *Status) BadResponses(pid peer.ID) (int, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	if status, ok := p.status[pid]; ok {
-		return status.badResponses, nil
-	}
-	return -1, ErrPeerUnknown
 }
 
 // IsBad states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	if status, ok := p.status[pid]; ok {
-		return status.badResponses >= p.maxBadResponses
-	}
-	return false
+	return p.scorer.IsBadPeer(pid)
 }
 
 // Connecting returns the peers that are connecting.
 func (p *Status) Connecting() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.peerState == PeerConnecting {
+	for pid, peerData := range p.store.peers {
+		if peerData.connState == PeerConnecting {
 			peers = append(peers, pid)
 		}
 	}
@@ -321,11 +302,11 @@ func (p *Status) Connecting() []peer.ID {
 
 // Connected returns the peers that are connected.
 func (p *Status) Connected() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.peerState == PeerConnected {
+	for pid, peerData := range p.store.peers {
+		if peerData.connState == PeerConnected {
 			peers = append(peers, pid)
 		}
 	}
@@ -334,11 +315,11 @@ func (p *Status) Connected() []peer.ID {
 
 // Active returns the peers that are connecting or connected.
 func (p *Status) Active() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.peerState == PeerConnecting || status.peerState == PeerConnected {
+	for pid, peerData := range p.store.peers {
+		if peerData.connState == PeerConnecting || peerData.connState == PeerConnected {
 			peers = append(peers, pid)
 		}
 	}
@@ -347,11 +328,11 @@ func (p *Status) Active() []peer.ID {
 
 // Disconnecting returns the peers that are disconnecting.
 func (p *Status) Disconnecting() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.peerState == PeerDisconnecting {
+	for pid, peerData := range p.store.peers {
+		if peerData.connState == PeerDisconnecting {
 			peers = append(peers, pid)
 		}
 	}
@@ -360,11 +341,11 @@ func (p *Status) Disconnecting() []peer.ID {
 
 // Disconnected returns the peers that are disconnected.
 func (p *Status) Disconnected() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.peerState == PeerDisconnected {
+	for pid, peerData := range p.store.peers {
+		if peerData.connState == PeerDisconnected {
 			peers = append(peers, pid)
 		}
 	}
@@ -373,11 +354,11 @@ func (p *Status) Disconnected() []peer.ID {
 
 // Inactive returns the peers that are disconnecting or disconnected.
 func (p *Status) Inactive() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.peerState == PeerDisconnecting || status.peerState == PeerDisconnected {
+	for pid, peerData := range p.store.peers {
+		if peerData.connState == PeerDisconnecting || peerData.connState == PeerDisconnected {
 			peers = append(peers, pid)
 		}
 	}
@@ -386,38 +367,63 @@ func (p *Status) Inactive() []peer.ID {
 
 // Bad returns the peers that are bad.
 func (p *Status) Bad() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-	peers := make([]peer.ID, 0)
-	for pid, status := range p.status {
-		if status.badResponses >= p.maxBadResponses {
-			peers = append(peers, pid)
-		}
-	}
-	return peers
+	return p.scorer.BadPeers()
 }
 
 // All returns all the peers regardless of state.
 func (p *Status) All() []peer.ID {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-	pids := make([]peer.ID, 0, len(p.status))
-	for pid := range p.status {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	pids := make([]peer.ID, 0, len(p.store.peers))
+	for pid := range p.store.peers {
 		pids = append(pids, pid)
 	}
 	return pids
 }
 
-// Decay reduces the bad responses of all peers, giving reformed peers a chance to join the network.
-// This can be run periodically, although note that each time it runs it does give all bad peers another chance as well to clog up
-// the network with bad responses, so should not be run too frequently; once an hour would be reasonable.
-func (p *Status) Decay() {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	for _, status := range p.status {
-		if status.badResponses > 0 {
-			status.badResponses--
+// Prune clears out and removes outdated and disconnected peers.
+func (p *Status) Prune() {
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	// Exit early if there is nothing to prune.
+	if len(p.store.peers) <= p.store.config.maxPeers {
+		return
+	}
+
+	type peerResp struct {
+		pid     peer.ID
+		badResp int
+	}
+	peersToPrune := make([]*peerResp, 0)
+	// Select disconnected peers with a smaller bad response count.
+	for pid, peerData := range p.store.peers {
+		if peerData.connState == PeerDisconnected && !p.scorer.isBadPeer(pid) {
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:     pid,
+				badResp: p.store.peers[pid].badResponsesCount,
+			})
 		}
+	}
+
+	// Sort peers in ascending order, so the peers with the
+	// least amount of bad responses are pruned first. This
+	// is to protect the node from malicious/lousy peers so
+	// that their memory is still kept.
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].badResp < peersToPrune[j].badResp
+	})
+
+	limitDiff := len(p.store.peers) - p.store.config.maxPeers
+	if limitDiff > len(peersToPrune) {
+		limitDiff = len(peersToPrune)
+	}
+
+	peersToPrune = peersToPrune[:limitDiff]
+
+	// Delete peers from map.
+	for _, peerData := range peersToPrune {
+		delete(p.store.peers, peerData.pid)
 	}
 }
 
@@ -472,21 +478,21 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 }
 
 // fetch is a helper function that fetches a peer status, possibly creating it.
-func (p *Status) fetch(pid peer.ID) *peerStatus {
-	if _, ok := p.status[pid]; !ok {
-		p.status[pid] = &peerStatus{}
+func (p *Status) fetch(pid peer.ID) *peerData {
+	if _, ok := p.store.peers[pid]; !ok {
+		p.store.peers[pid] = &peerData{}
 	}
-	return p.status[pid]
+	return p.store.peers[pid]
 }
 
 // HighestEpoch returns the highest epoch reported epoch amongst peers.
 func (p *Status) HighestEpoch() uint64 {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	var highestSlot uint64
-	for _, ps := range p.status {
-		if ps != nil && ps.chainState != nil && ps.chainState.HeadSlot > highestSlot {
-			highestSlot = ps.chainState.HeadSlot
+	for _, peerData := range p.store.peers {
+		if peerData != nil && peerData.chainState != nil && peerData.chainState.HeadSlot > highestSlot {
+			highestSlot = peerData.chainState.HeadSlot
 		}
 	}
 	return helpers.SlotToEpoch(highestSlot)

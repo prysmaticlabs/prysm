@@ -22,11 +22,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-var log = logrus.WithField("prefix", "keymanager-v2")
+var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
 	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
@@ -34,24 +36,12 @@ const (
 	DepositTransactionFileName = "deposit_transaction.rlp"
 	// TimestampFileName stores a timestamp for account creation as a
 	// file for a direct keymanager account.
-	TimestampFileName   = "created_at.txt"
-	keystoreFileName    = "keystore.json"
+	TimestampFileName = "created_at.txt"
+	// KeystoreFileName exposes the expected filename for the keystore file for an account.
+	KeystoreFileName    = "keystore.json"
 	depositDataFileName = "deposit_data.ssz"
 	eipVersion          = "EIP-2335"
 )
-
-// Wallet defines a struct which has capabilities and knowledge of how
-// to read and write important accounts-related files to the filesystem.
-// Useful for keymanager to have persistent capabilities for accounts on-disk.
-type Wallet interface {
-	AccountsDir() string
-	CanUnlockAccounts() bool
-	AccountNames() ([]string, error)
-	ReadPasswordForAccount(accountName string) (string, error)
-	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
-	WriteAccountToDisk(ctx context.Context, password string) (string, error)
-	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
-}
 
 // Config for a direct keymanager.
 type Config struct {
@@ -60,20 +50,11 @@ type Config struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet            Wallet
+	wallet            iface.Wallet
 	cfg               *Config
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
 	lock              sync.RWMutex
-}
-
-// Direct keystore json file representation as a Go struct.
-type directKeystore struct {
-	Crypto  map[string]interface{} `json:"crypto"`
-	ID      string                 `json:"uuid"`
-	Pubkey  string                 `json:"pubkey"`
-	Version uint                   `json:"version"`
-	Name    string                 `json:"name"`
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -84,12 +65,14 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:            wallet,
-		cfg:               cfg,
-		mnemonicGenerator: &EnglishMnemonicGenerator{},
-		keysCache:         make(map[[48]byte]bls.SecretKey),
+		wallet: wallet,
+		cfg:    cfg,
+		mnemonicGenerator: &EnglishMnemonicGenerator{
+			skipMnemonicConfirm: skipMnemonicConfirm,
+		},
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys
@@ -120,6 +103,11 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+// MarshalConfigFile returns a marshaled configuration file for a keymanager.
+func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+	return json.MarshalIndent(cfg, "", "\t")
 }
 
 // CreateAccount for a direct keymanager implementation. This utilizes
@@ -178,7 +166,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	}
 
 	// Write the encoded keystore to disk.
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, KeystoreFileName, encoded); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 
@@ -194,11 +182,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		"path": dr.wallet.AccountsDir(),
 	}).Info("Successfully created new validator account")
 	return accountName, nil
-}
-
-// MarshalConfigFile returns a marshaled configuration file for a direct keymanager.
-func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return json.MarshalIndent(dr.cfg, "", "\t")
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
@@ -223,11 +206,11 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 
 	for i, name := range accountNames {
-		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
+		encoded, err := dr.wallet.ReadFileForAccount(name, KeystoreFileName)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &directKeystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -252,7 +235,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
-	return secretKey.Sign(req.Data), nil
+	return secretKey.Sign(req.SigningRoot), nil
 }
 
 func (dr *Keymanager) initializeSecretKeysCache() error {
@@ -266,11 +249,11 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		if err != nil {
 			return errors.Wrapf(err, "could not read password for account %s", name)
 		}
-		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
+		encoded, err := dr.wallet.ReadFileForAccount(name, KeystoreFileName)
 		if err != nil {
 			return errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &directKeystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -304,12 +287,13 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	if err != nil {
 		return nil, err
 	}
-	keystoreFile := &directKeystore{}
-	keystoreFile.Crypto = cryptoFields
-	keystoreFile.ID = id.String()
-	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
-	keystoreFile.Version = encryptor.Version()
-	keystoreFile.Name = encryptor.Name()
+	keystoreFile := &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
 }
 

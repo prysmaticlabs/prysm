@@ -23,6 +23,11 @@ func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream l
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
 
+	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
+		return err
+	}
+	s.rateLimiter.add(stream, 1)
+
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
@@ -51,7 +56,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 		return nil, err
 	}
 	if code != 0 {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
 	msg := new(pb.MetaData)

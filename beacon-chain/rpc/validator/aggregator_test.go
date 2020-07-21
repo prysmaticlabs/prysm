@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"reflect"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -19,8 +18,11 @@ import (
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
@@ -37,9 +39,8 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1}
 	wanted := "Syncing to latest head, not ready to respond"
-	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); err == nil || !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not receive wanted error")
-	}
+	_, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
@@ -49,9 +50,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -63,9 +62,8 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	sig := priv.Sign([]byte{'A'})
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
-	if _, err := server.SubmitAggregateSelectionProof(ctx, req); err == nil || !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Did not get wanted error")
-	}
+	_, err = server.SubmitAggregateSelectionProof(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
@@ -79,9 +77,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 			{PublicKey: pubKey(1)},
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -93,15 +89,12 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'})
 	v, err := s.ValidatorAtIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	if _, err := server.SubmitAggregateSelectionProof(ctx, req); err == nil || !strings.Contains(err.Error(), "Could not find attestation for slot and committee in pool") {
-		t.Error("Did not get wanted error")
-	}
+	_, err = server.SubmitAggregateSelectionProof(ctx, req)
+	assert.ErrorContains(t, "Could not find attestation for slot and committee in pool", err)
 }
 
 func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
@@ -115,13 +108,9 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	att0, err := generateUnaggregatedAtt(beaconState, 0, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -134,18 +123,13 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0))
+	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	require.NoError(t, err)
 }
 
 func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
@@ -159,18 +143,12 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	att1, err := generateAtt(beaconState, 2, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -183,28 +161,18 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	if err := aggregatorServer.AttPool.SaveAggregatedAttestation(att0); err != nil {
-		t.Fatal(err)
-	}
-	if err := aggregatorServer.AttPool.SaveAggregatedAttestation(att1); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, aggregatorServer.AttPool.SaveAggregatedAttestation(att0))
+	require.NoError(t, aggregatorServer.AttPool.SaveAggregatedAttestation(att1))
+	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	require.NoError(t, err)
 
 	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
 	wanted, err := attaggregation.AggregatePair(att0, att1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if reflect.DeepEqual(aggregatedAtts, wanted) {
 		t.Error("Did not receive wanted attestation")
 	}
@@ -220,9 +188,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -235,20 +201,15 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), "Could not find attestation for slot and committee in pool") {
-		t.Error("Did not get wanted error")
-	}
+	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	assert.ErrorContains(t, "Could not find attestation for slot and committee in pool", err)
 
 	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
-	if len(aggregatedAtts) != 0 {
-		t.Errorf("Wanted aggregated attestation 0, got %d", len(aggregatedAtts))
-	}
+	assert.Equal(t, 0, len(aggregatedAtts), "Wanted aggregated attestation")
 }
 
 func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
@@ -328,4 +289,110 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
 	return att, nil
+}
+
+func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	c := params.MinimalSpecConfig()
+	c.TargetAggregatorsPerCommittee = 16
+	params.OverrideBeaconConfig(c)
+
+	db, _ := dbutil.SetupDB(t)
+	ctx := context.Background()
+
+	// This test creates 3 attestations. 0 and 2 have the same attestation data and can be
+	// aggregated. 1 has the validator's signature making this request and that is the expected
+	// attestation to sign, even though the aggregated 0&2 would have more aggregated bits.
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	att0, err := generateAtt(beaconState, 0, privKeys)
+	require.NoError(t, err)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.AggregationBits = bitfield.Bitlist{0b11100}
+	att1, err := generateAtt(beaconState, 0, privKeys)
+	require.NoError(t, err)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.AggregationBits = bitfield.Bitlist{0b11001}
+	att2, err := generateAtt(beaconState, 2, privKeys)
+	require.NoError(t, err)
+	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att2.AggregationBits = bitfield.Bitlist{0b11110}
+
+	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	require.NoError(t, err)
+
+	aggregatorServer := &Server{
+		HeadFetcher: &mock.ChainService{State: beaconState},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		P2P:         &mockp2p.MockBroadcaster{},
+	}
+
+	priv := bls.RandKey()
+	sig := priv.Sign([]byte{'B'})
+	v, err := beaconState.ValidatorAtIndex(1)
+	require.NoError(t, err)
+	pubKey := v.PublicKey
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]*ethpb.Attestation{
+		att0,
+		att1,
+		att2,
+	})
+	require.NoError(t, err)
+
+	res, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	require.NoError(t, err)
+	assert.DeepEqual(t, att1, res.AggregateAndProof.Aggregate, "Did not receive wanted attestation")
+}
+
+func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	c := params.MinimalSpecConfig()
+	c.TargetAggregatorsPerCommittee = 16
+	params.OverrideBeaconConfig(c)
+
+	db, _ := dbutil.SetupDB(t)
+	ctx := context.Background()
+
+	// This test creates two distinct attestations, neither of which contain the validator's index,
+	// index 0. This test should choose the most bits attestation, att1.
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	att0, err := generateAtt(beaconState, 0, privKeys)
+	require.NoError(t, err)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.AggregationBits = bitfield.Bitlist{0b11100}
+	att1, err := generateAtt(beaconState, 2, privKeys)
+	require.NoError(t, err)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.AggregationBits = bitfield.Bitlist{0b11110}
+
+	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	require.NoError(t, err)
+
+	aggregatorServer := &Server{
+		HeadFetcher: &mock.ChainService{State: beaconState},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		P2P:         &mockp2p.MockBroadcaster{},
+	}
+
+	priv := bls.RandKey()
+	sig := priv.Sign([]byte{'B'})
+	v, err := beaconState.ValidatorAtIndex(1)
+	require.NoError(t, err)
+	pubKey := v.PublicKey
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]*ethpb.Attestation{
+		att0,
+		att1,
+	})
+	require.NoError(t, err)
+
+	res, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	require.NoError(t, err)
+	assert.DeepEqual(t, att1, res.AggregateAndProof.Aggregate, "Did not receive wanted attestation")
 }

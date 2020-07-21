@@ -7,22 +7,18 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
 	b := herumi.RandKey().Marshal()
 	b32 := bytesutil.ToBytes32(b)
 	pk, err := herumi.SecretKeyFromBytes(b32[:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pk2, err := herumi.SecretKeyFromBytes(b32[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(pk.Marshal(), pk2.Marshal()) {
-		t.Errorf("Keys not equal, received %#x == %#x", pk.Marshal(), pk2.Marshal())
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, pk.Marshal(), pk2.Marshal())
 }
 
 func TestSecretKeyFromBytes(t *testing.T) {

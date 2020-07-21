@@ -10,6 +10,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestInitializeFromProto(t *testing.T) {
@@ -152,9 +153,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
 			testState, err = tt.stateModify(testState)
-			if err != nil {
-				t.Errorf("Unexpected error, expected %v, recevied %v", tt.error, err)
-			}
+			assert.NoError(t, err)
 			root, err := testState.HashTreeRoot(context.Background())
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
@@ -225,9 +224,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
 			testState, err = tt.stateModify(testState)
-			if err != nil {
-				t.Errorf("Unexpected error, expected %v, recevied %v", tt.error, err)
-			}
+			assert.NoError(t, err)
 			root, err := testState.HashTreeRoot(context.Background())
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)

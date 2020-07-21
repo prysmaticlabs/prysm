@@ -1,9 +1,7 @@
 package debug
 
 import (
-	"bytes"
 	"context"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -14,6 +12,8 @@ import (
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_GetBeaconState(t *testing.T) {
@@ -24,62 +24,40 @@ func TestServer_GetBeaconState(t *testing.T) {
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	slot := uint64(100)
-	if err := st.SetSlot(slot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.SetSlot(slot))
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
 		Slot: slot,
 	}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	gen := stategen.New(db, sc)
-	if err := gen.SaveState(ctx, gRoot, st); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, st, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, gen.SaveState(ctx, gRoot, st))
+	require.NoError(t, db.SaveState(ctx, st, gRoot))
 	bs := &Server{
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
-	if _, err := bs.GetBeaconState(ctx, &pbrpc.BeaconStateRequest{}); err == nil {
-		t.Errorf("Expected error without a query filter, received nil")
-	}
+	_, err = bs.GetBeaconState(ctx, &pbrpc.BeaconStateRequest{})
+	assert.ErrorContains(t, "Need to specify either a block root or slot to request state", err)
 	req := &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_BlockRoot{
 			BlockRoot: gRoot[:],
 		},
 	}
 	res, err := bs.GetBeaconState(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wanted, err := st.CloneInnerState().MarshalSSZ()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !bytes.Equal(wanted, res.Encoded) {
-		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, wanted, res.Encoded)
 	req = &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
 			Slot: slot,
 		},
 	}
 	res, err = bs.GetBeaconState(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(wanted, res.Encoded) {
-		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, wanted, res.Encoded)
 }
 
 func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
@@ -93,7 +71,6 @@ func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
 		},
 	}
 	wanted := "Cannot retrieve information about a slot in the future"
-	if _, err := ds.GetBeaconState(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := ds.GetBeaconState(context.Background(), req)
+	assert.ErrorContains(t, wanted, err)
 }

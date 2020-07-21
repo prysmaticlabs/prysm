@@ -159,7 +159,11 @@ func (s *Service) Start() {
 		}
 
 		// We start a counter to genesis, if needed.
-		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(beaconState.NumValidators()))
+		gState, err := s.beaconDB.GenesisState(s.ctx)
+		if err != nil {
+			log.Fatalf("Could not retrieve genesis state: %v", err)
+		}
+		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()))
 
 		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(s.ctx)
 		if err != nil {
@@ -423,7 +427,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
-	finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+	finalizedRoot = s.beaconDB.LastArchivedRoot(ctx)
 	if finalizedRoot == params.BeaconConfig().ZeroHash {
 		finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 	}

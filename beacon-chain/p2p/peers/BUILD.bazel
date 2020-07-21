@@ -3,7 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["status.go"],
+    srcs = [
+        "score_bad_responses.go",
+        "scorer.go",
+        "status.go",
+        "store.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
@@ -24,15 +29,19 @@ go_test(
     name = "go_default_test",
     srcs = [
         "benchmark_test.go",
+        "score_bad_responses_test.go",
+        "scorer_test.go",
         "status_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
-        "@com_github_libp2p_go_libp2p_peer//:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

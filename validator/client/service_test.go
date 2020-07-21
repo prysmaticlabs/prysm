@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -75,9 +76,7 @@ func TestStop_CancelsContext(t *testing.T) {
 		cancel: cancel,
 	}
 
-	if err := vs.Stop(); err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, vs.Stop())
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -99,9 +98,7 @@ func TestLifecycle(t *testing.T) {
 		keyManager: keymanager.NewDirect(nil),
 	}
 	validatorService.Start()
-	if err := validatorService.Stop(); err != nil {
-		t.Fatalf("Could not stop service: %v", err)
-	}
+	require.NoError(t, validatorService.Stop(), "Could not stop service")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
@@ -118,15 +115,11 @@ func TestLifecycle_Insecure(t *testing.T) {
 	}
 	validatorService.Start()
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
-	if err := validatorService.Stop(); err != nil {
-		t.Fatalf("Could not stop service: %v", err)
-	}
+	require.NoError(t, validatorService.Stop(), "Could not stop service")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestStatus_NoConnectionError(t *testing.T) {
 	validatorService := &ValidatorService{}
-	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
-		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)
-	}
+	assert.ErrorContains(t, "no connection", validatorService.Status())
 }

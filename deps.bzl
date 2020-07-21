@@ -61,7 +61,7 @@ def prysm_deps():
     # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        commit = "a933315235ecf4469b5784b62713bc40f979c19d",  # keep
+        commit = "82ea6953710decd73e89ca368c309e732233e39a",  # keep
         importpath = "github.com/ethereum/go-ethereum",  # keep
         # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
         # a fork that has resolved these issues by disabling HID/USB support and
@@ -697,8 +697,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:mu+F5uA3Y68oB6KXZqWlASKMetbNufhQx2stMI+sD+Y=",
-        version = "v0.0.0-20200522010937-01d282b5380b",
+        sum = "h1:P8yaFmLwc5ZlUx2sHuawcdQvpv5/0GM+WEGJ07ljN3g=",
+        version = "v0.0.0-20200706085701-832d8c2c0f7d",
     )
     go_repository(
         name = "com_github_hpcloud_tail",
@@ -1989,8 +1989,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_dgraph_io_ristretto",
         importpath = "github.com/dgraph-io/ristretto",
-        sum = "h1:a5WaUrDa0qm0YrAAS1tUykT5El3kt62KNZZeMxQn3po=",
-        version = "v0.0.2",
+        sum = "h1:jh22xisGBjrEVnRZ1DVTpBVQm0Xndu8sMl0CWDzSIBI=",
+        version = "v0.0.3",
     )
     go_repository(
         name = "com_github_emicklei_dot",
@@ -2594,8 +2594,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_protolambda_zssz",
         importpath = "github.com/protolambda/zssz",
-        sum = "h1:4jkt8sqwhOVR8B1JebREU/gVX0Ply4GypsV8+RWrDuw=",
-        version = "v0.1.4",
+        sum = "h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1ouek=",
+        version = "v0.1.5",
     )
     go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",
@@ -2661,8 +2661,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_wealdtech_go_eth2_util",
         importpath = "github.com/wealdtech/go-eth2-util",
-        sum = "h1:4OPbf2yaEQmqDmOIU6UKBfhKTPNZ7skU4lPhueBLx8o=",
-        version = "v1.1.5",
+        sum = "h1:b3fgyvoq/WocW9LkWT7zcO5VCKzKLCc97rPrk/B9oIc=",
+        version = "v1.5.0",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet",
@@ -2823,8 +2823,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_crypto",
         importpath = "golang.org/x/crypto",
-        sum = "h1:cg5LA/zNPRzIXIWSCxQW10Rvpy94aQh3LT/ShoCpkHw=",
-        version = "v0.0.0-20200510223506-06a226fb4e37",
+        sum = "h1:DZhuSZLsGlFL4CmhA8BcRA0mnthyA/nZ00AqCUo7vHg=",
+        version = "v0.0.0-20200709230013-948cd5f35899",
     )
     go_repository(
         name = "org_golang_x_exp",
@@ -2859,8 +2859,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:rITEj+UZHYC927n8GT97eC3zrpzXdb/voyeOuVKS46o=",
-        version = "v0.0.0-20200523222454-059865788121",
+        sum = "h1:Ih9Yo4hSPImZOpfGuA4bR/ORKTAbhZo2AbWNRCnevdo=",
+        version = "v0.0.0-20200625212154-ddb9806d33ae",
     )
     go_repository(
         name = "org_golang_x_text",
@@ -2882,6 +2882,11 @@ def prysm_deps():
     )
     go_repository(
         name = "org_uber_go_automaxprocs",
+        build_directives = [
+            # Do not use this library directly.
+            # Rather, load maxprocs from github.com/prysmaticlabs/shared/maxprocs.
+            "gazelle:go_visibility @prysm//shared/maxprocs:__pkg__",
+        ],
         importpath = "go.uber.org/automaxprocs",
         sum = "h1:II28aZoGdaglS5vVNnspf28lnZpXScxtIozx1lAjdb0=",
         version = "v1.3.0",
@@ -2889,8 +2894,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_ssz",
         importpath = "github.com/prysmaticlabs/go-ssz",
-        sum = "h1:V4o7uJqGXAuz6ZpwxhT4cnVjRb/XxpBmTKp/lVVr05k=",
-        version = "v0.0.0-20200605034351-b6a925e519d0",
+        sum = "h1:7qd0Af1ozWKBU3c93YW2RH+/09hJns9+ftqWUZyts9c=",
+        version = "v0.0.0-20200612203617-6d5c9aa213ae",
     )
     go_repository(
         name = "io_k8s_client_go",
@@ -2957,8 +2962,8 @@ def prysm_deps():
             "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
         ],
         importpath = "github.com/wealdtech/go-eth2-types/v2",
-        sum = "h1:2KSUzducArOynCL2prRf4vWU5GjwaPSnSN9oqNgf+dQ=",
-        version = "v2.3.1",
+        sum = "h1:L8sl3yoICAbn3134CBLNUt0o5h2voe0Es2KD5O9r8YQ=",
+        version = "v2.5.0",
     )
     go_repository(
         name = "io_k8s_sigs_structured_merge_diff",

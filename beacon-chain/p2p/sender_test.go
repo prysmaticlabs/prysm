@@ -11,6 +11,8 @@ import (
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_Send(t *testing.T) {
@@ -31,32 +33,27 @@ func TestService_Send(t *testing.T) {
 	// Register external listener which will repeat the message back.
 	var wg sync.WaitGroup
 	wg.Add(1)
-
-	p2.SetStreamHandler("/testing/1/ssz_snappy", func(stream network.Stream) {
+	topic := "/testing/1"
+	RPCTopicMappings[topic] = new(testpb.TestSimpleMessage)
+	defer func() {
+		delete(RPCTopicMappings, topic)
+	}()
+	p2.SetStreamHandler(topic+"/ssz_snappy", func(stream network.Stream) {
 		rcvd := &testpb.TestSimpleMessage{}
-		if err := svc.Encoding().DecodeWithMaxLength(stream, rcvd); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := svc.Encoding().EncodeWithMaxLength(stream, rcvd); err != nil {
-			t.Fatal(err)
-		}
-		if err := stream.Close(); err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, svc.Encoding().DecodeWithMaxLength(stream, rcvd))
+		_, err := svc.Encoding().EncodeWithMaxLength(stream, rcvd)
+		require.NoError(t, err)
+		assert.NoError(t, stream.Close())
 		wg.Done()
 	})
 
 	stream, err := svc.Send(context.Background(), msg, "/testing/1", p2.BHost.ID())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	testutil.WaitTimeout(&wg, 1*time.Second)
 
 	rcvd := &testpb.TestSimpleMessage{}
-	if err := svc.Encoding().DecodeWithMaxLength(stream, rcvd); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, svc.Encoding().DecodeWithMaxLength(stream, rcvd))
 	if !proto.Equal(rcvd, msg) {
 		t.Errorf("Expected identical message to be received. got %v want %v", rcvd, msg)
 	}

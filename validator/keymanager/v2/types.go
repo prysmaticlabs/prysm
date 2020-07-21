@@ -12,12 +12,19 @@ import (
 type IKeymanager interface {
 	// CreateAccount based on the keymanager's logic. Returns the account name.
 	CreateAccount(ctx context.Context, password string) (string, error)
-	// MarshalConfigFile for the keymanager's options.
-	MarshalConfigFile(ctx context.Context) ([]byte, error)
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
 	// Sign signs a message using a validator key.
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+}
+
+// Keystore json file representation as a Go struct.
+type Keystore struct {
+	Crypto  map[string]interface{} `json:"crypto"`
+	ID      string                 `json:"uuid"`
+	Pubkey  string                 `json:"pubkey"`
+	Version uint                   `json:"version"`
+	Name    string                 `json:"name"`
 }
 
 // Kind defines an enum for either direct, derived, or remote-signing
