@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -143,7 +144,8 @@ func listDerivedKeymanagerAccounts(
 	)
 	dirPath := au.BrightCyan("(wallet dir)")
 	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
-	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
+	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.Config().DerivedPathStructure).Bold())
 	ctx := context.Background()
 	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -168,35 +170,24 @@ func listDerivedKeymanagerAccounts(
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
 
 		// Retrieve the withdrawal key account metadata.
-		fmt.Printf("%s\n", au.BrightGreen(accountNames[i]).Bold())
-		fmt.Printf("%s\n", au.BrightGreen(withdrawalKeyPath).Bold())
+		createdAtBytes, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, derived.TimestampFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not read file for account: %s", derived.TimestampFileName)
+		}
+		unixTimestampInt, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
+		if err != nil {
+			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
+		}
+		unixTimestamp := time.Unix(unixTimestampInt, 0)
+		fmt.Printf("%s | %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
+		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
+
+		// Retrieve the validating key account metadata.
+		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
+		fmt.Printf("%s %s\n", au.BrightCyan("[derivation path]").Bold(), validatingKeyPath)
 
 		// Retrieve the account creation timestamp.
-		createdAtBytes, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.TimestampFileName)
-		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", derived.TimestampFileName)
-		}
-		unixTimestamp, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
-		}
-		unixTimestampStr := time.Unix(unixTimestamp, 0)
-		fmt.Printf("%s %v\n", au.BrightCyan("[created at]").Bold(), unixTimestampStr.String())
-
-		fmt.Printf("%s\n", au.BrightGreen(validatingKeyPath).Bold())
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), validatingPubKeys[i])
-		// Retrieve the validating key account metadata.
-		createdAtBytes, err = wallet.ReadFileAtPath(ctx, validatingKeyPath, derived.TimestampFileName)
-		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", derived.TimestampFileName)
-		}
-		unixTimestamp, err = strconv.ParseInt(string(createdAtBytes), 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
-		}
-		unixTimestampStr = time.Unix(unixTimestamp, 0)
-		fmt.Printf("%s %v\n", au.BrightCyan("[created at]").Bold(), unixTimestampStr.String())
 
 		//		if !showDepositData {
 		//			continue

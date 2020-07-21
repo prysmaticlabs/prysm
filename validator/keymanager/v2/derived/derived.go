@@ -75,7 +75,7 @@ type SeedConfig struct {
 // DefaultConfig for a derived keymanager implementation.
 func DefaultConfig() *Config {
 	return &Config{
-		DerivedPathStructure: "m / purpose / coin_type / account / withdrawal_key / validating_key",
+		DerivedPathStructure: "m / purpose / coin_type / account_index / withdrawal_key / validating_key",
 		DerivedEIPNumber:     EIPVersion,
 	}
 }
@@ -188,6 +188,11 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 // MarshalEncryptedSeedFile json encodes the seed configuration for a derived keymanager.
 func MarshalEncryptedSeedFile(ctx context.Context, seedCfg *SeedConfig) ([]byte, error) {
 	return json.MarshalIndent(seedCfg, "", "\t")
+}
+
+// Config --
+func (dr *Keymanager) Config() *Config {
+	return dr.cfg
 }
 
 // NextAccountNumber managed by the derived keymanager.

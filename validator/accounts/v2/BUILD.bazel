@@ -28,6 +28,7 @@ go_library(
         "//validator/keymanager/v2/derived:go_default_library",
         "//validator/keymanager/v2/direct:go_default_library",
         "//validator/keymanager/v2/remote:go_default_library",
+        "@com_github_dustin_go_humanize//:go_default_library",
         "@com_github_dustinkirkland_golang_petname//:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",
