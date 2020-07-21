@@ -18,9 +18,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	k2 := bls.RandKey()
 
 	result, _, err := depositutil.DepositInput(k1, k2, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	assert.DeepEqual(t, k1.PublicKey().Marshal(), result.PublicKey)
 
 	sig, err := bls.SignatureFromBytes(result.Signature)

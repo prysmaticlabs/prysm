@@ -311,9 +311,7 @@ func TestHighestBitIndex(t *testing.T) {
 	for _, tt := range tests {
 		i, err := bytesutil.HighestBitIndex(tt.a)
 		if !tt.error {
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			require.NoError(t, err)
 			assert.DeepEqual(t, tt.b, i)
 		} else {
