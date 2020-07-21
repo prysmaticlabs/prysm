@@ -3,7 +3,10 @@ package v2
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/validator/flags"
 
 	"github.com/manifoldco/promptui"
 
@@ -19,6 +22,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
 		log.Fatalf("Could not parse wallet directory: %v", err)
 	}
+
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
@@ -55,10 +59,11 @@ func recoverDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 		CanUnlockAccounts: true,
 	}
 	ctx := context.Background()
-	walletPassword, err := inputNewWalletPassword()
+	walletPassword, err := inputNewWalletPassword(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not input new wallet password")
 	}
+
 	seedConfig, err := derived.SeedFileFromMnemonic(ctx, mnemonic, walletPassword)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
@@ -71,6 +76,7 @@ func recoverDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not create new wallet")
 	}
+
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -85,6 +91,18 @@ func recoverDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 }
 
 func inputMnemonic(cliCtx *cli.Context) (string, error) {
+	if cliCtx.IsSet(flags.MnemonicFileFlag.Name) {
+		mnemonicFilePath := cliCtx.String(flags.MnemonicFileFlag.Name)
+		data, err := ioutil.ReadFile(mnemonicFilePath)
+		if err != nil {
+			return "", err
+		}
+		enteredMnemonic := string(data)
+		if err := validateMnemonic(enteredMnemonic); err != nil {
+			return "", errors.Wrap(err, "mnemonic phrase did not pass validation")
+		}
+		return enteredMnemonic, nil
+	}
 	prompt := promptui.Prompt{
 		Label:    "Enter the wallet recovery seed phrase you would like to recover",
 		Validate: validateMnemonic,

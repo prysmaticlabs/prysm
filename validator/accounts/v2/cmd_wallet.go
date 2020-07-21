@@ -44,6 +44,8 @@ var WalletCommands = &cli.Command{
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
+				flags.MnemonicFileFlag,
+				flags.PasswordFileFlag,
 			},
 			Action: RecoverWallet,
 		},
