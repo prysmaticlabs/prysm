@@ -10,8 +10,6 @@ import (
 
 // IKeymanager defines a general keymanager-v2 interface for Prysm wallets.
 type IKeymanager interface {
-	// CreateAccount based on the keymanager's logic. Returns the account name.
-	CreateAccount(ctx context.Context, password string) (string, error)
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
 	// Sign signs a message using a validator key.

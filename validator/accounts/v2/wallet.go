@@ -178,6 +178,7 @@ func (w *Wallet) AccountNames() ([]string, error) {
 func (w *Wallet) InitializeKeymanager(
 	ctx context.Context,
 	skipMnemonicConfirm bool,
+	walletPassword string,
 ) (v2keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
@@ -195,15 +196,11 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
 	case v2keymanager.Derived:
-		seedPassword, err := inputExistingWalletPassword()
-		if err != nil {
-			return nil, err
-		}
 		cfg, err := derived.UnmarshalConfigFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, seedPassword)
+		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, walletPassword)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
