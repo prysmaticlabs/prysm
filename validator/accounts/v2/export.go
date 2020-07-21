@@ -13,6 +13,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -25,7 +26,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
-		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+		log.Fatal("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
 		log.WithError(err).Fatal("Could not parse wallet directory")
 	}
@@ -51,6 +52,9 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		log.WithError(err).Fatal("Could not select accounts")
 	}
+	if len(accounts) == 0 {
+		return errors.New("no accounts to export")
+	}
 
 	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
 		log.WithError(err).Error("Could not export accounts")
@@ -59,6 +63,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err := logAccountsExported(wallet, accounts); err != nil {
 		log.WithError(err).Fatal("Could not log out exported accounts")
 	}
+
 	return nil
 }
 
@@ -119,6 +124,9 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 	sourcePath := w.accountsPath
 	archivePath := filepath.Join(targetPath, archiveFilename)
+	if err := os.MkdirAll(targetPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+		return errors.Wrap(err, "could not create target folder")
+	}
 	zipfile, err := os.Create(archivePath)
 	if err != nil {
 		return errors.Wrap(err, "could not create zip file")
@@ -146,7 +154,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 			if strings.Contains(path, accountName) {
 				// Add all files under the account folder to the archive.
 				isAccount = true
-			} else if !info.IsDir() && info.Name() == keymanagerConfigFileName {
+			} else if !info.IsDir() && info.Name() == KeymanagerConfigFileName {
 				// Add the keymanager config file to the archive as well.
 				isAccount = true
 			}

@@ -22,8 +22,10 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{}
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
-		PeerLimit:       0,
-		MaxBadResponses: 3,
+		PeerLimit: 0,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesThreshold: 3,
+		},
 	})
 	s.cfg = &Config{MaxPeers: 0}
 	s.addrFilter, err = configureFilter(&Config{})
@@ -61,8 +63,10 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{}
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
-		PeerLimit:       1,
-		MaxBadResponses: 3,
+		PeerLimit: 1,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesThreshold: 3,
+		},
 	})
 	s.cfg = &Config{MaxPeers: 1}
 	s.addrFilter, err = configureFilter(&Config{})

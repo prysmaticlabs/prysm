@@ -11,6 +11,8 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
@@ -19,14 +21,10 @@ func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
 	ctx := context.Background()
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// We mark the validator at index 5 as already slashed.
 	slashedVal.Slashed = true
-	if err := st.UpdateValidatorAtIndex(5, slashedVal); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.UpdateValidatorAtIndex(5, slashedVal))
 
 	mb := &mockp2p.MockBroadcaster{}
 	bs := &Server{
@@ -43,32 +41,23 @@ func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
 		SlashedIndices: []uint64{2},
 	}
 	slashing, err := testutil.GenerateProposerSlashingForValidator(st, privs[2], uint64(2))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	res, err := bs.SubmitProposerSlashing(ctx, slashing)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
 
-	if mb.BroadcastCalled {
-		t.Errorf("Expected broadcast not to be called by default")
-	}
+	assert.Equal(t, false, mb.BroadcastCalled, "Expected broadcast not to be called by default")
 
 	slashing, err = testutil.GenerateProposerSlashingForValidator(st, privs[5], uint64(5))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// We do not want a proposer slashing for an already slashed validator
 	// (the validator at index 5) to be included in the pool.
-	if _, err := bs.SubmitProposerSlashing(ctx, slashing); err == nil {
-		t.Error("Expected including a proposer slashing for an already slashed validator to fail")
-	}
+	_, err = bs.SubmitProposerSlashing(ctx, slashing)
+	require.ErrorContains(t, "Could not insert proposer slashing into pool", err)
 }
 
 func TestServer_SubmitProposerSlashing(t *testing.T) {
@@ -76,14 +65,10 @@ func TestServer_SubmitProposerSlashing(t *testing.T) {
 
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// We mark the validator at index 5 as already slashed.
 	slashedVal.Slashed = true
-	if err := st.UpdateValidatorAtIndex(5, slashedVal); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.UpdateValidatorAtIndex(5, slashedVal))
 
 	mb := &mockp2p.MockBroadcaster{}
 	bs := &Server{
@@ -97,18 +82,11 @@ func TestServer_SubmitProposerSlashing(t *testing.T) {
 	// We want a proposer slashing for validator with index 2 to
 	// be included in the pool.
 	slashing, err := testutil.GenerateProposerSlashingForValidator(st, privs[2], uint64(2))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_, err = bs.SubmitProposerSlashing(ctx, slashing)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !mb.BroadcastCalled {
-		t.Errorf("Expected broadcast to be called")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, mb.BroadcastCalled, "Expected broadcast to be called")
 }
 
 func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
@@ -118,15 +96,11 @@ func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
 	// We mark the validators at index 5, 6 as already slashed.
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// We mark the validator at index 5 as already slashed.
 	slashedVal.Slashed = true
-	if err := st.UpdateValidatorAtIndex(5, slashedVal); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.UpdateValidatorAtIndex(5, slashedVal))
 
 	mb := &mockp2p.MockBroadcaster{}
 	bs := &Server{
@@ -138,9 +112,7 @@ func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
 	}
 
 	slashing, err := testutil.GenerateAttesterSlashingForValidator(st, privs[2], uint64(2))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// We want the intersection of the slashing attesting indices
 	// to be slashed, so we expect validators 2 and 3 to be in the response
@@ -149,25 +121,18 @@ func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
 		SlashedIndices: []uint64{2},
 	}
 	res, err := bs.SubmitAttesterSlashing(ctx, slashing)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	if mb.BroadcastCalled {
-		t.Errorf("Expected broadcast not to be called by default")
-	}
+	assert.Equal(t, false, mb.BroadcastCalled, "Expected broadcast not to be called by default")
 
 	slashing, err = testutil.GenerateAttesterSlashingForValidator(st, privs[5], uint64(5))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// If any of the attesting indices in the slashing object have already
 	// been slashed, we should fail to insert properly into the attester slashing pool.
-	if _, err := bs.SubmitAttesterSlashing(ctx, slashing); err == nil {
-		t.Error("Expected including a attester slashing for an already slashed validator to fail")
-	}
+	_, err = bs.SubmitAttesterSlashing(ctx, slashing)
+	assert.NotNil(t, err, "Expected including a attester slashing for an already slashed validator to fail")
 }
 
 func TestServer_SubmitAttesterSlashing(t *testing.T) {
@@ -175,15 +140,11 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 	// We mark the validators at index 5, 6 as already slashed.
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// We mark the validator at index 5 as already slashed.
 	slashedVal.Slashed = true
-	if err := st.UpdateValidatorAtIndex(5, slashedVal); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.UpdateValidatorAtIndex(5, slashedVal))
 
 	mb := &mockp2p.MockBroadcaster{}
 	bs := &Server{
@@ -195,18 +156,12 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 	}
 
 	slashing, err := testutil.GenerateAttesterSlashingForValidator(st, privs[2], uint64(2))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// We want the intersection of the slashing attesting indices
 	// to be slashed, so we expect validators 2 and 3 to be in the response
 	// slashed indices.
 	_, err = bs.SubmitAttesterSlashing(ctx, slashing)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !mb.BroadcastCalled {
-		t.Errorf("Expected broadcast to be called when flag is set")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, mb.BroadcastCalled, "Expected broadcast to be called when flag is set")
 }

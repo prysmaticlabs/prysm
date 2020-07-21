@@ -14,5 +14,4 @@ go_test(
     size = "small",
     srcs = ["service_registry_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/require:go_default_library"],
 )

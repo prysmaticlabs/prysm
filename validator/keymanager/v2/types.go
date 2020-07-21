@@ -18,6 +18,15 @@ type IKeymanager interface {
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
+// Keystore json file representation as a Go struct.
+type Keystore struct {
+	Crypto  map[string]interface{} `json:"crypto"`
+	ID      string                 `json:"uuid"`
+	Pubkey  string                 `json:"pubkey"`
+	Version uint                   `json:"version"`
+	Name    string                 `json:"name"`
+}
+
 // Kind defines an enum for either direct, derived, or remote-signing
 // keystores for Prysm wallets.
 type Kind int
