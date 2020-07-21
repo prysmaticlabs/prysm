@@ -75,12 +75,6 @@ build:fuzz --compilation_mode=opt
 
 test:fuzz --local_test_jobs="HOST_CPUS*.5"
 
-test:fuzzit --config=fuzz
-test:fuzzit --test_env=FUZZIT_API_KEY
-test:fuzzit --test_env=PRYSM_BUILD_IMAGE=gcr.io/prysmaticlabs/prysm-fuzzit:v0.11.0
-test:fuzzit --test_timeout=1200
-test:fuzzit --run_under=//tools:fuzzit_wrapper
-
 # Build binary with cgo symbolizer for debugging / profiling.
 build:cgo_symbolizer --config=llvm
 build:cgo_symbolizer --copt=-g

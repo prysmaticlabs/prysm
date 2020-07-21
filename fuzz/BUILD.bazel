@@ -18,34 +18,8 @@ ssz_gen_marshal(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
     objs = [
-        "InputBlockHeader",
-        "InputAttesterSlashingWrapper",
-        "InputAttestationWrapper",
-        "InputDepositWrapper",
-        "InputVoluntaryExitWrapper",
-        "InputProposerSlashingWrapper",
+        "InputBlockWithPrestate",
     ],
-)
-
-container_image(
-    name = "prysm_fuzzit",
-    base = "@fuzzit_base//image",
-    directory = "/beacon_states",
-    env = {
-        "BEACONSTATES_PATH": "/beacon_states",
-    },
-    files = [
-        "@sigp_beacon_fuzz_corpora//:current_mainnet_beaconstate",
-    ],
-)
-
-container_push(
-    name = "push_image",
-    format = "Docker",
-    image = ":prysm_fuzzit",
-    registry = "gcr.io",
-    repository = "prysmaticlabs/prysm-fuzzit",
-    tag = "v0.11.0",
 )
 
 IMPORT_PATH = "github.com/prysmaticlabs/prysm/fuzz"
@@ -69,48 +43,10 @@ test_suite(
     name = "fuzz_tests",
     tags = ["manual"],
     tests = [
-        ":attestation_fuzz_test_with_libfuzzer",
-        ":attester_slashing_fuzz_test_with_libfuzzer",
         ":block_fuzz_test_with_libfuzzer",
-        ":block_header_fuzz_test_with_libfuzzer",
-        ":deposit_fuzz_test_with_libfuzzer",
-        ":proposer_slashing_fuzz_test_with_libfuzzer",
         ":rpc_status_fuzz_test_with_libfuzzer",
-        ":ssz_cache_fuzz_test_with_libfuzzer",
-        ":voluntary_exit_fuzz_test_with_libfuzzer",
+        ":state_fuzz_test_with_libfuzzer",
     ],
-)
-
-go_fuzz_test(
-    name = "attestation_fuzz_test",
-    srcs = [
-        "attestation_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_attestation",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/attestation",
-    func = "BeaconFuzzAttestation",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//fuzz/testing:go_default_library",
-        "//shared/params:go_default_library",
-    ] + COMMON_DEPS,
-)
-
-go_fuzz_test(
-    name = "attester_slashing_fuzz_test",
-    srcs = [
-        "attester_slashing_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_attester_slashing",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/attester_slashing",
-    func = "BeaconFuzzAttesterSlashing",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//fuzz/testing:go_default_library",
-        "//shared/params:go_default_library",
-    ] + COMMON_DEPS,
 )
 
 go_fuzz_test(
@@ -122,60 +58,13 @@ go_fuzz_test(
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/block_header",
     func = "BeaconFuzzBlock",
     importpath = IMPORT_PATH,
+    max_len = 30000000,
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//fuzz/testing:go_default_library",
         "//shared/params:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-    ] + COMMON_DEPS,
-)
-
-go_fuzz_test(
-    name = "block_header_fuzz_test",
-    srcs = [
-        "block_header_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_block_header",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/block_header",
-    func = "BeaconFuzzBlockHeader",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//fuzz/testing:go_default_library",
-        "//shared/params:go_default_library",
-    ] + COMMON_DEPS,
-)
-
-go_fuzz_test(
-    name = "deposit_fuzz_test",
-    srcs = [
-        "deposit_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "deposit_corpus",
-    corpus_path = "fuzz/deposit_corpus",
-    func = "BeaconFuzzDeposit",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//fuzz/testing:go_default_library",
-        "//shared/params:go_default_library",
-    ] + COMMON_DEPS,
-)
-
-go_fuzz_test(
-    name = "proposer_slashing_fuzz_test",
-    srcs = [
-        "proposer_slashing_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_proposer_slashing",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/proposer_slashing",
-    func = "BeaconFuzzProposerSlashing",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//fuzz/testing:go_default_library",
-        "//shared/params:go_default_library",
     ] + COMMON_DEPS,
 )
 
@@ -206,21 +95,6 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
-    name = "ssz_cache_fuzz_test",
-    srcs = [
-        "ssz_cache_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "@sigp_beacon_fuzz_corpora//:0_11_0_mainnet_beaconstate",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/beaconstate",
-    func = "BeaconFuzzSSZCache",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
-    ] + COMMON_DEPS,
-)
-
-go_fuzz_test(
     name = "state_fuzz_test",
     srcs = [
         "state_fuzz.go",
@@ -229,6 +103,7 @@ go_fuzz_test(
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/beaconstate",
     func = "BeaconStateFuzz",
     importpath = IMPORT_PATH,
+    max_len = 30000000,
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//beacon-chain/core/state:go_default_library",
@@ -236,36 +111,14 @@ go_fuzz_test(
     ] + COMMON_DEPS,
 )
 
-go_fuzz_test(
-    name = "voluntary_exit_fuzz_test",
-    srcs = [
-        "voluntary_exit_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "voluntary_exit_corpus",
-    corpus_path = "fuzz/voluntary_exit_corpus",
-    func = "BeaconFuzzVoluntaryExit",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//fuzz/testing:go_default_library",
-        "//shared/params:go_default_library",
-    ] + COMMON_DEPS,
-)
-
 go_library(
     name = "go_default_library",
     testonly = 1,
     srcs = [
-        "attestation_fuzz.go",
-        "attester_slashing_fuzz.go",
         "block_fuzz.go",
-        "block_header_fuzz.go",
         "common.go",
-        "deposit_fuzz.go",
         "inputs.go",
         "rpc_status_fuzz.go",
-        "ssz_cache_fuzz.go",
-        "voluntary_exit_fuzz.go",
         ":ssz_generated_files",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/fuzz",

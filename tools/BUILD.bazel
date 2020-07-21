@@ -12,12 +12,6 @@ alias(
 )
 
 sh_binary(
-    name = "fuzzit_wrapper",
-    srcs = ["fuzzit_wrapper.sh"],
-    data = ["@fuzzit_linux//:fuzzit"],
-)
-
-sh_binary(
     name = "fuzz_wrapper",
     srcs = ["fuzz_wrapper.sh"],
 )

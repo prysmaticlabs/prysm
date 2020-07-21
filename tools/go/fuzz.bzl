@@ -64,7 +64,7 @@ def go_fuzz_test(
         importpath,
         func = "Fuzz",
         repository = "",
-        input_size = 0,
+        max_len = 0,
         size = "medium",
         tags = [],
         **kwargs):
@@ -117,8 +117,8 @@ def go_fuzz_test(
         corpus_name = corpus
 
     additional_args = []
-    if input_size > 0:
-        additional_args += ["-max_len=%s" % input_size]
+    if max_len > 0:
+        additional_args += ["-max_len=%s" % max_len]
 
     native.cc_test(
         name = name + "_with_afl",

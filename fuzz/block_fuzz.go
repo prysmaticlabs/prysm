@@ -11,7 +11,7 @@ import (
 // BeaconFuzzBlock -- TODO.
 func BeaconFuzzBlock(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
-	input := &InputBlockHeader{}
+	input := &InputBlockWithPrestate{}
 	if err := input.UnmarshalSSZ(b); err != nil {
 		return fail(err)
 	}

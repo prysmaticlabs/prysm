@@ -19,14 +19,14 @@ var (
 	errSize                = fmt.Errorf("incorrect size")
 )
 
-// MarshalSSZ ssz marshals the InputBlockHeader object
-func (i *InputBlockHeader) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the InputBlockWithPrestate object
+func (i *InputBlockWithPrestate) MarshalSSZ() ([]byte, error) {
 	buf := make([]byte, i.SizeSSZ())
 	return i.MarshalSSZTo(buf[:0])
 }
 
-// MarshalSSZTo ssz marshals the InputBlockHeader object to a target array
-func (i *InputBlockHeader) MarshalSSZTo(dst []byte) ([]byte, error) {
+// MarshalSSZTo ssz marshals the InputBlockWithPrestate object to a target array
+func (i *InputBlockWithPrestate) MarshalSSZTo(dst []byte) ([]byte, error) {
 	var err error
 	offset := int(6)
 
@@ -48,8 +48,8 @@ func (i *InputBlockHeader) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return dst, err
 }
 
-// UnmarshalSSZ ssz unmarshals the InputBlockHeader object
-func (i *InputBlockHeader) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the InputBlockWithPrestate object
+func (i *InputBlockWithPrestate) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 6 {
@@ -80,8 +80,8 @@ func (i *InputBlockHeader) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the InputBlockHeader object
-func (i *InputBlockHeader) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the InputBlockWithPrestate object
+func (i *InputBlockWithPrestate) SizeSSZ() (size int) {
 	size = 6
 
 	// Field (1) 'Block'
