@@ -27,45 +27,33 @@ func ListAccounts(cliCtx *cli.Context) error {
 	}
 	// Read the wallet from the specified path.
 	ctx := context.Background()
-	wallet, err := OpenWallet(ctx, &WalletConfig{
+	wallet, err := OpenWallet(cliCtx, &WalletConfig{
 		WalletDir:         walletDir,
 		CanUnlockAccounts: false,
 	})
 	if err != nil {
 		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 	}
-	configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
 		log.Fatal(err)
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
-		cfg, err := direct.UnmarshalConfigFile(configFile)
-		if err != nil {
-			log.Fatal(err)
+		km, ok := keymanager.(*direct.Keymanager)
+		if !ok {
+			log.Fatal("Not ok")
 		}
-		keymanager, err := direct.NewKeymanager(ctx, wallet, cfg, true /* skip mnemonic confirm */)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := listDirectKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
+		if err := listDirectKeymanagerAccounts(showDepositData, wallet, km); err != nil {
 			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
 		}
 	case v2keymanager.Derived:
-		cfg, err := derived.UnmarshalConfigFile(configFile)
-		if err != nil {
-			log.Fatal(err)
+		km, ok := keymanager.(*derived.Keymanager)
+		if !ok {
+			log.Fatal("Not ok")
 		}
-		walletPassword, err := inputExistingWalletPassword()
-		if err != nil {
-			log.Fatal(err)
-		}
-		keymanager, err := derived.NewKeymanager(ctx, wallet, cfg, true /* skip mnemonic confirm */, walletPassword)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
+		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, km); err != nil {
 			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)
 		}
 	default:

@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -36,7 +35,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 		log.WithError(err).Fatal("Could not parse output directory")
 	}
 
-	wallet, err := OpenWallet(context.Background(), &WalletConfig{
+	wallet, err := OpenWallet(cliCtx, &WalletConfig{
 		CanUnlockAccounts: false,
 		WalletDir:         walletDir,
 	})

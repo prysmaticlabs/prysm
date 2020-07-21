@@ -56,7 +56,6 @@ var (
 type WalletConfig struct {
 	WalletDir         string
 	PasswordsDir      string
-	KeymanagerKind    v2keymanager.Kind
 	CanUnlockAccounts bool
 }
 
@@ -69,6 +68,7 @@ type Wallet struct {
 	passwordsDir      string
 	canUnlockAccounts bool
 	keymanagerKind    v2keymanager.Kind
+	walletPassword    string
 }
 
 func init() {
@@ -77,11 +77,11 @@ func init() {
 
 // NewWallet given a set of configuration options, will leverage
 // create and write a new wallet to disk for a Prysm validator.
-func NewWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
+func NewWallet(ctx context.Context, cfg *WalletConfig, keymanagerKind v2keymanager.Kind) (*Wallet, error) {
 	if cfg.WalletDir == "" || (cfg.CanUnlockAccounts && cfg.PasswordsDir == "") {
 		return nil, errors.New("wallet dir and passwords dir cannot be nil")
 	}
-	accountsPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
+	accountsPath := path.Join(cfg.WalletDir, keymanagerKind.String())
 	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
 		return nil, errors.Wrap(err, "could not create wallet directory")
 	}
@@ -93,7 +93,7 @@ func NewWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	w := &Wallet{
 		accountsPath:      accountsPath,
 		passwordsDir:      cfg.PasswordsDir,
-		keymanagerKind:    cfg.KeymanagerKind,
+		keymanagerKind:    keymanagerKind,
 		canUnlockAccounts: cfg.CanUnlockAccounts,
 	}
 	return w, nil
@@ -102,18 +102,29 @@ func NewWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
-func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
+func OpenWallet(cliCtx *cli.Context, cfg *WalletConfig) (*Wallet, error) {
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager kind for wallet")
 	}
 	walletPath := path.Join(cfg.WalletDir, keymanagerKind.String())
-	return &Wallet{
+	w := &Wallet{
 		accountsPath:      walletPath,
 		passwordsDir:      cfg.PasswordsDir,
 		keymanagerKind:    keymanagerKind,
 		canUnlockAccounts: cfg.CanUnlockAccounts,
-	}, nil
+	}
+	if keymanagerKind == v2keymanager.Derived {
+		walletPassword, err := inputExistingWalletPassword()
+		if err != nil {
+			return nil, err
+		}
+		w.walletPassword = walletPassword
+	}
+	if keymanagerKind == v2keymanager.Direct {
+		w.passwordsDir = inputPasswordsDirectory(cliCtx)
+	}
+	return w, nil
 }
 
 // ReadKeymanagerConfigFromDisk opens a keymanager config file
@@ -178,7 +189,6 @@ func (w *Wallet) AccountNames() ([]string, error) {
 func (w *Wallet) InitializeKeymanager(
 	ctx context.Context,
 	skipMnemonicConfirm bool,
-	walletPassword string,
 ) (v2keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
@@ -200,7 +210,7 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, walletPassword)
+		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, w.walletPassword)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}

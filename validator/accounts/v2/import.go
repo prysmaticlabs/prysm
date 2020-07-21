@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -47,7 +46,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 
-	wallet, err := OpenWallet(context.Background(), &WalletConfig{
+	wallet, err := OpenWallet(cliCtx, &WalletConfig{
 		CanUnlockAccounts: true,
 		PasswordsDir:      passwordsDirPath,
 		WalletDir:         walletDir,

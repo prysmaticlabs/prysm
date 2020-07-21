@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
@@ -41,9 +40,8 @@ func TestCreateWallet_Direct(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(ctx, &WalletConfig{
+	wallet, err := OpenWallet(cliCtx, &WalletConfig{
 		WalletDir:         walletDir,
-		KeymanagerKind:    v2keymanager.Direct,
 		CanUnlockAccounts: false,
 	})
 	assert.NoError(t, err)
@@ -93,9 +91,8 @@ func TestCreateWallet_Remote(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(ctx, &WalletConfig{
+	wallet, err := OpenWallet(cliCtx, &WalletConfig{
 		WalletDir:         walletDir,
-		KeymanagerKind:    v2keymanager.Remote,
 		CanUnlockAccounts: false,
 	})
 	assert.NoError(t, err)

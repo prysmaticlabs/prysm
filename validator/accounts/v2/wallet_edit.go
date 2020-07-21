@@ -21,21 +21,15 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 	} else if err != nil {
 		log.Fatal("Could not parse wallet directory")
 	}
-	// Determine the keymanager kind for the wallet.
-	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
-	if err != nil {
-		log.Fatalf("Could not select keymanager kind: %v", err)
-	}
 	ctx := context.Background()
-	wallet, err := OpenWallet(ctx, &WalletConfig{
+	wallet, err := OpenWallet(cliCtx, &WalletConfig{
 		CanUnlockAccounts: false,
 		WalletDir:         walletDir,
-		KeymanagerKind:    keymanagerKind,
 	})
 	if err != nil {
 		log.Fatalf("Could not open wallet: %v", err)
 	}
-	switch keymanagerKind {
+	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
 		log.Fatal("No configuration options available to edit for direct keymanager")
 	case v2keymanager.Derived:
@@ -63,7 +57,7 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 			log.Fatal(err)
 		}
 	default:
-		log.Fatalf("Keymanager type %s is not supported", keymanagerKind)
+		log.Fatalf("Keymanager type %s is not supported", wallet.KeymanagerKind())
 	}
 	return nil
 }

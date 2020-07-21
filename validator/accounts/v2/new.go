@@ -44,71 +44,40 @@ func NewAccount(cliCtx *cli.Context) error {
 		log.Fatal(err)
 	}
 	ctx := context.Background()
-	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+	wallet, err := OpenWallet(cliCtx, &WalletConfig{
+		WalletDir:         walletDir,
+		CanUnlockAccounts: true,
+	})
+	if err != nil {
+		log.Fatalf("Could not open wallet: %v", err)
+	}
+	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
+	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
 		log.Fatal(err)
 	}
-	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	switch keymanagerKind {
+	switch wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		log.Fatal("Cannot create a new account for a remote keymanager")
 	case v2keymanager.Direct:
-		passwordsDirPath := inputPasswordsDirectory(cliCtx)
-		// Read the directory for password storage from user input.
-		wallet, err := OpenWallet(ctx, &WalletConfig{
-			PasswordsDir:      passwordsDirPath,
-			WalletDir:         walletDir,
-			CanUnlockAccounts: true,
-		})
-		if err != nil {
-			log.Fatalf("Could not open wallet: %v", err)
-		}
-		configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		cfg, err := direct.UnmarshalConfigFile(configFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		keymanager, err := direct.NewKeymanager(ctx, wallet, cfg, skipMnemonicConfirm)
-		if err != nil {
-			log.Fatal(err)
+		km, ok := keymanager.(*direct.Keymanager)
+		if !ok {
+			log.Fatal("Not ok")
 		}
 		password, err := inputNewAccountPassword(cliCtx)
 		if err != nil {
 			log.Fatal(err)
 		}
 		// Create a new validator account using the specified keymanager.
-		if _, err := keymanager.CreateAccount(ctx, password); err != nil {
+		if _, err := km.CreateAccount(ctx, password); err != nil {
 			log.Fatalf("Could not create account in wallet: %v", err)
 		}
 	case v2keymanager.Derived:
-		// Read the directory for password storage from user input.
-		wallet, err := OpenWallet(ctx, &WalletConfig{
-			WalletDir:         walletDir,
-			CanUnlockAccounts: true,
-		})
-		if err != nil {
-			log.Fatalf("Could not open wallet: %v", err)
+		km, ok := keymanager.(*derived.Keymanager)
+		if !ok {
+			log.Fatal("Not ok")
 		}
-		configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		cfg, err := derived.UnmarshalConfigFile(configFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		walletPassword, err := inputExistingWalletPassword()
-		if err != nil {
-			log.Fatal(err)
-		}
-		keymanager, err := derived.NewKeymanager(ctx, wallet, cfg, skipMnemonicConfirm, walletPassword)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if _, err := keymanager.CreateAccount(ctx); err != nil {
+		if _, err := km.CreateAccount(ctx); err != nil {
 			log.Fatalf("Could not create account in wallet: %v", err)
 		}
 	default:
@@ -198,6 +167,7 @@ func inputNewWalletPassword() (string, error) {
 }
 
 func inputExistingWalletPassword() (string, error) {
+	// TODO: Check if wallet password file is passed in.
 	prompt := promptui.Prompt{
 		Label:    "Wallet password",
 		Validate: validatePasswordInput,
