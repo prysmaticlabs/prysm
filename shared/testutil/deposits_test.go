@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSetupInitialDeposits_1024Entries(t *testing.T) {
@@ -12,13 +13,9 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	entries := 1
 	ResetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(uint64(entries))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, depositDataRoots, err := DeterministicDepositTrie(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if len(deposits) != entries {
 		t.Fatalf("incorrect number of deposits returned, wanted %d but received %d", entries, len(deposits))
@@ -49,13 +46,9 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	entries = 1024
 	ResetCache()
 	deposits, privKeys, err = DeterministicDepositsAndKeys(uint64(entries))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, depositDataRoots, err = DeterministicDepositTrie(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if len(deposits) != entries {
 		t.Fatalf("incorrect number of deposits returned, wanted %d but received %d", entries, len(deposits))
 	}
@@ -97,9 +90,7 @@ func TestDeterministicGenesisState_100Validators(t *testing.T) {
 	validatorCount := uint64(100)
 	beaconState, privKeys := DeterministicGenesisState(t, validatorCount)
 	activeValidators, err := helpers.ActiveValidatorCount(beaconState, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if len(privKeys) != int(validatorCount) {
 		t.Fatalf("expected amount of private keys %d to match requested amount of validators %d", len(privKeys), validatorCount)
@@ -111,18 +102,12 @@ func TestDeterministicGenesisState_100Validators(t *testing.T) {
 
 func TestDepositTrieFromDeposits(t *testing.T) {
 	deposits, _, err := DeterministicDepositsAndKeys(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	depositTrie, _, err := DepositTrieFromDeposits(deposits)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	root := depositTrie.Root()
 	if !bytes.Equal(root[:], eth1Data.DepositRoot) {
