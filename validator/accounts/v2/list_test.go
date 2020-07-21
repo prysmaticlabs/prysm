@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -27,34 +29,17 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	keymanager, err := direct.NewKeymanager(ctx, wallet, direct.DefaultConfig(), true /* skip confirm */)
 	require.NoError(t, err)
 	numAccounts := 5
-	accountNames := make([]string, numAccounts)
-	pubKeys := make([][48]byte, numAccounts)
 	depositDataForAccounts := make([][]byte, numAccounts)
+	accountCreationTimestamps := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		//// Generate a new account name and write the account
-		//// to disk using the wallet.
-		//name, err := wallet.generateAccountName()
-		//require.NoError(t, err)
-		//accountNames[i] = name
-		//// Generate a directory for the account name and
-		//// write its associated password to disk.
-		//accountPath := path.Join(wallet.accountsPath, name)
-		//require.NoError(t, os.MkdirAll(accountPath, DirectoryPermissions))
-		//require.NoError(t, wallet.writePasswordToFile(name, password))
-		//
-		//// Write the deposit data for each account.
-		//depositData := []byte(strconv.Itoa(i))
-		//depositDataForAccounts[i] = depositData
-		//require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.DepositTransactionFileName, depositData))
-		//
-		//// Write the creation timestamp for the account with unix timestamp 0.
-		//require.NoError(t, wallet.WriteFileForAccount(ctx, name, direct.TimestampFileName, []byte("0")))
-		//
-		//// Create public keys for the accounts.
-		//key := bls.RandKey()
-		//pubKeys[i] = bytesutil.ToBytes48(key.PublicKey().Marshal())
-		_, err := keymanager.CreateAccount(ctx, "hello world")
+		accountName, err := keymanager.CreateAccount(ctx, "hello world")
 		require.NoError(t, err)
+		depositData, err := wallet.ReadFileForAccount(accountName, direct.DepositTransactionFileName)
+		require.NoError(t, err)
+		depositDataForAccounts[i] = depositData
+		unixTimestamp, err := wallet.ReadFileForAccount(accountName, direct.TimestampFileName)
+		require.NoError(t, err)
+		accountCreationTimestamps[i] = unixTimestamp
 	}
 	rescueStdout := os.Stdout
 	r, w, err := os.Pipe()
@@ -80,6 +65,11 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		t.Errorf("Did not find accounts path %s in output", wallet.accountsPath)
 	}
 
+	accountNames, err := wallet.AccountNames()
+	require.NoError(t, err)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+
 	for i := 0; i < numAccounts; i++ {
 		accountName := accountNames[i]
 		// Assert the account name is printed to stdout.
@@ -100,9 +90,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		}
 
 		// Assert the account creation time is displayed
-		if !strings.Contains(stringOutput, fmt.Sprintf("%v", time.Unix(0, 0).String())) {
-			t.Error("Did not display account creation timestamp")
-		}
+		unixTimestampStr, err := strconv.ParseInt(string(accountCreationTimestamps[i]), 10, 64)
+		require.NoError(t, err)
+		unixTimestamp := time.Unix(unixTimestampStr, 0)
+		assert.Equal(t, strings.Contains(stringOutput, fmt.Sprintf("%s", unixTimestamp)), true)
 	}
 }
 
