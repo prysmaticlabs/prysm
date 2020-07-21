@@ -125,7 +125,7 @@ func validateMnemonic(mnemonic string) error {
 		}
 	}
 	if len(words) != phraseWordCount {
-		return fmt.Errorf("phrase must be 24 words, entered %d", len(words))
+		return fmt.Errorf("phrase must be %d words, entered %d", phraseWordCount, len(words))
 	}
 	return nil
 }

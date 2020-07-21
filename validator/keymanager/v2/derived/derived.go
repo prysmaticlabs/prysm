@@ -197,7 +197,8 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 	}, nil
 }
 
-// SeedFileFromPhrase --
+// SeedFileFromMnemonic uses the provided mnemonic seed phrase to generate the
+// appropriate seed file for recovering a derived wallets.
 func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string) (*SeedConfig, error) {
 	walletSeed, err := bip39.MnemonicToByteArray(mnemonic)
 	if err != nil {
