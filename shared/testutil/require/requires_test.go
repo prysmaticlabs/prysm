@@ -29,13 +29,22 @@ func TestAssert_Equal(t *testing.T) {
 			},
 		},
 		{
+			name: "equal values different types",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: uint64(42),
+				actual:   42,
+			},
+			expectedErr: "Values are not equal, want: 42 (uint64), got: 42 (int)",
+		},
+		{
 			name: "non-equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
 				expected: 42,
 				actual:   41,
 			},
-			expectedErr: "Values are not equal, got: 41, want: 42",
+			expectedErr: "Values are not equal, want: 42 (int), got: 41 (int)",
 		},
 		{
 			name: "custom error message",
@@ -45,7 +54,7 @@ func TestAssert_Equal(t *testing.T) {
 				actual:   41,
 				msgs:     []interface{}{"Custom values are not equal"},
 			},
-			expectedErr: "Custom values are not equal, got: 41, want: 42",
+			expectedErr: "Custom values are not equal, want: 42 (int), got: 41 (int)",
 		},
 		{
 			name: "custom error message with params",
@@ -55,7 +64,7 @@ func TestAssert_Equal(t *testing.T) {
 				actual:   41,
 				msgs:     []interface{}{"Custom values are not equal (for slot %d)", 12},
 			},
-			expectedErr: "Custom values are not equal (for slot 12), got: 41, want: 42",
+			expectedErr: "Custom values are not equal (for slot 12), want: 42 (int), got: 41 (int)",
 		},
 	}
 	for _, tt := range tests {
@@ -95,7 +104,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 				expected: struct{ i int }{42},
 				actual:   struct{ i int }{41},
 			},
-			expectedErr: "Values are not equal, got: {41}, want: {42}",
+			expectedErr: "Values are not equal, want: {42}, got: {41}",
 		},
 		{
 			name: "custom error message",
@@ -105,7 +114,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 				actual:   struct{ i int }{41},
 				msgs:     []interface{}{"Custom values are not equal"},
 			},
-			expectedErr: "Custom values are not equal, got: {41}, want: {42}",
+			expectedErr: "Custom values are not equal, want: {42}, got: {41}",
 		},
 		{
 			name: "custom error message with params",
@@ -115,7 +124,7 @@ func TestAssert_DeepEqual(t *testing.T) {
 				actual:   struct{ i int }{41},
 				msgs:     []interface{}{"Custom values are not equal (for slot %d)", 12},
 			},
-			expectedErr: "Custom values are not equal (for slot 12), got: {41}, want: {42}",
+			expectedErr: "Custom values are not equal (for slot 12), want: {42}, got: {41}",
 		},
 	}
 	for _, tt := range tests {
