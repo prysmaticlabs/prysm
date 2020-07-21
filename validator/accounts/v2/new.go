@@ -42,6 +42,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Info(keymanagerKind)
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	switch keymanagerKind {
 	case v2keymanager.Remote:

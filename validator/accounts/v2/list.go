@@ -34,26 +34,38 @@ func ListAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 	}
-	keymanager, err := wallet.InitializeKeymanager(ctx, false /* skipMnemonicConfirm */)
+	configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
-		log.Fatalf("Could not initialize keymanager: %v", err)
+		log.Fatal(err)
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
-		km, ok := keymanager.(*direct.Keymanager)
-		if !ok {
-			log.Fatal("Could not assert keymanager interface to concrete type")
+		cfg, err := direct.UnmarshalConfigFile(configFile)
+		if err != nil {
+			log.Fatal(err)
 		}
-		if err := listDirectKeymanagerAccounts(showDepositData, wallet, km); err != nil {
+		keymanager, err := direct.NewKeymanager(ctx, wallet, cfg, true /* skip mnemonic confirm */)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := listDirectKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
 			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
 		}
 	case v2keymanager.Derived:
-		km, ok := keymanager.(*derived.Keymanager)
-		if !ok {
-			log.Fatal("Could not assert keymanager interface to concrete type")
+		cfg, err := derived.UnmarshalConfigFile(configFile)
+		if err != nil {
+			log.Fatal(err)
 		}
-		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, km); err != nil {
+		walletPassword, err := inputExistingWalletPassword()
+		if err != nil {
+			log.Fatal(err)
+		}
+		keymanager, err := derived.NewKeymanager(ctx, wallet, cfg, true /* skip mnemonic confirm */, walletPassword)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, keymanager); err != nil {
 			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)
 		}
 	default:
