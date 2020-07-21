@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/tyler-smith/go-bip39"
-
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -21,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )

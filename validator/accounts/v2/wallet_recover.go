@@ -6,15 +6,15 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/validator/flags"
-
 	"github.com/manifoldco/promptui"
-
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/urfave/cli/v2"
 )
+
+const phraseWordCount = 24
 
 func RecoverWallet(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
@@ -124,7 +124,7 @@ func validateMnemonic(mnemonic string) error {
 			words = append(words[:i], words[i+1:]...)
 		}
 	}
-	if len(words) != 24 {
+	if len(words) != phraseWordCount {
 		return fmt.Errorf("phrase must be 24 words, entered %d", len(words))
 	}
 	return nil
