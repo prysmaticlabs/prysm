@@ -58,6 +58,7 @@ var (
 		Usage: "Number of attempts to retry gRPC requests",
 		Value: 5,
 	}
+	// GrpcRetryDelayFlag defines the interval to retry a failed gRPC request.
 	GrpcRetryDelayFlag = &cli.DurationFlag{
 		Name:  "grpc-retry-delay",
 		Usage: "The amount of time between gRPC retry requests.",

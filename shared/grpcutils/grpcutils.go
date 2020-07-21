@@ -30,6 +30,7 @@ func LogGRPCRequests(ctx context.Context, method string, req, reply interface{},
 	return err
 }
 
+// LogGRPCStream to print the method at DEBUG level at the start of the stream.
 func LogGRPCStream(ctx context.Context, sd *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 	// Shortcut when debug logging is not enabled.
 	if logrus.GetLevel() < logrus.DebugLevel {
