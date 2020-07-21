@@ -413,7 +413,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		}
 
 		// Update a simple cache of public key -> secret key utilized
-		// for fast signing access in the direct keymanager.
+		// for fast signing access in the keymanager.
 		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
 	}
 	return nil

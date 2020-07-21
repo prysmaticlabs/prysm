@@ -132,9 +132,8 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%d", numAccounts-1), accountName)
 
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	// The results are not guaranteed to be ordered, so we ensure each
 	// key we expect exists in the results via a map.
 	keysMap := make(map[[48]byte]bool)
