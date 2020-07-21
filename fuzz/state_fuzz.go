@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func init() {
@@ -18,6 +19,7 @@ func init() {
 
 // BeaconStateFuzz --
 func BeaconStateFuzz(input []byte)  {
+	params.UseMainnetConfig()
 	st := &pb.BeaconState{}
 	if err := st.UnmarshalSSZ(input); err != nil {
 		return

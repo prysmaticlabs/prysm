@@ -95,6 +95,23 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
+    name = "ssz_encoder_attestations_test",
+    srcs = [
+        "ssz_encoder_attestations_fuzz.go",
+    ] + COMMON_SRCS,
+    corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_block_header",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/block_header",
+    func = "SszEncoderAttestationFuzz",
+    importpath = IMPORT_PATH,
+    #    max_len = 30000000,
+    deps = [
+        "//beacon-chain/p2p/encoder:go_default_library",
+        "//shared/params:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+    ] + COMMON_DEPS,
+)
+
+go_fuzz_test(
     name = "state_fuzz_test",
     srcs = [
         "state_fuzz.go",
@@ -108,6 +125,7 @@ go_fuzz_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//shared/params:go_default_library",
     ] + COMMON_DEPS,
 )
 

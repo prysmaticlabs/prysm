@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -82,10 +85,22 @@ func ProcessAttestationsNoVerify(
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
 	var err error
+	e := encoder.SszNetworkEncoder{}
+
 	for idx, attestation := range body.Attestations {
 		beaconState, err = ProcessAttestationNoVerify(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
+		}
+
+		buf := new(bytes.Buffer)
+		if _, err := e.EncodeGossip(buf, attestation); err != nil {
+			return nil, err
+		}
+		hash := hashutil.FastSum256(buf.Bytes())
+		path := fmt.Sprintf("/tmp/ssz_encoder_corpus/%x", hash)
+		if err := ioutil.WriteFile(path, buf.Bytes(), 0644); err != nil {
+			return nil, err
 		}
 	}
 	return beaconState, nil

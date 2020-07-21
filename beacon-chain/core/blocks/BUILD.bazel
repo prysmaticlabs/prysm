@@ -25,6 +25,7 @@ go_library(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
+        "//beacon-chain/p2p/encoder:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
