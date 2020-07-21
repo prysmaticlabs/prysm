@@ -4,7 +4,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "archive.go",
         "archived_point.go",
         "backup.go",
         "blocks.go",
@@ -62,7 +61,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "archive_test.go",
         "archived_point_test.go",
         "backup_test.go",
         "blocks_test.go",
