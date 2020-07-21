@@ -22,7 +22,12 @@ func setupWallet(t *testing.T, testDir string) *Wallet {
 	passwordsDir := filepath.Join(testDir, passwordDirName)
 	ctx := context.Background()
 
-	assert.NoError(t, initializeDirectWallet(walletDir, passwordsDir))
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
+	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
+	cliCtx := cli.NewContext(&app, set, nil)
+	assert.NoError(t, createDirectWallet(cliCtx, walletDir))
 	cfg := &WalletConfig{
 		WalletDir:      walletDir,
 		PasswordsDir:   passwordsDir,
