@@ -36,7 +36,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 		log.Fatalf("Could not initialize wallet with derived keymanager: %v", err)
 	}
 	log.WithField("wallet-path", walletDir).Infof(
-		"Successfully created HD wallet and saved configuration to disk. " +
+		"Successfully recovered HD wallet and saved configuration to disk. " +
 			"Make a new validator account with ./prysm.sh validator accounts-2 new",
 	)
 	return nil
