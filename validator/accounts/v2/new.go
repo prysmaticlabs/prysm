@@ -37,7 +37,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
-		return errors.New("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
 		return errors.Wrap(err, "could not get wallet directory")
 	}
@@ -49,7 +49,7 @@ func NewAccount(cliCtx *cli.Context) error {
 
 	// Only direct keymanagers can create accounts for now.
 	if keymanagerKind == v2keymanager.Remote {
-		return errors.New("Cannot create a new account for a remote keymanager")
+		return errors.New("cannot create a new account for a remote keymanager")
 	}
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)

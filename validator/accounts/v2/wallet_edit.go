@@ -37,9 +37,9 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 	}
 	switch keymanagerKind {
 	case v2keymanager.Direct:
-		return errors.New("No configuration options available to edit for direct keymanager")
+		return errors.New("no configuration options available to edit for direct keymanager")
 	case v2keymanager.Derived:
-		return errors.New("Derived keymanager is not yet supported")
+		return errors.New("derived keymanager is not yet supported")
 	case v2keymanager.Remote:
 		enc, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 		if err != nil {
