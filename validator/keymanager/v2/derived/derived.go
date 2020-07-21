@@ -11,11 +11,17 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
+	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -44,6 +50,11 @@ const (
 	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
+	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
+	// for a validator account.
+	DepositTransactionFileName = "deposit_transaction.rlp"
+	// DepositDataFileName for the raw, ssz-encoded deposit data object.
+	DepositDataFileName = "deposit_data.ssz"
 )
 
 // Config for a derived keymanager.
@@ -253,6 +264,30 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
 	}
 
+	// Upon confirmation of the withdrawal key, proceed to display
+	// and write associated deposit data to disk.
+	tx, depositData, err := generateDepositTransaction(validatingKey.Marshal(), withdrawalKey.Marshal())
+	if err != nil {
+		return "", errors.Wrap(err, "could not generate deposit transaction data")
+	}
+
+	// Log the deposit transaction data to the user.
+	logDepositTransaction(tx)
+
+	// We write the raw deposit transaction as an .rlp encoded file.
+	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositTransactionFileName, tx.Data()); err != nil {
+		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, DepositTransactionFileName)
+	}
+
+	// We write the ssz-encoded deposit data to disk as a .ssz file.
+	encodedDepositData, err := ssz.Marshal(depositData)
+	if err != nil {
+		return "", errors.Wrap(err, "could not marshal deposit data")
+	}
+	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositDataFileName, encodedDepositData); err != nil {
+		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, encodedDepositData)
+	}
+
 	// Finally, write the account creation timestamps as a files.
 	createdAt := roughtime.Now().Unix()
 	createdAtStr := strconv.FormatInt(createdAt, 10)
@@ -349,4 +384,53 @@ func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, 
 		Name:    encryptor.Name(),
 	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
+}
+
+func generateDepositTransaction(
+	validatingKey []byte,
+	withdrawalKey []byte,
+) (*types.Transaction, *ethpb.Deposit_Data, error) {
+	validatingPrivateKey, err := bls.SecretKeyFromBytes(validatingKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	withdrawalPrivateKey, err := bls.SecretKeyFromBytes(withdrawalKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	depositData, depositRoot, err := depositutil.DepositInput(
+		validatingPrivateKey, withdrawalPrivateKey, params.BeaconConfig().MaxEffectiveBalance,
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not generate deposit input")
+	}
+	testAcc, err := contract.Setup()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not load deposit contract")
+	}
+	testAcc.TxOpts.GasLimit = 1000000
+
+	tx, err := testAcc.Contract.Deposit(
+		testAcc.TxOpts,
+		depositData.PublicKey,
+		depositData.WithdrawalCredentials,
+		depositData.Signature,
+		depositRoot,
+	)
+	return tx, depositData, nil
+}
+
+func logDepositTransaction(tx *types.Transaction) {
+	log.Info(
+		"Copy + paste the deposit data below when using the " +
+			"eth1 deposit contract")
+	fmt.Printf(`
+========================Deposit Data===============================
+
+%#x
+
+===================================================================`, tx.Data())
+	fmt.Printf(`
+***Enter the above deposit data into step 3 on https://prylabs.net/participate***
+`)
 }

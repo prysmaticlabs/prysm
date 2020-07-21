@@ -164,7 +164,8 @@ func listDerivedKeymanagerAccounts(
 	if err != nil {
 		return err
 	}
-	for i := uint64(0); i < currentAccountNumber; i++ {
+	log.Info(currentAccountNumber)
+	for i := uint64(0); i <= currentAccountNumber; i++ {
 		fmt.Println("")
 		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
@@ -187,26 +188,25 @@ func listDerivedKeymanagerAccounts(
 		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
 		fmt.Printf("%s %s\n", au.BrightCyan("[derivation path]").Bold(), validatingKeyPath)
 
-		// Retrieve the account creation timestamp.
+		if !showDepositData {
+			continue
+		}
+		enc, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.DepositTransactionFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
+		}
+		fmt.Printf(
+			"%s %s\n",
+			"(deposit tx file)",
+			path.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
+		)
+		fmt.Printf(`
+======================Deposit Transaction Data=====================
 
-		//		if !showDepositData {
-		//			continue
-		//		}
-		//		enc, err := wallet.ReadFileForAccount(accountNames[i], direct.DepositTransactionFileName)
-		//		if err != nil {
-		//			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
-		//		}
-		//		fmt.Printf(
-		//			"%s %s\n",
-		//			"(deposit tx file)",
-		//			path.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
-		//		)
-		//		fmt.Printf(`
-		//======================Deposit Transaction Data=====================
-		//
-		//%#x
-		//
-		//===================================================================`, enc)
+%#x
+
+===================================================================`, enc)
+		fmt.Println(" ")
 	}
 	return nil
 }
