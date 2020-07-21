@@ -16,6 +16,7 @@ import (
 
 const phraseWordCount = 24
 
+// RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
 func RecoverWallet(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
