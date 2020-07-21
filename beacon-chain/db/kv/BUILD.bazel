@@ -6,7 +6,6 @@ go_library(
     srcs = [
         "archive.go",
         "archived_point.go",
-        "attestations.go",
         "backup.go",
         "blocks.go",
         "check_historical_state.go",
@@ -65,7 +64,6 @@ go_test(
     srcs = [
         "archive_test.go",
         "archived_point_test.go",
-        "attestations_test.go",
         "backup_test.go",
         "blocks_test.go",
         "check_historical_test_test.go",
@@ -95,7 +93,6 @@ go_test(
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_etcd_go_bbolt//:go_default_library",
