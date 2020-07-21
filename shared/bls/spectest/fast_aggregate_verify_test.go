@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestFastAggregateVerifyYaml(t *testing.T) {
@@ -18,36 +19,23 @@ func TestFastAggregateVerifyYaml(t *testing.T) {
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
-			if err != nil {
-				t.Fatalf("Failed to read file: %v", err)
-			}
+			require.NoError(t, err)
 			test := &FastAggregateVerifyTest{}
-			if err := yaml.Unmarshal(file, test); err != nil {
-				t.Fatalf("Failed to unmarshal: %v", err)
-			}
+			require.NoError(t, yaml.Unmarshal(file, test))
 
 			pubkeys := make([]iface.PublicKey, len(test.Input.Pubkeys))
 			for j, raw := range test.Input.Pubkeys {
 				pkBytes, err := hex.DecodeString(raw[2:])
-				if err != nil {
-					t.Fatalf("Cannot decode string to bytes: %v", err)
-				}
+				require.NoError(t, err)
 				pk, err := bls.PublicKeyFromBytes(pkBytes)
-				if err != nil {
-					t.Fatalf("Cannot unmarshal input to secret key: %v", err)
-				}
+				require.NoError(t, err)
 				pubkeys[j] = pk
 			}
 
 			msgBytes, err := hex.DecodeString(test.Input.Message[2:])
-			if err != nil {
-				t.Fatalf("Cannot decode string to bytes: %v", err)
-			}
-
+			require.NoError(t, err)
 			sigBytes, err := hex.DecodeString(test.Input.Signature[2:])
-			if err != nil {
-				t.Fatalf("Cannot decode string to bytes: %v", err)
-			}
+			require.NoError(t, err)
 			sig, err := bls.SignatureFromBytes(sigBytes)
 			if err != nil {
 				if test.Output == false {

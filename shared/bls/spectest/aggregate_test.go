@@ -1,7 +1,6 @@
 package spectest
 
 import (
-	"bytes"
 	"encoding/hex"
 	"path"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestAggregateYaml(t *testing.T) {
@@ -19,23 +19,15 @@ func TestAggregateYaml(t *testing.T) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
-			if err != nil {
-				t.Fatalf("Failed to read file: %v", err)
-			}
+			require.NoError(t, err)
 			test := &AggregateTest{}
-			if err := yaml.Unmarshal(file, test); err != nil {
-				t.Fatalf("Failed to unmarshal: %v", err)
-			}
+			require.NoError(t, yaml.Unmarshal(file, test))
 			var sigs []iface.Signature
 			for _, s := range test.Input {
 				sigBytes, err := hex.DecodeString(s[2:])
-				if err != nil {
-					t.Fatalf("Cannot decode string to bytes: %v", err)
-				}
+				require.NoError(t, err)
 				sig, err := bls.SignatureFromBytes(sigBytes)
-				if err != nil {
-					t.Fatalf("Unable to unmarshal signature from bytes: %v", err)
-				}
+				require.NoError(t, err)
 				sigs = append(sigs, sig)
 			}
 			if len(test.Input) == 0 {
@@ -52,12 +44,8 @@ func TestAggregateYaml(t *testing.T) {
 				return
 			}
 			outputBytes, err := hex.DecodeString(test.Output[2:])
-			if err != nil {
-				t.Fatalf("Cannot decode string to bytes: %v", err)
-			}
-			if !bytes.Equal(outputBytes, sig.Marshal()) {
-				t.Fatal("Output does not equal marshaled aggregated sig bytes")
-			}
+			require.NoError(t, err)
+			require.DeepEqual(t, outputBytes, sig.Marshal())
 		})
 	}
 }
