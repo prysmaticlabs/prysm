@@ -107,9 +107,6 @@ func (e SszNetworkEncoder) DecodeGossip(b []byte, to interface{}) error {
 	if err != nil {
 		return err
 	}
-	if uint64(len(b)) > MaxGossipSize {
-		return errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
-	}
 	return e.doDecode(b, to)
 }
 
