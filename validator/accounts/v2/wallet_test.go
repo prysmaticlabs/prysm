@@ -38,19 +38,9 @@ func setupWalletDir(t testing.TB) (string, string) {
 
 func TestCreateAndReadWallet(t *testing.T) {
 	ctx := context.Background()
-	if _, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir: "",
-		WalletDir:    "",
-	}); err == nil {
-		t.Error("Expected error when passing in empty directories, received nil")
-	}
-	walletDir, passwordsDir := setupWalletDir(t)
+	walletDir, _ := setupWalletDir(t)
 	keymanagerKind := v2keymanager.Direct
-	wallet, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir:   passwordsDir,
-		WalletDir:      walletDir,
-		KeymanagerKind: keymanagerKind,
-	})
+	wallet, err := NewWallet(nil)
 	require.NoError(t, err)
 
 	keymanager := &mock.MockKeymanager{
@@ -65,9 +55,6 @@ func TestCreateAndReadWallet(t *testing.T) {
 	require.Equal(t, true, fileExists(configFilePath), "Expected config file to have been created at path: %s", configFilePath)
 
 	// We should be able to now read the wallet as well.
-	_, err = NewWallet(ctx, &WalletConfig{
-		PasswordsDir: passwordsDir,
-		WalletDir:    walletDir,
-	})
+	_, err = OpenWallet(nil)
 	require.NoError(t, err)
 }

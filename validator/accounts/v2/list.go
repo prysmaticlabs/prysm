@@ -19,20 +19,11 @@ import (
 
 // ListAccounts displays all available validator accounts in a Prysm wallet.
 func ListAccounts(cliCtx *cli.Context) error {
-	walletDir, err := inputWalletDir(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	} else if err != nil {
-		return errors.Wrap(err, "could not parse wallet directory")
-	}
 	// Read the wallet from the specified path.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx, &WalletConfig{
-		WalletDir:         walletDir,
-		CanUnlockAccounts: false,
-	})
+	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
+		log.Fatalf("Could not read wallet at specified path %s: %v", wallet.AccountsDir(), err)
 	}
 	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {

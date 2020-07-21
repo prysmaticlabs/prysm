@@ -25,16 +25,17 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	}
 	seed := make([]byte, 32)
 	copy(seed, "hello world")
+	password := "secretPassw0rd$1999"
 	dr := &Keymanager{
 		wallet: wallet,
 		seed:   seed,
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
+		walletPassword: password,
 	}
 	ctx := context.Background()
-	password := "secretPassw0rd$1999"
-	accountName, err := dr.CreateAccount(ctx, password)
+	accountName, err := dr.CreateAccount(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "0", accountName)
 

@@ -40,10 +40,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx, &WalletConfig{
-		WalletDir:         walletDir,
-		CanUnlockAccounts: false,
-	})
+	wallet, err := OpenWallet(cliCtx)
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
@@ -91,10 +88,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx, &WalletConfig{
-		WalletDir:         walletDir,
-		CanUnlockAccounts: false,
-	})
+	wallet, err := OpenWallet(cliCtx)
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.

@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"flag"
 	"os"
 	"path/filepath"
@@ -13,34 +12,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/urfave/cli/v2"
 )
 
 func setupWallet(t *testing.T, testDir string) *Wallet {
-	walletDir := filepath.Join(testDir, walletDirName)
+	//walletDir := filepath.Join(testDir, walletDirName)
 	passwordsDir := filepath.Join(testDir, passwordDirName)
-	ctx := context.Background()
-
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
 	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
 	cliCtx := cli.NewContext(&app, set, nil)
-	assert.NoError(t, createDirectWallet(cliCtx, walletDir))
-	cfg := &WalletConfig{
-		WalletDir:      walletDir,
-		PasswordsDir:   passwordsDir,
-		KeymanagerKind: v2.Direct,
-	}
-	w, err := NewWallet(ctx, cfg)
+	w, err := NewWallet(cliCtx)
 	require.NoError(t, err)
-
-	keymanager, err := w.InitializeKeymanager(ctx, true)
-	require.NoError(t, err)
-
-	_, err = keymanager.CreateAccount(ctx, password)
-	require.NoError(t, err)
+	assert.NoError(t, createDirectKeymanagerWallet(cliCtx, w))
 	return w
 }
 

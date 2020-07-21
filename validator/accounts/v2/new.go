@@ -36,18 +36,8 @@ var keymanagerKindSelections = map[v2keymanager.Kind]string{
 // NewAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
 func NewAccount(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	} else if err != nil {
-		log.Fatal(err)
-	}
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx, &WalletConfig{
-		WalletDir:         walletDir,
-		CanUnlockAccounts: true,
-	})
+	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
 		log.Fatalf("Could not open wallet: %v", err)
 	}

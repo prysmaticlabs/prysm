@@ -11,22 +11,18 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 func TestListAccounts_DirectKeymanager(t *testing.T) {
-	walletDir, passwordsDir := setupWalletDir(t)
-	keymanagerKind := v2keymanager.Direct
+	//walletDir, passwordsDir := setupWalletDir(t)
+	//keymanagerKind := v2keymanager.Direct
 	ctx := context.Background()
-	wallet, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir:   passwordsDir,
-		WalletDir:      walletDir,
-		KeymanagerKind: keymanagerKind,
-	})
+	wallet, err := NewWallet(nil)
 	require.NoError(t, err)
 	keymanager, err := direct.NewKeymanager(ctx, wallet, direct.DefaultConfig(), true /* skip confirm */)
 	require.NoError(t, err)
@@ -100,14 +96,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 }
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
-	walletDir, passwordsDir := setupWalletDir(t)
-	keymanagerKind := v2keymanager.Derived
+	//walletDir, passwordsDir := setupWalletDir(t)
+	//keymanagerKind := v2keymanager.Derived
 	ctx := context.Background()
-	wallet, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir:   passwordsDir,
-		WalletDir:      walletDir,
-		KeymanagerKind: keymanagerKind,
-	})
+	wallet, err := NewWallet(nil)
 	require.NoError(t, err)
 
 	password := "hello world"
@@ -131,7 +123,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx, password)
+		_, err := keymanager.CreateAccount(ctx)
 		require.NoError(t, err)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
 		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositTransactionFileName)

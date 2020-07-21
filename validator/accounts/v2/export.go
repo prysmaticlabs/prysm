@@ -22,23 +22,12 @@ const archiveFilename = "backup.zip"
 
 // ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		log.Fatal("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	} else if err != nil {
-		log.WithError(err).Fatal("Could not parse wallet directory")
-	}
-
 	outputDir, err := inputExportDir(cliCtx)
 	if err != nil {
 		log.WithError(err).Fatal("Could not parse output directory")
 	}
 
-	wallet, err := OpenWallet(cliCtx, &WalletConfig{
-		CanUnlockAccounts: false,
-		WalletDir:         walletDir,
-	})
+	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
 		log.WithError(err).Fatal("Could not open wallet")
 	}

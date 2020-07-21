@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
@@ -31,11 +31,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 	}
 	encodedCfg, err := remote.MarshalConfigFile(ctx, originalCfg)
 	assert.NoError(t, err)
-	walletConfig := &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Remote,
-	}
-	wallet, err := NewWallet(ctx, walletConfig)
+	wallet, err := NewWallet(nil)
 	assert.NoError(t, err)
 	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
