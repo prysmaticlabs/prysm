@@ -21,6 +21,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 var errInts = errors.New("error in subscribeInts")
@@ -66,9 +68,7 @@ loop:
 	sub.Unsubscribe()
 
 	err, ok := <-sub.Err()
-	if err != nil {
-		t.Fatal("got non-nil error after Unsubscribe")
-	}
+	require.NoError(t, err)
 	if ok {
 		t.Fatal("channel still open after Unsubscribe")
 	}
@@ -114,7 +114,5 @@ func TestResubscribeAbort(t *testing.T) {
 	})
 
 	sub.Unsubscribe()
-	if err := <-done; err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, <-done)
 }
