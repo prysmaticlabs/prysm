@@ -107,6 +107,7 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
@@ -117,6 +118,5 @@ go_test(
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
-        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
