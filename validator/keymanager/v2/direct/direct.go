@@ -47,8 +47,6 @@ const (
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
 	KeystoreFileName = "keystore.json"
-	// NumAccountWords for human-readable names in wallets using a direct keymanager.
-	NumAccountWords = 3
 	// PasswordFileSuffix for passwords persisted as text to disk.
 	PasswordFileSuffix  = ".pass"
 	depositDataFileName = "deposit_data.ssz"
