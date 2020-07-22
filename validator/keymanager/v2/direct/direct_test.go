@@ -12,33 +12,14 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
-
-type mockMnemonicGenerator struct {
-	generatedMnemonics []string
-}
-
-func (m *mockMnemonicGenerator) Generate(data []byte) (string, error) {
-	newMnemonic, err := bip39.NewMnemonic(data)
-	if err != nil {
-		return "", err
-	}
-	m.generatedMnemonics = append(m.generatedMnemonics, newMnemonic)
-	return newMnemonic, nil
-}
-
-func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
-	return nil
-}
 
 func TestKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -46,12 +27,8 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}
-	mnemonicGenerator := &mockMnemonicGenerator{
-		generatedMnemonics: make([]string, 0),
-	}
 	dr := &Keymanager{
-		wallet:            wallet,
-		mnemonicGenerator: mnemonicGenerator,
+		wallet: wallet,
 	}
 	ctx := context.Background()
 	password := "secretPassw0rd$1999"
@@ -92,24 +69,6 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 		)
 	}
 
-	// We ensure the mnemonic phrase has successfully been generated.
-	require.Equal(t, 1, len(mnemonicGenerator.generatedMnemonics), "Expected to have generated new mnemonic for private key")
-	mnemonicPhrase := mnemonicGenerator.generatedMnemonics[0]
-	rawWithdrawalBytes, err := bip39.EntropyFromMnemonic(mnemonicPhrase)
-	require.NoError(t, err)
-	validatorWithdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalBytes)
-	require.NoError(t, err, "Could not instantiate bls secret key from bytes")
-
-	// We then verify the withdrawal hash created from the recovered withdrawal key
-	// given the mnemonic phrase does indeed verify with the deposit data that was persisted on disk.
-	withdrawalHash := depositutil.WithdrawalCredentialsHash(validatorWithdrawalKey)
-	if !bytes.Equal(withdrawalHash, depositData.WithdrawalCredentials) {
-		t.Errorf(
-			"Expected matching withdrawal credentials, got %#x, received %#x",
-			withdrawalHash,
-			depositData.WithdrawalCredentials,
-		)
-	}
 	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
 }
 
