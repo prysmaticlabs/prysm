@@ -4,5 +4,5 @@ go_library(
     name = "go_default_library",
     srcs = ["consts.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2/consts",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
 )
