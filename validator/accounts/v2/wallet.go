@@ -133,7 +133,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		keymanagerKind: keymanagerKind,
 	}
 	if keymanagerKind == v2keymanager.Derived {
-		walletPassword, err := inputExistingWalletPassword()
+		walletPassword, err := inputExistingWalletPassword(cliCtx)
 		if err != nil {
 			return nil, err
 		}

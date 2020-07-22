@@ -23,6 +23,7 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+				flags.PasswordFileFlag,
 			},
 			Action: CreateWallet,
 		},

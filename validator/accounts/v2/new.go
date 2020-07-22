@@ -156,8 +156,15 @@ func inputNewWalletPassword() (string, error) {
 	return walletPassword, nil
 }
 
-func inputExistingWalletPassword() (string, error) {
-	// TODO: Check if wallet password file is passed in.
+func inputExistingWalletPassword(cliCtx *cli.Context) (string, error) {
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", err
+		}
+		return string(data), nil
+	}
 	prompt := promptui.Prompt{
 		Label:    "Wallet password",
 		Validate: validatePasswordInput,
