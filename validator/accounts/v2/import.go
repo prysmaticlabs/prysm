@@ -29,12 +29,12 @@ func ImportAccount(cliCtx *cli.Context) error {
 
 	backupDir, err := inputImportDir(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not parse output directory: %v", err)
+		return errors.Wrap(err, "could not parse output directory")
 	}
 
 	accountsImported, err := unzipArchiveToTarget(backupDir, walletDir)
 	if err != nil {
-		log.WithError(err).Fatal("Could not unzip archive")
+		return errors.Wrap(err, "could not unzip archive")
 	}
 
 	au := aurora.NewAurora(true)
@@ -53,16 +53,16 @@ func ImportAccount(cliCtx *cli.Context) error {
 		WalletDir:         walletDir,
 	})
 	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
+		return errors.Wrap(err, "could not open wallet")
 	}
 
 	for _, accountName := range accountsImported {
 		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-			log.WithError(err).Fatal("Could not set account password")
+			return errors.Wrap(err, "could not set account password")
 		}
 	}
 	if err := logAccountsImported(wallet, accountsImported); err != nil {
-		log.WithError(err).Fatal("Could not log accounts imported")
+		return errors.Wrap(err, "could not log accounts imported")
 	}
 
 	return nil
