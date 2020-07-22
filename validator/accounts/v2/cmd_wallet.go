@@ -27,7 +27,7 @@ var WalletCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := CreateWallet(cliCtx); err != nil {
-					log.Fatalf("Could not create a wallet: %v", err)
+					log.WithError(err).Fatal("Could not create a wallet")
 				}
 				return nil
 			},
