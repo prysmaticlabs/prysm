@@ -151,7 +151,7 @@ func listDerivedKeymanagerAccounts(
 	if nextAccountNumber > 0 {
 		currentAccountNumber--
 	}
-	accountNames, err := keymanager.AccountNames(ctx)
+	accountNames, err := keymanager.ValidatingAccountNames(ctx)
 	if err != nil {
 		return err
 	}
