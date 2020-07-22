@@ -11,6 +11,8 @@ import (
 
 // Wallet contains an in-memory, simulated wallet implementation.
 type Wallet struct {
+	InnerAccountsDir  string
+	Directories       []string
 	Files             map[string]map[string][]byte
 	EncryptedSeedFile []byte
 	AccountPasswords  map[string]string
@@ -31,7 +33,12 @@ func (m *Wallet) AccountNames() ([]string, error) {
 
 // AccountsDir --
 func (m *Wallet) AccountsDir() string {
-	return ""
+	return m.InnerAccountsDir
+}
+
+// ListDirs --
+func (m *Wallet) ListDirs() ([]string, error) {
+	return m.Directories, nil
 }
 
 // CanUnlockAccounts --

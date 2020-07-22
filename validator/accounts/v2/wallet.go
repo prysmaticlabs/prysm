@@ -195,6 +195,37 @@ func (w *Wallet) InitializeKeymanager(
 	return keymanager, nil
 }
 
+// ListDirs in wallet accounts path.
+func (w *Wallet) ListDirs() ([]string, error) {
+	accountsDir, err := os.Open(w.AccountsDir())
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := accountsDir.Close(); err != nil {
+			log.WithField(
+				"directory", w.AccountsDir(),
+			).Errorf("Could not close accounts directory: %v", err)
+		}
+	}()
+
+	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.AccountsDir())
+	}
+	dirNames := make([]string, 0)
+	for _, item := range list {
+		ok, err := hasDir(filepath.Join(w.AccountsDir(), item))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
+		}
+		if ok {
+			dirNames = append(dirNames, item)
+		}
+	}
+	return dirNames, nil
+}
+
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
 func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName string, data []byte) error {
 	accountPath := path.Join(w.accountsPath, filePath)

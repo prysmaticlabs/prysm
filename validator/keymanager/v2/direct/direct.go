@@ -13,7 +13,6 @@ import (
 	"strings"
 	"sync"
 
-	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
@@ -21,19 +20,21 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
@@ -122,35 +123,9 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
-// ValidatingAccountNames --
+// ValidatingAccountNames for a direct keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
-	accountsDir, err := os.Open(dr.wallet.AccountsDir())
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := accountsDir.Close(); err != nil {
-			log.WithField(
-				"directory", dr.wallet.AccountsDir(),
-			).Errorf("Could not close accounts directory: %v", err)
-		}
-	}()
-
-	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read files in directory: %s", dr.wallet.AccountsDir())
-	}
-	accountNames := make([]string, 0)
-	for _, item := range list {
-		ok, err := hasDir(filepath.Join(dr.wallet.AccountsDir(), item))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
-		}
-		if ok {
-			accountNames = append(accountNames, item)
-		}
-	}
-	return accountNames, err
+	return dr.wallet.ListDirs()
 }
 
 // CreateAccount for a direct keymanager implementation. This utilizes
@@ -159,8 +134,9 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 // generates a mnemonic for withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
-	// Create a new, unique account name and write its password + directory to disk.
-	accountName, err := dr.generateAccountName()
+	// Create a petname for an account from its public key and write its password to disk.
+	validatingKey := bls.RandKey()
+	accountName, err := dr.generateAccountName(validatingKey.PublicKey().Marshal())
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate unique account name")
 	}
@@ -169,7 +145,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	}
 	// Generates a new EIP-2335 compliant keystore file
 	// from a BLS private key and marshals it as JSON.
-	validatingKey := bls.RandKey()
 	encoded, err := dr.generateKeystoreFile(validatingKey, password)
 	if err != nil {
 		return "", err
@@ -389,11 +364,11 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	return json.MarshalIndent(keystoreFile, "", "\t")
 }
 
-func (dr *Keymanager) generateAccountName() (string, error) {
+func (dr *Keymanager) generateAccountName(pubKey []byte) (string, error) {
 	var accountExists bool
 	var accountName string
 	for !accountExists {
-		accountName = petname.Generate(NumAccountWords, "-" /* separator */)
+		accountName = petnames.DeterministicName(pubKey, "-")
 		exists, err := hasDir(filepath.Join(dr.wallet.AccountsDir(), accountName))
 		if err != nil {
 			return "", errors.Wrapf(err, "could not check if account exists in dir: %s", dr.wallet.AccountsDir())

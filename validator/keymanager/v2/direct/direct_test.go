@@ -10,10 +10,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/tyler-smith/go-bip39"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -23,6 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/tyler-smith/go-bip39"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 type mockMnemonicGenerator struct {
@@ -147,7 +146,7 @@ func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
 	numAccounts := 20
-	wantedPublicKeys := generateAccounts(t, numAccounts, dr)
+	_, wantedPublicKeys := generateAccounts(t, numAccounts, dr)
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -177,7 +176,9 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 
 	// First, generate accounts and their keystore.json files.
 	numAccounts := 2
-	generateAccounts(t, numAccounts, dr)
+	accountNames, _ := generateAccounts(t, numAccounts, dr)
+	wallet.Directories = accountNames
+
 	ctx := context.Background()
 	if err := dr.initializeSecretKeysCache(ctx); err != nil {
 		t.Fatal(err)
@@ -264,20 +265,21 @@ func BenchmarkKeymanager_FetchValidatingPublicKeys(b *testing.B) {
 	}
 }
 
-func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte {
+func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) ([]string, [][48]byte) {
 	ctx := context.Background()
+	accountNames := make([]string, numAccounts)
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		validatingKey := bls.RandKey()
 		wantedPublicKeys[i] = bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())
 		password := strconv.Itoa(i)
 		encoded, err := dr.generateKeystoreFile(validatingKey, password)
-		if err != nil {
-			t.Fatal(err)
-		}
-		accountName, err := dr.generateAccountName()
+		require.NoError(t, err)
+		accountName, err := dr.generateAccountName(validatingKey.PublicKey().Marshal())
 		require.NoError(t, err)
 		assert.NoError(t, err, dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded))
+		assert.NoError(t, err, dr.wallet.WritePasswordToDisk(ctx, accountName+PasswordFileSuffix, password))
+		accountNames[i] = accountName
 	}
-	return wantedPublicKeys
+	return accountNames, wantedPublicKeys
 }
