@@ -250,10 +250,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(enableHistoricalDetectionFlag.Name) {
-		log.Warn("Enabling historical attestation detection")
-		cfg.EnableHistoricalDetection = true
-	}
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
 		cfg.DisableLookback = true

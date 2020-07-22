@@ -1,6 +1,8 @@
 package v2
 
-import "testing"
+import (
+	"testing"
+)
 
 func Test_validatePasswordInput(t *testing.T) {
 	tests := []struct {

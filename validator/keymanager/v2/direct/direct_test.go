@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -64,7 +65,7 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected to have stored %s in wallet", KeystoreFileName)
 	}
-	keystoreFile := &Keystore{}
+	keystoreFile := &v2keymanager.Keystore{}
 	if err := json.Unmarshal(encodedKeystore, keystoreFile); err != nil {
 		t.Fatalf("Could not decode keystore json: %v", err)
 	}

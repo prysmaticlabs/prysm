@@ -18,10 +18,6 @@ import (
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
 type ReadOnlyDatabase interface {
-	// Attestation related methods.
-	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error)
-	Attestations(ctx context.Context, f *filters.QueryFilter) ([]*eth.Attestation, error)
-	HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
 	// Block related methods.
 	Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error)
@@ -48,11 +44,6 @@ type ReadOnlyDatabase interface {
 	// Checkpoint operations.
 	JustifiedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
-	// Archival data handlers for storing/retrieving historical beacon node information.
-	ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedActiveSetChanges, error)
-	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error)
-	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
-	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error)
 	ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte
 	HasArchivedPoint(ctx context.Context, slot uint64) bool
 	LastArchivedRoot(ctx context.Context) [32]byte
@@ -67,11 +58,6 @@ type ReadOnlyDatabase interface {
 type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
-	// Attestation related methods.
-	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
-	DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error
-	SaveAttestation(ctx context.Context, att *eth.Attestation) error
-	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
 	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
@@ -91,11 +77,6 @@ type NoHeadAccessDatabase interface {
 	// Checkpoint operations.
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
-	// Archival data handlers for storing/retrieving historical beacon node information.
-	SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *ethereum_beacon_p2p_v1.ArchivedActiveSetChanges) error
-	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error
-	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
-	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.

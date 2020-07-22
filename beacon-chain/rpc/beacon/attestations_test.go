@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -33,6 +32,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -42,9 +43,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &chainMock.ChainService{
@@ -59,9 +58,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	res, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
@@ -74,9 +71,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &chainMock.ChainService{
@@ -113,15 +108,9 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	},
 	}
 	root, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
 		NextPageToken: "",
@@ -133,18 +122,14 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			GenesisEpoch: true,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
 
 	// Should throw an error if there is more than 1 block
 	// for the genesis slot.
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, blk))
 	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -180,9 +165,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -195,13 +178,8 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 			GenesisEpoch: true,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(atts, received.Attestations) {
-		t.Fatalf("incorrect attestations response: wanted \n%v, received \n%v", atts, received.Attestations)
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, atts, received.Attestations, "Incorrect attestations response")
 }
 
 func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
@@ -301,9 +279,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 		},
 	}
 
-	if err := db.SaveBlocks(ctx, blocks); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlocks(ctx, blocks))
 
 	bs := &Server{
 		BeaconDB: db,
@@ -312,21 +288,13 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_Epoch{Epoch: 1},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 1 {
-		t.Errorf("Wanted 1 matching attestations for epoch %d, received %d", 1, len(received.Attestations))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(received.Attestations))
 	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 2 {
-		t.Errorf("Wanted 2 matching attestations for epoch %d, received %d", 0, len(received.Attestations))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(received.Attestations))
 }
 
 func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
@@ -357,9 +325,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					},
 				},
 			}
-			if err := db.SaveBlock(ctx, blockExample); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveBlock(ctx, blockExample))
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		}
 	}
@@ -437,9 +403,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := bs.ListAttestations(ctx, test.req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			if !proto.Equal(res, test.res) {
 				t.Errorf("Incorrect attestations response, wanted \n%v, received \n%v", test.res, res)
 			}
@@ -474,9 +438,7 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 				},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -492,9 +454,8 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 		PageSize:  100,
 	}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
-	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.ListAttestations(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
@@ -504,9 +465,8 @@ func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.ListAttestations(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
@@ -538,9 +498,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -554,16 +512,11 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 		},
 	}
 	res, err := bs.ListAttestations(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	i := 0
 	j := params.BeaconConfig().DefaultPageSize
-	if !reflect.DeepEqual(res.Attestations, atts[i:j]) {
-		t.Log(res.Attestations, atts[i:j])
-		t.Error("Incorrect attestations response")
-	}
+	assert.DeepEqual(t, atts[i:j], res.Attestations, "Incorrect attestations response")
 }
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
@@ -592,15 +545,9 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	mappedAtts := mapAttestationsByTargetRoot(atts)
 	wantedMapLen := 2
 	wantedMapNumberOfElements := 50
-	if len(mappedAtts) != wantedMapLen {
-		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapLen, len(mappedAtts))
-	}
-	if len(mappedAtts[targetRoot1]) != wantedMapNumberOfElements {
-		t.Errorf("Expected number of attestations per block root to be: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[targetRoot1]))
-	}
-	if len(mappedAtts[targetRoot2]) != wantedMapNumberOfElements {
-		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[targetRoot2]))
-	}
+	assert.Equal(t, wantedMapLen, len(mappedAtts), "Unexpected mapped attestations length")
+	assert.Equal(t, wantedMapNumberOfElements, len(mappedAtts[targetRoot1]), "Unexpected number of attestations per block root")
+	assert.Equal(t, wantedMapNumberOfElements, len(mappedAtts[targetRoot2]), "Unexpected number of attestations per block root")
 }
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
@@ -645,9 +592,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 				},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		if i%2 == 0 {
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		} else {
@@ -665,25 +610,17 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
+		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
 	for i := 0; i < len(atts2); i++ {
 		att := atts2[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts2[i], committee)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
+		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i+len(atts)] = idxAtt
 	}
 
@@ -693,46 +630,29 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		HeadFetcher:        &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db, sc),
 	}
-	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: targetRoot1[:],
 		Slot: 1,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	})
+	require.NoError(t, err)
+
+	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: targetRoot2[:],
 		Slot: 2,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot1[:])); err != nil {
-		t.Fatal(err)
-	}
-	if err := state.SetSlot(state.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot2[:])); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot1[:])))
+	require.NoError(t, state.SetSlot(state.Slot()+1))
+	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot2[:])))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.IndexedAttestations) != len(indexedAtts) {
-		t.Errorf("Incorrect indexted attestations length. expected: %d got: %d", len(indexedAtts), len(res.IndexedAttestations))
-	}
-	if !reflect.DeepEqual(indexedAtts, res.IndexedAttestations) {
-		t.Fatalf(
-			"Incorrect list indexed attestations response: wanted %v, received %v",
-			indexedAtts,
-			res.IndexedAttestations,
-		)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, len(indexedAtts), len(res.IndexedAttestations), "Incorrect indexted attestations length")
+	assert.DeepEqual(t, indexedAtts, res.IndexedAttestations, "Incorrect list indexed attestations response")
 }
 
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
@@ -771,9 +691,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 				},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -785,25 +703,17 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
 	}
-	if err := state.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
-	if err := state.SetSlot(startSlot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, state.SetRandaoMixes(randaoMixes))
+	require.NoError(t, state.SetSlot(startSlot))
 
 	// Next up we convert the test attestations to indexed form:
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
+		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
 
@@ -814,31 +724,19 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		},
 		StateGen: stategen.New(db, sc),
 	}
-	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
 		Slot: helpers.StartSlot(epoch),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(indexedAtts, res.IndexedAttestations) {
-		t.Fatalf(
-			"Incorrect list indexed attestations response: wanted %v, received %v",
-			indexedAtts,
-			res.IndexedAttestations,
-		)
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, indexedAtts, res.IndexedAttestations, "Incorrect list indexed attestations response")
 }
 
 func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
@@ -848,9 +746,8 @@ func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.AttestationPoolRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.AttestationPool(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
@@ -864,18 +761,15 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
 		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
 	}
-	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
 
 	req := &ethpb.AttestationPoolRequest{
 		PageToken: strconv.Itoa(1),
 		PageSize:  100,
 	}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
-	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.AttestationPool(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
@@ -891,25 +785,13 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b1101},
 		}
 	}
-	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
 
 	req := &ethpb.AttestationPoolRequest{}
 	res, err := bs.AttestationPool(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.Attestations) != params.BeaconConfig().DefaultPageSize {
-		t.Errorf(
-			"Wanted %d attestations in response, received %d",
-			params.BeaconConfig().DefaultPageSize,
-			len(res.Attestations),
-		)
-	}
-	if int(res.TotalSize) != params.BeaconConfig().DefaultPageSize+1 {
-		t.Errorf("Wanted total size %d, received %d", params.BeaconConfig().DefaultPageSize+1, res.TotalSize)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().DefaultPageSize, len(res.Attestations), "Unexpected number of attestations")
+	assert.Equal(t, params.BeaconConfig().DefaultPageSize+1, int(res.TotalSize), "Unexpected total size")
 }
 
 func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
@@ -926,9 +808,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b1101},
 		}
 	}
-	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
 	tests := []struct {
 		req *ethpb.AttestationPoolRequest
 		res *ethpb.AttestationPoolResponse
@@ -966,15 +846,9 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		res, err := bs.AttestationPool(ctx, tt.req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if res.TotalSize != tt.res.TotalSize {
-			t.Errorf("Wanted total size %d, received %d", tt.res.TotalSize, res.TotalSize)
-		}
-		if res.NextPageToken != tt.res.NextPageToken {
-			t.Errorf("Wanted next page token %s, received %s", tt.res.NextPageToken, res.NextPageToken)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.res.TotalSize, res.TotalSize, "Unexpected total size")
+		assert.Equal(t, tt.res.NextPageToken, res.NextPageToken, "Unexpected next page token")
 	}
 }
 
@@ -1020,33 +894,19 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	numValidators := 64
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	epoch := uint64(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	committees, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, attesterSeed)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	// We generate attestations for each validator per slot per epoch.
@@ -1083,13 +943,9 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 				},
 			}
 			domain, err := helpers.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, headState.GenesisValidatorRoot())
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			encoded, err := helpers.ComputeSigningRoot(attExample.Data, domain)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			sig := privKeys[j].Sign(encoded[:])
 			attExample.Signature = sig.Marshal()
 			attExample.Data.CommitteeIndex = committeeIndex
@@ -1117,9 +973,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	for dataRoot, sameDataAtts := range atts {
 		aggAtts, err := attaggregation.Aggregate(sameDataAtts)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		atts[dataRoot] = aggAtts
 	}
 
@@ -1159,9 +1013,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		if err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.NoError(tt, server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	server.CollectedAttestationsBuffer <- allAtts
@@ -1184,12 +1036,11 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		if err := server.StreamAttestations(
+		err := server.StreamAttestations(
 			&ptypes.Empty{},
 			mockStream,
-		); !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Expected context canceled error got: %v", err)
-		}
+		)
+		assert.ErrorContains(tt, "Context canceled", err)
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -1222,9 +1073,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		if err := server.StreamAttestations(&ptypes.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.NoError(tt, server.StreamAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 	for i := 0; i < len(atts); i++ {
 		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).

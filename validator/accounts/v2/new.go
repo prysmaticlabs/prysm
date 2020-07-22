@@ -7,11 +7,14 @@ import (
 	"path"
 	"unicode"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -25,60 +28,45 @@ const (
 	minPasswordScore = 3
 )
 
-var keymanagerKindSelections = map[v2keymanager.Kind]string{
-	v2keymanager.Direct:  "Direct, On-Disk Wallet (Recommended)",
-	v2keymanager.Derived: "Derived HD Wallet (Advanced)",
-	v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
-}
-
 // NewAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
 func NewAccount(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	} else if err != nil {
-		log.Fatal(err)
-	}
 	ctx := context.Background()
-	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "could not open wallet")
 	}
-
-	// Only direct keymanagers can create accounts for now.
-	if keymanagerKind != v2keymanager.Direct {
-		log.Fatalf("cannot create a new account for a %s keymanager", keymanagerKind)
-	}
-	// Read the directory for password storage from user input.
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-	wallet, err := OpenWallet(ctx, &WalletConfig{
-		PasswordsDir:      passwordsDirPath,
-		WalletDir:         walletDir,
-		CanUnlockAccounts: true,
-		KeymanagerKind:    keymanagerKind,
-	})
-	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
-	}
-
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	// We initialize a new keymanager depending on the wallet's keymanager kind.
 	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
-		log.Fatalf("Could not initialize keymanager: %v", err)
+		return errors.Wrap(err, "could not initialize keymanager")
 	}
-
-	// Read the new account's password from user input.
-	password, err := inputNewAccountPassword(cliCtx)
-	if err != nil {
-		log.Fatalf("Could not read password: %v", err)
-	}
-
-	// Create a new validator account using the specified keymanager.
-	if _, err := keymanager.CreateAccount(ctx, password); err != nil {
-		log.Fatalf("Could not create account in wallet: %v", err)
+	switch wallet.KeymanagerKind() {
+	case v2keymanager.Remote:
+		return errors.New("cannot create a new account for a remote keymanager")
+	case v2keymanager.Direct:
+		km, ok := keymanager.(*direct.Keymanager)
+		if !ok {
+			return errors.New("not a direct keymanager")
+		}
+		password, err := inputNewAccountPassword(cliCtx)
+		if err != nil {
+			return errors.Wrap(err, "could not input new account password")
+		}
+		// Create a new validator account using the specified keymanager.
+		if _, err := km.CreateAccount(ctx, password); err != nil {
+			return errors.Wrap(err, "could not create account in wallet")
+		}
+	case v2keymanager.Derived:
+		km, ok := keymanager.(*derived.Keymanager)
+		if !ok {
+			return errors.New("not a derived keymanager")
+		}
+		if _, err := km.CreateAccount(ctx); err != nil {
+			return errors.Wrap(err, "could not create account in wallet")
+		}
+	default:
+		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
 	}
 	return nil
 }
@@ -91,6 +79,15 @@ func inputWalletDir(cliCtx *cli.Context) (string, error) {
 
 	if walletDir == flags.DefaultValidatorDir() {
 		walletDir = path.Join(walletDir, WalletDefaultDirName)
+		ok, err := hasDir(walletDir)
+		if err != nil {
+			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", walletDir)
+		}
+		if ok {
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), walletDir)
+			return walletDir, nil
+		}
 	}
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
@@ -118,8 +115,8 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			keymanagerKindSelections[v2keymanager.Direct],
 			keymanagerKindSelections[v2keymanager.Derived],
+			keymanagerKindSelections[v2keymanager.Direct],
 			keymanagerKindSelections[v2keymanager.Remote],
 		},
 	}
@@ -128,6 +125,74 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", formatPromptError(err))
 	}
 	return v2keymanager.Kind(selection), nil
+}
+
+func inputNewWalletPassword(cliCtx *cli.Context) (string, error) {
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", err
+		}
+		enteredPassword := string(data)
+		if err := validatePasswordInput(enteredPassword); err != nil {
+			return "", errors.Wrap(err, "password did not pass validation")
+		}
+		return enteredPassword, nil
+	}
+
+	var hasValidPassword bool
+	var walletPassword string
+	var err error
+	for !hasValidPassword {
+		prompt := promptui.Prompt{
+			Label:    "New wallet password",
+			Validate: validatePasswordInput,
+			Mask:     '*',
+		}
+
+		walletPassword, err = prompt.Run()
+		if err != nil {
+			return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
+		}
+
+		prompt = promptui.Prompt{
+			Label: "Confirm password",
+			Mask:  '*',
+		}
+		confirmPassword, err := prompt.Run()
+		if err != nil {
+			return "", fmt.Errorf("could not read password confirmation: %v", formatPromptError(err))
+		}
+		if walletPassword != confirmPassword {
+			log.Error("Passwords do not match")
+			continue
+		}
+		hasValidPassword = true
+	}
+	return walletPassword, nil
+}
+
+func inputExistingWalletPassword(cliCtx *cli.Context) (string, error) {
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", err
+		}
+		return string(data), nil
+	}
+	prompt := promptui.Prompt{
+		Label:    "Wallet password",
+		Validate: validatePasswordInput,
+		Mask:     '*',
+	}
+
+	walletPassword, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
+	}
+	return walletPassword, nil
 }
 
 func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
@@ -139,7 +204,7 @@ func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
 		}
 		enteredPassword := string(data)
 		if err := validatePasswordInput(enteredPassword); err != nil {
-			log.WithError(err).Fatal("Password did not pass validation")
+			return "", errors.Wrap(err, "password did not pass validation")
 		}
 		return enteredPassword, nil
 	}
@@ -156,7 +221,7 @@ func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
 
 		walletPassword, err = prompt.Run()
 		if err != nil {
-			return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
+			return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
 		}
 
 		prompt = promptui.Prompt{
@@ -189,14 +254,23 @@ func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error)
 	return walletPassword, nil
 }
 
-func inputPasswordsDirectory(cliCtx *cli.Context) string {
+func inputPasswordsDirectory(cliCtx *cli.Context) (string, error) {
 	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
 	if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) {
-		return passwordsDir
+		return passwordsDir, nil
 	}
 
 	if passwordsDir == flags.DefaultValidatorDir() {
 		passwordsDir = path.Join(passwordsDir, PasswordsDefaultDirName)
+		ok, err := hasDir(passwordsDir)
+		if err != nil {
+			return "", errors.Wrap(err, "could not check if passwords directory exists")
+		}
+		if ok {
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), passwordsDir)
+			return passwordsDir, nil
+		}
 	}
 	prompt := promptui.Prompt{
 		Label:    "Directory where passwords will be stored",
@@ -205,9 +279,9 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	}
 	passwordsPath, err := prompt.Run()
 	if err != nil {
-		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
+		return "", fmt.Errorf("could not determine passwords directory: %v", formatPromptError(err))
 	}
-	return passwordsPath
+	return passwordsPath, nil
 }
 
 // Validate a strong password input for new accounts,
