@@ -119,9 +119,9 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
-		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+		return nil, errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
 	if err != nil {
