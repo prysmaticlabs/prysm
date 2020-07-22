@@ -104,6 +104,9 @@ func NewKeymanager(
 	password string,
 ) (*Keymanager, error) {
 	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
+	}
 	enc, err := ioutil.ReadAll(seedConfigFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read seed configuration file contents")

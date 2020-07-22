@@ -20,10 +20,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -35,6 +31,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
@@ -259,6 +258,8 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
+// EnterPasswordForAccount checks if a user has a password specified for the new account
+// either from a file or from stdin. Then, it saves the password to the wallet.
 func (dr *Keymanager) EnterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
 	au := aurora.NewAurora(true)
 	var password string
@@ -303,6 +304,31 @@ func (dr *Keymanager) EnterPasswordForAccount(cliCtx *cli.Context, accountName s
 		return errors.Wrap(err, "could not write password to disk")
 	}
 	return nil
+}
+
+// PublicKeyForAccount returns the associated public key for an account name.
+func (dr *Keymanager) PublicKeyForAccount(accountName string) ([48]byte, error) {
+	accountKeystore, err := dr.keystoreForAccount(accountName)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could not get keystore")
+	}
+	pubKey, err := hex.DecodeString(accountKeystore.Pubkey)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could decode pubkey string")
+	}
+	return bytesutil.ToBytes48(pubKey), nil
+}
+
+func (dr *Keymanager) keystoreForAccount(accountName string) (*v2keymanager.Keystore, error) {
+	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), accountName, KeystoreFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keystore file")
+	}
+	keystoreJSON := &v2keymanager.Keystore{}
+	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+		return nil, errors.Wrap(err, "could not decode json")
+	}
+	return keystoreJSON, nil
 }
 
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
@@ -391,31 +417,6 @@ func (dr *Keymanager) checkPasswordForAccount(accountName string, password strin
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
 	return nil
-}
-
-// PublicKeyForAccount --
-func (dr *Keymanager) PublicKeyForAccount(accountName string) ([48]byte, error) {
-	accountKeystore, err := dr.keystoreForAccount(accountName)
-	if err != nil {
-		return [48]byte{}, errors.Wrap(err, "could not get keystore")
-	}
-	pubKey, err := hex.DecodeString(accountKeystore.Pubkey)
-	if err != nil {
-		return [48]byte{}, errors.Wrap(err, "could decode pubkey string")
-	}
-	return bytesutil.ToBytes48(pubKey), nil
-}
-
-func (dr *Keymanager) keystoreForAccount(accountName string) (*v2keymanager.Keystore, error) {
-	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), accountName, KeystoreFileName)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read keystore file")
-	}
-	keystoreJSON := &v2keymanager.Keystore{}
-	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
-		return nil, errors.Wrap(err, "could not decode json")
-	}
-	return keystoreJSON, nil
 }
 
 func generateDepositTransaction(
