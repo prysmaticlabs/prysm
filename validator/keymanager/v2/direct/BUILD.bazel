@@ -48,6 +48,8 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "//validator/accounts/v2/testing:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
