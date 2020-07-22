@@ -54,7 +54,7 @@ func TestZipAndUnzip(t *testing.T) {
 	err = wallet.zipAccounts(accounts, exportDir)
 	require.NoError(t, err)
 
-	if _, err := os.Stat(filefilepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
 
@@ -98,7 +98,7 @@ func TestExport_Noninteractive(t *testing.T) {
 	_, err = keymanager.CreateAccount(ctx, password)
 	require.NoError(t, err)
 	require.NoError(t, ExportAccount(cliCtx))
-	if _, err := os.Stat(filefilepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
 }
