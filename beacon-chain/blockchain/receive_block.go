@@ -38,6 +38,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		return err
 	}
 
+	// Update and save head block after fork choice.
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		return errors.Wrap(err, "could not update head")
+	}
+
 	// Send notification of the processed block to the state feed.
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
@@ -51,11 +56,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	// Handle post block operations such as attestations and exits.
 	if err := s.handlePostBlockOperations(blockCopy.Block); err != nil {
 		return err
-	}
-
-	// Update and save head block after fork choice.
-	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-		return errors.Wrap(err, "could not update head")
 	}
 
 	// Reports on block and fork choice metrics.
