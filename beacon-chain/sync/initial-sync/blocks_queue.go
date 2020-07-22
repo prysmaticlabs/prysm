@@ -29,6 +29,7 @@ var (
 	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
 	errInvalidInitialState        = errors.New("invalid initial state")
 	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
+	errNoPeersWithFinalizedBlocks = errors.New("no peers with finalized blocks are found")
 )
 
 // blocksQueueConfig is a config to setup block queue service.
@@ -151,11 +152,16 @@ func (q *blocksQueue) loop() {
 				fsm := q.smm.machines[key]
 				if err := fsm.trigger(eventTick, nil); err != nil {
 					log.WithFields(logrus.Fields{
-						"event": eventTick,
-						"epoch": helpers.SlotToEpoch(fsm.start),
-						"start": fsm.start,
-						"error": err.Error(),
+						"highestExpectedSlot": q.highestExpectedSlot,
+						"event":               eventTick,
+						"epoch":               helpers.SlotToEpoch(fsm.start),
+						"start":               fsm.start,
+						"error":               err.Error(),
 					}).Debug("Can not trigger event")
+					if err == errNoPeersWithFinalizedBlocks {
+						q.cancel()
+						continue
+					}
 				}
 				// Do garbage collection, and advance sliding window forward.
 				if q.headFetcher.HeadSlot() >= fsm.start+blocksPerRequest-1 {
@@ -315,6 +321,11 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 			return m.state, nil
 		}
 
+		// Check if we have enough peers to progress, or sync needs to halt (due to no peers available).
+		if q.blocksFetcher.bestFinalizedSlot() <= q.headFetcher.HeadSlot() {
+			return stateSkipped, errNoPeersWithFinalizedBlocks
+		}
+
 		// Shift start position of all the machines except for the last one.
 		startSlot := q.headFetcher.HeadSlot() + 1
 		blocksPerRequest := q.blocksFetcher.blocksPerSecond
@@ -326,8 +337,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		}
 
 		// Replace the last (currently activated) state machine.
-		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(
-			ctx, startSlot+blocksPerRequest*(lookaheadSteps-1)-1)
+		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot+blocksPerRequest*(lookaheadSteps-1)-1)
 		if err != nil {
 			return stateSkipped, err
 		}
