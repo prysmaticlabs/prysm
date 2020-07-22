@@ -63,13 +63,6 @@ message PendingAttestation {
   uint64 proposer_index = 4;
 }
 
-message ValidatorLatestVote {
-  // The epoch of when the latest message was voted.
-  uint64 epoch = 1;
-  // The root of the latest message votes.
-  bytes root = 2;
-}
-
 message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
