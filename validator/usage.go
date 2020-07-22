@@ -87,6 +87,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
 			flags.GrpcRetriesFlag,
+			flags.GrpcRetryDelayFlag,
 			flags.GrpcHeadersFlag,
 			flags.SlasherRPCProviderFlag,
 			flags.SlasherCertFlag,
