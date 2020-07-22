@@ -119,10 +119,10 @@ func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 // ReadKeymanagerConfigFromDisk opens a keymanager config file
 // for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error) {
-	if !fileExists(path.Join(w.accountsPath, KeymanagerConfigFileName)) {
+	configFilePath := path.Join(w.accountsPath, KeymanagerConfigFileName)
+	if !fileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
-	configFilePath := path.Join(w.accountsPath, KeymanagerConfigFileName)
 	return os.Open(configFilePath)
 }
 

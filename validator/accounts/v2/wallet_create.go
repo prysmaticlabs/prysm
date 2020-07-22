@@ -104,7 +104,7 @@ func createDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 		CanUnlockAccounts: true,
 	}
 	ctx := context.Background()
-	walletPassword, err := inputNewWalletPassword()
+	walletPassword, err := inputNewWalletPassword(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not input new wallet password")
 	}
