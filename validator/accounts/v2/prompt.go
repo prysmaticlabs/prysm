@@ -7,8 +7,6 @@ import (
 	"unicode"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/consts"
-
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
@@ -36,15 +34,16 @@ const (
 	// Min password score of 3 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
 	// library for strong-entropy password computation.
 	minPasswordScore = 3
-
+	// An enum to indicate the prompt that confirming the password is not needed.
 	noConfirmPass passwordConfirm = iota
+	// An enum to indicate the prompt to confirm the password entered.
 	confirmPass
 )
 
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
-	directory := cliCtx.String(flag.Name)
+	directory := appendDirName(cliCtx.String(flag.Name), flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return appendDirName(directory, flag.Name), nil
+		return directory, nil
 	} else if flag.Name == flags.WalletDirFlag.Name {
 		ok, err := hasDir(directory)
 		if err != nil {
@@ -135,9 +134,9 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 func appendDirName(inputtedDir string, flagName string) string {
 	switch flagName {
 	case flags.WalletDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, consts.WalletDefaultDirName)
+		inputtedDir = filepath.Join(inputtedDir, WalletDefaultDirName)
 	case flags.WalletPasswordsDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, consts.PasswordsDefaultDirName)
+		inputtedDir = filepath.Join(inputtedDir, PasswordsDefaultDirName)
 	}
 	return inputtedDir
 }

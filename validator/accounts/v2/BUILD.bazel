@@ -25,7 +25,6 @@ go_library(
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
-        "//validator/accounts/v2/consts:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/derived:go_default_library",
