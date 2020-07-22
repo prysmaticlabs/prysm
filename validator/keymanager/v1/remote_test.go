@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 )
 
@@ -132,44 +133,32 @@ func TestNewRemoteWallet(t *testing.T) {
 
 			if test.caCert != "" || test.clientCert != "" || test.clientKey != "" {
 				dir := fmt.Sprintf("%s/%s", testutil.TempDir(), test.name)
-				if err := os.MkdirAll(dir, 0777); err != nil {
-					t.Fatalf(err.Error())
-				}
+				require.NoError(t, os.MkdirAll(dir, 0777))
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
-					if err := ioutil.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions); err != nil {
-						t.Fatalf("Failed to write CA certificate: %v", err)
-					}
+					err := ioutil.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
+					require.NoError(t, err, "Failed to write CA certificate")
 					test.opts = strings.ReplaceAll(test.opts, "<<cacert>>", caCertPath)
 				}
 				if test.clientCert != "" {
 					clientCertPath := fmt.Sprintf("%s/client.crt", dir)
-					if err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions); err != nil {
-						t.Fatalf("Failed to write client certificate: %v", err)
-					}
+					err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions)
+					require.NoError(t, err, "Failed to write client certificate")
 					test.opts = strings.ReplaceAll(test.opts, "<<clientcert>>", clientCertPath)
 				}
 				if test.clientKey != "" {
 					clientKeyPath := fmt.Sprintf("%s/client.key", dir)
-					if err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions); err != nil {
-						t.Fatalf("Failed to write client key: %v", err)
-					}
+					err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions)
+					require.NoError(t, err, "Failed to write client key")
 					test.opts = strings.ReplaceAll(test.opts, "<<clientkey>>", clientKeyPath)
 				}
 			}
 
 			_, _, err := keymanager.NewRemoteWallet(test.opts)
 			if test.err == "" {
-				if err != nil {
-					t.Fatalf("Received unexpected error: %v", err.Error())
-				}
+				require.NoError(t, err)
 			} else {
-				if err == nil {
-					t.Fatal("Did not received an error")
-				}
-				if err.Error() != test.err {
-					t.Fatalf("Did not received expected error: expected %v, received %v", test.err, err.Error())
-				}
+				require.ErrorContains(t, test.err, err)
 			}
 		})
 	}

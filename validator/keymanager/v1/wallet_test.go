@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	nd "github.com/wealdtech/go-eth2-wallet-nd"
@@ -14,38 +16,26 @@ import (
 
 func SetupWallet(t *testing.T) string {
 	path, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	store := filesystem.New(filesystem.WithLocation(path))
 	encryptor := keystorev4.New()
 
 	// Create wallets with keys.
 	w1, err := nd.CreateWallet("Wallet 1", store, encryptor)
-	if err != nil {
-		t.Fatalf("Failed to create wallet: %v", err)
-	}
+	require.NoError(t, err, "Failed to create wallet")
 	err = w1.Unlock(nil)
-	if err != nil {
-		t.Fatalf("Failed to unlock wallet: %v", err)
-	}
+	require.NoError(t, err, "Failed to unlock wallet")
 	_, err = w1.CreateAccount("Account 1", []byte("foo"))
-	if err != nil {
-		t.Fatalf("Failed to create account 1: %v", err)
-	}
+	require.NoError(t, err, "Failed to create account 1")
 	_, err = w1.CreateAccount("Account 2", []byte("bar"))
-	if err != nil {
-		t.Fatalf("Failed to create account 2: %v", err)
-	}
+	require.NoError(t, err, "Failed to create account 2")
 
 	return path
 }
 
 func wallet(t *testing.T, opts string) keymanager.KeyManager {
 	km, _, err := keymanager.NewWallet(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return km
 }
 
@@ -86,12 +76,8 @@ func TestMultiplePassphrases(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			keys, err := test.wallet.FetchValidatingKeys()
-			if err != nil {
-				t.Error(err)
-			}
-			if len(keys) != test.accounts {
-				t.Errorf("Found %d keys; expected %d", len(keys), test.accounts)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, test.accounts, len(keys), "Found %d keys", len(keys))
 		})
 	}
 }
@@ -104,29 +90,23 @@ func TestEnvPassphrases(t *testing.T) {
 		}
 	}()
 
-	if err := os.Setenv("TESTENVPASSPHRASES_NEITHER", "neither"); err != nil {
-		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_NEITHER: %v", err)
-	}
+	err := os.Setenv("TESTENVPASSPHRASES_NEITHER", "neither")
+	require.NoError(t, err, "Error setting environment variable TESTENVPASSPHRASES_NEITHER")
 	defer func() {
-		if err := os.Unsetenv("TESTENVPASSPHRASES_NEITHER"); err != nil {
-			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_NEITHER: %v", err)
-		}
+		err := os.Unsetenv("TESTENVPASSPHRASES_NEITHER")
+		require.NoError(t, err, "Error unsetting environment variable TESTENVPASSPHRASES_NEITHER")
 	}()
-	if err := os.Setenv("TESTENVPASSPHRASES_FOO", "foo"); err != nil {
-		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_FOO: %v", err)
-	}
+	err = os.Setenv("TESTENVPASSPHRASES_FOO", "foo")
+	require.NoError(t, err, "Error setting environment variable TESTENVPASSPHRASES_FOO")
 	defer func() {
-		if err := os.Unsetenv("TESTENVPASSPHRASES_FOO"); err != nil {
-			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_FOO: %v", err)
-		}
+		err := os.Unsetenv("TESTENVPASSPHRASES_FOO")
+		require.NoError(t, err, "Error unsetting environment variable TESTENVPASSPHRASES_FOO")
 	}()
-	if err := os.Setenv("TESTENVPASSPHRASES_BAR", "bar"); err != nil {
-		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_BAR: %v", err)
-	}
+	err = os.Setenv("TESTENVPASSPHRASES_BAR", "bar")
+	require.NoError(t, err, "Error setting environment variable TESTENVPASSPHRASES_BAR")
 	defer func() {
-		if err := os.Unsetenv("TESTENVPASSPHRASES_BAR"); err != nil {
-			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_BAR: %v", err)
-		}
+		err := os.Unsetenv("TESTENVPASSPHRASES_BAR")
+		require.NoError(t, err, "Error unsetting environment variable TESTENVPASSPHRASES_BAR")
 	}()
 
 	tests := []struct {
@@ -159,12 +139,8 @@ func TestEnvPassphrases(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			keys, err := test.wallet.FetchValidatingKeys()
-			if err != nil {
-				t.Error(err)
-			}
-			if len(keys) != test.accounts {
-				t.Errorf("Found %d keys; expected %d", len(keys), test.accounts)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, test.accounts, len(keys), "Found %d keys", len(keys))
 		})
 	}
 }
