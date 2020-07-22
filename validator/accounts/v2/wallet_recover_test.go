@@ -38,24 +38,21 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	set.String(flags.WalletDirFlag.Name, walletDir, "")
 	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
 	set.String(flags.PasswordFileFlag.Name, passwordFilePath, "")
+	set.String(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String(), "")
 	set.String(flags.MnemonicFileFlag.Name, mnemonicFilePath, "")
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
 	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
 	assert.NoError(t, set.Set(flags.PasswordFileFlag.Name, passwordFilePath))
+	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String()))
 	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	if err := recoverDerivedWallet(cliCtx, walletDir); err != nil {
+	if err := RecoverWallet(cliCtx); err != nil {
 		t.Fatal(err)
 	}
 
 	ctx := context.Background()
-	wallet, err := OpenWallet(ctx, &WalletConfig{
-		WalletDir:         walletDir,
-		PasswordsDir:      passwordsDir,
-		KeymanagerKind:    v2keymanager.Derived,
-		CanUnlockAccounts: false,
-	})
+	wallet, err := OpenWallet(cliCtx)
 	assert.NoError(t, err)
 
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)

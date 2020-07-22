@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -21,10 +20,9 @@ import (
 // ImportAccount uses the archived account made from ExportAccount to import an account and
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
+	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		return errors.Wrap(err, "could not parse wallet directory")
+		return errors.Wrap(err, "could not open wallet")
 	}
 
 	backupDir, err := inputImportDir(cliCtx)
@@ -32,7 +30,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not parse output directory")
 	}
 
-	accountsImported, err := unzipArchiveToTarget(backupDir, walletDir)
+	accountsImported, err := unzipArchiveToTarget(backupDir, wallet.AccountsDir())
 	if err != nil {
 		return errors.Wrap(err, "could not unzip archive")
 	}
@@ -43,18 +41,6 @@ func ImportAccount(cliCtx *cli.Context) error {
 		loggedAccounts = append(loggedAccounts, fmt.Sprintf("%s", au.BrightGreen(accountName).Bold()))
 	}
 	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
-
-	// Read the directory for password storage from user input.
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-
-	wallet, err := OpenWallet(context.Background(), &WalletConfig{
-		CanUnlockAccounts: true,
-		PasswordsDir:      passwordsDirPath,
-		WalletDir:         walletDir,
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
 
 	for _, accountName := range accountsImported {
 		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {

@@ -19,17 +19,23 @@ import (
 )
 
 func TestListAccounts_DirectKeymanager(t *testing.T) {
-	walletDir, passwordsDir := setupWalletDir(t)
-	keymanagerKind := v2keymanager.Direct
-	ctx := context.Background()
-	wallet, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir:   passwordsDir,
-		WalletDir:      walletDir,
-		KeymanagerKind: keymanagerKind,
+	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		passwordsDir:   passwordsDir,
+		keymanagerKind: v2keymanager.Direct,
 	})
+	wallet, err := NewWallet(cliCtx)
 	require.NoError(t, err)
-	keymanager, err := direct.NewKeymanager(ctx, wallet, direct.DefaultConfig(), true /* skip confirm */)
+	ctx := context.Background()
+	keymanager, err := direct.NewKeymanager(
+		ctx,
+		wallet,
+		direct.DefaultConfig(),
+		true, /* skip confirm */
+	)
 	require.NoError(t, err)
+
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)
@@ -100,17 +106,17 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 }
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
-	walletDir, passwordsDir := setupWalletDir(t)
-	keymanagerKind := v2keymanager.Derived
-	ctx := context.Background()
-	wallet, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir:   passwordsDir,
-		WalletDir:      walletDir,
-		KeymanagerKind: keymanagerKind,
+	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		passwordsDir:   passwordsDir,
+		keymanagerKind: v2keymanager.Derived,
 	})
+	wallet, err := NewWallet(cliCtx)
 	require.NoError(t, err)
-
+	ctx := context.Background()
 	password := "hello world"
+
 	seedConfig, err := derived.InitializeWalletSeedFile(ctx, password, true /* skip confirm */)
 	require.NoError(t, err)
 
@@ -127,11 +133,12 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		password,
 	)
 	require.NoError(t, err)
+
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx, password)
+		_, err := keymanager.CreateAccount(ctx)
 		require.NoError(t, err)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
 		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositTransactionFileName)

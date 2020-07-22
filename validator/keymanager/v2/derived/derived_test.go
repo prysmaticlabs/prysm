@@ -29,16 +29,17 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	}
 	seed := make([]byte, 32)
 	copy(seed, "hello world")
+	password := "secretPassw0rd$1999"
 	dr := &Keymanager{
 		wallet: wallet,
 		seed:   seed,
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
+		walletPassword: password,
 	}
 	ctx := context.Background()
-	password := "secretPassw0rd$1999"
-	accountName, err := dr.CreateAccount(ctx, password)
+	accountName, err := dr.CreateAccount(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "0", accountName)
 
@@ -108,17 +109,17 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		seed: make([]byte, 32),
+		seed:           make([]byte, 32),
+		walletPassword: "hello world",
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
 	numAccounts := 20
-	password := "hello world"
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	var err error
 	var accountName string
 	for i := 0; i < numAccounts; i++ {
-		accountName, err = dr.CreateAccount(ctx, password)
+		accountName, err = dr.CreateAccount(ctx)
 		require.NoError(t, err)
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		enc, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
@@ -161,16 +162,16 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
+		walletPassword: "hello world",
 	}
 
 	// First, generate some accounts.
 	numAccounts := 2
 	ctx := context.Background()
-	password := "hello world"
 	var err error
 	var accountName string
 	for i := 0; i < numAccounts; i++ {
-		accountName, err = dr.CreateAccount(ctx, password)
+		accountName, err = dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 	assert.Equal(t, fmt.Sprintf("%d", numAccounts-1), accountName)
