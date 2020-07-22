@@ -24,7 +24,12 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
 			},
-			Action: CreateWallet,
+			Action: func(cliCtx *cli.Context) error {
+				if err := CreateWallet(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not create a wallet")
+				}
+				return nil
+			},
 		},
 		{
 			Name:  "edit-config",
@@ -36,7 +41,12 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
 			},
-			Action: EditWalletConfiguration,
+			Action: func(cliCtx *cli.Context) error {
+				if err := EditWalletConfiguration(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not edit wallet configuration")
+				}
+				return nil
+			},
 		},
 		{
 			Name:  "recover",
