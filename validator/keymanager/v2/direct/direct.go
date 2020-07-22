@@ -46,11 +46,10 @@ type Config struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet            iface.Wallet
-	cfg               *Config
-	mnemonicGenerator SeedPhraseFactory
-	keysCache         map[[48]byte]bls.SecretKey
-	lock              sync.RWMutex
+	wallet    iface.Wallet
+	cfg       *Config
+	keysCache map[[48]byte]bls.SecretKey
+	lock      sync.RWMutex
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -61,13 +60,10 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet: wallet,
-		cfg:    cfg,
-		mnemonicGenerator: &EnglishMnemonicGenerator{
-			skipMnemonicConfirm: skipMnemonicConfirm,
-		},
+		wallet:    wallet,
+		cfg:       cfg,
 		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// If the wallet has the capability of unlocking accounts using
@@ -107,7 +103,7 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 // CreateAccount for a direct keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It
 // stores the generated keystore.json file in the wallet and additionally
-// generates a mnemonic for withdrawal credentials. At the end, it logs
+// generates withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// Create a new, unique account name and write its password + directory to disk.
@@ -126,14 +122,17 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	// Generate a withdrawal key and confirm user
 	// acknowledgement of a 256-bit entropy mnemonic phrase.
 	withdrawalKey := bls.RandKey()
-	rawWithdrawalKey := withdrawalKey.Marshal()[:]
-	seedPhrase, err := dr.mnemonicGenerator.Generate(rawWithdrawalKey)
-	if err != nil {
-		return "", errors.Wrap(err, "could not generate mnemonic for withdrawal key")
-	}
-	if err := dr.mnemonicGenerator.ConfirmAcknowledgement(seedPhrase); err != nil {
-		return "", errors.Wrap(err, "could not confirm acknowledgement of mnemonic")
-	}
+	log.Info(
+		"Write down the private key, as it is your unique " +
+			"withdrawal private key for eth2",
+	)
+	fmt.Printf(`
+==========================Withdrawal Key===========================
+
+%#x
+
+===================================================================
+	`, withdrawalKey.Marshal())
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.

@@ -223,7 +223,7 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = direct.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm)
+		keymanager, err = direct.NewKeymanager(ctx, w, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
