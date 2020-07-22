@@ -130,13 +130,13 @@ var (
 	// Prysm accounts-v2.
 	WalletPasswordsDirFlag = &cli.StringFlag{
 		Name:  "passwords-dir",
-		Usage: "Path to a directory on-disk where wallet passwords are stored",
+		Usage: "Path to a directory on-disk where account passwords are stored",
 		Value: DefaultValidatorDir(),
 	}
 	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
 	PasswordFileFlag = &cli.StringFlag{
 		Name:  "password-file",
-		Usage: "File to retrieve password for writing to the password dir when making a new account",
+		Usage: "Path to a file containing a password to interact with wallets/accounts in a non-interactive way",
 	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{
