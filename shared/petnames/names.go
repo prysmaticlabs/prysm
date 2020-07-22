@@ -1,10 +1,10 @@
 package petnames
 
 import (
-	"math/rand"
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 var (
@@ -16,11 +16,12 @@ var (
 // DeterministicName returns a deterministic triple of adverb-adjective-name
 // given a random seed for initialization.
 func DeterministicName(seed []byte, separator string) string {
+	rng := rand.NewDeterministicGenerator()
 	hashedValue := hashutil.FastSum64(seed)
-	rand.Seed(int64(hashedValue))
-	adverb := adverbs[rand.Intn(len(adverbs)-1)]
-	adjective := adjectives[rand.Intn(len(adjectives)-1)]
-	name := names[rand.Intn(len(names)-1)]
+	rng.Seed(int64(hashedValue))
+	adverb := adverbs[rng.Intn(len(adverbs)-1)]
+	adjective := adjectives[rng.Intn(len(adjectives)-1)]
+	name := names[rng.Intn(len(names)-1)]
 	petname := []string{adverb, adjective, name}
 	return strings.Join(petname, separator)
 }
