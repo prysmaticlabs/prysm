@@ -138,6 +138,11 @@ var (
 		Name:  "password-file",
 		Usage: "File to retrieve password for writing to the password dir when making a new account",
 	}
+	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
+	MnemonicFileFlag = &cli.StringFlag{
+		Name:  "mnemonic-file",
+		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
+	}
 	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
 	SkipMnemonicConfirmFlag = &cli.BoolFlag{
 		Name:  "skip-mnemonic-confirm",
