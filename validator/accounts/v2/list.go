@@ -3,7 +3,7 @@ package v2
 import (
 	"context"
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -107,7 +107,7 @@ func listDirectKeymanagerAccounts(
 		fmt.Printf(
 			"%s %s\n",
 			"(deposit tx file)",
-			path.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
+			filepath.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
 		)
 		fmt.Printf(`
 ======================Deposit Transaction Data=====================
@@ -184,7 +184,7 @@ func listDerivedKeymanagerAccounts(
 		fmt.Printf(
 			"%s %s\n",
 			"(deposit tx file)",
-			path.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
+			filepath.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
 		)
 		fmt.Printf(`
 ======================Deposit Transaction Data=====================

@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -57,9 +57,9 @@ func setupWalletCtx(
 func setupWalletAndPasswordsDir(t testing.TB) (string, string) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
-	walletDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
+	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-	passwordsDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
+	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
 	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
