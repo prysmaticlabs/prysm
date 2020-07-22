@@ -8,7 +8,6 @@ import (
 	"unicode"
 
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
