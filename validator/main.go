@@ -62,6 +62,7 @@ var appFlags = []cli.Flag{
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
 	flags.GrpcRetriesFlag,
+	flags.GrpcRetryDelayFlag,
 	flags.GrpcHeadersFlag,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
@@ -170,6 +171,7 @@ contract in order to activate the validator client`,
 						flags.CertFlag,
 						flags.GrpcHeadersFlag,
 						flags.GrpcRetriesFlag,
+						flags.GrpcRetryDelayFlag,
 						flags.KeyManager,
 						flags.KeyManagerOpts,
 					},
@@ -200,6 +202,7 @@ contract in order to activate the validator client`,
 							cliCtx.String(flags.CertFlag.Name),
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
 							cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+							cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
 							grpc.WithBlock())
 						endpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 						conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
