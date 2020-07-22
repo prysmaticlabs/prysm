@@ -11,14 +11,13 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
-
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"

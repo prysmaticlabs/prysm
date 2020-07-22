@@ -5,8 +5,6 @@ package depositutil
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 // DepositInput for a given key. This input data can be used to when making a

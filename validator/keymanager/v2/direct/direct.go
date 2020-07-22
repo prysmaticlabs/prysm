@@ -10,14 +10,13 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
-
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
