@@ -63,5 +63,21 @@ func TestImport_Noninteractive(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
+<<<<<<< Updated upstream
+=======
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, importDir, "")
+	set.String(flags.WalletPasswordsDirFlag.Name, importPasswordDir, "")
+	set.String(flags.BackupDirFlag.Name, exportDir, "")
+	set.String(flags.PasswordFileFlag.Name, passwordFilePath, "")
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, importDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, importPasswordDir))
+	assert.NoError(t, set.Set(flags.BackupDirFlag.Name, exportDir))
+	assert.NoError(t, set.Set(flags.PasswordFileFlag.Name, passwordFilePath))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+>>>>>>> Stashed changes
 	require.NoError(t, ImportAccount(cliCtx))
 }

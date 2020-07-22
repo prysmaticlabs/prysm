@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-
-	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
@@ -25,7 +22,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 
-	backupDir, err := inputImportDir(cliCtx)
+	backupDir, err := inputDir(cliCtx, importDirPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
@@ -52,26 +49,6 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 
 	return nil
-}
-
-func inputImportDir(cliCtx *cli.Context) (string, error) {
-	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
-	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
-		return outputDir, nil
-	}
-	if outputDir == flags.DefaultValidatorDir() {
-		outputDir = path.Join(outputDir)
-	}
-	prompt := promptui.Prompt{
-		Label:    "Enter the file location of the exported wallet zip to import",
-		Validate: validateDirectoryPath,
-		Default:  outputDir,
-	}
-	outputPath, err := prompt.Run()
-	if err != nil {
-		return "", fmt.Errorf("could not determine import directory: %v", formatPromptError(err))
-	}
-	return outputPath, nil
 }
 
 func unzipArchiveToTarget(archiveDir string, target string) ([]string, error) {

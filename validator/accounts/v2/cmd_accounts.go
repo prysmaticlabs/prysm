@@ -51,7 +51,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
+				flags.BackupDirFlag,
 				flags.AccountsFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -67,7 +67,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
+				flags.BackupDirFlag,
 				flags.PasswordFileFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {

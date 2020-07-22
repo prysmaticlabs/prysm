@@ -98,6 +98,7 @@ func TestExport_Noninteractive(t *testing.T) {
 	require.NoError(t, err)
 	_, err = keymanager.CreateAccount(ctx, password)
 	require.NoError(t, err)
+
 	require.NoError(t, ExportAccount(cliCtx))
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")

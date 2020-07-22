@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/consts"
 	"github.com/urfave/cli/v2"
 )
 
@@ -124,14 +125,14 @@ var (
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
-		Value: DefaultValidatorDir(),
+		Value: filepath.Join(DefaultValidatorDir(), consts.WalletDefaultDirName),
 	}
 	// WalletPasswordsDirFlag defines the path for a passwords directory for
 	// Prysm accounts-v2.
 	WalletPasswordsDirFlag = &cli.StringFlag{
 		Name:  "passwords-dir",
 		Usage: "Path to a directory on-disk where wallet passwords are stored",
-		Value: DefaultValidatorDir(),
+		Value: filepath.Join(DefaultValidatorDir(), consts.PasswordsDefaultDirName),
 	}
 	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
 	PasswordFileFlag = &cli.StringFlag{
@@ -159,9 +160,9 @@ var (
 		Name:  "accounts",
 		Usage: "List of account names to export, or \"all\" to backup all accounts",
 	}
-	// BackupPathFlag defines the path for the zip backup of the wallet will be created.
-	BackupPathFlag = &cli.StringFlag{
-		Name:  "backup-path",
+	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
+	BackupDirFlag = &cli.StringFlag{
+		Name:  "backup-dir",
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
 	}

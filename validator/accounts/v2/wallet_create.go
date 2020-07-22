@@ -67,7 +67,7 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	ctx := context.Background()
-	walletPassword, err := inputNewWalletPassword(cliCtx)
+	walletPassword, err := inputPassword(cliCtx, newWalletPasswordPromptText, confirmPass)
 	if err != nil {
 		return err
 	}
