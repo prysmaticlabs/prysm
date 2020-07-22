@@ -36,6 +36,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
+				flags.PasswordFileFlag,
 				flags.ShowDepositDataFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {

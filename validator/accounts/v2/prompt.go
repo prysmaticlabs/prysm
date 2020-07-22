@@ -58,7 +58,7 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	} else if flag.Name == flags.WalletPasswordsDirFlag.Name {
 		ok, err := hasDir(directory)
 		if err != nil {
-			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
+			return "", errors.Wrapf(err, "could not check if passwords dir %s exists", directory)
 		}
 		if ok {
 			au := aurora.NewAurora(true)
