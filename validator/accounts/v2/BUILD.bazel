@@ -14,6 +14,7 @@ go_library(
         "wallet.go",
         "wallet_create.go",
         "wallet_edit.go",
+        "wallet_recover.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2",
     visibility = [
@@ -50,6 +51,7 @@ go_test(
         "new_test.go",
         "wallet_create_test.go",
         "wallet_edit_test.go",
+        "wallet_recover_test.go",
         "wallet_test.go",
     ],
     embed = [":go_default_library"],
