@@ -268,7 +268,7 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 }
 
 // ReadPasswordFromDisk --
-func (w *Wallet) ReadPasswordFromDisk(passwordFileName string) (string, error) {
+func (w *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName string) (string, error) {
 	fullPath := filepath.Join(w.passwordsDir, passwordFileName)
 	rawData, err := ioutil.ReadFile(fullPath)
 	if err != nil {
@@ -278,7 +278,7 @@ func (w *Wallet) ReadPasswordFromDisk(passwordFileName string) (string, error) {
 }
 
 // WritePasswordToDisk --
-func (w *Wallet) WritePasswordToDisk(passwordFileName string, password string) error {
+func (w *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
 	passwordPath := filepath.Join(w.passwordsDir, passwordFileName)
 	if err := ioutil.WriteFile(passwordPath, []byte(password), os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", passwordPath)

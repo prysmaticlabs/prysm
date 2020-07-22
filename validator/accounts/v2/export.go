@@ -13,11 +13,10 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/urfave/cli/v2"
 )
 
 const allAccountsText = "All accounts"
@@ -58,7 +57,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not export accounts")
 	}
 
-	if err := logAccountsExported(wallet, accounts); err != nil {
+	if err := logAccountsExported(wallet, km, accounts); err != nil {
 		return errors.Wrap(err, "could not log out exported accounts")
 	}
 
@@ -206,7 +205,7 @@ func copyFileFromZip(archive *zip.Writer, sourcePath string, info os.FileInfo, p
 	return err
 }
 
-func logAccountsExported(wallet *Wallet, accountNames []string) error {
+func logAccountsExported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -220,7 +219,7 @@ func logAccountsExported(wallet *Wallet, accountNames []string) error {
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
 
-		publicKey, err := wallet.publicKeyForAccount(accountName)
+		publicKey, err := keymanager.PublicKeyForAccount(accountName)
 		if err != nil {
 			return errors.Wrap(err, "could not get public key")
 		}

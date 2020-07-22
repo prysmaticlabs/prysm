@@ -56,7 +56,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not set account password")
 		}
 	}
-	if err := logAccountsImported(wallet, accountsImported); err != nil {
+	if err := logAccountsImported(wallet, km, accountsImported); err != nil {
 		return errors.Wrap(err, "could not log accounts imported")
 	}
 
@@ -145,7 +145,7 @@ func copyFileFromZipToPath(file *zip.File, path string) error {
 	return nil
 }
 
-func logAccountsImported(wallet *Wallet, accountNames []string) error {
+func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -159,7 +159,7 @@ func logAccountsImported(wallet *Wallet, accountNames []string) error {
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
 
-		publicKey, err := wallet.publicKeyForAccount(accountName)
+		publicKey, err := keymanager.PublicKeyForAccount(accountName)
 		if err != nil {
 			return errors.Wrap(err, "could not get public key")
 		}

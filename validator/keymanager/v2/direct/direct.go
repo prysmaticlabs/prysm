@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -324,7 +324,8 @@ func (dr *Keymanager) EnterPasswordForAccount(cliCtx *cli.Context, accountName s
 			attemptingPassword = false
 		}
 	}
-	if err := dr.wallet.WritePasswordToDisk(accountName+PasswordFileSuffix, password); err != nil {
+	ctx := context.Background()
+	if err := dr.wallet.WritePasswordToDisk(ctx, accountName+PasswordFileSuffix, password); err != nil {
 		return errors.Wrap(err, "could not write password to disk")
 	}
 	return nil
@@ -337,7 +338,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	}
 
 	for _, name := range accountNames {
-		password, err := dr.wallet.ReadPasswordFromDisk(name + PasswordFileSuffix)
+		password, err := dr.wallet.ReadPasswordFromDisk(ctx, name+PasswordFileSuffix)
 		if err != nil {
 			return errors.Wrapf(err, "could not read password for account %s", name)
 		}
@@ -418,7 +419,8 @@ func (dr *Keymanager) checkPasswordForAccount(accountName string, password strin
 	return nil
 }
 
-func (dr *Keymanager) publicKeyForAccount(accountName string) ([48]byte, error) {
+// PublicKeyForAccount --
+func (dr *Keymanager) PublicKeyForAccount(accountName string) ([48]byte, error) {
 	accountKeystore, err := dr.keystoreForAccount(accountName)
 	if err != nil {
 		return [48]byte{}, errors.Wrap(err, "could not get keystore")
