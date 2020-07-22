@@ -10,16 +10,19 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/tyler-smith/go-bip39"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/tyler-smith/go-bip39"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 type mockMnemonicGenerator struct {
@@ -272,14 +275,9 @@ func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte 
 		if err != nil {
 			t.Fatal(err)
 		}
-		//accountName, err := dr.wallet.WriteFileAtPath(ctx, password)
-		//if err != nil {
-		//	t.Fatal(err)
-		//}
-		accountName := "something"
-		if err := dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded); err != nil {
-			t.Fatal(err)
-		}
+		accountName, err := dr.generateAccountName()
+		require.NoError(t, err)
+		assert.NoError(t, err, dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded))
 	}
 	return wantedPublicKeys
 }

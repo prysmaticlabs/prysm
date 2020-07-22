@@ -164,8 +164,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate unique account name")
 	}
-	// TODO: Needs a write password function.
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, accountName+".pass", []byte(password)); err != nil {
+	if err := dr.wallet.WritePasswordToDisk(ctx, accountName+".pass", password); err != nil {
 		return "", errors.Wrap(err, "could not write password to disk")
 	}
 	// Generates a new EIP-2335 compliant keystore file

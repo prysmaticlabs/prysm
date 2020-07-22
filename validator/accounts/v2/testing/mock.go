@@ -39,7 +39,7 @@ func (m *Wallet) CanUnlockAccounts() bool {
 	return m.UnlockAccounts
 }
 
-// WriteAccountToDisk --
+// WritePasswordToDisk --
 func (m *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -47,7 +47,7 @@ func (m *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName strin
 	return nil
 }
 
-// ReadPasswordFromDisk
+// ReadPasswordFromDisk --
 func (m *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName string) (string, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()

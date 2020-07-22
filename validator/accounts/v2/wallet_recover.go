@@ -41,7 +41,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	if err := wallet.WriteFileAtPath(ctx, "", derived.EncryptedSeedFileName, seedConfigFile); err != nil {
+	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
 		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
 	log.WithField("wallet-path", wallet.AccountsDir()).Infof(
