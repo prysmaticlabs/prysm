@@ -22,9 +22,9 @@ func TestImport_Noninteractive(t *testing.T) {
 	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
-	exportDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	importDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	importPasswordDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	exportDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
+	importDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "import")
+	importPasswordDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "importpassword")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(exportDir), "Failed to remove directory")
 		require.NoError(t, os.RemoveAll(importDir), "Failed to remove directory")
@@ -39,6 +39,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		passwordsDir:   passwordsDir,
 		exportDir:      exportDir,
 		keymanagerKind: v2keymanager.Direct,
+		passwordFile:   passwordFilePath,
 	})
 	wallet, err := NewWallet(cliCtx)
 	require.NoError(t, err)

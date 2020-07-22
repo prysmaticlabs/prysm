@@ -29,6 +29,7 @@ type testWalletConfig struct {
 	passwordsDir     string
 	exportDir        string
 	accountsToExport string
+	passwordFile     string
 	keymanagerKind   v2keymanager.Kind
 }
 
@@ -43,20 +44,22 @@ func setupWalletCtx(
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.BackupPathFlag.Name, cfg.exportDir, "")
 	set.String(flags.AccountsFlag.Name, cfg.accountsToExport, "")
+	set.String(flags.PasswordFileFlag.Name, cfg.passwordFile, "")
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
 	assert.NoError(tb, set.Set(flags.WalletPasswordsDirFlag.Name, cfg.passwordsDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.BackupPathFlag.Name, cfg.exportDir))
 	assert.NoError(tb, set.Set(flags.AccountsFlag.Name, cfg.accountsToExport))
+	assert.NoError(tb, set.Set(flags.PasswordFileFlag.Name, cfg.passwordFile))
 	return cli.NewContext(&app, set, nil)
 }
 
 func setupWalletAndPasswordsDir(t testing.TB) (string, string) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
-	walletDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	walletDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-	passwordsDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	passwordsDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
 	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
