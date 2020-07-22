@@ -255,6 +255,16 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	return nil
 }
 
+// ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
+// within the wallet path.
+func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
+	configFilePath := path.Join(w.accountsPath, derived.EncryptedSeedFileName)
+	if !fileExists(configFilePath) {
+		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
+	}
+	return os.Open(configFilePath)
+}
+
 // WriteEncryptedSeedToDisk writes the encrypted wallet seed configuration
 // within the wallet path.
 func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
@@ -265,16 +275,6 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 	}
 	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
 	return nil
-}
-
-// ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
-// within the wallet path.
-func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
-	if !fileExists(path.Join(w.accountsPath, derived.EncryptedSeedFileName)) {
-		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
-	}
-	configFilePath := path.Join(w.accountsPath, derived.EncryptedSeedFileName)
-	return os.Open(configFilePath)
 }
 
 // ReadPasswordFromDisk --
