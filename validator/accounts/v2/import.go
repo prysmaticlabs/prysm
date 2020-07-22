@@ -2,6 +2,7 @@ package v2
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,10 +11,10 @@ import (
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,6 +24,14 @@ func ImportAccount(cliCtx *cli.Context) error {
 	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
+	}
+	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	km, ok := keymanager.(*direct.Keymanager)
+	if !ok {
+		return errors.New("can only export accounts for a non-HD wallet")
 	}
 
 	backupDir, err := inputImportDir(cliCtx)
@@ -43,7 +52,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
 
 	for _, accountName := range accountsImported {
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
+		if err := km.EnterPasswordForAccount(cliCtx, accountName); err != nil {
 			return errors.Wrap(err, "could not set account password")
 		}
 	}

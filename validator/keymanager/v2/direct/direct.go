@@ -10,11 +10,14 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
+	"github.com/logrusorgru/aurora"
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -26,8 +29,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -43,7 +48,9 @@ const (
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
 	KeystoreFileName = "keystore.json"
 	// NumAccountWords for human-readable names in wallets using a direct keymanager.
-	NumAccountWords     = 3
+	NumAccountWords = 3
+	// PasswordFileSuffix for passwords persisted as text to disk.
+	PasswordFileSuffix  = ".pass"
 	depositDataFileName = "deposit_data.ssz"
 	eipVersion          = "EIP-2335"
 )
@@ -278,6 +285,51 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
+func (dr *Keymanager) EnterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
+	au := aurora.NewAurora(true)
+	var password string
+	var err error
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return err
+		}
+		password = string(data)
+		err = dr.checkPasswordForAccount(accountName, password)
+		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+			return fmt.Errorf("invalid password entered for account %s", accountName)
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		attemptingPassword := true
+		// Loop asking for the password until the user enters it correctly.
+		for attemptingPassword {
+			// Ask the user for the password to their account.
+			password, err = inputPasswordForAccount(cliCtx, accountName)
+			if err != nil {
+				return errors.Wrap(err, "could not input password")
+			}
+			err = dr.checkPasswordForAccount(accountName, password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				fmt.Println(au.Red("Incorrect password entered, please try again"))
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			attemptingPassword = false
+		}
+	}
+	if err := dr.wallet.WritePasswordToDisk(accountName+PasswordFileSuffix, password); err != nil {
+		return errors.Wrap(err, "could not write password to disk")
+	}
+	return nil
+}
+
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	accountNames, err := dr.ValidatingAccountNames()
 	if err != nil {
@@ -285,7 +337,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	}
 
 	for _, name := range accountNames {
-		password, err := dr.wallet.ReadPasswordForAccount(name)
+		password, err := dr.wallet.ReadPasswordFromDisk(name + PasswordFileSuffix)
 		if err != nil {
 			return errors.Wrapf(err, "could not read password for account %s", name)
 		}
@@ -353,6 +405,43 @@ func (dr *Keymanager) generateAccountName() (string, error) {
 	return accountName, nil
 }
 
+func (dr *Keymanager) checkPasswordForAccount(accountName string, password string) error {
+	accountKeystore, err := dr.keystoreForAccount(accountName)
+	if err != nil {
+		return errors.Wrap(err, "could not get keystore")
+	}
+	decryptor := keystorev4.New()
+	_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
+	if err != nil {
+		return errors.Wrap(err, "could not decrypt keystore")
+	}
+	return nil
+}
+
+func (dr *Keymanager) publicKeyForAccount(accountName string) ([48]byte, error) {
+	accountKeystore, err := dr.keystoreForAccount(accountName)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could not get keystore")
+	}
+	pubKey, err := hex.DecodeString(accountKeystore.Pubkey)
+	if err != nil {
+		return [48]byte{}, errors.Wrap(err, "could decode pubkey string")
+	}
+	return bytesutil.ToBytes48(pubKey), nil
+}
+
+func (dr *Keymanager) keystoreForAccount(accountName string) (*v2keymanager.Keystore, error) {
+	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), accountName, KeystoreFileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read keystore file")
+	}
+	keystoreJSON := &v2keymanager.Keystore{}
+	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+		return nil, errors.Wrap(err, "could not decode json")
+	}
+	return keystoreJSON, nil
+}
+
 func generateDepositTransaction(
 	validatingKey bls.SecretKey,
 	withdrawalKey bls.SecretKey,
@@ -401,4 +490,16 @@ func hasDir(dirPath string) (bool, error) {
 		return false, nil
 	}
 	return info.IsDir(), err
+}
+
+func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error) {
+	prompt := promptui.Prompt{
+		Label: fmt.Sprintf("Enter password for account %s", accountName),
+		Mask:  '*',
+	}
+	walletPassword, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not read wallet password: %v", err)
+	}
+	return walletPassword, nil
 }
