@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -98,16 +99,19 @@ func (s *Service) createListener(
 	ipAddr net.IP,
 	privKey *ecdsa.PrivateKey,
 ) (*discover.UDPv5, error) {
-	udpAddr := &net.UDPAddr{
-		IP:   ipAddr,
-		Port: int(s.cfg.UDPPort),
-	}
 	// assume ip is either ipv4 or ipv6
 	networkVersion := ""
 	if ipAddr.To4() != nil {
 		networkVersion = "udp4"
 	} else {
 		networkVersion = "udp6"
+	}
+	// Check for the real local address which may
+	// be different in the presence of virtual networks.
+	ipAddr = s.localAddress(networkVersion, ipAddr)
+	udpAddr := &net.UDPAddr{
+		IP:   ipAddr,
+		Port: int(s.cfg.UDPPort),
 	}
 	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
@@ -249,6 +253,37 @@ func (s *Service) isPeerAtLimit() bool {
 	activePeers := len(s.Peers().Active())
 
 	return activePeers >= maxPeers || numOfConns >= maxPeers
+}
+
+// retrieve real local address of the node. In the event
+// that is not possible we return the provided ip.
+func (s *Service) localAddress(network string, addr net.IP) net.IP {
+	if len(s.cfg.BootstrapNodeAddr) == 0 {
+		return addr
+	}
+	// Dial the first bootnode to determine our 'real' local address.
+	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.BootstrapNodeAddr[0])
+	if err != nil {
+		log.Error("Could not parse bootnode address")
+		return addr
+	}
+	conn, err := net.DialTimeout(network, net.JoinHostPort(bootNode.IP().String(), strconv.Itoa(bootNode.UDP())), dialTimeout)
+	if err != nil {
+		log.Error("Could not dial remote peer")
+		return addr
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	// Determine the real address from which the initial connection was made.
+	realAddr, _, err := net.SplitHostPort(conn.LocalAddr().String())
+	if err != nil {
+		log.Error("Could not dial remote peer")
+		return addr
+	}
+	return net.ParseIP(realAddr)
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
