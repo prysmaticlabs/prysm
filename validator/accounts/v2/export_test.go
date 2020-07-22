@@ -1,59 +1,49 @@
 package v2
 
 import (
-	"flag"
+	"context"
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/urfave/cli/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
-func setupWalletCtx(
-	t *testing.T,
-	testDir string,
-	exportDir string,
-	accountsFlag string,
-	keymanagerKind v2keymanager.Kind,
-) *cli.Context {
-	walletDir := filepath.Join(testDir, walletDirName)
-	passwordsDir := filepath.Join(testDir, passwordDirName)
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
-	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.KeymanagerKindFlag.Name, keymanagerKind.String(), "")
-	set.String(flags.BackupPathFlag.Name, exportDir, "")
-	set.String(flags.AccountsFlag.Name, accountsFlag, "")
-	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
-	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanagerKind.String()))
-	assert.NoError(t, set.Set(flags.BackupPathFlag.Name, exportDir))
-	assert.NoError(t, set.Set(flags.AccountsFlag.Name, accountsFlag))
-	return cli.NewContext(&app, set, nil)
-}
-
 func TestZipAndUnzip(t *testing.T) {
-	testDir := testutil.TempDir()
-	walletDir := filepath.Join(testDir, walletDirName)
-	passwordsDir := filepath.Join(testDir, passwordDirName)
-	exportDir := filepath.Join(testDir, exportDirName)
-	importDir := filepath.Join(testDir, importDirName)
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.RemoveAll(passwordsDir))
-		assert.NoError(t, os.RemoveAll(exportDir))
-		assert.NoError(t, os.RemoveAll(importDir))
-	}()
-	cliCtx := setupWalletCtx(t, testDir, exportDir, "", v2keymanager.Direct)
+	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	exportDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	importDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(exportDir), "Failed to remove directory")
+		require.NoError(t, os.RemoveAll(importDir), "Failed to remove directory")
+	})
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		passwordsDir:   passwordsDir,
+		exportDir:      exportDir,
+		keymanagerKind: v2keymanager.Direct,
+	})
 	wallet, err := NewWallet(cliCtx)
+	require.NoError(t, err)
+	ctx := context.Background()
+	keymanager, err := direct.NewKeymanager(
+		ctx,
+		wallet,
+		direct.DefaultConfig(),
+		true, /* skip mnemonic */
+	)
+	require.NoError(t, err)
+	_, err = keymanager.CreateAccount(ctx, password)
 	require.NoError(t, err)
 
 	accounts, err := wallet.AccountNames()
@@ -81,17 +71,33 @@ func TestZipAndUnzip(t *testing.T) {
 }
 
 func TestExport_Noninteractive(t *testing.T) {
-	testDir := testutil.TempDir()
-	walletDir := filepath.Join(testDir, walletDirName)
-	passwordsDir := filepath.Join(testDir, passwordDirName)
-	exportDir := filepath.Join(testDir, exportDirName)
+	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	exportDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(exportDir), "Failed to remove directory")
+	})
 	accounts := "all"
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.RemoveAll(passwordsDir))
-		assert.NoError(t, os.RemoveAll(exportDir))
-	}()
-	cliCtx := setupWalletCtx(t, testDir, exportDir, accounts, v2keymanager.Direct)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:        walletDir,
+		passwordsDir:     passwordsDir,
+		exportDir:        exportDir,
+		accountsToExport: accounts,
+		keymanagerKind:   v2keymanager.Direct,
+	})
+	wallet, err := NewWallet(cliCtx)
+	require.NoError(t, err)
+	ctx := context.Background()
+	keymanager, err := direct.NewKeymanager(
+		ctx,
+		wallet,
+		direct.DefaultConfig(),
+		true, /* skip mnemonic */
+	)
+	require.NoError(t, err)
+	_, err = keymanager.CreateAccount(ctx, password)
+	require.NoError(t, err)
 	require.NoError(t, ExportAccount(cliCtx))
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")

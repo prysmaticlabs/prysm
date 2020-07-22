@@ -3,24 +3,26 @@ package v2
 import (
 	"context"
 	"flag"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/urfave/cli/v2"
-
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/urfave/cli/v2"
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir := filepath.Join(testutil.TempDir(), walletDirName)
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-	}()
+	walletDir, _ := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		keymanagerKind: v2keymanager.Remote,
+	})
+	wallet, err := NewWallet(cliCtx)
+	require.NoError(t, err)
 	ctx := context.Background()
+
 	originalCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/a.crt",
@@ -30,8 +32,6 @@ func TestEditWalletConfiguration(t *testing.T) {
 		RemoteAddr: "my.server.com:4000",
 	}
 	encodedCfg, err := remote.MarshalConfigFile(ctx, originalCfg)
-	assert.NoError(t, err)
-	wallet, err := NewWallet(nil)
 	assert.NoError(t, err)
 	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
@@ -55,7 +55,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 	assert.NoError(t, set.Set(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath))
 	assert.NoError(t, set.Set(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath))
 	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
-	cliCtx := cli.NewContext(&app, set, nil)
+	cliCtx = cli.NewContext(&app, set, nil)
 
 	assert.NoError(t, EditWalletConfiguration(cliCtx))
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)

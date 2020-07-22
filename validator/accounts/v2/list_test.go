@@ -14,18 +14,29 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 func TestListAccounts_DirectKeymanager(t *testing.T) {
-	//walletDir, passwordsDir := setupWalletDir(t)
-	//keymanagerKind := v2keymanager.Direct
+	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		passwordsDir:   passwordsDir,
+		keymanagerKind: v2keymanager.Direct,
+	})
+	wallet, err := NewWallet(cliCtx)
+	require.NoError(t, err)
 	ctx := context.Background()
-	wallet, err := NewWallet(nil)
+	keymanager, err := direct.NewKeymanager(
+		ctx,
+		wallet,
+		direct.DefaultConfig(),
+		true, /* skip confirm */
+	)
 	require.NoError(t, err)
-	keymanager, err := direct.NewKeymanager(ctx, wallet, direct.DefaultConfig(), true /* skip confirm */)
-	require.NoError(t, err)
+
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)
@@ -96,13 +107,17 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 }
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
-	//walletDir, passwordsDir := setupWalletDir(t)
-	//keymanagerKind := v2keymanager.Derived
-	ctx := context.Background()
-	wallet, err := NewWallet(nil)
+	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		passwordsDir:   passwordsDir,
+		keymanagerKind: v2keymanager.Derived,
+	})
+	wallet, err := NewWallet(cliCtx)
 	require.NoError(t, err)
-
+	ctx := context.Background()
 	password := "hello world"
+
 	seedConfig, err := derived.InitializeWalletSeedFile(ctx, password, true /* skip confirm */)
 	require.NoError(t, err)
 
@@ -119,6 +134,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		password,
 	)
 	require.NoError(t, err)
+
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)

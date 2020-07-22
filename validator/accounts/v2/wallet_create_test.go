@@ -4,36 +4,25 @@ import (
 	"context"
 	"flag"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
 )
 
 func TestCreateWallet_Direct(t *testing.T) {
-	walletDir := filepath.Join(testutil.TempDir(), walletDirName)
-	passwordsDir := filepath.Join(testutil.TempDir(), passwordDirName)
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.RemoveAll(passwordsDir))
-	}()
-	wantCfg := direct.DefaultConfig()
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	keymanagerKind := "direct"
-	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.KeymanagerKindFlag.Name, keymanagerKind, "")
-	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
-	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanagerKind))
-	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
-	cliCtx := cli.NewContext(&app, set, nil)
+	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		passwordsDir:   passwordsDir,
+		keymanagerKind: v2keymanager.Direct,
+	})
 
 	// We attempt to create the wallet.
 	require.NoError(t, CreateWallet(cliCtx))
@@ -50,7 +39,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	assert.DeepEqual(t, wantCfg, cfg)
+	assert.DeepEqual(t, direct.DefaultConfig(), cfg)
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
