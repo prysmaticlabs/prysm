@@ -26,14 +26,14 @@ func ExportAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
-		log.Fatal("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
-		log.WithError(err).Fatal("Could not parse wallet directory")
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
 
 	outputDir, err := inputExportDir(cliCtx)
 	if err != nil {
-		log.WithError(err).Fatal("Could not parse output directory")
+		return errors.Wrap(err, "could not parse output directory")
 	}
 
 	wallet, err := OpenWallet(context.Background(), &WalletConfig{
@@ -41,16 +41,16 @@ func ExportAccount(cliCtx *cli.Context) error {
 		WalletDir:         walletDir,
 	})
 	if err != nil {
-		log.WithError(err).Fatal("Could not open wallet")
+		return errors.Wrap(err, "could not open wallet")
 	}
 
 	allAccounts, err := wallet.AccountNames()
 	if err != nil {
-		log.WithError(err).Fatal("Could not get account names")
+		return errors.Wrap(err, "could not get account names")
 	}
 	accounts, err := selectAccounts(cliCtx, allAccounts)
 	if err != nil {
-		log.WithError(err).Fatal("Could not select accounts")
+		return errors.Wrap(err, "could not select accounts")
 	}
 	if len(accounts) == 0 {
 		return errors.New("no accounts to export")
@@ -61,7 +61,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 
 	if err := logAccountsExported(wallet, accounts); err != nil {
-		log.WithError(err).Fatal("Could not log out exported accounts")
+		return errors.Wrap(err, "could not log out exported accounts")
 	}
 
 	return nil
