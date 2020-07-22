@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"sync"
 
+	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -40,7 +41,9 @@ const (
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName    = "keystore.json"
+	KeystoreFileName = "keystore.json"
+	// NumAccountWords for human-readable names in wallets using a direct keymanager.
+	NumAccountWords     = 3
 	depositDataFileName = "deposit_data.ssz"
 	eipVersion          = "EIP-2335"
 )
@@ -150,11 +153,14 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 // the raw deposit data hex string for users to copy.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// Create a new, unique account name and write its password + directory to disk.
-	//accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
-	//if err != nil {
-	//	return "", errors.Wrap(err, "could not write account to disk")
-	//}
-	accountName := "hello"
+	accountName, err := dr.generateAccountName()
+	if err != nil {
+		return "", errors.Wrap(err, "could not generate unique account name")
+	}
+	// TODO: Needs a write password function.
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, accountName+".pass", []byte(password)); err != nil {
+		return "", errors.Wrap(err, "could not write password to disk")
+	}
 	// Generates a new EIP-2335 compliant keystore file
 	// from a BLS private key and marshals it as JSON.
 	validatingKey := bls.RandKey()
@@ -329,6 +335,22 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 		Name:    encryptor.Name(),
 	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
+}
+
+func (dr *Keymanager) generateAccountName() (string, error) {
+	var accountExists bool
+	var accountName string
+	for !accountExists {
+		accountName = petname.Generate(NumAccountWords, "-" /* separator */)
+		exists, err := hasDir(filepath.Join(dr.wallet.AccountsDir(), accountName))
+		if err != nil {
+			return "", errors.Wrapf(err, "could not check if account exists in dir: %s", dr.wallet.AccountsDir())
+		}
+		if !exists {
+			break
+		}
+	}
+	return accountName, nil
 }
 
 func generateDepositTransaction(

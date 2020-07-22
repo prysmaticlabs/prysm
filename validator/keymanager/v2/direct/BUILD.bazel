@@ -23,6 +23,7 @@ go_library(
         "//shared/roughtime:go_default_library",
         "//validator/accounts/v2/iface:go_default_library",
         "//validator/keymanager/v2:go_default_library",
+        "@com_github_dustinkirkland_golang_petname//:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",

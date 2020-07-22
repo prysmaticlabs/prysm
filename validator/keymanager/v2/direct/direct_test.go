@@ -39,7 +39,7 @@ func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 	return nil
 }
 
-func TestKeymanager_CreateAccount(t *testing.T) {
+func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
@@ -132,7 +132,7 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
 }
 
-func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -162,7 +162,7 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 }
 
-func TestKeymanager_Sign(t *testing.T) {
+func TestDirectKeymanager_Sign(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -176,7 +176,7 @@ func TestKeymanager_Sign(t *testing.T) {
 	numAccounts := 2
 	generateAccounts(t, numAccounts, dr)
 	ctx := context.Background()
-	if err := dr.initializeSecretKeysCache(); err != nil {
+	if err := dr.initializeSecretKeysCache(ctx); err != nil {
 		t.Fatal(err)
 	}
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
@@ -209,7 +209,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		t.Fatalf("Expected sig not to verify for pubkey %#x and data %v", wrongPubKey.Marshal(), data)
 	}
 }
-func TestKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
+func TestDirectKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: nil,
 	}
@@ -223,7 +223,7 @@ func TestKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	}
 }
 
-func TestKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
+func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
@@ -272,11 +272,12 @@ func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte 
 		if err != nil {
 			t.Fatal(err)
 		}
-		accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := dr.wallet.WriteFileForAccount(ctx, accountName, KeystoreFileName, encoded); err != nil {
+		//accountName, err := dr.wallet.WriteFileAtPath(ctx, password)
+		//if err != nil {
+		//	t.Fatal(err)
+		//}
+		accountName := "something"
+		if err := dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded); err != nil {
 			t.Fatal(err)
 		}
 	}

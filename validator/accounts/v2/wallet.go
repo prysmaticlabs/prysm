@@ -194,37 +194,6 @@ func (w *Wallet) CanUnlockAccounts() bool {
 	return w.canUnlockAccounts
 }
 
-//// AccountNames reads all account names at the wallet's path.
-//func (w *Wallet) AccountNames() ([]string, error) {
-//	accountsDir, err := os.Open(w.accountsPath)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer func() {
-//		if err := accountsDir.Close(); err != nil {
-//			log.WithField(
-//				"directory", w.accountsPath,
-//			).Errorf("Could not close accounts directory: %v", err)
-//		}
-//	}()
-//
-//	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
-//	if err != nil {
-//		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.accountsPath)
-//	}
-//	accountNames := make([]string, 0)
-//	for _, item := range list {
-//		ok, err := hasDir(path.Join(w.accountsPath, item))
-//		if err != nil {
-//			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
-//		}
-//		if ok {
-//			accountNames = append(accountNames, item)
-//		}
-//	}
-//	return accountNames, err
-//}
-
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) InitializeKeymanager(
@@ -260,26 +229,6 @@ func (w *Wallet) InitializeKeymanager(
 	}
 	return keymanager, nil
 }
-
-// WriteAccountToDisk creates an account directory under a unique namespace
-// within the wallet's path. It additionally writes the account's password to the
-// wallet's passwords directory. Returns the unique account name.
-//func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
-//	accountName, err := w.generateAccountName()
-//	if err != nil {
-//		return "", errors.Wrap(err, "could not generate unique account name")
-//	}
-//	// Generate a directory for the new account name and
-//	// write its associated password to disk.
-//	accountPath := path.Join(w.accountsPath, accountName)
-//	if err := os.MkdirAll(accountPath, DirectoryPermissions); err != nil {
-//		return "", errors.Wrap(err, "could not create account directory")
-//	}
-//	if err := w.writePasswordToFile(accountName, password); err != nil {
-//		return "", errors.Wrap(err, "could not write password to disk")
-//	}
-//	return accountName, nil
-//}
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
 func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName string, data []byte) error {
