@@ -27,14 +27,14 @@ func ListAccounts(cliCtx *cli.Context) error {
 	}
 	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Could not initialize keymanager: %v", err)
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
-			log.Fatal("Not ok")
+			log.Fatal("Not a direct keymanager")
 		}
 		if err := listDirectKeymanagerAccounts(showDepositData, wallet, km); err != nil {
 			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
@@ -42,7 +42,7 @@ func ListAccounts(cliCtx *cli.Context) error {
 	case v2keymanager.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
 		if !ok {
-			log.Fatal("Not ok")
+			log.Fatal("Not a derived keymanager")
 		}
 		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, km); err != nil {
 			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)

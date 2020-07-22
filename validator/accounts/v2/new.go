@@ -44,7 +44,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Could not initialize keymanager: %v", err)
 	}
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
@@ -52,7 +52,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
-			log.Fatal("Not ok")
+			log.Fatal("Not a direct keymanager")
 		}
 		password, err := inputNewAccountPassword(cliCtx)
 		if err != nil {
@@ -65,7 +65,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	case v2keymanager.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
 		if !ok {
-			log.Fatal("Not ok")
+			log.Fatal("Not a direct keymanager")
 		}
 		if _, err := km.CreateAccount(ctx); err != nil {
 			log.Fatalf("Could not create account in wallet: %v", err)

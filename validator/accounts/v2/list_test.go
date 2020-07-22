@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
