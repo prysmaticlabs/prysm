@@ -52,7 +52,6 @@ func TestImport_Noninteractive(t *testing.T) {
 		ctx,
 		wallet,
 		keymanagerCfg,
-		true, /* skip mnemonic */
 	)
 	require.NoError(t, err)
 	_, err = keymanager.CreateAccount(ctx, password)

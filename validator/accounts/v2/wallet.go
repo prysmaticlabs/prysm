@@ -46,11 +46,10 @@ var (
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
-	accountsPath      string
-	passwordsDir      string
-	canUnlockAccounts bool
-	keymanagerKind    v2keymanager.Kind
-	walletPassword    string
+	accountsPath   string
+	passwordsDir   string
+	keymanagerKind v2keymanager.Kind
+	walletPassword string
 }
 
 func init() {
@@ -100,7 +99,6 @@ func NewWallet(
 			return nil, errors.Wrap(err, "could not create passwords directory")
 		}
 		w.passwordsDir = passwordsDir
-		w.canUnlockAccounts = true
 	}
 	return w, nil
 }
@@ -138,7 +136,6 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 			return nil, err
 		}
 		w.passwordsDir = passwordsDir
-		w.canUnlockAccounts = true
 	}
 	return w, nil
 }
@@ -151,12 +148,6 @@ func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 // AccountsDir for the wallet.
 func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
-}
-
-// CanUnlockAccounts determines whether a wallet has capabilities
-// of unlocking validator accounts using passphrases.
-func (w *Wallet) CanUnlockAccounts() bool {
-	return w.canUnlockAccounts
 }
 
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
@@ -176,7 +167,7 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = direct.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm)
+		keymanager, err = direct.NewKeymanager(ctx, w, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
