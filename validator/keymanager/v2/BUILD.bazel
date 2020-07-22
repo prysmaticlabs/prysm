@@ -19,5 +19,9 @@ go_test(
     name = "go_default_test",
     srcs = ["types_test.go"],
     embed = [":go_default_library"],
-    deps = ["//validator/keymanager/v2/direct:go_default_library"],
+    deps = [
+        "//validator/keymanager/v2/derived:go_default_library",
+        "//validator/keymanager/v2/direct:go_default_library",
+        "//validator/keymanager/v2/remote:go_default_library",
+    ],
 )

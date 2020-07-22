@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/urfave/cli/v2"
 )
@@ -56,6 +57,12 @@ var (
 		Name:  "grpc-retries",
 		Usage: "Number of attempts to retry gRPC requests",
 		Value: 5,
+	}
+	// GrpcRetryDelayFlag defines the interval to retry a failed gRPC request.
+	GrpcRetryDelayFlag = &cli.DurationFlag{
+		Name:  "grpc-retry-delay",
+		Usage: "The amount of time between gRPC retry requests.",
+		Value: 1 * time.Second,
 	}
 	// GrpcHeadersFlag defines a list of headers to send with all gRPC requests.
 	GrpcHeadersFlag = &cli.StringFlag{
@@ -130,6 +137,11 @@ var (
 	PasswordFileFlag = &cli.StringFlag{
 		Name:  "password-file",
 		Usage: "File to retrieve password for writing to the password dir when making a new account",
+	}
+	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
+	MnemonicFileFlag = &cli.StringFlag{
+		Name:  "mnemonic-file",
+		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
 	}
 	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
 	SkipMnemonicConfirmFlag = &cli.BoolFlag{

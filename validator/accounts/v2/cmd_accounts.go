@@ -23,7 +23,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.PasswordFileFlag,
 				flags.SkipMnemonicConfirmFlag,
 			},
-			Action: NewAccount,
+			Action: func(cliCtx *cli.Context) error {
+				if err := NewAccount(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not create new account")
+				}
+				return nil
+			},
 		},
 		{
 			Name:        "list",
@@ -33,7 +38,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordsDirFlag,
 				flags.ShowDepositDataFlag,
 			},
-			Action: ListAccounts,
+			Action: func(cliCtx *cli.Context) error {
+				if err := ListAccounts(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not list accounts")
+				}
+				return nil
+			},
 		},
 		{
 			Name:        "export",
@@ -44,7 +54,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupPathFlag,
 				flags.AccountsFlag,
 			},
-			Action: ExportAccount,
+			Action: func(cliCtx *cli.Context) error {
+				if err := ExportAccount(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not export accounts")
+				}
+				return nil
+			},
 		},
 		{
 			Name:        "import",
@@ -55,7 +70,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupPathFlag,
 				flags.PasswordFileFlag,
 			},
-			Action: ImportAccount,
+			Action: func(cliCtx *cli.Context) error {
+				if err := ImportAccount(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not import accounts")
+				}
+				return nil
+			},
 		},
 	},
 }
