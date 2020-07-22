@@ -8,7 +8,6 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/src-d/go-log.v1"
 )
 
 // EditWalletConfiguration for a user's on-disk wallet, being able to change

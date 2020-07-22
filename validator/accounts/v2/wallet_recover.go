@@ -8,10 +8,9 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/urfave/cli/v2"
 )
 
 const phraseWordCount = 24
