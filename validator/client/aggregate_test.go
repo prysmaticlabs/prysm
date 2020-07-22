@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -77,9 +79,7 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
 	currentTime = roughtime.Now()
-	if currentTime.Unix() != twoThirdTime.Unix() {
-		t.Errorf("Wanted %v time for slot two third but got %v", twoThirdTime, currentTime)
-	}
+	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
 }
 
 func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
@@ -97,10 +97,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 		SelectionProof:  nil,
 	}
 	sig, err := validator.aggregateAndProofSig(context.Background(), validatorPubKey, agg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := bls.SignatureFromBytes(sig); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	_, err = bls.SignatureFromBytes(sig)
+	require.NoError(t, err)
 }

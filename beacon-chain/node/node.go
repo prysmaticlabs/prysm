@@ -96,6 +96,15 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
+	if cliCtx.IsSet(flags.HistoricalSlasherNode.Name) {
+		c := params.BeaconConfig()
+		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch
+		params.OverrideBeaconConfig(c)
+		cmdConfig := cmd.Get()
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
+		cmd.Init(cmdConfig)
+	}
+
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig()
 		c.SlotsPerArchivedPoint = uint64(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))

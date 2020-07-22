@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
@@ -18,77 +19,80 @@ import (
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
 func CreateWallet(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
-	if err != nil && !errors.Is(err, ErrNoWalletFound) {
-		log.Fatalf("Could not parse wallet directory: %v", err)
-	}
-	// Check if the user has a wallet at the specified path.
-	// If a user does not have a wallet, we instantiate one
-	// based on specified options.
-	walletExists, err := hasDir(walletDir)
+	w, err := NewWallet(cliCtx)
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "could not check if wallet directory exists")
 	}
-	if walletExists {
-		log.Fatal(
-			"You already have a wallet at the specified path. You can " +
-				"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit",
-		)
-	}
-	// Determine the desired keymanager kind for the wallet from user input.
-	keymanagerKind, err := inputKeymanagerKind(cliCtx)
-	if err != nil {
-		log.Fatalf("Could not select keymanager kind: %v", err)
-	}
-	switch keymanagerKind {
+	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
-		if err = initializeDirectWallet(cliCtx, walletDir); err != nil {
-			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
+		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
+			return errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
-		log.WithField("wallet-path", walletDir).Infof(
+		log.WithField("wallet-path", w.accountsPath).Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
 				"Make a new validator account with ./prysm.sh validator accounts-2 new",
 		)
 	case v2keymanager.Derived:
-		log.Fatal("Derived keymanager is not yet supported")
-	case v2keymanager.Remote:
-		if err = initializeRemoteSignerWallet(cliCtx, walletDir); err != nil {
-			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
+		if err = createDerivedKeymanagerWallet(cliCtx, w); err != nil {
+			return errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
-		log.WithField("wallet-path", walletDir).Infof(
+		log.WithField("wallet-path", w.accountsPath).Infof(
+			"Successfully created HD wallet and saved configuration to disk. " +
+				"Make a new validator account with ./prysm.sh validator accounts-2 new",
+		)
+	case v2keymanager.Remote:
+		if err = createRemoteKeymanagerWallet(cliCtx, w); err != nil {
+			return errors.Wrap(err, "could not initialize wallet with remote keymanager")
+		}
+		log.WithField("wallet-path", w.accountsPath).Infof(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		log.Fatalf("Keymanager type %s is not supported", keymanagerKind)
+		return errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
 	}
 	return nil
 }
 
-func initializeDirectWallet(cliCtx *cli.Context, walletDir string) error {
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-	walletConfig := &WalletConfig{
-		PasswordsDir:      passwordsDirPath,
-		WalletDir:         walletDir,
-		KeymanagerKind:    v2keymanager.Direct,
-		CanUnlockAccounts: true,
-	}
-	ctx := context.Background()
-	wallet, err := NewWallet(ctx, walletConfig)
+func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
+	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), direct.DefaultConfig())
 	if err != nil {
-		return errors.Wrap(err, "could not create new wallet")
+		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
-	keymanagerConfig, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
+	if err := wallet.WriteKeymanagerConfigToDisk(context.Background(), keymanagerConfig); err != nil {
+		return errors.Wrap(err, "could not write keymanager config to disk")
+	}
+	return nil
+}
+
+func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
+	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
+	ctx := context.Background()
+	walletPassword, err := inputNewWalletPassword(cliCtx)
+	if err != nil {
+		return err
+	}
+	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword, skipMnemonicConfirm)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize new wallet seed file")
+	}
+	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
+	}
+	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
+	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
+		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+	}
 	return nil
 }
 
-func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
+func createRemoteKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	conf, err := inputRemoteKeymanagerConfig(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not input remote keymanager config")
@@ -97,14 +101,6 @@ func initializeRemoteSignerWallet(cliCtx *cli.Context, walletDir string) error {
 	keymanagerConfig, err := remote.MarshalConfigFile(ctx, conf)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal config file")
-	}
-	walletConfig := &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Remote,
-	}
-	wallet, err := NewWallet(ctx, walletConfig)
-	if err != nil {
-		return errors.Wrap(err, "could not create new wallet")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
