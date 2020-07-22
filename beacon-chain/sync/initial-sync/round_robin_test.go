@@ -33,6 +33,40 @@ func TestService_roundRobinSync(t *testing.T) {
 		peers              []*peerData
 	}{
 		{
+			name:               "Single peer with no finalized blocks",
+			currentSlot:        2,
+			expectedBlockSlots: makeSequence(1, 2),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 2),
+					finalizedEpoch: 0,
+					headSlot:       2,
+				},
+			},
+		},
+		{
+			name:               "Multiple peers with no finalized blocks",
+			currentSlot:        2,
+			expectedBlockSlots: makeSequence(1, 2),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 2),
+					finalizedEpoch: 0,
+					headSlot:       2,
+				},
+				{
+					blocks:         makeSequence(1, 2),
+					finalizedEpoch: 0,
+					headSlot:       2,
+				},
+				{
+					blocks:         makeSequence(1, 2),
+					finalizedEpoch: 0,
+					headSlot:       2,
+				},
+			},
+		},
+		{
 			name:               "Single peer with all blocks",
 			currentSlot:        131,
 			expectedBlockSlots: makeSequence(1, 131),
