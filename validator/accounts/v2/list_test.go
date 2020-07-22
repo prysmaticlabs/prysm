@@ -32,7 +32,6 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		ctx,
 		wallet,
 		direct.DefaultConfig(),
-		true, /* skip confirm */
 	)
 	require.NoError(t, err)
 
