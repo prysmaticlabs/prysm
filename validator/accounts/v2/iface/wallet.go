@@ -12,8 +12,9 @@ type Wallet interface {
 	AccountsDir() string
 	CanUnlockAccounts() bool
 	// Read methods for important wallet and accounts-related files.
-	ReadPasswordForAccount(accountName string) (string, error)
 	ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error)
+	ReadPasswordFromDisk(passwordFileName string) (string, error)
 	// Write methods to persist important wallet and accounts-related files to disk.
 	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
+	WritePasswordToDisk(passwordFileName string, password string) error
 }
