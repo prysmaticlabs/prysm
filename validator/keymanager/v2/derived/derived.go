@@ -73,6 +73,7 @@ type Keymanager struct {
 	lock              sync.RWMutex
 	seedCfg           *SeedConfig
 	seed              []byte
+	walletPassword    string
 }
 
 // SeedConfig json file representation as a Go struct.
@@ -128,9 +129,10 @@ func NewKeymanager(
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: skipMnemonicConfirm,
 		},
-		seedCfg:   seedConfig,
-		seed:      seed,
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		seedCfg:        seedConfig,
+		seed:           seed,
+		walletPassword: password,
+		keysCache:      make(map[[48]byte]bls.SecretKey),
 	}
 	// We initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via the unlocked wallet.
@@ -248,8 +250,12 @@ func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
 func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, error) {
 	names := make([]string, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
-		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		names = append(names, petnames.DeterministicName([]byte(withdrawalKeyPath), "-"))
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not derive validating key")
+		}
+		names = append(names, petnames.DeterministicName(validatingKey.Marshal(), "-"))
 	}
 	return names, nil
 }
@@ -259,7 +265,7 @@ func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, err
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
-func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
@@ -275,7 +281,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	encodedWithdrawalKeystore, err := dr.generateKeystoreFile(
 		withdrawalKey.Marshal(),
 		withdrawalKey.PublicKey().Marshal(),
-		password,
+		dr.walletPassword,
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate keystore file for withdrawal account")
@@ -283,7 +289,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	encodedValidatingKeystore, err := dr.generateKeystoreFile(
 		validatingKey.Marshal(),
 		validatingKey.PublicKey().Marshal(),
-		password,
+		dr.walletPassword,
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate keystore file for validating account")

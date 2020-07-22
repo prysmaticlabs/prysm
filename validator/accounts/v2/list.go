@@ -19,22 +19,13 @@ import (
 
 // ListAccounts displays all available validator accounts in a Prysm wallet.
 func ListAccounts(cliCtx *cli.Context) error {
-	walletDir, err := inputWalletDir(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	} else if err != nil {
-		return errors.Wrap(err, "could not parse wallet directory")
-	}
 	// Read the wallet from the specified path.
 	ctx := context.Background()
-	wallet, err := OpenWallet(ctx, &WalletConfig{
-		WalletDir:         walletDir,
-		CanUnlockAccounts: false,
-	})
+	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		return errors.Wrapf(err, "could not read wallet at specified path %s", walletDir)
+		return errors.Wrapf(err, "could not read wallet at specified path %s", wallet.AccountsDir())
 	}
-	keymanager, err := wallet.InitializeKeymanager(ctx, false /* skipMnemonicConfirm */)
+	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -84,8 +75,6 @@ func listDirectKeymanagerAccounts(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
 			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
-	dirPath := au.BrightCyan("(wallet dir)")
-	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
 	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(context.Background())
@@ -142,8 +131,6 @@ func listDerivedKeymanagerAccounts(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
 			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
-	dirPath := au.BrightCyan("(wallet dir)")
-	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.Config().DerivedPathStructure).Bold())
 	ctx := context.Background()
@@ -164,7 +151,6 @@ func listDerivedKeymanagerAccounts(
 	if err != nil {
 		return err
 	}
-	log.Info(currentAccountNumber)
 	for i := uint64(0); i <= currentAccountNumber; i++ {
 		fmt.Println("")
 		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
