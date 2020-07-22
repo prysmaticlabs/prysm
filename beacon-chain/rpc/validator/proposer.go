@@ -1,11 +1,11 @@
 package validator
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"reflect"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -208,7 +208,6 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 
 // eth1DataMajorityVote determines the appropriate eth1data for a block proposal using an extended
 // simple voting algorithm - voting with the majority. The algorithm for this method is as follows:
-//  - Determine if we are in the "head" of the voting period. If yes, use the simple voting algorithm for proposal.
 //  - Determine the timestamp for the start slot for the current eth1 voting period.
 //  - Determine the timestamp for the start slot for the previous eth1 voting period.
 //  - Determine the most recent eth1 block before each timestamp.
@@ -218,7 +217,6 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 //  - If no blocks are left after filtering, use the current period's most recent eth1 block for proposal.
 //  - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
 //  - This vote's block is the eth1block to use for the block proposal.
-// TODO: "Genesis" period and previous period
 // TODO: Feature flag
 func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
@@ -231,14 +229,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return vs.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
-
-	headOfVotingPeriod :=
-		slot%(params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch) <
-			params.BeaconConfig().HeadOfVotingPeriodLength
-	if headOfVotingPeriod {
-		// TODO: Is it OK that `context.WithTimeout` will be invoked again?
-		return vs.eth1Data(ctx, slot)
-	}
 
 	slotsPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
 	genesisTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
@@ -281,7 +271,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		if err != nil {
 			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
 		}
-		// TODO: Both inclusive?
 		if ok && lastValidBlockNumber.Cmp(height) > -1 && firstValidBlockNumber.Cmp(height) < 1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
@@ -300,10 +289,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		newVote := true
 		for i, aggregatedVote := range voteCount {
 			aggregatedData := aggregatedVote.data
-			if bytes.Equal(singleVote.eth1Data.BlockHash, aggregatedData.eth1Data.BlockHash) &&
-				singleVote.eth1Data.DepositCount == aggregatedData.eth1Data.DepositCount &&
-				bytes.Equal(singleVote.eth1Data.DepositRoot, aggregatedData.eth1Data.DepositRoot) {
-
+			if reflect.DeepEqual(singleVote.eth1Data, aggregatedData.eth1Data) {
 				voteCount[i].votes++
 				newVote = false
 				break

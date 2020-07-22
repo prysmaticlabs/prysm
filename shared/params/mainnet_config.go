@@ -123,7 +123,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxPeersToSync:            15,
 	SlotsPerArchivedPoint:     2048,
 	GenesisCountdownInterval:  time.Minute,
-	HeadOfVotingPeriodLength:  32,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
