@@ -10,17 +10,14 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -143,13 +140,13 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, depositData, err := generateDepositTransaction(validatingKey, withdrawalKey)
+	tx, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
 	// Log the deposit transaction data to the user.
-	logDepositTransaction(tx)
+	depositutil.LogDepositTransaction(log, tx)
 
 	// We write the raw deposit transaction as an .rlp encoded file.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, DepositTransactionFileName, tx.Data()); err != nil {
@@ -295,45 +292,4 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 		Name:    encryptor.Name(),
 	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
-}
-
-func generateDepositTransaction(
-	validatingKey bls.SecretKey,
-	withdrawalKey bls.SecretKey,
-) (*types.Transaction, *ethpb.Deposit_Data, error) {
-	depositData, depositRoot, err := depositutil.DepositInput(
-		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit input")
-	}
-	testAcc, err := contract.Setup()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not load deposit contract")
-	}
-	testAcc.TxOpts.GasLimit = 1000000
-
-	tx, err := testAcc.Contract.Deposit(
-		testAcc.TxOpts,
-		depositData.PublicKey,
-		depositData.WithdrawalCredentials,
-		depositData.Signature,
-		depositRoot,
-	)
-	return tx, depositData, nil
-}
-
-func logDepositTransaction(tx *types.Transaction) {
-	log.Info(
-		"Copy + paste the deposit data below when using the " +
-			"eth1 deposit contract")
-	fmt.Printf(`
-========================Deposit Data===============================
-
-%#x
-
-===================================================================`, tx.Data())
-	fmt.Printf(`
-***Enter the above deposit data into step 3 on https://prylabs.net/participate***
-`)
 }
