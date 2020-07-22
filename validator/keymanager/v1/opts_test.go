@@ -1,10 +1,12 @@
 package v1
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestDecodeOpts(t *testing.T) {
@@ -53,24 +55,12 @@ func TestDecodeOpts(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			err := decodeOpts(test.input, test.res)
 			if test.err == nil {
-				if err != nil {
-					t.Fatalf("Unexepcted error: %v", err)
-				}
+				require.NoError(t, err)
 				recoded, err := json.Marshal(test.res)
-				if err != nil {
-					t.Fatalf("Unexepcted error encoding result: %v", err)
-				}
-				if !bytes.Equal([]byte(test.result), recoded) {
-					t.Fatalf("Unexpected recoded value: expected %s, received %s", test.result, string(recoded))
-				}
-
+				require.NoError(t, err)
+				require.DeepEqual(t, []byte(test.result), recoded, "Unexpected recoded value")
 			} else {
-				if err == nil {
-					t.Fatalf("Missing expected error: %v", test.err)
-				}
-				if test.err.Error() != err.Error() {
-					t.Fatalf("Unexpected error value: expected %v, received %v", test.err.Error(), err.Error())
-				}
+				assert.ErrorContains(t, test.err.Error(), err)
 			}
 		})
 	}
