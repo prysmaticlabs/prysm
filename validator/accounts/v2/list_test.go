@@ -166,7 +166,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		t.Errorf("Did not find accounts path %s in output", wallet.accountsPath)
 	}
 
-	accountNames, err := keymanager.AccountNames(ctx)
+	accountNames, err := keymanager.ValidatingAccountNames(ctx)
 	require.NoError(t, err)
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
