@@ -22,7 +22,7 @@ const archiveFilename = "backup.zip"
 
 // ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
-	outputDir, err := inputDir(cliCtx, exportDirPromptText, flags.BackupDirFlag)
+	outputDir, err := inputDirectory(cliCtx, exportDirPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}

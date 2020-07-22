@@ -37,7 +37,7 @@ const (
 	confirmPass
 )
 
-func inputDir(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
+func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
 		return directory, nil

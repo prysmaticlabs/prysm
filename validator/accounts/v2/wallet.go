@@ -59,7 +59,7 @@ func init() {
 func NewWallet(
 	cliCtx *cli.Context,
 ) (*Wallet, error) {
-	walletDir, err := inputDir(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
@@ -89,7 +89,7 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputDir(cliCtx, walletPasswordPromptText, flags.WalletPasswordsDirFlag)
+		passwordsDir, err := inputDirectory(cliCtx, walletPasswordPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +107,7 @@ func NewWallet(
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	// Read a wallet's directory from user input.
-	walletDir, err := inputDir(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if errors.Is(err, ErrNoWalletFound) {
 		return nil, errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
@@ -130,7 +130,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputDir(cliCtx, walletPasswordPromptText, flags.WalletPasswordsDirFlag)
+		passwordsDir, err := inputDirectory(cliCtx, walletPasswordPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
 			return nil, err
 		}

@@ -22,7 +22,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 
-	backupDir, err := inputDir(cliCtx, importDirPromptText, flags.BackupDirFlag)
+	backupDir, err := inputDirectory(cliCtx, importDirPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
