@@ -65,7 +65,13 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 	}
-	eth1Data, err := vs.eth1Data(ctx, req.Slot)
+
+	var eth1Data *ethpb.Eth1Data
+	if featureconfig.Get().EnableEth1DataMajorityVote {
+		eth1Data, err = vs.eth1DataMajorityVote(ctx, req.Slot)
+	} else {
+		eth1Data, err = vs.eth1Data(ctx, req.Slot)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
@@ -214,7 +220,6 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 //  - If no blocks are left after filtering, use the current period's most recent eth1 block for proposal.
 //  - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
 //  - This vote's block is the eth1block to use for the block proposal.
-// TODO: Feature flag
 func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
