@@ -46,7 +46,7 @@ func TestZipAndUnzip(t *testing.T) {
 	_, err = keymanager.CreateAccount(ctx, password)
 	require.NoError(t, err)
 
-	accounts, err := wallet.AccountNames()
+	accounts, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
 
 	if len(accounts) == 0 {

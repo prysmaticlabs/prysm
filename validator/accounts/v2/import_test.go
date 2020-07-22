@@ -55,7 +55,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	_, err = keymanager.CreateAccount(ctx, password)
 	require.NoError(t, err)
 
-	accounts, err := wallet.AccountNames()
+	accounts, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
 	assert.Equal(t, len(accounts), 1)
 

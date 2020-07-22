@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -79,7 +81,7 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config, skipMn
 	// used to retrieve secrets keys for the accounts via password unlock.
 	// This cache is needed to process Sign requests using a public key.
 	if wallet.CanUnlockAccounts() {
-		if err := k.initializeSecretKeysCache(); err != nil {
+		if err := k.initializeSecretKeysCache(ctx); err != nil {
 			return nil, errors.Wrap(err, "could not initialize keys cache")
 		}
 	}
@@ -110,6 +112,37 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
+// ValidatingAccountNames --
+func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
+	accountsDir, err := os.Open(dr.wallet.AccountsDir())
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := accountsDir.Close(); err != nil {
+			log.WithField(
+				"directory", dr.wallet.AccountsDir(),
+			).Errorf("Could not close accounts directory: %v", err)
+		}
+	}()
+
+	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read files in directory: %s", dr.wallet.AccountsDir())
+	}
+	accountNames := make([]string, 0)
+	for _, item := range list {
+		ok, err := hasDir(filepath.Join(dr.wallet.AccountsDir(), item))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
+		}
+		if ok {
+			accountNames = append(accountNames, item)
+		}
+	}
+	return accountNames, err
+}
+
 // CreateAccount for a direct keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It
 // stores the generated keystore.json file in the wallet and additionally
@@ -117,10 +150,11 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 // the raw deposit data hex string for users to copy.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// Create a new, unique account name and write its password + directory to disk.
-	accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
-	if err != nil {
-		return "", errors.Wrap(err, "could not write account to disk")
-	}
+	//accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
+	//if err != nil {
+	//	return "", errors.Wrap(err, "could not write account to disk")
+	//}
+	accountName := "hello"
 	// Generates a new EIP-2335 compliant keystore file
 	// from a BLS private key and marshals it as JSON.
 	validatingKey := bls.RandKey()
@@ -152,7 +186,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	logDepositTransaction(tx)
 
 	// We write the raw deposit transaction as an .rlp encoded file.
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, DepositTransactionFileName, tx.Data()); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, DepositTransactionFileName, tx.Data()); err != nil {
 		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, DepositTransactionFileName)
 	}
 
@@ -161,19 +195,19 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	if err != nil {
 		return "", errors.Wrap(err, "could not marshal deposit data")
 	}
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
 		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
 
 	// Write the encoded keystore to disk.
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, KeystoreFileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 
 	// Finally, write the account creation timestamp as a file.
 	createdAt := roughtime.Now().Unix()
 	createdAtStr := strconv.FormatInt(createdAt, 10)
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, TimestampFileName, []byte(createdAtStr)); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, TimestampFileName, []byte(createdAtStr)); err != nil {
 		return "", errors.Wrapf(err, "could not write timestamp file for account %s", accountName)
 	}
 
@@ -186,7 +220,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	accountNames, err := dr.wallet.AccountNames()
+	accountNames, err := dr.ValidatingAccountNames()
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +240,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 
 	for i, name := range accountNames {
-		encoded, err := dr.wallet.ReadFileForAccount(name, KeystoreFileName)
+		encoded, err := dr.wallet.ReadFileAtPath(ctx, name, KeystoreFileName)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
@@ -238,8 +272,8 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
-func (dr *Keymanager) initializeSecretKeysCache() error {
-	accountNames, err := dr.wallet.AccountNames()
+func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
+	accountNames, err := dr.ValidatingAccountNames()
 	if err != nil {
 		return err
 	}
@@ -249,7 +283,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		if err != nil {
 			return errors.Wrapf(err, "could not read password for account %s", name)
 		}
-		encoded, err := dr.wallet.ReadFileForAccount(name, KeystoreFileName)
+		encoded, err := dr.wallet.ReadFileAtPath(ctx, name, KeystoreFileName)
 		if err != nil {
 			return errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
@@ -336,4 +370,13 @@ func logDepositTransaction(tx *types.Transaction) {
 	fmt.Printf(`
 ***Enter the above deposit data into step 3 on https://prylabs.net/participate***
 `)
+}
+
+// Checks if a directory indeed exists at the specified path.
+func hasDir(dirPath string) (bool, error) {
+	info, err := os.Stat(dirPath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return info.IsDir(), err
 }

@@ -86,7 +86,7 @@ func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
+	if err := wallet.WriteFileAtPath(ctx, "", derived.EncryptedSeedFileName, seedConfigFile); err != nil {
 		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
 	return nil

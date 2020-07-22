@@ -2,6 +2,7 @@ package v2
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -31,8 +34,15 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-
-	allAccounts, err := wallet.AccountNames()
+	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	km, ok := keymanager.(*direct.Keymanager)
+	if !ok {
+		return errors.New("can only export accounts for a non-HD wallet")
+	}
+	allAccounts, err := km.ValidatingAccountNames()
 	if err != nil {
 		return errors.Wrap(err, "could not get account names")
 	}

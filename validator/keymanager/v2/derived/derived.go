@@ -56,6 +56,8 @@ const (
 	DepositTransactionFileName = "deposit_transaction.rlp"
 	// DepositDataFileName for the raw, ssz-encoded deposit data object.
 	DepositDataFileName = "deposit_data.ssz"
+	// EncryptedSeedFileName for persisting a wallet's seed when using a derived keymanager.
+	EncryptedSeedFileName = "seed.encrypted.json"
 )
 
 // Config for a derived keymanager.
@@ -101,19 +103,10 @@ func NewKeymanager(
 	skipMnemonicConfirm bool,
 	password string,
 ) (*Keymanager, error) {
-	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+	enc, err := wallet.ReadFileAtPath(ctx, "", EncryptedSeedFileName)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read encrypted seed configuration file from disk")
 	}
-	enc, err := ioutil.ReadAll(seedConfigFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read seed configuration file contents")
-	}
-	defer func() {
-		if err := seedConfigFile.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
-		}
-	}()
 	seedConfig := &SeedConfig{}
 	if err := json.Unmarshal(enc, seedConfig); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
@@ -350,7 +343,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "could not marshal encrypted seed file")
 	}
-	if err := dr.wallet.WriteEncryptedSeedToDisk(ctx, encodedCfg); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, "", EncryptedSeedFileName, encodedCfg); err != nil {
 		return "", errors.Wrap(err, "could not write encrypted seed file to disk")
 	}
 	return fmt.Sprintf("%d", newAccountNumber), nil
