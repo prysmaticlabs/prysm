@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"unicode"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/consts"
 
 	"github.com/manifoldco/promptui"
@@ -44,6 +45,26 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
 		return appendDirName(directory, flag.Name), nil
+	} else if flag.Name == flags.WalletDirFlag.Name {
+		ok, err := hasDir(directory)
+		if err != nil {
+			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
+		}
+		if ok {
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), directory)
+			return directory, nil
+		}
+	} else if flag.Name == flags.WalletPasswordsDirFlag.Name {
+		ok, err := hasDir(directory)
+		if err != nil {
+			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
+		}
+		if ok {
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), directory)
+			return directory, nil
+		}
 	}
 
 	prompt := promptui.Prompt{
