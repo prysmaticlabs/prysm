@@ -98,10 +98,6 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			voluntaryExitsBucket,
 			chainMetadataBucket,
 			checkpointBucket,
-			archivedValidatorSetChangesBucket,
-			archivedCommitteeInfoBucket,
-			archivedBalancesBucket,
-			archivedValidatorParticipationBucket,
 			powchainBucket,
 			stateSummaryBucket,
 			// Indices buckets.
