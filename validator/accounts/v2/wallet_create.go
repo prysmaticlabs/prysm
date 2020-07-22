@@ -22,17 +22,17 @@ func CreateWallet(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
-		log.Fatalf("Could not parse wallet directory: %v", err)
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
 	walletExists, err := hasDir(walletDir)
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "could not check if wallet directory exists")
 	}
 	if walletExists {
-		log.Fatal(
+		return errors.New(
 			"You already have a wallet at the specified path. You can " +
 				"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit",
 		)
@@ -40,12 +40,12 @@ func CreateWallet(cliCtx *cli.Context) error {
 	// Determine the desired keymanager kind for the wallet from user input.
 	keymanagerKind, err := inputKeymanagerKind(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not select keymanager kind: %v", err)
+		return errors.Wrap(err, "could not select keymanager kind")
 	}
 	switch keymanagerKind {
 	case v2keymanager.Direct:
 		if err = createDirectWallet(cliCtx, walletDir); err != nil {
-			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
+			return errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
 		log.WithField("wallet-path", walletDir).Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
@@ -53,7 +53,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		)
 	case v2keymanager.Derived:
 		if err = createDerivedWallet(cliCtx, walletDir); err != nil {
-			log.Fatalf("Could not initialize wallet with derived keymanager: %v", err)
+			return errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
 		log.WithField("wallet-path", walletDir).Infof(
 			"Successfully created HD wallet and saved configuration to disk. " +
@@ -61,13 +61,13 @@ func CreateWallet(cliCtx *cli.Context) error {
 		)
 	case v2keymanager.Remote:
 		if err = createRemoteWallet(cliCtx, walletDir); err != nil {
-			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
+			return errors.Wrap(err, "could not initialize wallet with remote keymanager")
 		}
 		log.WithField("wallet-path", walletDir).Infof(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		log.Fatalf("Keymanager type %s is not supported", keymanagerKind)
+		return errors.Wrap(err, "keymanager type %s is not supported")
 	}
 	return nil
 }
@@ -104,7 +104,7 @@ func createDerivedWallet(cliCtx *cli.Context, walletDir string) error {
 		CanUnlockAccounts: true,
 	}
 	ctx := context.Background()
-	walletPassword, err := inputNewWalletPassword()
+	walletPassword, err := inputNewWalletPassword(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not input new wallet password")
 	}
