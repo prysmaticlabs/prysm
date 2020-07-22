@@ -3,7 +3,10 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"unicode"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/consts"
 
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
@@ -40,7 +43,7 @@ const (
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return directory, nil
+		return appendDirName(directory, flag.Name), nil
 	}
 
 	prompt := promptui.Prompt{
@@ -52,7 +55,10 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	if err != nil {
 		return "", fmt.Errorf("could not determine directory: %v", formatPromptError(err))
 	}
-	return inputtedDir, nil
+	if inputtedDir == prompt.Default {
+		return directory, nil
+	}
+	return appendDirName(inputtedDir, flag.Name), nil
 }
 
 func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passwordConfirm) (string, error) {
@@ -103,6 +109,16 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		}
 	}
 	return walletPassword, nil
+}
+
+func appendDirName(inputtedDir string, flagName string) string {
+	switch flagName {
+	case flags.WalletDirFlag.Name:
+		inputtedDir = filepath.Join(inputtedDir, consts.WalletDefaultDirName)
+	case flags.WalletPasswordsDirFlag.Name:
+		inputtedDir = filepath.Join(inputtedDir, consts.PasswordsDefaultDirName)
+	}
+	return inputtedDir
 }
 
 // Validate a strong password input for new accounts,

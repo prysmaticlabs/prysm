@@ -89,7 +89,7 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputDirectory(cliCtx, walletPasswordPromptText, flags.WalletPasswordsDirFlag)
+		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +130,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputDirectory(cliCtx, walletPasswordPromptText, flags.WalletPasswordsDirFlag)
+		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
 			return nil, err
 		}
