@@ -83,8 +83,9 @@ func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
-	numAccounts := 20
-	_, wantedPublicKeys := generateAccounts(t, numAccounts, dr)
+	numAccounts := 1
+	accountNames, wantedPublicKeys := generateAccounts(t, numAccounts, dr)
+	wallet.Directories = accountNames
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	// The results are not guaranteed to be ordered, so we ensure each
