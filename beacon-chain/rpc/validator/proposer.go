@@ -186,10 +186,7 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	}
 	eth1DataNotification = false
 
-	eth1VotingPeriodStartTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	eth1VotingPeriodStartTime +=
-		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
-			params.BeaconConfig().SecondsPerSlot
+	eth1VotingPeriodStartTime := vs.slotStartTime(slot)
 
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
@@ -231,9 +228,8 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 	eth1DataNotification = false
 
 	slotsPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
-	genesisTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	currentPeriodVotingStartTime := genesisTime +
-		(slot-(slot%slotsPerVotingPeriod))*params.BeaconConfig().SecondsPerSlot
+	currentPeriodVotingStartTime := vs.slotStartTime(slot)
+	// Can't use slotStartTime function because slot would be negative in the initial voting period.
 	previousPeriodVotingStartTime := currentPeriodVotingStartTime -
 		slotsPerVotingPeriod*params.BeaconConfig().SecondsPerSlot
 
@@ -261,19 +257,9 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return eth1Data, nil
 	}
 
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
-	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
-
-	var inRangeVotes []eth1DataSingleVote
-	for _, eth1Data := range headState.Eth1DataVotes() {
-		ok, height, err := vs.BlockFetcher.BlockExists(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
-		if err != nil {
-			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
-		}
-		if ok && lastValidBlockNumber.Cmp(height) > -1 && firstValidBlockNumber.Cmp(height) < 1 {
-			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
-		}
+	inRangeVotes, err := vs.inRangeVotes(ctx, currentPeriodBlockNumber, previousPeriodBlockNumber)
+	if err != nil {
+		return nil, err
 	}
 	if len(inRangeVotes) == 0 {
 		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
@@ -284,8 +270,49 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return eth1Data, nil
 	}
 
+	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
+	return &chosenVote.data.eth1Data, nil
+}
+
+func (vs *Server) slotStartTime(slot uint64) uint64 {
+	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+	startTime +=
+		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
+			params.BeaconConfig().SecondsPerSlot
+	return startTime
+}
+
+func (vs *Server) inRangeVotes(
+	ctx context.Context,
+	currentPeriodBlockNumber *big.Int,
+	previousPeriodBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
+
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
+	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
+	var inRangeVotes []eth1DataSingleVote
+	for _, eth1Data := range headState.Eth1DataVotes() {
+		ok, height, err := vs.BlockFetcher.BlockExists(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
+		if err != nil {
+			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
+		}
+		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
+			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
+		}
+	}
+
+	return inRangeVotes, nil
+}
+
+func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
 	var voteCount []eth1DataAggregatedVote
-	for _, singleVote := range inRangeVotes {
+	for _, singleVote := range votes {
 		newVote := true
 		for i, aggregatedVote := range voteCount {
 			aggregatedData := aggregatedVote.data
@@ -311,7 +338,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		}
 	}
 
-	return &currentVote.data.eth1Data, nil
+	return currentVote
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
