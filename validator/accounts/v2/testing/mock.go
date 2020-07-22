@@ -36,11 +36,6 @@ func (m *Wallet) AccountsDir() string {
 	return ""
 }
 
-// CanUnlockAccounts --
-func (m *Wallet) CanUnlockAccounts() bool {
-	return m.UnlockAccounts
-}
-
 // WriteAccountToDisk --
 func (m *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
 	m.lock.Lock()
