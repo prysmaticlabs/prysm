@@ -39,39 +39,39 @@ func NewAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
+		return errors.Wrap(err, "could not open wallet")
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
-		log.Fatalf("Could not initialize keymanager: %v", err)
+		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
-		log.Fatal("Cannot create a new account for a remote keymanager")
+		return errors.New("cannot create a new account for a remote keymanager")
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
-			log.Fatal("Not a direct keymanager")
+			return errors.New("not a direct keymanager")
 		}
 		password, err := inputNewAccountPassword(cliCtx)
 		if err != nil {
-			log.Fatal(err)
+			return errors.Wrap(err, "could not input new account password")
 		}
 		// Create a new validator account using the specified keymanager.
 		if _, err := km.CreateAccount(ctx, password); err != nil {
-			log.Fatalf("Could not create account in wallet: %v", err)
+			return errors.Wrap(err, "could not create account in wallet")
 		}
 	case v2keymanager.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
 		if !ok {
-			log.Fatal("Not a direct keymanager")
+			return errors.New("not a derived keymanager")
 		}
 		if _, err := km.CreateAccount(ctx); err != nil {
-			log.Fatalf("Could not create account in wallet: %v", err)
+			return errors.Wrap(err, "could not create account in wallet")
 		}
 	default:
-		log.Fatal("Keymanager kind not supported")
+		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
 	}
 	return nil
 }
@@ -123,7 +123,20 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	return v2keymanager.Kind(selection), nil
 }
 
-func inputNewWalletPassword() (string, error) {
+func inputNewWalletPassword(cliCtx *cli.Context) (string, error) {
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", err
+		}
+		enteredPassword := string(data)
+		if err := validatePasswordInput(enteredPassword); err != nil {
+			return "", errors.Wrap(err, "password did not pass validation")
+		}
+		return enteredPassword, nil
+	}
+
 	var hasValidPassword bool
 	var walletPassword string
 	var err error
@@ -187,7 +200,7 @@ func inputNewAccountPassword(cliCtx *cli.Context) (string, error) {
 		}
 		enteredPassword := string(data)
 		if err := validatePasswordInput(enteredPassword); err != nil {
-			log.WithError(err).Fatal("Password did not pass validation")
+			return "", errors.Wrap(err, "password did not pass validation")
 		}
 		return enteredPassword, nil
 	}

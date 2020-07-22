@@ -21,12 +21,12 @@ import (
 func CreateWallet(cliCtx *cli.Context) error {
 	w, err := NewWallet(cliCtx)
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "could not check if wallet directory exists")
 	}
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-			log.Fatalf("Could not initialize wallet with direct keymanager: %v", err)
+			return errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
 		log.WithField("wallet-path", w.accountsPath).Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
@@ -34,7 +34,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		)
 	case v2keymanager.Derived:
 		if err = createDerivedKeymanagerWallet(cliCtx, w); err != nil {
-			log.Fatalf("Could not initialize wallet with derived keymanager: %v", err)
+			return errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
 		log.WithField("wallet-path", w.accountsPath).Infof(
 			"Successfully created HD wallet and saved configuration to disk. " +
@@ -42,13 +42,13 @@ func CreateWallet(cliCtx *cli.Context) error {
 		)
 	case v2keymanager.Remote:
 		if err = createRemoteKeymanagerWallet(cliCtx, w); err != nil {
-			log.Fatalf("Could not initialize wallet with remote keymanager: %v", err)
+			return errors.Wrap(err, "could not initialize wallet with remote keymanager")
 		}
 		log.WithField("wallet-path", w.accountsPath).Infof(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		log.Fatalf("Keymanager type %s is not supported", w.KeymanagerKind())
+		return errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	ctx := context.Background()
-	walletPassword, err := inputNewWalletPassword()
+	walletPassword, err := inputNewWalletPassword(cliCtx)
 	if err != nil {
 		return err
 	}

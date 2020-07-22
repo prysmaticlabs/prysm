@@ -24,32 +24,32 @@ const archiveFilename = "backup.zip"
 func ExportAccount(cliCtx *cli.Context) error {
 	outputDir, err := inputExportDir(cliCtx)
 	if err != nil {
-		log.WithError(err).Fatal("Could not parse output directory")
+		return errors.Wrap(err, "could not parse output directory")
 	}
 
 	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		log.WithError(err).Fatal("Could not open wallet")
+		return errors.Wrap(err, "could not open wallet")
 	}
 
 	allAccounts, err := wallet.AccountNames()
 	if err != nil {
-		log.WithError(err).Fatal("Could not get account names")
+		return errors.Wrap(err, "could not get account names")
 	}
 	accounts, err := selectAccounts(cliCtx, allAccounts)
 	if err != nil {
-		log.WithError(err).Fatal("Could not select accounts")
+		return errors.Wrap(err, "could not select accounts")
 	}
 	if len(accounts) == 0 {
 		return errors.New("no accounts to export")
 	}
 
 	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
-		log.WithError(err).Error("Could not export accounts")
+		return errors.Wrap(err, "could not export accounts")
 	}
 
 	if err := logAccountsExported(wallet, accounts); err != nil {
-		log.WithError(err).Fatal("Could not log out exported accounts")
+		return errors.Wrap(err, "could not log out exported accounts")
 	}
 
 	return nil

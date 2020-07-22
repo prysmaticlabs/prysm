@@ -23,32 +23,32 @@ func ListAccounts(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not read wallet at specified path %s: %v", wallet.AccountsDir(), err)
+		return errors.Wrapf(err, "could not read wallet at specified path %s", wallet.AccountsDir())
 	}
 	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
-		log.Fatalf("Could not initialize keymanager: %v", err)
+		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
-			log.Fatal("Not a direct keymanager")
+			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDirectKeymanagerAccounts(showDepositData, wallet, km); err != nil {
-			log.Fatalf("Could not list validator accounts with direct keymanager: %v", err)
+			return errors.Wrap(err, "could not list validator accounts with direct keymanager")
 		}
 	case v2keymanager.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
 		if !ok {
-			log.Fatal("Not a derived keymanager")
+			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, km); err != nil {
-			log.Fatalf("Could not list validator accounts with derived keymanager: %v", err)
+			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
 	default:
-		log.Fatalf("Keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
+		return fmt.Errorf("keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
 	}
 	return nil
 }
