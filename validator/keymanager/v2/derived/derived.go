@@ -250,8 +250,12 @@ func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
 func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, error) {
 	names := make([]string, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
-		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		names = append(names, petnames.DeterministicName([]byte(withdrawalKeyPath), "-"))
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not derive validating key")
+		}
+		names = append(names, petnames.DeterministicName(validatingKey.Marshal(), "-"))
 	}
 	return names, nil
 }

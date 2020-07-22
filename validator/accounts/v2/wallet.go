@@ -49,6 +49,11 @@ var (
 	ErrNoWalletFound = errors.New(
 		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
 	)
+	keymanagerKindSelections = map[v2keymanager.Kind]string{
+		v2keymanager.Derived: "HD Wallet (Recommended)",
+		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
+		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
+	}
 )
 
 // Wallet is a primitive in Prysm's v2 account management which
@@ -102,7 +107,10 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir := inputPasswordsDirectory(cliCtx)
+		passwordsDir, err := inputPasswordsDirectory(cliCtx)
+		if err != nil {
+			return nil, err
+		}
 		if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
 			return nil, errors.Wrap(err, "could not create passwords directory")
 		}
@@ -140,7 +148,11 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		w.passwordsDir = inputPasswordsDirectory(cliCtx)
+		passwordsDir, err := inputPasswordsDirectory(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		w.passwordsDir = passwordsDir
 		w.canUnlockAccounts = true
 	}
 	return w, nil

@@ -75,8 +75,6 @@ func listDirectKeymanagerAccounts(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
 			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
-	dirPath := au.BrightCyan("(wallet dir)")
-	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
 	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(context.Background())
@@ -133,8 +131,6 @@ func listDerivedKeymanagerAccounts(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
 			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
-	dirPath := au.BrightCyan("(wallet dir)")
-	fmt.Printf("%s %s\n", dirPath, wallet.AccountsDir())
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.Config().DerivedPathStructure).Bold())
 	ctx := context.Background()
@@ -155,7 +151,6 @@ func listDerivedKeymanagerAccounts(
 	if err != nil {
 		return err
 	}
-	log.Info(currentAccountNumber)
 	for i := uint64(0); i <= currentAccountNumber; i++ {
 		fmt.Println("")
 		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)

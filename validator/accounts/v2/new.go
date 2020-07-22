@@ -7,6 +7,7 @@ import (
 	"path"
 	"unicode"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
@@ -26,12 +27,6 @@ const (
 	// library for strong-entropy password computation.
 	minPasswordScore = 3
 )
-
-var keymanagerKindSelections = map[v2keymanager.Kind]string{
-	v2keymanager.Derived: "HD Wallet (Recommended)",
-	v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
-	v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
-}
 
 // NewAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
@@ -84,6 +79,15 @@ func inputWalletDir(cliCtx *cli.Context) (string, error) {
 
 	if walletDir == flags.DefaultValidatorDir() {
 		walletDir = path.Join(walletDir, WalletDefaultDirName)
+		ok, err := hasDir(walletDir)
+		if err != nil {
+			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", walletDir)
+		}
+		if ok {
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), walletDir)
+			return walletDir, nil
+		}
 	}
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
@@ -250,14 +254,23 @@ func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error)
 	return walletPassword, nil
 }
 
-func inputPasswordsDirectory(cliCtx *cli.Context) string {
+func inputPasswordsDirectory(cliCtx *cli.Context) (string, error) {
 	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
 	if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) {
-		return passwordsDir
+		return passwordsDir, nil
 	}
 
 	if passwordsDir == flags.DefaultValidatorDir() {
 		passwordsDir = path.Join(passwordsDir, PasswordsDefaultDirName)
+		ok, err := hasDir(passwordsDir)
+		if err != nil {
+			return "", errors.Wrap(err, "could not check if passwords directory exists")
+		}
+		if ok {
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), passwordsDir)
+			return passwordsDir, nil
+		}
 	}
 	prompt := promptui.Prompt{
 		Label:    "Directory where passwords will be stored",
@@ -266,9 +279,9 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	}
 	passwordsPath, err := prompt.Run()
 	if err != nil {
-		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
+		return "", fmt.Errorf("could not determine passwords directory: %v", formatPromptError(err))
 	}
-	return passwordsPath
+	return passwordsPath, nil
 }
 
 // Validate a strong password input for new accounts,
