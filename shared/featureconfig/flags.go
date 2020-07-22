@@ -578,6 +578,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-local-protection",
+	"--enable-external-slasher-protection",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.

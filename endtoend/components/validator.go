@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
@@ -66,6 +67,12 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		beaconRPCPort = e2e.TestParams.BeaconNodeRPCPort
 	}
 
+	slasherRPCPort := e2e.TestParams.SlasherRPCPort + index
+	if slasherRPCPort >= e2e.TestParams.SlasherRPCPort+e2e.TestParams.SlasherRPCPort {
+		// Point any extra validator clients to a node we know is running.
+		slasherRPCPort = e2e.TestParams.BeaconNodeRPCPort
+	}
+
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
 	if err != nil {
 		t.Fatal(err)
@@ -77,6 +84,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		fmt.Sprintf("--interop-start-index=%d", validatorNum*index),
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
 		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
+		fmt.Sprintf("--slasher-rpc-provider=localhost:%d", slasherRPCPort),
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
 		"--verbosity=trace",
 		"--force-clear-db",
