@@ -2,27 +2,20 @@ package v2
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
+	"path/filepath"
 
 	petname "github.com/dustinkirkland/golang-petname"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 const (
@@ -32,14 +25,6 @@ const (
 	PasswordsDefaultDirName = ".prysm-wallet-v2-passwords"
 	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
-	// EncryptedSeedFileName for persisting a wallet's seed when using a derived keymanager.
-	EncryptedSeedFileName = "seed.encrypted.json"
-	// PasswordFileSuffix for passwords persisted as text to disk.
-	PasswordFileSuffix = ".pass"
-	// NumAccountWords for human-readable names in wallets using a direct keymanager.
-	NumAccountWords = 3 // Number of words in account human-readable names.
-	// AccountFilePermissions for accounts saved to disk.
-	AccountFilePermissions = os.O_CREATE | os.O_RDWR
 	// DirectoryPermissions for directories created under the wallet path.
 	DirectoryPermissions = os.ModePerm
 )
@@ -155,16 +140,6 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	return w, nil
 }
 
-// ReadKeymanagerConfigFromDisk opens a keymanager config file
-// for reading if it exists at the wallet path.
-func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error) {
-	configFilePath := path.Join(w.accountsPath, KeymanagerConfigFileName)
-	if !fileExists(configFilePath) {
-		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
-	}
-	return os.Open(configFilePath)
-}
-
 // KeymanagerKind used by the wallet.
 func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 	return w.keymanagerKind
@@ -173,37 +148,6 @@ func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 // AccountsDir for the wallet.
 func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
-}
-
-// AccountNames reads all account names at the wallet's path.
-func (w *Wallet) AccountNames() ([]string, error) {
-	accountsDir, err := os.Open(w.accountsPath)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := accountsDir.Close(); err != nil {
-			log.WithField(
-				"directory", w.accountsPath,
-			).Errorf("Could not close accounts directory: %v", err)
-		}
-	}()
-
-	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.accountsPath)
-	}
-	accountNames := make([]string, 0)
-	for _, item := range list {
-		ok, err := hasDir(path.Join(w.accountsPath, item))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
-		}
-		if ok {
-			accountNames = append(accountNames, item)
-		}
-	}
-	return accountNames, err
 }
 
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
@@ -242,24 +186,35 @@ func (w *Wallet) InitializeKeymanager(
 	return keymanager, nil
 }
 
-// WriteAccountToDisk creates an account directory under a unique namespace
-// within the wallet's path. It additionally writes the account's password to the
-// wallet's passwords directory. Returns the unique account name.
-func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
-	accountName, err := w.generateAccountName()
+// ListDirs in wallet accounts path.
+func (w *Wallet) ListDirs() ([]string, error) {
+	accountsDir, err := os.Open(w.AccountsDir())
 	if err != nil {
-		return "", errors.Wrap(err, "could not generate unique account name")
+		return nil, err
 	}
-	// Generate a directory for the new account name and
-	// write its associated password to disk.
-	accountPath := path.Join(w.accountsPath, accountName)
-	if err := os.MkdirAll(accountPath, DirectoryPermissions); err != nil {
-		return "", errors.Wrap(err, "could not create account directory")
+	defer func() {
+		if err := accountsDir.Close(); err != nil {
+			log.WithField(
+				"directory", w.AccountsDir(),
+			).Errorf("Could not close accounts directory: %v", err)
+		}
+	}()
+
+	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.AccountsDir())
 	}
-	if err := w.writePasswordToFile(accountName, password); err != nil {
-		return "", errors.Wrap(err, "could not write password to disk")
+	dirNames := make([]string, 0)
+	for _, item := range list {
+		ok, err := hasDir(filepath.Join(w.AccountsDir(), item))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
+		}
+		if ok {
+			dirNames = append(dirNames, item)
+		}
 	}
-	return accountName, nil
+	return dirNames, nil
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
@@ -282,9 +237,6 @@ func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName 
 // ReadFileAtPath within the wallet directory given the desired path and filename.
 func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error) {
 	accountPath := path.Join(w.accountsPath, filePath)
-	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
-		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
-	}
 	fullPath := path.Join(accountPath, fileName)
 	rawData, err := ioutil.ReadFile(fullPath)
 	if err != nil {
@@ -293,27 +245,14 @@ func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName s
 	return rawData, nil
 }
 
-// WriteFileForAccount stores a unique file and its data under an account namespace
-// in the wallet's directory on-disk. Creates the file if it does not exist
-// and writes over it otherwise.
-func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error {
-	accountPath := path.Join(w.accountsPath, accountName)
-	exists, err := hasDir(accountPath)
-	if err != nil {
-		return errors.Wrapf(err, "could not check if account exists in directory: %s", w.accountsPath)
+// ReadKeymanagerConfigFromDisk opens a keymanager config file
+// for reading if it exists at the wallet path.
+func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error) {
+	configFilePath := path.Join(w.accountsPath, KeymanagerConfigFileName)
+	if !fileExists(configFilePath) {
+		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
-	if !exists {
-		return errors.Wrapf(err, "account does not exist in wallet directory: %s", w.accountsPath)
-	}
-	filePath := path.Join(accountPath, fileName)
-	if err := ioutil.WriteFile(filePath, data, os.ModePerm); err != nil {
-		return errors.Wrapf(err, "could not write %s", filePath)
-	}
-	log.WithFields(logrus.Fields{
-		"name": accountName,
-		"path": filePath,
-	}).Debug("Wrote new file for account")
-	return nil
+	return os.Open(configFilePath)
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file
@@ -328,10 +267,20 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	return nil
 }
 
+// ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
+// within the wallet path.
+func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
+	configFilePath := path.Join(w.accountsPath, derived.EncryptedSeedFileName)
+	if !fileExists(configFilePath) {
+		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
+	}
+	return os.Open(configFilePath)
+}
+
 // WriteEncryptedSeedToDisk writes the encrypted wallet seed configuration
 // within the wallet path.
 func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
-	seedFilePath := path.Join(w.accountsPath, EncryptedSeedFileName)
+	seedFilePath := path.Join(w.accountsPath, derived.EncryptedSeedFileName)
 	// Write the config file to disk.
 	if err := ioutil.WriteFile(seedFilePath, encoded, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", seedFilePath)
@@ -340,188 +289,23 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 	return nil
 }
 
-// ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
-// within the wallet path.
-func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
-	if !fileExists(path.Join(w.accountsPath, EncryptedSeedFileName)) {
-		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
+// ReadPasswordFromDisk --
+func (w *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName string) (string, error) {
+	fullPath := filepath.Join(w.passwordsDir, passwordFileName)
+	rawData, err := ioutil.ReadFile(fullPath)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not read %s", fullPath)
 	}
-	configFilePath := path.Join(w.accountsPath, EncryptedSeedFileName)
-	return os.Open(configFilePath)
+	return string(rawData), nil
 }
 
-// ReadPasswordForAccount when given an account name from the wallet's passwords' path.
-func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
-	passwordFilePath := path.Join(w.passwordsDir, accountName+PasswordFileSuffix)
-	passwordFile, err := os.Open(passwordFilePath)
-	if err != nil {
-		return "", errors.Wrapf(err, "could not read password file from directory: %s", w.passwordsDir)
-	}
-	defer func() {
-		if err := passwordFile.Close(); err != nil {
-			log.Errorf("Could not close password file: %s", passwordFilePath)
-		}
-	}()
-	password, err := ioutil.ReadAll(passwordFile)
-	if err != nil {
-		return "", errors.Wrapf(err, "could not read data from password file: %s", passwordFilePath)
-	}
-	return string(password), nil
-}
-
-// ReadFileForAccount from the wallet's accounts directory.
-func (w *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
-	accountPath := path.Join(w.accountsPath, accountName)
-	exists, err := hasDir(accountPath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not check if account exists in directory: %s", w.accountsPath)
-	}
-	if !exists {
-		return nil, errors.Wrapf(err, "account does not exist in wallet directory: %s", w.accountsPath)
-	}
-	filePath := path.Join(accountPath, fileName)
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read file for account: %s", filePath)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Errorf("Could not close file after writing: %s", filePath)
-		}
-	}()
-	return ioutil.ReadAll(f)
-}
-
-func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
-	au := aurora.NewAurora(true)
-
-	var password string
-	var err error
-	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return err
-		}
-		password = string(data)
-		err = w.checkPasswordForAccount(accountName, password)
-		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			return fmt.Errorf("invalid password entered for account %s", accountName)
-		}
-		if err != nil {
-			return err
-		}
-	} else {
-		attemptingPassword := true
-		// Loop asking for the password until the user enters it correctly.
-		for attemptingPassword {
-			// Ask the user for the password to their account.
-			password, err = inputPasswordForAccount(cliCtx, accountName)
-			if err != nil {
-				return errors.Wrap(err, "could not input password")
-			}
-			err = w.checkPasswordForAccount(accountName, password)
-			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				fmt.Println(au.Red("Incorrect password entered, please try again"))
-				continue
-			}
-			if err != nil {
-				return err
-			}
-
-			attemptingPassword = false
-		}
-	}
-
-	if err := os.MkdirAll(w.passwordsDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
-		return err
-	}
-	if err := w.writePasswordToFile(accountName, password); err != nil {
-		return errors.Wrap(err, "could not write password to disk")
+// WritePasswordToDisk --
+func (w *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
+	passwordPath := filepath.Join(w.passwordsDir, passwordFileName)
+	if err := ioutil.WriteFile(passwordPath, []byte(password), os.ModePerm); err != nil {
+		return errors.Wrapf(err, "could not write %s", passwordPath)
 	}
 	return nil
-}
-
-func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
-	accountKeystore, err := w.keystoreForAccount(accountName)
-	if err != nil {
-		return errors.Wrap(err, "could not get keystore")
-	}
-	decryptor := keystorev4.New()
-	_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
-	if err != nil {
-		return errors.Wrap(err, "could not decrypt keystore")
-	}
-	return nil
-}
-
-func (w *Wallet) publicKeyForAccount(accountName string) ([48]byte, error) {
-	accountKeystore, err := w.keystoreForAccount(accountName)
-	if err != nil {
-		return [48]byte{}, errors.Wrap(err, "could not get keystore")
-	}
-	pubKey, err := hex.DecodeString(accountKeystore.Pubkey)
-	if err != nil {
-		return [48]byte{}, errors.Wrap(err, "could decode pubkey string")
-	}
-	return bytesutil.ToBytes48(pubKey), nil
-}
-
-func (w *Wallet) keystoreForAccount(accountName string) (*v2keymanager.Keystore, error) {
-	encoded, err := w.ReadFileForAccount(accountName, direct.KeystoreFileName)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read keystore file")
-	}
-	keystoreJSON := &v2keymanager.Keystore{}
-	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
-		return nil, errors.Wrap(err, "could not decode json")
-	}
-	return keystoreJSON, nil
-}
-
-// Writes the password file for an account namespace in the wallet's passwords directory.
-func (w *Wallet) writePasswordToFile(accountName string, password string) error {
-	passwordFilePath := path.Join(w.passwordsDir, accountName+PasswordFileSuffix)
-	// Removing any file that exists to make sure the existing is overwritten.
-	if _, err := os.Stat(passwordFilePath); os.IsExist(err) {
-		if err := os.Remove(passwordFilePath); err != nil {
-			return errors.Wrap(err, "could not rewrite password file")
-		}
-	}
-	passwordFile, err := os.Create(passwordFilePath)
-	if err != nil {
-		return errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
-	}
-	defer func() {
-		if err := passwordFile.Close(); err != nil {
-			log.WithError(err).Error("Could not close password file")
-		}
-	}()
-	n, err := passwordFile.WriteString(password)
-	if err != nil {
-		return errors.Wrap(err, "could not write account password to disk")
-	}
-	if n != len(password) {
-		return fmt.Errorf("could only write %d/%d password bytes to disk", n, len(password))
-	}
-	return nil
-}
-
-// Generates a human-readable name for an account. Checks for uniqueness in the accounts path.
-func (w *Wallet) generateAccountName() (string, error) {
-	var accountExists bool
-	var accountName string
-	for !accountExists {
-		accountName = petname.Generate(NumAccountWords, "-" /* separator */)
-		exists, err := hasDir(path.Join(w.accountsPath, accountName))
-		if err != nil {
-			return "", errors.Wrapf(err, "could not check if account exists in dir: %s", w.accountsPath)
-		}
-		if !exists {
-			break
-		}
-	}
-	return accountName, nil
 }
 
 func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, error) {
