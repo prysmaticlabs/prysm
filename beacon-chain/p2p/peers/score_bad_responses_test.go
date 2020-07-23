@@ -66,42 +66,42 @@ func TestPeerScorer_decayBadResponsesStats(t *testing.T) {
 	// Peer 1 has 0 bad responses.
 	pid1 := peer.ID("peer1")
 	peerStatuses.Add(nil, pid1, nil, network.DirUnknown)
-	badResponsesCount, err := scorer.BadResponses(pid1)
+	badResponses, err := scorer.BadResponses(pid1)
 	require.NoError(t, err)
-	assert.Equal(t, 0, badResponsesCount)
+	assert.Equal(t, 0, badResponses)
 
 	// Peer 2 has 1 bad response.
 	pid2 := peer.ID("peer2")
 	peerStatuses.Add(nil, pid2, nil, network.DirUnknown)
 	scorer.IncrementBadResponses(pid2)
-	badResponsesCount, err = scorer.BadResponses(pid2)
+	badResponses, err = scorer.BadResponses(pid2)
 	require.NoError(t, err)
-	assert.Equal(t, 1, badResponsesCount)
+	assert.Equal(t, 1, badResponses)
 
 	// Peer 3 has 2 bad response.
 	pid3 := peer.ID("peer3")
 	peerStatuses.Add(nil, pid3, nil, network.DirUnknown)
 	scorer.IncrementBadResponses(pid3)
 	scorer.IncrementBadResponses(pid3)
-	badResponsesCount, err = scorer.BadResponses(pid3)
+	badResponses, err = scorer.BadResponses(pid3)
 	require.NoError(t, err)
-	assert.Equal(t, 2, badResponsesCount)
+	assert.Equal(t, 2, badResponses)
 
 	// Decay the values
 	scorer.DecayBadResponsesStats()
 
 	// Ensure the new values are as expected
-	badResponsesCount, err = scorer.BadResponses(pid1)
+	badResponses, err = scorer.BadResponses(pid1)
 	require.NoError(t, err)
-	assert.Equal(t, 0, badResponsesCount, "unexpected bad responses for pid1")
+	assert.Equal(t, 0, badResponses, "unexpected bad responses for pid1")
 
-	badResponsesCount, err = scorer.BadResponses(pid2)
+	badResponses, err = scorer.BadResponses(pid2)
 	require.NoError(t, err)
-	assert.Equal(t, 0, badResponsesCount, "unexpected bad responses for pid2")
+	assert.Equal(t, 0, badResponses, "unexpected bad responses for pid2")
 
-	badResponsesCount, err = scorer.BadResponses(pid3)
+	badResponses, err = scorer.BadResponses(pid3)
 	require.NoError(t, err)
-	assert.Equal(t, 1, badResponsesCount, "unexpected bad responses for pid3")
+	assert.Equal(t, 1, badResponses, "unexpected bad responses for pid3")
 }
 
 func TestPeerScorer_IsBadPeer(t *testing.T) {

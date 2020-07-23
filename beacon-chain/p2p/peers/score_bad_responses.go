@@ -19,7 +19,7 @@ func (s *PeerScorer) BadResponses(pid peer.ID) (int, error) {
 // badResponses is a lock-free version of BadResponses.
 func (s *PeerScorer) badResponses(pid peer.ID) (int, error) {
 	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.badResponsesCount, nil
+		return peerData.badResponses, nil
 	}
 	return -1, ErrPeerUnknown
 }
@@ -32,11 +32,11 @@ func (s *PeerScorer) IncrementBadResponses(pid peer.ID) {
 
 	if _, ok := s.store.peers[pid]; !ok {
 		s.store.peers[pid] = &peerData{
-			badResponsesCount: 1,
+			badResponses: 1,
 		}
 		return
 	}
-	s.store.peers[pid].badResponsesCount++
+	s.store.peers[pid].badResponses++
 }
 
 // IsBadPeer states if the peer is to be considered bad.
@@ -50,7 +50,7 @@ func (s *PeerScorer) IsBadPeer(pid peer.ID) bool {
 // isBadPeer is lock-free version of IsBadPeer.
 func (s *PeerScorer) isBadPeer(pid peer.ID) bool {
 	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.badResponsesCount >= s.config.BadResponsesThreshold
+		return peerData.badResponses >= s.config.BadResponsesThreshold
 	}
 	return false
 }
@@ -77,8 +77,8 @@ func (s *PeerScorer) DecayBadResponsesStats() {
 	defer s.store.Unlock()
 
 	for _, peerData := range s.store.peers {
-		if peerData.badResponsesCount > 0 {
-			peerData.badResponsesCount--
+		if peerData.badResponses > 0 {
+			peerData.badResponses--
 		}
 	}
 }

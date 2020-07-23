@@ -64,7 +64,7 @@ func (s *PeerScorer) Score(pid peer.ID) float64 {
 		return 0
 	}
 
-	badResponsesScore := float64(s.store.peers[pid].badResponsesCount) / float64(s.config.BadResponsesThreshold)
+	badResponsesScore := float64(s.store.peers[pid].badResponses) / float64(s.config.BadResponsesThreshold)
 	badResponsesScore = badResponsesScore * s.config.BadResponsesWeight
 	score += badResponsesScore
 
