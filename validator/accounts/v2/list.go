@@ -152,6 +152,14 @@ func listDerivedKeymanagerAccounts(
 	if err != nil {
 		return err
 	}
+	if len(accountNames) == 1 {
+		fmt.Print("Showing 1 validator account\n")
+	} else if len(accountNames) == 0 {
+		fmt.Print("No accounts found\n")
+		return nil
+	} else {
+		fmt.Printf("Showing %d validator accounts\n", len(accountNames))
+	}
 	for i := uint64(0); i <= currentAccountNumber; i++ {
 		fmt.Println("")
 		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)

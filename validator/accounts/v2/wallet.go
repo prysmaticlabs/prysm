@@ -60,6 +60,7 @@ func init() {
 // create and write a new wallet to disk for a Prysm validator.
 func NewWallet(
 	cliCtx *cli.Context,
+	keymanagerKind v2keymanager.Kind,
 ) (*Wallet, error) {
 	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
@@ -78,10 +79,6 @@ func NewWallet(
 				"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit",
 		)
 	}
-	keymanagerKind, err := inputKeymanagerKind(cliCtx)
-	if err != nil {
-		return nil, err
-	}
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
 	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
 		return nil, errors.Wrap(err, "could not create wallet directory")
@@ -89,6 +86,13 @@ func NewWallet(
 	w := &Wallet{
 		accountsPath:   accountsPath,
 		keymanagerKind: keymanagerKind,
+	}
+	if keymanagerKind == v2keymanager.Derived {
+		walletPassword, err := inputPassword(cliCtx, newWalletPasswordPromptText, confirmPass)
+		if err != nil {
+			return nil, err
+		}
+		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
 		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)

@@ -16,7 +16,11 @@ import (
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
 func CreateWallet(cliCtx *cli.Context) error {
-	w, err := NewWallet(cliCtx)
+	keymanagerKind, err := inputKeymanagerKind(cliCtx)
+	if err != nil {
+		return err
+	}
+	w, err := NewWallet(cliCtx, keymanagerKind)
 	if err != nil {
 		return errors.Wrap(err, "could not check if wallet directory exists")
 	}
@@ -64,11 +68,7 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	ctx := context.Background()
-	walletPassword, err := inputPassword(cliCtx, newWalletPasswordPromptText, confirmPass)
-	if err != nil {
-		return err
-	}
-	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword, skipMnemonicConfirm)
+	seedConfig, err := derived.InitializeWalletSeedFile(ctx, wallet.walletPassword, skipMnemonicConfirm)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
 	}
