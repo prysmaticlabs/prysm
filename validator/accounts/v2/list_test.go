@@ -2,15 +2,19 @@ package v2
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -106,15 +110,28 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err)
+	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords-file")
+	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
+	})
+	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
+	password := "PasszW0rdzzz2%"
+	require.NoError(
+		t,
+		ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm),
+	)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		passwordsDir:   passwordsDir,
 		keymanagerKind: v2keymanager.Derived,
+		passwordFile:   passwordFilePath,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
 	require.NoError(t, err)
 	ctx := context.Background()
-	password := "hello world"
 
 	seedConfig, err := derived.InitializeWalletSeedFile(ctx, password, true /* skip confirm */)
 	require.NoError(t, err)
