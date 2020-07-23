@@ -158,7 +158,7 @@ func WriteHeapFile(testDir string, index int) error {
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf(fmt.Sprint(err) + ": " + stderr.String())
+		return fmt.Errorf("%s: %s", err.Error(), stderr.String())
 	}
 	return nil
 }
