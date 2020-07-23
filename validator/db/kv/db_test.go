@@ -7,26 +7,20 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // setupDB instantiates and returns a DB instance for the validator client.
 func setupDB(t testing.TB, pubkeys [][48]byte) *Store {
 	randPath := rand.NewDeterministicGenerator().Int()
 	p := filepath.Join(tempdir(), fmt.Sprintf("/%d", randPath))
-	if err := os.RemoveAll(p); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
+	require.NoError(t, os.RemoveAll(p), "Failed to remove directory")
 	db, err := NewKVStore(p, pubkeys)
-	if err != nil {
-		t.Fatalf("Failed to instantiate DB: %v", err)
-	}
+	require.NoError(t, err, "Failed to instantiate DB")
+
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed to close database: %v", err)
-		}
-		if err := db.ClearDB(); err != nil {
-			t.Fatalf("Failed to clear database: %v", err)
-		}
+		require.NoError(t, db.Close(), "Failed to close database")
+		require.NoError(t, db.ClearDB(), "Failed to clear database")
 	})
 	return db
 }
