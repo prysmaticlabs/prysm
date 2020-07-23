@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -21,8 +20,8 @@ func TestZipAndUnzip(t *testing.T) {
 	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
-	exportDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
-	importDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "import")
+	exportDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
+	importDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "import")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(exportDir), "Failed to remove directory")
 		require.NoError(t, os.RemoveAll(importDir), "Failed to remove directory")
@@ -73,7 +72,7 @@ func TestExport_Noninteractive(t *testing.T) {
 	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
-	exportDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
+	exportDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(exportDir), "Failed to remove directory")
 	})
