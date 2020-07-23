@@ -240,7 +240,7 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	}
 	prompt = promptui.Prompt{
 		Label:    "(Optional) Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
-		Validate: validateCertPath,
+		Validate: validateCACertPath,
 	}
 	caCrtPath, err := prompt.Run()
 	if err != nil {
@@ -263,6 +263,13 @@ func validateCertPath(input string) error {
 		return errors.New("crt path cannot be empty")
 	}
 	if !fileExists(input) {
+		return fmt.Errorf("no crt found at path: %s", input)
+	}
+	return nil
+}
+
+func validateCACertPath(input string) error {
+	if input != "" && !fileExists(input) {
 		return fmt.Errorf("no crt found at path: %s", input)
 	}
 	return nil

@@ -14,6 +14,8 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -183,6 +185,15 @@ func (w *Wallet) InitializeKeymanager(
 		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, w.walletPassword)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
+		}
+	case v2keymanager.Remote:
+		cfg, err := remote.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
+		}
+		keymanager, err = remote.NewKeymanager(ctx, 100000000, cfg)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)

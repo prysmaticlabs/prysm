@@ -10,10 +10,13 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -47,6 +50,14 @@ func ListAccounts(cliCtx *cli.Context) error {
 		if err := listDerivedKeymanagerAccounts(showDepositData, wallet, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
+	case v2keymanager.Remote:
+		km, ok := keymanager.(*remote.Keymanager)
+		if !ok {
+			return errors.New("could not assert keymanager interface to concrete type")
+		}
+		if err := listRemoteKeymanagerAccounts(wallet, km, km.Config()); err != nil {
+			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
+		}
 	default:
 		return fmt.Errorf("keymanager kind %s not yet supported", wallet.KeymanagerKind().String())
 	}
@@ -75,7 +86,6 @@ func listDirectKeymanagerAccounts(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
 			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
-	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 
 	ctx := context.Background()
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
@@ -201,6 +211,45 @@ func listDerivedKeymanagerAccounts(
 %#x
 
 ===================================================================`, enc)
+		fmt.Println(" ")
+	}
+	return nil
+}
+
+func listRemoteKeymanagerAccounts(
+	wallet *Wallet,
+	keymanager v2keymanager.IKeymanager,
+	cfg *remote.Config,
+) error {
+	au := aurora.NewAurora(true)
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
+	fmt.Printf(
+		"(configuration file path) %s\n",
+		au.BrightGreen(filepath.Join(wallet.AccountsDir(), KeymanagerConfigFileName)).Bold(),
+	)
+	ctx := context.Background()
+	fmt.Println(" ")
+	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
+	fmt.Println(cfg)
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	if len(validatingPubKeys) == 1 {
+		fmt.Print("Showing 1 validator account\n")
+	} else if len(validatingPubKeys) == 0 {
+		fmt.Print("No accounts found\n")
+		return nil
+	} else {
+		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
+	}
+	for i := 0; i < len(validatingPubKeys); i++ {
+		fmt.Println("")
+		fmt.Printf(
+			"%s\n", au.BrightGreen(petnames.DeterministicName(validatingPubKeys[i][:], "-")).Bold(),
+		)
+		// Retrieve the validating key account metadata.
+		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
 		fmt.Println(" ")
 	}
 	return nil
