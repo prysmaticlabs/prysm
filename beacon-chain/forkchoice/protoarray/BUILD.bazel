@@ -36,5 +36,7 @@ go_test(
     deps = [
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
     ],
 )

@@ -24,6 +24,10 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		}
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
+	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
+		return err
+	}
+	s.rateLimiter.add(stream, 1)
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		if err := stream.Close(); err != nil {
@@ -98,7 +102,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	s.p2p.Host().Peerstore().RecordLatency(id, roughtime.Now().Sub(currentTime))
 
 	if code != 0 {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 	msg := new(uint64)
@@ -107,7 +111,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
 		return err
 	}
 	if valid {

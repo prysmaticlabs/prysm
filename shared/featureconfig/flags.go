@@ -61,11 +61,11 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-
 	enableLocalProtectionFlag = &cli.BoolFlag{
 		Name: "enable-local-protection",
 		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting any messages that could be considered slashable according to its own history.",
+		Value: true,
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
@@ -111,10 +111,6 @@ var (
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
 	}
-	enableHistoricalDetectionFlag = &cli.BoolFlag{
-		Name:  "enable-historical-detection",
-		Usage: "Enables historical attestation detection for the slasher",
-	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
@@ -143,6 +139,10 @@ var (
 	altonaTestnet = &cli.BoolFlag{
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
+	}
+	medallaTestnet = &cli.BoolFlag{
+		Name:  "medalla",
+		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
 	}
 	enableAccountsV2 = &cli.BoolFlag{
 		Name:  "enable-accounts-v2",
@@ -574,13 +574,13 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	altonaTestnet,
+	medallaTestnet,
 	enableAccountsV2,
 	enableBlst,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
-	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
 
@@ -618,6 +618,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
+	medallaTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableBlst,

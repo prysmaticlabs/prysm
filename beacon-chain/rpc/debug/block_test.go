@@ -1,7 +1,6 @@
 package debug
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -9,6 +8,8 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_GetBlock(t *testing.T) {
@@ -17,39 +18,25 @@ func TestServer_GetBlock(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
 		Slot: 100,
 	}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, b))
 	blockRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs := &Server{
 		BeaconDB: db,
 	}
 	res, err := bs.GetBlock(ctx, &pbrpc.BlockRequest{
 		BlockRoot: blockRoot[:],
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wanted, err := b.MarshalSSZ()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(wanted, res.Encoded) {
-		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, wanted, res.Encoded)
 
 	// Checking for nil block.
 	blockRoot = [32]byte{}
 	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequest{
 		BlockRoot: blockRoot[:],
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal([]byte{}, res.Encoded) {
-		t.Errorf("Wanted empty, received %v", res.Encoded)
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, []byte{}, res.Encoded)
 }

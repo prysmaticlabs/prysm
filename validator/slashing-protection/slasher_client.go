@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -30,6 +31,7 @@ type Service struct {
 	grpcRetries        uint
 	grpcHeaders        []string
 	slasherClient      ethsl.SlasherClient
+	grpcRetryDelay     time.Duration
 }
 
 // Config for the validator service.
@@ -38,6 +40,7 @@ type Config struct {
 	CertFlag                   string
 	GrpcMaxCallRecvMsgSizeFlag int
 	GrpcRetriesFlag            uint
+	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
 }
 
@@ -52,6 +55,7 @@ func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*Service, e
 		withCert:           cfg.CertFlag,
 		maxCallRecvMsgSize: cfg.GrpcMaxCallRecvMsgSizeFlag,
 		grpcRetries:        cfg.GrpcRetriesFlag,
+		grpcRetryDelay:     cfg.GrpcRetryDelay,
 		grpcHeaders:        strings.Split(cfg.GrpcHeadersFlag, ","),
 	}, nil
 }
@@ -94,6 +98,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 		dialOpt,
 		grpc.WithDefaultCallOptions(
 			grpc_retry.WithMax(s.grpcRetries),
+			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(s.grpcRetryDelay)),
 			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),

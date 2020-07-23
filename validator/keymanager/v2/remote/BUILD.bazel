@@ -35,6 +35,7 @@ go_test(
         "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
     ],
 )

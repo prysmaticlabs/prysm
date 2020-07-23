@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/urfave/cli/v2"
 )
@@ -56,6 +57,12 @@ var (
 		Name:  "grpc-retries",
 		Usage: "Number of attempts to retry gRPC requests",
 		Value: 5,
+	}
+	// GrpcRetryDelayFlag defines the interval to retry a failed gRPC request.
+	GrpcRetryDelayFlag = &cli.DurationFlag{
+		Name:  "grpc-retry-delay",
+		Usage: "The amount of time between gRPC retry requests.",
+		Value: 1 * time.Second,
 	}
 	// GrpcHeadersFlag defines a list of headers to send with all gRPC requests.
 	GrpcHeadersFlag = &cli.StringFlag{
@@ -131,6 +138,11 @@ var (
 		Name:  "password-file",
 		Usage: "File to retrieve password for writing to the password dir when making a new account",
 	}
+	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
+	MnemonicFileFlag = &cli.StringFlag{
+		Name:  "mnemonic-file",
+		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
+	}
 	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
 	SkipMnemonicConfirmFlag = &cli.BoolFlag{
 		Name:  "skip-mnemonic-confirm",
@@ -147,9 +159,9 @@ var (
 		Name:  "accounts",
 		Usage: "List of account names to export, or \"all\" to backup all accounts",
 	}
-	// BackupPathFlag defines the path for the zip backup of the wallet will be created.
-	BackupPathFlag = &cli.StringFlag{
-		Name:  "backup-path",
+	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
+	BackupDirFlag = &cli.StringFlag{
+		Name:  "backup-dir",
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
 	}
@@ -178,6 +190,12 @@ var (
 	RemoteSignerCACertPathFlag = &cli.StringFlag{
 		Name:  "remote-signer-ca-crt-path",
 		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
+	}
+	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
+	KeymanagerKindFlag = &cli.StringFlag{
+		Name:  "keymanager-kind",
+		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
 )

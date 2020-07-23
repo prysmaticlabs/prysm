@@ -146,7 +146,9 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	if !ok {
+	// Also ensures that beacon state may not be the latest state hence `IndexByPubkey` may not always reflect to input state.
+	// Guard check using validator length.
+	if !ok || index >= uint64(beaconState.NumValidators()) {
 		if verifySignature {
 			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 			if err != nil {

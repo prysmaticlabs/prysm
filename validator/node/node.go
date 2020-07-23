@@ -95,11 +95,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			passwordsDir = path.Join(passwordsDir, accountsv2.PasswordsDefaultDirName)
 		}
 		// Read the wallet from the specified path.
-		wallet, err := accountsv2.OpenWallet(context.Background(), &accountsv2.WalletConfig{
-			PasswordsDir:      passwordsDir,
-			WalletDir:         walletDir,
-			CanUnlockAccounts: true,
-		})
+		wallet, err := accountsv2.OpenWallet(cliCtx)
 		if err != nil {
 			log.Fatalf("Could not open wallet: %v", err)
 		}
@@ -226,6 +222,7 @@ func (s *ValidatorClient) registerClientService(
 	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	var sp *slashing_protection.Service
 	var protector slashing_protection.Protector
 	if err := s.services.FetchService(&sp); err == nil {
@@ -243,6 +240,7 @@ func (s *ValidatorClient) registerClientService(
 		ValidatingPubKeys:          validatingPubKeys,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
+		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
 	})
@@ -261,11 +259,13 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	sp, err := slashing_protection.NewSlashingProtectionService(context.Background(), &slashing_protection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
+		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {

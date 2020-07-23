@@ -21,7 +21,12 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{}
-	s.peers = peers.NewStatus(3, 0)
+	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 0,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesThreshold: 3,
+		},
+	})
 	s.cfg = &Config{MaxPeers: 0}
 	s.addrFilter, err = configureFilter(&Config{})
 	require.NoError(t, err)
@@ -57,7 +62,12 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{}
-	s.peers = peers.NewStatus(3, 1)
+	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 1,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesThreshold: 3,
+		},
+	})
 	s.cfg = &Config{MaxPeers: 1}
 	s.addrFilter, err = configureFilter(&Config{})
 	require.NoError(t, err)

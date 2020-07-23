@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -26,31 +25,6 @@ func (e Exporter) ClearDB() error {
 // Backup -- passthrough.
 func (e Exporter) Backup(ctx context.Context) error {
 	return e.db.Backup(ctx)
-}
-
-// AttestationsByDataRoot -- passthrough.
-func (e Exporter) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error) {
-	return e.db.AttestationsByDataRoot(ctx, attDataRoot)
-}
-
-// Attestations -- passthrough.
-func (e Exporter) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*eth.Attestation, error) {
-	return e.db.Attestations(ctx, f)
-}
-
-// HasAttestation -- passthrough.
-func (e Exporter) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
-	return e.db.HasAttestation(ctx, attDataRoot)
-}
-
-// DeleteAttestation -- passthrough.
-func (e Exporter) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
-	return e.db.DeleteAttestation(ctx, attDataRoot)
-}
-
-// DeleteAttestations -- passthrough.
-func (e Exporter) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
-	return e.db.DeleteAttestations(ctx, attDataRoots)
 }
 
 // Block -- passthrough.
@@ -138,26 +112,6 @@ func (e Exporter) FinalizedCheckpoint(ctx context.Context) (*eth.Checkpoint, err
 	return e.db.FinalizedCheckpoint(ctx)
 }
 
-// ArchivedActiveValidatorChanges -- passthrough.
-func (e Exporter) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedActiveSetChanges, error) {
-	return e.db.ArchivedActiveValidatorChanges(ctx, epoch)
-}
-
-// ArchivedCommitteeInfo -- passthrough.
-func (e Exporter) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error) {
-	return e.db.ArchivedCommitteeInfo(ctx, epoch)
-}
-
-// ArchivedBalances -- passthrough.
-func (e Exporter) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error) {
-	return e.db.ArchivedBalances(ctx, epoch)
-}
-
-// ArchivedValidatorParticipation -- passthrough.
-func (e Exporter) ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error) {
-	return e.db.ArchivedValidatorParticipation(ctx, epoch)
-}
-
 // DepositContractAddress -- passthrough.
 func (e Exporter) DepositContractAddress(ctx context.Context) ([]byte, error) {
 	return e.db.DepositContractAddress(ctx)
@@ -223,26 +177,6 @@ func (e Exporter) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.C
 	return e.db.SaveFinalizedCheckpoint(ctx, checkpoint)
 }
 
-// SaveArchivedActiveValidatorChanges -- passthrough.
-func (e Exporter) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *ethereum_beacon_p2p_v1.ArchivedActiveSetChanges) error {
-	return e.db.SaveArchivedActiveValidatorChanges(ctx, epoch, changes)
-}
-
-// SaveArchivedCommitteeInfo -- passthrough.
-func (e Exporter) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error {
-	return e.db.SaveArchivedCommitteeInfo(ctx, epoch, info)
-}
-
-// SaveArchivedBalances -- passthrough.
-func (e Exporter) SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error {
-	return e.db.SaveArchivedBalances(ctx, epoch, balances)
-}
-
-// SaveArchivedValidatorParticipation -- passthrough.
-func (e Exporter) SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error {
-	return e.db.SaveArchivedValidatorParticipation(ctx, epoch, part)
-}
-
 // SaveDepositContractAddress -- passthrough.
 func (e Exporter) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
 	return e.db.SaveDepositContractAddress(ctx, addr)
@@ -283,11 +217,6 @@ func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) 
 	return e.db.SavePowchainData(ctx, data)
 }
 
-// SaveArchivedPointRoot -- passthrough
-func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
-	return e.db.SaveArchivedPointRoot(ctx, blockRoot, index)
-}
-
 // ArchivedPointRoot -- passthrough
 func (e Exporter) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 	return e.db.ArchivedPointRoot(ctx, index)
@@ -298,14 +227,9 @@ func (e Exporter) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	return e.db.HasArchivedPoint(ctx, index)
 }
 
-// LastArchivedIndexRoot -- passthrough
-func (e Exporter) LastArchivedIndexRoot(ctx context.Context) [32]byte {
-	return e.db.LastArchivedIndexRoot(ctx)
-}
-
-// HighestSlotBlocks -- passthrough
-func (e Exporter) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
-	return e.db.HighestSlotBlocks(ctx)
+// LastArchivedRoot -- passthrough
+func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
+	return e.db.LastArchivedRoot(ctx)
 }
 
 // HighestSlotBlocksBelow -- passthrough
@@ -313,27 +237,22 @@ func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*e
 	return e.db.HighestSlotBlocksBelow(ctx, slot)
 }
 
-// HighestSlotStates -- passthrough
-func (e Exporter) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
-	return e.db.HighestSlotStates(ctx)
-}
-
 // HighestSlotStatesBelow -- passthrough
 func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
 	return e.db.HighestSlotStatesBelow(ctx, slot)
 }
 
-// SaveLastArchivedIndex -- passthrough
-func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	return e.db.SaveLastArchivedIndex(ctx, index)
-}
-
-// LastArchivedIndex -- passthrough
-func (e Exporter) LastArchivedIndex(ctx context.Context) (uint64, error) {
-	return e.db.LastArchivedIndex(ctx)
+// LastArchivedSlot -- passthrough
+func (e Exporter) LastArchivedSlot(ctx context.Context) (uint64, error) {
+	return e.db.LastArchivedSlot(ctx)
 }
 
 // HistoricalStatesDeleted -- passthrough
 func (e Exporter) HistoricalStatesDeleted(ctx context.Context) error {
 	return e.db.HistoricalStatesDeleted(ctx)
+}
+
+// RunMigrations -- passthrough
+func (e Exporter) RunMigrations(ctx context.Context) error {
+	return e.db.RunMigrations(ctx)
 }

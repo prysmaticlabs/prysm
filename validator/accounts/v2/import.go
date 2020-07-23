@@ -6,37 +6,40 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-
-	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
 
 // ImportAccount uses the archived account made from ExportAccount to import an account and
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	} else if err != nil {
-		return errors.Wrap(err, "could not parse wallet directory")
+	wallet, err := OpenWallet(cliCtx)
+	if err != nil {
+		return errors.Wrap(err, "could not open wallet")
+	}
+	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	km, ok := keymanager.(*direct.Keymanager)
+	if !ok {
+		return errors.New("can only export accounts for a non-HD wallet")
 	}
 
-	backupDir, err := inputImportDir(cliCtx)
+	backupDir, err := inputDirectory(cliCtx, importDirPromptText, flags.BackupDirFlag)
 	if err != nil {
-		log.Fatalf("Could not parse output directory: %v", err)
+		return errors.Wrap(err, "could not parse output directory")
 	}
 
-	accountsImported, err := unzipArchiveToTarget(backupDir, walletDir)
+	accountsImported, err := unzipArchiveToTarget(backupDir, wallet.AccountsDir())
 	if err != nil {
-		log.WithError(err).Fatal("Could not unzip archive")
+		return errors.Wrap(err, "could not unzip archive")
 	}
 
 	au := aurora.NewAurora(true)
@@ -46,48 +49,16 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
 
-	// Read the directory for password storage from user input.
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-
-	wallet, err := OpenWallet(context.Background(), &WalletConfig{
-		CanUnlockAccounts: true,
-		PasswordsDir:      passwordsDirPath,
-		WalletDir:         walletDir,
-	})
-	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
-	}
-
 	for _, accountName := range accountsImported {
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-			log.WithError(err).Fatal("Could not set account password")
+		if err := km.EnterPasswordForAccount(cliCtx, accountName); err != nil {
+			return errors.Wrap(err, "could not set account password")
 		}
 	}
-	if err := logAccountsImported(wallet, accountsImported); err != nil {
-		log.WithError(err).Fatal("Could not log accounts imported")
+	if err := logAccountsImported(wallet, km, accountsImported); err != nil {
+		return errors.Wrap(err, "could not log accounts imported")
 	}
 
 	return nil
-}
-
-func inputImportDir(cliCtx *cli.Context) (string, error) {
-	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
-	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
-		return outputDir, nil
-	}
-	if outputDir == flags.DefaultValidatorDir() {
-		outputDir = path.Join(outputDir)
-	}
-	prompt := promptui.Prompt{
-		Label:    "Enter the file location of the exported wallet zip to import",
-		Validate: validateDirectoryPath,
-		Default:  outputDir,
-	}
-	outputPath, err := prompt.Run()
-	if err != nil {
-		return "", fmt.Errorf("could not determine import directory: %v", formatPromptError(err))
-	}
-	return outputPath, nil
 }
 
 func unzipArchiveToTarget(archiveDir string, target string) ([]string, error) {
@@ -152,7 +123,7 @@ func copyFileFromZipToPath(file *zip.File, path string) error {
 	return nil
 }
 
-func logAccountsImported(wallet *Wallet, accountNames []string) error {
+func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -166,7 +137,7 @@ func logAccountsImported(wallet *Wallet, accountNames []string) error {
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
 
-		publicKey, err := wallet.publicKeyForAccount(accountName)
+		publicKey, err := keymanager.PublicKeyForAccount(accountName)
 		if err != nil {
 			return errors.Wrap(err, "could not get public key")
 		}
