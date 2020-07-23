@@ -3,7 +3,7 @@ package v2
 import (
 	"context"
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -59,7 +59,7 @@ func listDirectKeymanagerAccounts(
 	keymanager *direct.Keymanager,
 ) error {
 	// We initialize the wallet's keymanager.
-	accountNames, err := wallet.AccountNames()
+	accountNames, err := keymanager.ValidatingAccountNames()
 	if err != nil {
 		return errors.Wrap(err, "could not fetch account names")
 	}
@@ -77,7 +77,8 @@ func listDirectKeymanagerAccounts(
 	)
 	fmt.Printf("Keymanager kind: %s\n", au.BrightGreen(wallet.KeymanagerKind().String()).Bold())
 
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(context.Background())
+	ctx := context.Background()
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -87,7 +88,7 @@ func listDirectKeymanagerAccounts(
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), pubKeys[i])
 
 		// Retrieve the account creation timestamp.
-		createdAtBytes, err := wallet.ReadFileForAccount(accountNames[i], direct.TimestampFileName)
+		createdAtBytes, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.TimestampFileName)
 		if err != nil {
 			return errors.Wrapf(err, "could not read file for account: %s", direct.TimestampFileName)
 		}
@@ -100,14 +101,14 @@ func listDirectKeymanagerAccounts(
 		if !showDepositData {
 			continue
 		}
-		enc, err := wallet.ReadFileForAccount(accountNames[i], direct.DepositTransactionFileName)
+		enc, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.DepositTransactionFileName)
 		if err != nil {
 			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
 		}
 		fmt.Printf(
 			"%s %s\n",
 			"(deposit tx file)",
-			path.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
+			filepath.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
 		)
 		fmt.Printf(`
 ======================Deposit Transaction Data=====================
@@ -184,7 +185,7 @@ func listDerivedKeymanagerAccounts(
 		fmt.Printf(
 			"%s %s\n",
 			"(deposit tx file)",
-			path.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
+			filepath.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
 		)
 		fmt.Printf(`
 ======================Deposit Transaction Data=====================

@@ -47,9 +47,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	if err := RecoverWallet(cliCtx); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, RecoverWallet(cliCtx))
 
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
