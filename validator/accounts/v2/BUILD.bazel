@@ -11,6 +11,7 @@ go_library(
         "import.go",
         "list.go",
         "new.go",
+        "prompt.go",
         "wallet.go",
         "wallet_create.go",
         "wallet_edit.go",
