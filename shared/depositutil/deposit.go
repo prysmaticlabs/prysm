@@ -4,7 +4,6 @@ package depositutil
 
 import (
 	"fmt"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
