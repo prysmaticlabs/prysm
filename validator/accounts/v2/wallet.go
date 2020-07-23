@@ -6,27 +6,16 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-)
-
-const (
-	// WalletDefaultDirName for accounts-v2.
-	WalletDefaultDirName = ".prysm-wallet-v2"
-	// PasswordsDefaultDirName where account passwords are stored.
-	PasswordsDefaultDirName = ".prysm-wallet-v2-passwords"
-	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
-	KeymanagerConfigFileName = "keymanageropts.json"
-	// DirectoryPermissions for directories created under the wallet path.
-	DirectoryPermissions = os.ModePerm
 )
 
 var (
@@ -39,6 +28,17 @@ var (
 		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
 		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
+)
+
+const (
+	// WalletDefaultDirName for accounts-v2.
+	WalletDefaultDirName = ".prysm-wallet-v2"
+	// PasswordsDefaultDirName where account passwords are stored.
+	PasswordsDefaultDirName = ".prysm-wallet-v2-passwords"
+	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
+	KeymanagerConfigFileName = "keymanageropts.json"
+	// DirectoryPermissions for directories created under the wallet path.
+	DirectoryPermissions = os.ModePerm
 )
 
 // Wallet is a primitive in Prysm's v2 account management which
@@ -61,7 +61,7 @@ func init() {
 func NewWallet(
 	cliCtx *cli.Context,
 ) (*Wallet, error) {
-	walletDir, err := inputWalletDir(cliCtx)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
@@ -82,7 +82,7 @@ func NewWallet(
 	if err != nil {
 		return nil, err
 	}
-	accountsPath := path.Join(walletDir, keymanagerKind.String())
+	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
 	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
 		return nil, errors.Wrap(err, "could not create wallet directory")
 	}
@@ -91,7 +91,7 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputPasswordsDirectory(cliCtx)
+		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func NewWallet(
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if errors.Is(err, ErrNoWalletFound) {
 		return nil, errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
 	} else if err != nil {
@@ -118,20 +118,20 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager kind for wallet")
 	}
-	walletPath := path.Join(walletDir, keymanagerKind.String())
+	walletPath := filepath.Join(walletDir, keymanagerKind.String())
 	w := &Wallet{
 		accountsPath:   walletPath,
 		keymanagerKind: keymanagerKind,
 	}
 	if keymanagerKind == v2keymanager.Derived {
-		walletPassword, err := inputExistingWalletPassword(cliCtx)
+		walletPassword, err := inputPassword(cliCtx, walletPasswordPromptText, noConfirmPass)
 		if err != nil {
 			return nil, err
 		}
 		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputPasswordsDirectory(cliCtx)
+		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -219,11 +219,11 @@ func (w *Wallet) ListDirs() ([]string, error) {
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
 func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName string, data []byte) error {
-	accountPath := path.Join(w.accountsPath, filePath)
+	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not create path: %s", accountPath)
 	}
-	fullPath := path.Join(accountPath, fileName)
+	fullPath := filepath.Join(accountPath, fileName)
 	if err := ioutil.WriteFile(fullPath, data, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", filePath)
 	}
@@ -236,8 +236,11 @@ func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName 
 
 // ReadFileAtPath within the wallet directory given the desired path and filename.
 func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error) {
-	accountPath := path.Join(w.accountsPath, filePath)
-	fullPath := path.Join(accountPath, fileName)
+	accountPath := filepath.Join(w.accountsPath, filePath)
+	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
+		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
+	}
+	fullPath := filepath.Join(accountPath, fileName)
 	rawData, err := ioutil.ReadFile(fullPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read %s", filePath)
@@ -248,7 +251,7 @@ func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName s
 // ReadKeymanagerConfigFromDisk opens a keymanager config file
 // for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error) {
-	configFilePath := path.Join(w.accountsPath, KeymanagerConfigFileName)
+	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
 	if !fileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
@@ -258,7 +261,7 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file
 // and writes it to the wallet path.
 func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error {
-	configFilePath := path.Join(w.accountsPath, KeymanagerConfigFileName)
+	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
 	// Write the config file to disk.
 	if err := ioutil.WriteFile(configFilePath, encoded, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", configFilePath)
@@ -270,7 +273,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 // ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
 // within the wallet path.
 func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
-	configFilePath := path.Join(w.accountsPath, derived.EncryptedSeedFileName)
+	configFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
 	if !fileExists(configFilePath) {
 		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
 	}
@@ -280,7 +283,7 @@ func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, 
 // WriteEncryptedSeedToDisk writes the encrypted wallet seed configuration
 // within the wallet path.
 func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
-	seedFilePath := path.Join(w.accountsPath, derived.EncryptedSeedFileName)
+	seedFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
 	// Write the config file to disk.
 	if err := ioutil.WriteFile(seedFilePath, encoded, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", seedFilePath)

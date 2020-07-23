@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -24,7 +23,7 @@ const archiveFilename = "backup.zip"
 
 // ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
-	outputDir, err := inputExportDir(cliCtx)
+	outputDir, err := inputDirectory(cliCtx, exportDirPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
@@ -62,26 +61,6 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 
 	return nil
-}
-
-func inputExportDir(cliCtx *cli.Context) (string, error) {
-	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
-	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
-		return outputDir, nil
-	}
-	if outputDir == flags.DefaultValidatorDir() {
-		outputDir = path.Join(outputDir)
-	}
-	prompt := promptui.Prompt{
-		Label:    "Enter a file location to write the exported wallet to",
-		Validate: validateDirectoryPath,
-		Default:  outputDir,
-	}
-	outputPath, err := prompt.Run()
-	if err != nil {
-		return "", fmt.Errorf("could not determine output directory: %v", formatPromptError(err))
-	}
-	return outputPath, nil
 }
 
 func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
