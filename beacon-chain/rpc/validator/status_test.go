@@ -935,3 +935,44 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		}
 	}
 }
+
+func TestValidatorStatus_Invalid(t *testing.T) {
+	db, _ := dbutil.SetupDB(t)
+	ctx := context.Background()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatalf("Could not generate deposits and keys: %v", err)
+	}
+	deposit := deposits[0]
+	pubKey1 := deposit.Data.PublicKey
+	deposit.Data.Signature = deposit.Data.Signature[1:]
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err, "Could not setup deposit trie")
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
+			0: uint64(height),
+		},
+	}
+	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	require.NoError(t, err)
+	vs := &Server{
+		BeaconDB:       db,
+		DepositFetcher: depositCache,
+		BlockFetcher:   p,
+		HeadFetcher: &mockChain.ChainService{
+			State: stateObj,
+		},
+		Eth1InfoFetcher: p,
+	}
+	req := &ethpb.ValidatorStatusRequest{
+		PublicKey: pubKey1,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	require.NoError(t, err, "Could not get validator status")
+	assert.Equal(t, ethpb.ValidatorStatus_INVALID, resp.Status)
+}
