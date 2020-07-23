@@ -12,6 +12,7 @@ go_library(
         "network_config.go",
         "testnet_altona_config.go",
         "testnet_e2e_config.go",
+        "testnet_medalla_config.go",
         "testnet_onyx_config.go",
         "testutils.go",
     ],
