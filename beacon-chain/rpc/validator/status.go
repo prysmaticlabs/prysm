@@ -164,8 +164,15 @@ func (vs *Server) validatorStatus(
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
 			return resp, nonExistentIndex
 		}
-
-		if err := depositutil.VerifyDepositSignature(deposit.Data); err != nil {
+		domain, err := helpers.ComputeDomain(
+			params.BeaconConfig().DomainDeposit,
+			params.BeaconConfig().GenesisForkVersion,
+			params.BeaconConfig().ZeroHash[:],
+		)
+		if err != nil {
+			return resp, nonExistentIndex
+		}
+		if err := depositutil.VerifyDepositSignature(deposit.Data, domain); err != nil {
 			resp.Status = ethpb.ValidatorStatus_INVALID
 			return resp, nonExistentIndex
 		}

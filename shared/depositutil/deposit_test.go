@@ -45,7 +45,15 @@ func TestVerifyDepositSignature_ValidSig(t *testing.T) {
 		t.Fatalf("Error Generating Deposits and Keys - %v", err)
 	}
 	deposit := deposits[0]
-	err = depositutil.VerifyDepositSignature(deposit.Data)
+	domain, err := helpers.ComputeDomain(
+		params.BeaconConfig().DomainDeposit,
+		params.BeaconConfig().GenesisForkVersion,
+		params.BeaconConfig().ZeroHash[:],
+	)
+	if err != nil {
+		t.Fatalf("Error Computing Domain - %v", err)
+	}
+	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
 	if err != nil {
 		t.Fatal("Deposit Verification fails with a valid signature")
 	}
@@ -57,8 +65,16 @@ func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
 		t.Fatalf("Error Generating Deposits and Keys - %v", err)
 	}
 	deposit := deposits[0]
+	domain, err := helpers.ComputeDomain(
+		params.BeaconConfig().DomainDeposit,
+		params.BeaconConfig().GenesisForkVersion,
+		params.BeaconConfig().ZeroHash[:],
+	)
+	if err != nil {
+		t.Fatalf("Error Computing Domain - %v", err)
+	}
 	deposit.Data.Signature = deposit.Data.Signature[1:]
-	err = depositutil.VerifyDepositSignature(deposit.Data)
+	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
 	if err == nil {
 		t.Fatal("Deposit Verification succeeds with a invalid signature")
 	}

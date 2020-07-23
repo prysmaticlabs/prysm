@@ -84,7 +84,7 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 }
 
 // VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
-func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
+func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 	if featureconfig.Get().SkipBLSVerify {
 		return nil
 	}
@@ -96,15 +96,6 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
 	sig, err := bls.SignatureFromBytes(dd.Signature)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
-	}
-	cfg := params.BeaconConfig()
-	domain, err := helpers.ComputeDomain(
-		cfg.DomainDeposit,
-		cfg.GenesisForkVersion,
-		cfg.ZeroHash[:],
-	)
-	if err != nil {
-		return err
 	}
 	ddCopy.Signature = nil
 	root, err := ssz.SigningRoot(ddCopy)
