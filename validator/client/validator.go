@@ -278,7 +278,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
 		case ethpb.ValidatorStatus_INVALID:
-			log.Warning("Invalid Eth1 deposit")
+			log.Warn("Invalid Eth1 deposit")
 		default:
 			log.WithFields(logrus.Fields{
 				"activationEpoch": status.Status.ActivationEpoch,
