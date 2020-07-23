@@ -19,7 +19,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Remote)
 	require.NoError(t, err)
 	ctx := context.Background()
 

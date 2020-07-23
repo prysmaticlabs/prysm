@@ -40,7 +40,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		keymanagerKind: v2keymanager.Direct,
 		passwordFile:   passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()

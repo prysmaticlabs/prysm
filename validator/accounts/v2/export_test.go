@@ -32,7 +32,7 @@ func TestZipAndUnzip(t *testing.T) {
 		exportDir:      exportDir,
 		keymanagerKind: v2keymanager.Direct,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
 	ctx := context.Background()
 	keymanager, err := direct.NewKeymanager(
@@ -84,7 +84,7 @@ func TestExport_Noninteractive(t *testing.T) {
 		accountsToExport: accounts,
 		keymanagerKind:   v2keymanager.Direct,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()

@@ -25,7 +25,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		passwordsDir:   passwordsDir,
 		keymanagerKind: v2keymanager.Direct,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
 	ctx := context.Background()
 	keymanager, err := direct.NewKeymanager(
@@ -111,7 +111,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		passwordsDir:   passwordsDir,
 		keymanagerKind: v2keymanager.Derived,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
 	require.NoError(t, err)
 	ctx := context.Background()
 	password := "hello world"
