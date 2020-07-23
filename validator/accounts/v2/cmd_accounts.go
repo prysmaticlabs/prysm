@@ -25,7 +25,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := NewAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not create new account")
+					log.Fatalf("Could not create new account: %v", err)
 				}
 				return nil
 			},
@@ -41,7 +41,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ListAccounts(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not list accounts")
+					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
 			},
@@ -57,7 +57,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ExportAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not export accounts")
+					log.Fatalf("Could not export accounts: %v", err)
 				}
 				return nil
 			},
@@ -73,7 +73,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ImportAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not import accounts")
+					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil
 			},
