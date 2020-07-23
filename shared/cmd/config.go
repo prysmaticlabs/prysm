@@ -16,13 +16,15 @@ type Flags struct {
 
 var sharedConfig *Flags
 
+func DefaultCMDConfig() *Flags {
+	return &Flags{
+		MaxRPCPageSize:     params.BeaconConfig().DefaultPageSize,
+		CustomGenesisDelay: params.BeaconConfig().GenesisDelay,
+	}
+}
+
 // Get retrieves feature config.
 func Get() *Flags {
-	if sharedConfig == nil {
-		return &Flags{
-			MaxRPCPageSize: params.BeaconConfig().DefaultPageSize,
-		}
-	}
 	return sharedConfig
 }
 
@@ -44,18 +46,14 @@ func InitWithReset(c *Flags) func() {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := newConfig(ctx)
-	delay := params.BeaconConfig().GenesisDelay
 	if ctx.IsSet(CustomGenesisDelayFlag.Name) {
-		delay = ctx.Uint64(CustomGenesisDelayFlag.Name)
-		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
+		cfg.CustomGenesisDelay = ctx.Uint64(CustomGenesisDelayFlag.Name)
+		log.Warnf("Starting ETH2 with genesis delay of %d seconds", cfg.CustomGenesisDelay)
 	}
-	cfg.CustomGenesisDelay = delay
-	maxPageSize := params.BeaconConfig().DefaultPageSize
 	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
-		maxPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
-		log.Warnf("Starting beacon chain with max RPC page size of %d", maxPageSize)
+		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
+		log.Warnf("Starting beacon chain with max RPC page size of %d", cfg.MaxRPCPageSize)
 	}
-	cfg.MaxRPCPageSize = maxPageSize
 	Init(cfg)
 }
 
@@ -63,12 +61,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
 	cfg := newConfig(ctx)
-	maxPageSize := params.BeaconConfig().DefaultPageSize
 	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
-		maxPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
-		log.Warnf("Starting slasher with max RPC page size of %d", maxPageSize)
+		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
+		log.Warnf("Starting slasher with max RPC page size of %d", cfg.MaxRPCPageSize)
 	}
-	cfg.MaxRPCPageSize = maxPageSize
 	Init(cfg)
 }
 
@@ -80,7 +76,7 @@ func ConfigureValidator(ctx *cli.Context) {
 }
 
 func newConfig(ctx *cli.Context) *Flags {
-	cfg := &Flags{}
+	cfg := DefaultCMDConfig()
 	if ctx.Bool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
