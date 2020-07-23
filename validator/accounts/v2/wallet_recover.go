@@ -46,7 +46,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	}
 	log.WithField("wallet-path", wallet.AccountsDir()).Infof(
 		"Successfully recovered HD wallet and saved configuration to disk. " +
-			"Make a new validator account with ./prysm.sh validator accounts-2 new",
+			"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 	)
 	return nil
 }
