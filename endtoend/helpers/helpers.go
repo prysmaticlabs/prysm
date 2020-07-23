@@ -4,6 +4,7 @@ package helpers
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -152,8 +153,12 @@ func WriteHeapFile(testDir string, index int) error {
 	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
 	filePath := filepath.Join(testDir, fmt.Sprintf(heapFileName, index))
 	cmd := exec.Command("curl", url, fmt.Sprintf("-o %s", filePath))
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf(fmt.Sprint(err) + ": " + stderr.String())
 	}
 	return nil
 }

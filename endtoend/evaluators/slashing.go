@@ -20,28 +20,28 @@ import (
 // InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
 var InjectDoubleVote = types.Evaluator{
 	Name:       "inject_double_vote_%d",
-	Policy:     onEpoch(1),
+	Policy:     onEpoch(0),
 	Evaluation: insertDoubleAttestationIntoPool,
 }
 
 // ProposeDoubleBlock broadcasts a double block to the beacon node for the slasher to detect.
 var ProposeDoubleBlock = types.Evaluator{
 	Name:       "propose_double_block_%d",
-	Policy:     onEpoch(1),
+	Policy:     onEpoch(0),
 	Evaluation: proposeDoubleBlock,
 }
 
 // ValidatorsSlashed ensures the expected amount of validators are slashed.
 var ValidatorsSlashed = types.Evaluator{
 	Name:       "validators_slashed_epoch_%d",
-	Policy:     afterNthEpoch(1),
+	Policy:     afterNthEpoch(0),
 	Evaluation: validatorsSlashed,
 }
 
 // SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
 var SlashedValidatorsLoseBalance = types.Evaluator{
 	Name:       "slashed_validators_lose_valance_epoch_%d",
-	Policy:     afterNthEpoch(1),
+	Policy:     afterNthEpoch(0),
 	Evaluation: validatorsLoseBalance,
 }
 
