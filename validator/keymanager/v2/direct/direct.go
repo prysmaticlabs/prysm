@@ -151,6 +151,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 ===================================================================
 	`, withdrawalKey.Marshal())
+	fmt.Println(" ")
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.

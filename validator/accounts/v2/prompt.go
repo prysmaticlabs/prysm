@@ -168,6 +168,8 @@ func validatePasswordInput(input string) error {
 	}
 	for _, char := range input {
 		switch {
+		case !(unicode.IsLetter(char) || unicode.IsNumber(char) || unicode.IsPunct(char) || unicode.IsSymbol(char)):
+			return errors.New("password must only contain alphanumeric characters, punctuation, or symbols")
 		case unicode.IsLetter(char):
 			hasLetter = true
 		case unicode.IsNumber(char):
@@ -195,7 +197,11 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
 	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
+
 	if addr != "" && crt != "" && key != "" && ca != "" {
+		if !(isValidUnicode(addr) && isValidUnicode(crt) && isValidUnicode(key) && isValidUnicode(ca)) {
+			return nil, errors.New("flag inputs contain non-unicode characters")
+		}
 		newCfg := &remote.Config{
 			RemoteCertificate: &remote.CertificateConfig{
 				ClientCertPath: strings.TrimRight(crt, "\r\n"),
@@ -214,6 +220,9 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 		Validate: func(input string) error {
 			if input == "" {
 				return errors.New("remote host address cannot be empty")
+			}
+			if !isValidUnicode(input) {
+				return errors.New("not valid unicode")
 			}
 			return nil
 		},
@@ -262,6 +271,9 @@ func validateCertPath(input string) error {
 	if input == "" {
 		return errors.New("crt path cannot be empty")
 	}
+	if !isValidUnicode(input) {
+		return errors.New("not valid unicode")
+	}
 	if !fileExists(input) {
 		return fmt.Errorf("no crt found at path: %s", input)
 	}
@@ -271,6 +283,9 @@ func validateCertPath(input string) error {
 func validateCACertPath(input string) error {
 	if input != "" && !fileExists(input) {
 		return fmt.Errorf("no crt found at path: %s", input)
+	}
+	if !isValidUnicode(input) {
+		return errors.New("not valid unicode")
 	}
 	return nil
 }
@@ -286,4 +301,16 @@ func formatPromptError(err error) error {
 	default:
 		return err
 	}
+}
+
+// Checks if an input string is a valid unicode string comprised of only
+// letters, numbers, punctuation, or symbols.
+func isValidUnicode(input string) bool {
+	for _, char := range input {
+		if !(unicode.IsLetter(char) || unicode.IsNumber(char) || unicode.IsPunct(char) || unicode.IsSymbol(char)) {
+			log.Info(char)
+			return false
+		}
+	}
+	return true
 }
