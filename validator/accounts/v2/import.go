@@ -12,6 +12,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
@@ -19,17 +20,20 @@ import (
 // ImportAccount uses the archived account made from ExportAccount to import an account and
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
-	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil && !errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
-	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
+	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create wallet directory")
 	}
-	km, ok := keymanager.(*direct.Keymanager)
-	if !ok {
-		return errors.New("can only export accounts for a non-HD wallet")
+	passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create passwords directory")
 	}
 
 	backupDir, err := inputDirectory(cliCtx, importDirPromptText, flags.BackupDirFlag)
@@ -37,9 +41,15 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not parse output directory")
 	}
 
-	accountsImported, err := unzipArchiveToTarget(backupDir, wallet.AccountsDir())
+	accountsImported, err := unzipArchiveToTarget(backupDir, walletDir)
 	if err != nil {
 		return errors.Wrap(err, "could not unzip archive")
+	}
+
+	wallet := &Wallet{
+		accountsPath:   accountsPath,
+		passwordsDir:   passwordsDir,
+		keymanagerKind: v2keymanager.Direct,
 	}
 
 	au := aurora.NewAurora(true)
@@ -50,9 +60,17 @@ func ImportAccount(cliCtx *cli.Context) error {
 	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
 
 	for _, accountName := range accountsImported {
-		if err := km.EnterPasswordForAccount(cliCtx, accountName); err != nil {
+		if err := wallet.EnterPasswordForAccount(cliCtx, accountName); err != nil {
 			return errors.Wrap(err, "could not set account password")
 		}
+	}
+	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	km, ok := keymanager.(*direct.Keymanager)
+	if !ok {
+		return errors.New("can only export accounts for a non-HD wallet")
 	}
 	if err := logAccountsImported(wallet, km, accountsImported); err != nil {
 		return errors.Wrap(err, "could not log accounts imported")

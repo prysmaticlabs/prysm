@@ -2,13 +2,16 @@ package v2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	petname "github.com/dustinkirkland/golang-petname"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -16,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var (
@@ -300,6 +304,71 @@ func (w *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName stri
 		return "", errors.Wrapf(err, "could not read %s", fullPath)
 	}
 	return string(rawData), nil
+}
+
+// EnterPasswordForAccount checks if a user has a password specified for the new account
+// either from a file or from stdin. Then, it saves the password to the wallet.
+func (w *Wallet) EnterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
+	au := aurora.NewAurora(true)
+	var password string
+	var err error
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return err
+		}
+		password = string(data)
+		err = w.checkPasswordForAccount(accountName, password)
+		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+			return fmt.Errorf("invalid password entered for account %s", accountName)
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		attemptingPassword := true
+		// Loop asking for the password until the user enters it correctly.
+		for attemptingPassword {
+			// Ask the user for the password to their account.
+			password, err = inputPassword(cliCtx, fmt.Sprintf(passwordForAccountPromptText, accountName), noConfirmPass)
+			if err != nil {
+				return errors.Wrap(err, "could not input password")
+			}
+			err = w.checkPasswordForAccount(accountName, password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				fmt.Println(au.Red("Incorrect password entered, please try again"))
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			attemptingPassword = false
+		}
+	}
+	ctx := context.Background()
+	if err := w.WritePasswordToDisk(ctx, accountName+direct.PasswordFileSuffix, password); err != nil {
+		return errors.Wrap(err, "could not write password to disk")
+	}
+	return nil
+}
+
+func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
+	encoded, err := w.ReadFileAtPath(context.Background(), accountName, direct.KeystoreFileName)
+	if err != nil {
+		return errors.Wrap(err, "could not read keystore file")
+	}
+	keystoreJSON := &v2keymanager.Keystore{}
+	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+		return errors.Wrap(err, "could not decode json")
+	}
+	decryptor := keystorev4.New()
+	_, err = decryptor.Decrypt(keystoreJSON.Crypto, []byte(password))
+	if err != nil {
+		return errors.Wrap(err, "could not decrypt keystore")
+	}
+	return nil
 }
 
 // WritePasswordToDisk --

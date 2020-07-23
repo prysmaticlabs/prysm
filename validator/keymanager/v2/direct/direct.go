@@ -10,12 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/logrusorgru/aurora"
-	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -25,10 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -249,54 +244,6 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
-// EnterPasswordForAccount checks if a user has a password specified for the new account
-// either from a file or from stdin. Then, it saves the password to the wallet.
-func (dr *Keymanager) EnterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
-	au := aurora.NewAurora(true)
-	var password string
-	var err error
-	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return err
-		}
-		password = string(data)
-		err = dr.checkPasswordForAccount(accountName, password)
-		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			return fmt.Errorf("invalid password entered for account %s", accountName)
-		}
-		if err != nil {
-			return err
-		}
-	} else {
-		attemptingPassword := true
-		// Loop asking for the password until the user enters it correctly.
-		for attemptingPassword {
-			// Ask the user for the password to their account.
-			password, err = inputPasswordForAccount(cliCtx, accountName)
-			if err != nil {
-				return errors.Wrap(err, "could not input password")
-			}
-			err = dr.checkPasswordForAccount(accountName, password)
-			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				fmt.Println(au.Red("Incorrect password entered, please try again"))
-				continue
-			}
-			if err != nil {
-				return err
-			}
-
-			attemptingPassword = false
-		}
-	}
-	ctx := context.Background()
-	if err := dr.wallet.WritePasswordToDisk(ctx, accountName+PasswordFileSuffix, password); err != nil {
-		return errors.Wrap(err, "could not write password to disk")
-	}
-	return nil
-}
-
 // PublicKeyForAccount returns the associated public key for an account name.
 func (dr *Keymanager) PublicKeyForAccount(accountName string) ([48]byte, error) {
 	accountKeystore, err := dr.keystoreForAccount(accountName)
@@ -417,16 +364,4 @@ func hasDir(dirPath string) (bool, error) {
 		return false, nil
 	}
 	return info.IsDir(), err
-}
-
-func inputPasswordForAccount(_ *cli.Context, accountName string) (string, error) {
-	prompt := promptui.Prompt{
-		Label: fmt.Sprintf("Enter password for account %s", accountName),
-		Mask:  '*',
-	}
-	walletPassword, err := prompt.Run()
-	if err != nil {
-		return "", fmt.Errorf("could not read wallet password: %v", err)
-	}
-	return walletPassword, nil
 }
