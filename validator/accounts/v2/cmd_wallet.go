@@ -26,6 +26,7 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCACertPathFlag,
 				flags.PasswordFileFlag,
 				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := CreateWallet(cliCtx); err != nil {
@@ -44,6 +45,7 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
 				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := EditWalletConfiguration(cliCtx); err != nil {
@@ -61,6 +63,7 @@ var WalletCommands = &cli.Command{
 				flags.MnemonicFileFlag,
 				flags.PasswordFileFlag,
 				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := RecoverWallet(cliCtx); err != nil {

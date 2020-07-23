@@ -24,6 +24,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.PasswordFileFlag,
 				flags.SkipMnemonicConfirmFlag,
 				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := NewAccount(cliCtx); err != nil {
@@ -41,6 +42,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.PasswordFileFlag,
 				flags.ShowDepositDataFlag,
 				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ListAccounts(cliCtx); err != nil {
@@ -58,6 +60,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupDirFlag,
 				flags.AccountsFlag,
 				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ExportAccount(cliCtx); err != nil {
@@ -75,6 +78,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupDirFlag,
 				flags.PasswordFileFlag,
 				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ImportAccount(cliCtx); err != nil {
