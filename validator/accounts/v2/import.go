@@ -2,6 +2,7 @@ package v2
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,10 +11,10 @@ import (
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,6 +24,14 @@ func ImportAccount(cliCtx *cli.Context) error {
 	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
+	}
+	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	km, ok := keymanager.(*direct.Keymanager)
+	if !ok {
+		return errors.New("can only export accounts for a non-HD wallet")
 	}
 
 	backupDir, err := inputImportDir(cliCtx)
@@ -43,11 +52,11 @@ func ImportAccount(cliCtx *cli.Context) error {
 	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
 
 	for _, accountName := range accountsImported {
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
+		if err := km.EnterPasswordForAccount(cliCtx, accountName); err != nil {
 			return errors.Wrap(err, "could not set account password")
 		}
 	}
-	if err := logAccountsImported(wallet, accountsImported); err != nil {
+	if err := logAccountsImported(wallet, km, accountsImported); err != nil {
 		return errors.Wrap(err, "could not log accounts imported")
 	}
 
@@ -136,7 +145,7 @@ func copyFileFromZipToPath(file *zip.File, path string) error {
 	return nil
 }
 
-func logAccountsImported(wallet *Wallet, accountNames []string) error {
+func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -150,7 +159,7 @@ func logAccountsImported(wallet *Wallet, accountNames []string) error {
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
 
-		publicKey, err := wallet.publicKeyForAccount(accountName)
+		publicKey, err := keymanager.PublicKeyForAccount(accountName)
 		if err != nil {
 			return errors.Wrap(err, "could not get public key")
 		}

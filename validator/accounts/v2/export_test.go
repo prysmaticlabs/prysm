@@ -45,7 +45,7 @@ func TestZipAndUnzip(t *testing.T) {
 	_, err = keymanager.CreateAccount(ctx, password)
 	require.NoError(t, err)
 
-	accounts, err := wallet.AccountNames()
+	accounts, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
 
 	if len(accounts) == 0 {
@@ -88,10 +88,14 @@ func TestExport_Noninteractive(t *testing.T) {
 	wallet, err := NewWallet(cliCtx)
 	require.NoError(t, err)
 	ctx := context.Background()
+	keymanagerCfg := direct.DefaultConfig()
+	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
+	require.NoError(t, err)
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
 		ctx,
 		wallet,
-		direct.DefaultConfig(),
+		keymanagerCfg,
 	)
 	require.NoError(t, err)
 	_, err = keymanager.CreateAccount(ctx, password)
