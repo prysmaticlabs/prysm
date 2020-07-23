@@ -61,11 +61,10 @@ var (
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
-	accountsPath      string
-	passwordsDir      string
-	canUnlockAccounts bool
-	keymanagerKind    v2keymanager.Kind
-	walletPassword    string
+	accountsPath   string
+	passwordsDir   string
+	keymanagerKind v2keymanager.Kind
+	walletPassword string
 }
 
 func init() {
@@ -115,7 +114,6 @@ func NewWallet(
 			return nil, errors.Wrap(err, "could not create passwords directory")
 		}
 		w.passwordsDir = passwordsDir
-		w.canUnlockAccounts = true
 	}
 	return w, nil
 }
@@ -153,7 +151,6 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 			return nil, err
 		}
 		w.passwordsDir = passwordsDir
-		w.canUnlockAccounts = true
 	}
 	return w, nil
 }
@@ -176,12 +173,6 @@ func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 // AccountsDir for the wallet.
 func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
-}
-
-// CanUnlockAccounts determines whether a wallet has capabilities
-// of unlocking validator accounts using passphrases.
-func (w *Wallet) CanUnlockAccounts() bool {
-	return w.canUnlockAccounts
 }
 
 // AccountNames reads all account names at the wallet's path.
@@ -361,9 +352,6 @@ func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, 
 
 // ReadPasswordForAccount when given an account name from the wallet's passwords' path.
 func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
-	if !w.canUnlockAccounts {
-		return "", errors.New("wallet has no permission to read account passwords")
-	}
 	passwordFilePath := path.Join(w.passwordsDir, accountName+PasswordFileSuffix)
 	passwordFile, err := os.Open(passwordFilePath)
 	if err != nil {
