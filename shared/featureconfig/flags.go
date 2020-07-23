@@ -140,6 +140,10 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	medallaTestnet = &cli.BoolFlag{
+		Name:  "medalla",
+		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
+	}
 	enableAccountsV2 = &cli.BoolFlag{
 		Name:  "enable-accounts-v2",
 		Usage: "Enables usage of v2 for Prysm validator accounts",
@@ -566,6 +570,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	altonaTestnet,
+	medallaTestnet,
 	enableAccountsV2,
 }...)
 
@@ -608,6 +613,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	altonaTestnet,
+	medallaTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
