@@ -121,7 +121,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	}
-	if ctx.Bool(medallaTestnet.Name) {
+	if ctx.Bool(MedallaTestnet.Name) {
 		log.Warn("Running Node on Medalla Testnet")
 		params.UseMedallaConfig()
 		params.UseMedallaNetworkConfig()
@@ -270,7 +270,7 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	}
-	if ctx.Bool(medallaTestnet.Name) {
+	if ctx.Bool(MedallaTestnet.Name) {
 		log.Warn("Running Validator on Medalla Testnet")
 		params.UseMedallaConfig()
 		params.UseMedallaNetworkConfig()
