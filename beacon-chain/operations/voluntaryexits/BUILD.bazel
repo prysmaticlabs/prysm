@@ -8,7 +8,10 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",

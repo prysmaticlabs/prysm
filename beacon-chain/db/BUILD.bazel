@@ -23,6 +23,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
         "//tools:__subpackages__",
     ],
     deps = [

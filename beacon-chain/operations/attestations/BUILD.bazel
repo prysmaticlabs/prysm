@@ -12,7 +12,10 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/operations/attestations/kv:go_default_library",
         "//beacon-chain/state:go_default_library",
