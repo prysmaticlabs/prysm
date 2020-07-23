@@ -45,7 +45,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
 	defer func() {
-		if err := helpers.WriteHeapFile(e2e.TestParams.TestPath, 0); err != nil {
+		if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, 0); err != nil {
 			t.Error(err)
 		}
 	}()
@@ -97,7 +97,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := helpers.WriteHeapFile(e2e.TestParams.TestPath, 0); err != nil {
+	if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, 0); err != nil {
 		t.Error(err)
 	}
 
