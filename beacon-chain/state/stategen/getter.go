@@ -51,6 +51,9 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
+	// To invalidate cache for parent root because pre state will get mutated.
+	defer s.hotStateCache.Delete(blockRoot)
+
 	if s.hotStateCache.Has(blockRoot) {
 		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
 	}
@@ -86,9 +89,6 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 	}
-
-	// To invalidate cache for parent root because pre state will get mutated.
-	s.hotStateCache.Delete(blockRoot)
 
 	return startState, nil
 }
