@@ -151,7 +151,7 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 // WriteHeapFile writes a heap file to the test path.
 func WriteHeapFile(testDir string, index int) error {
 	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
-	filePath := filepath.Join(testDir, fmt.Sprintf(heapFileName, index))
+	filePath := filepath.Join(testDir, "eth2-beacon-node-0", fmt.Sprintf(heapFileName, index))
 	cmd := exec.Command("curl", url, fmt.Sprintf("-o %s", filePath))
 	var out bytes.Buffer
 	var stderr bytes.Buffer
