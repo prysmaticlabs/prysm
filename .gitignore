@@ -29,3 +29,7 @@ password.txt
 
 # Dist files
 dist
+
+# libfuzzer
+oom-*
+crash-*
