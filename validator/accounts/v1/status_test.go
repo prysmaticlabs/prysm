@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestFetchAccountStatuses_OK(t *testing.T) {
@@ -26,7 +27,5 @@ func TestFetchAccountStatuses_OK(t *testing.T) {
 		&ethpb.MultipleValidatorStatusRequest{PublicKeys: pubkeys},
 	).Return(&ethpb.MultipleValidatorStatusResponse{PublicKeys: pubkeys, Indices: indices}, nil /*err*/)
 	_, err := FetchAccountStatuses(ctx, mockClient, pubkeys)
-	if err != nil {
-		t.Fatalf("FetchAccountStatuses failed with error: %v.", err)
-	}
+	require.NoError(t, err, "FetchAccountStatuses failed with error")
 }
