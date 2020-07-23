@@ -34,6 +34,7 @@ func TestZipAndUnzip(t *testing.T) {
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanager, err := direct.NewKeymanager(
 		ctx,
@@ -86,6 +87,7 @@ func TestExport_Noninteractive(t *testing.T) {
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()
 	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)

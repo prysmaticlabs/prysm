@@ -36,8 +36,8 @@ func Test_validatePasswordInput(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "Non-unicode characters",
-			input:   "pr�spr�spr�pr�ss",
+			name:    "Unicode strings separated by a space character",
+			input:   "x*329293@aAJSD i22903saj",
 			wantErr: true,
 		},
 	}

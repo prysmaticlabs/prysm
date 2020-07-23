@@ -82,9 +82,6 @@ func NewWallet(
 		)
 	}
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
-	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
-		return nil, errors.Wrap(err, "could not create wallet directory")
-	}
 	w := &Wallet{
 		accountsPath:   accountsPath,
 		keymanagerKind: keymanagerKind,
@@ -144,6 +141,19 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		w.passwordsDir = passwordsDir
 	}
 	return w, nil
+}
+
+// SaveWallet persists the wallet's directories to disk.
+func (w *Wallet) SaveWallet() error {
+	if err := os.MkdirAll(w.accountsPath, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create wallet directory")
+	}
+	if w.keymanagerKind == v2keymanager.Direct {
+		if err := os.MkdirAll(w.passwordsDir, DirectoryPermissions); err != nil {
+			return errors.Wrap(err, "could not create passwords directory")
+		}
+	}
+	return nil
 }
 
 // KeymanagerKind used by the wallet.

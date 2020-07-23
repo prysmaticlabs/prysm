@@ -39,6 +39,9 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}

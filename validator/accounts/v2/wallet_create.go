@@ -55,6 +55,9 @@ func CreateWallet(cliCtx *cli.Context) error {
 }
 
 func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
 	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), direct.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -80,6 +83,9 @@ func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
@@ -98,6 +104,9 @@ func createRemoteKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	keymanagerConfig, err := remote.MarshalConfigFile(ctx, conf)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")

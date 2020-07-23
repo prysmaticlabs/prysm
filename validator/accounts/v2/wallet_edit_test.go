@@ -21,6 +21,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Remote)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 
 	originalCfg := &remote.Config{

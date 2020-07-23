@@ -48,6 +48,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanager, err := direct.NewKeymanager(
 		ctx,
@@ -148,6 +149,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 
 	seedConfig, err := derived.InitializeWalletSeedFile(ctx, password, true /* skip confirm */)
@@ -246,6 +248,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Remote)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 
 	rescueStdout := os.Stdout
 	r, w, err := os.Pipe()
