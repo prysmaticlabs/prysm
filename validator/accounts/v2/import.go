@@ -24,23 +24,22 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
-	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
-	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
-		return errors.Wrap(err, "could not create wallet directory")
-	}
 	passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
-		return errors.Wrap(err, "could not create passwords directory")
-	}
-
 	backupDir, err := inputDirectory(cliCtx, importDirPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
 
+	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
+	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create wallet directory")
+	}
+	if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create passwords directory")
+	}
 	accountsImported, err := unzipArchiveToTarget(backupDir, filepath.Dir(walletDir))
 	if err != nil {
 		return errors.Wrap(err, "could not unzip archive")
@@ -60,7 +59,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
 
 	for _, accountName := range accountsImported {
-		if err := wallet.EnterPasswordForAccount(cliCtx, accountName); err != nil {
+		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
 			return errors.Wrap(err, "could not set account password")
 		}
 	}

@@ -306,9 +306,9 @@ func (w *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName stri
 	return string(rawData), nil
 }
 
-// EnterPasswordForAccount checks if a user has a password specified for the new account
+// enterPasswordForAccount checks if a user has a password specified for the new account
 // either from a file or from stdin. Then, it saves the password to the wallet.
-func (w *Wallet) EnterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
+func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
 	au := aurora.NewAurora(true)
 	var password string
 	var err error
