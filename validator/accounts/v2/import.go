@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -21,20 +20,19 @@ import (
 // ImportAccount uses the archived account made from ExportAccount to import an account and
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
+	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
-		return errors.Wrap(err, "could not parse wallet directory")
+		return errors.Wrap(err, "could not open wallet")
 	}
 
 	backupDir, err := inputImportDir(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not parse output directory: %v", err)
+		return errors.Wrap(err, "could not parse output directory")
 	}
 
-	accountsImported, err := unzipArchiveToTarget(backupDir, walletDir)
+	accountsImported, err := unzipArchiveToTarget(backupDir, wallet.AccountsDir())
 	if err != nil {
-		log.WithError(err).Fatal("Could not unzip archive")
+		return errors.Wrap(err, "could not unzip archive")
 	}
 
 	au := aurora.NewAurora(true)
@@ -44,25 +42,13 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
 
-	// Read the directory for password storage from user input.
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-
-	wallet, err := OpenWallet(context.Background(), &WalletConfig{
-		CanUnlockAccounts: true,
-		PasswordsDir:      passwordsDirPath,
-		WalletDir:         walletDir,
-	})
-	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
-	}
-
 	for _, accountName := range accountsImported {
 		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-			log.WithError(err).Fatal("Could not set account password")
+			return errors.Wrap(err, "could not set account password")
 		}
 	}
 	if err := logAccountsImported(wallet, accountsImported); err != nil {
-		log.WithError(err).Fatal("Could not log accounts imported")
+		return errors.Wrap(err, "could not log accounts imported")
 	}
 
 	return nil

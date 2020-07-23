@@ -10,18 +10,16 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -41,19 +39,6 @@ const (
 	eipVersion          = "EIP-2335"
 )
 
-// Wallet defines a struct which has capabilities and knowledge of how
-// to read and write important accounts-related files to the filesystem.
-// Useful for keymanager to have persistent capabilities for accounts on-disk.
-type Wallet interface {
-	AccountsDir() string
-	CanUnlockAccounts() bool
-	AccountNames() ([]string, error)
-	ReadPasswordForAccount(accountName string) (string, error)
-	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
-	WriteAccountToDisk(ctx context.Context, password string) (string, error)
-	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
-}
-
 // Config for a direct keymanager.
 type Config struct {
 	EIPVersion string `json:"direct_eip_version"`
@@ -61,20 +46,10 @@ type Config struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet            Wallet
-	cfg               *Config
-	mnemonicGenerator SeedPhraseFactory
-	keysCache         map[[48]byte]bls.SecretKey
-	lock              sync.RWMutex
-}
-
-// Keystore json file representation as a Go struct.
-type Keystore struct {
-	Crypto  map[string]interface{} `json:"crypto"`
-	ID      string                 `json:"uuid"`
-	Pubkey  string                 `json:"pubkey"`
-	Version uint                   `json:"version"`
-	Name    string                 `json:"name"`
+	wallet    iface.Wallet
+	cfg       *Config
+	keysCache map[[48]byte]bls.SecretKey
+	lock      sync.RWMutex
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -85,23 +60,18 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config, skipMnemonicConfirm bool) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet: wallet,
-		cfg:    cfg,
-		mnemonicGenerator: &EnglishMnemonicGenerator{
-			skipMnemonicConfirm: skipMnemonicConfirm,
-		},
+		wallet:    wallet,
+		cfg:       cfg,
 		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via password unlock.
 	// This cache is needed to process Sign requests using a public key.
-	if wallet.CanUnlockAccounts() {
-		if err := k.initializeSecretKeysCache(); err != nil {
-			return nil, errors.Wrap(err, "could not initialize keys cache")
-		}
+	if err := k.initializeSecretKeysCache(); err != nil {
+		return nil, errors.Wrap(err, "could not initialize keys cache")
 	}
 	return k, nil
 }
@@ -133,7 +103,7 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 // CreateAccount for a direct keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It
 // stores the generated keystore.json file in the wallet and additionally
-// generates a mnemonic for withdrawal credentials. At the end, it logs
+// generates withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// Create a new, unique account name and write its password + directory to disk.
@@ -152,24 +122,27 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	// Generate a withdrawal key and confirm user
 	// acknowledgement of a 256-bit entropy mnemonic phrase.
 	withdrawalKey := bls.RandKey()
-	rawWithdrawalKey := withdrawalKey.Marshal()[:]
-	seedPhrase, err := dr.mnemonicGenerator.Generate(rawWithdrawalKey)
-	if err != nil {
-		return "", errors.Wrap(err, "could not generate mnemonic for withdrawal key")
-	}
-	if err := dr.mnemonicGenerator.ConfirmAcknowledgement(seedPhrase); err != nil {
-		return "", errors.Wrap(err, "could not confirm acknowledgement of mnemonic")
-	}
+	log.Info(
+		"Write down the private key, as it is your unique " +
+			"withdrawal private key for eth2",
+	)
+	fmt.Printf(`
+==========================Withdrawal Key===========================
+
+%#x
+
+===================================================================
+	`, withdrawalKey.Marshal())
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, depositData, err := generateDepositTransaction(validatingKey, withdrawalKey)
+	tx, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
 	// Log the deposit transaction data to the user.
-	logDepositTransaction(tx)
+	depositutil.LogDepositTransaction(log, tx)
 
 	// We write the raw deposit transaction as an .rlp encoded file.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, DepositTransactionFileName, tx.Data()); err != nil {
@@ -230,7 +203,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &Keystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -273,7 +246,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		if err != nil {
 			return errors.Wrapf(err, "could not read keystore file for account %s", name)
 		}
-		keystoreFile := &Keystore{}
+		keystoreFile := &v2keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
 		}
@@ -307,52 +280,12 @@ func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password
 	if err != nil {
 		return nil, err
 	}
-	keystoreFile := &Keystore{}
-	keystoreFile.Crypto = cryptoFields
-	keystoreFile.ID = id.String()
-	keystoreFile.Pubkey = fmt.Sprintf("%x", validatingKey.PublicKey().Marshal())
-	keystoreFile.Version = encryptor.Version()
-	keystoreFile.Name = encryptor.Name()
+	keystoreFile := &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 	return json.MarshalIndent(keystoreFile, "", "\t")
-}
-
-func generateDepositTransaction(
-	validatingKey bls.SecretKey,
-	withdrawalKey bls.SecretKey,
-) (*types.Transaction, *ethpb.Deposit_Data, error) {
-	depositData, depositRoot, err := depositutil.DepositInput(
-		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit input")
-	}
-	testAcc, err := contract.Setup()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not load deposit contract")
-	}
-	testAcc.TxOpts.GasLimit = 1000000
-
-	tx, err := testAcc.Contract.Deposit(
-		testAcc.TxOpts,
-		depositData.PublicKey,
-		depositData.WithdrawalCredentials,
-		depositData.Signature,
-		depositRoot,
-	)
-	return tx, depositData, nil
-}
-
-func logDepositTransaction(tx *types.Transaction) {
-	log.Info(
-		"Copy + paste the deposit data below when using the " +
-			"eth1 deposit contract")
-	fmt.Printf(`
-========================Deposit Data===============================
-
-%#x
-
-===================================================================`, tx.Data())
-	fmt.Printf(`
-***Enter the above deposit data into step 3 on https://prylabs.net/participate***
-`)
 }

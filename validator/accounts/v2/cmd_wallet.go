@@ -23,8 +23,14 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+				flags.PasswordFileFlag,
 			},
-			Action: CreateWallet,
+			Action: func(cliCtx *cli.Context) error {
+				if err := CreateWallet(cliCtx); err != nil {
+					log.Fatalf("Could not create a wallet: %v", err)
+				}
+				return nil
+			},
 		},
 		{
 			Name:  "edit-config",
@@ -36,7 +42,28 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
 			},
-			Action: EditWalletConfiguration,
+			Action: func(cliCtx *cli.Context) error {
+				if err := EditWalletConfiguration(cliCtx); err != nil {
+					log.Fatalf("Could not edit wallet configuration: %v", err)
+				}
+				return nil
+			},
+		},
+		{
+			Name:  "recover",
+			Usage: "uses a derived wallet seed recovery phase to recreate an existing HD wallet",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordsDirFlag,
+				flags.MnemonicFileFlag,
+				flags.PasswordFileFlag,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := RecoverWallet(cliCtx); err != nil {
+					log.Fatalf("Could not recover wallet: %v", err)
+				}
+				return nil
+			},
 		},
 	},
 }
