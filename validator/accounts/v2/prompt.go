@@ -114,7 +114,7 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		if err := validatePasswordInput(enteredPassword); err != nil {
 			return "", errors.Wrap(err, "password did not pass validation")
 		}
-		return enteredPassword, nil
+		return strings.TrimRight(enteredPassword, "\r\n"), nil
 	}
 
 	var hasValidPassword bool
@@ -147,10 +147,10 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 			}
 			hasValidPassword = true
 		} else {
-			return walletPassword, nil
+			return strings.TrimRight(walletPassword, "\r\n"), nil
 		}
 	}
-	return walletPassword, nil
+	return strings.TrimRight(walletPassword, "\r\n"), nil
 }
 
 // Validate a strong password input for new accounts,
