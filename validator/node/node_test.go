@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	"github.com/urfave/cli/v2"
 )
@@ -31,11 +32,7 @@ func TestNode_Builds(t *testing.T) {
 	set.String("verbosity", "debug", "log verbosity")
 	context := cli.NewContext(&app, set, nil)
 
-	if err := v1.NewValidatorAccount(dir, "1234"); err != nil {
-		t.Fatalf("Could not create validator account: %v", err)
-	}
+	require.NoError(t, v1.NewValidatorAccount(dir, "1234"), "Could not create validator account")
 	_, err := NewValidatorClient(context)
-	if err != nil {
-		t.Fatalf("Failed to create ValidatorClient: %v", err)
-	}
+	require.NoError(t, err, "Failed to create ValidatorClient")
 }
