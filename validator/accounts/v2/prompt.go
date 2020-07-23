@@ -307,7 +307,10 @@ func formatPromptError(err error) error {
 // letters, numbers, punctuation, or symbols.
 func isValidUnicode(input string) bool {
 	for _, char := range input {
-		if !(unicode.IsLetter(char) || unicode.IsNumber(char) || unicode.IsPunct(char) || unicode.IsSymbol(char)) {
+		if !(unicode.IsLetter(char) ||
+			unicode.IsNumber(char) ||
+			unicode.IsPunct(char) ||
+			unicode.IsSymbol(char)) {
 			log.Info(char)
 			return false
 		}

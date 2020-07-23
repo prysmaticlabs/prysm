@@ -57,12 +57,7 @@ func Test_isValidUnicode(t *testing.T) {
 		want  bool
 	}{
 		{
-			name:  "Non-unicode string",
-			input: "pr�spr�spr�pr�ss",
-			want:  false,
-		},
-		{
-			name:  "Unicode string",
+			name:  "Regular alphanumeric",
 			input: "Someone23xx",
 			want:  true,
 		},
@@ -74,12 +69,12 @@ func Test_isValidUnicode(t *testing.T) {
 		{
 			name:  "Japanese",
 			input: "僕は絵お見るのが好きです",
-			want:  false,
+			want:  true,
 		},
 		{
-			name:  "Non-unicode latin",
+			name:  "Other foreign",
 			input: "Etérium",
-			want:  false,
+			want:  true,
 		},
 	}
 	for _, tt := range tests {
