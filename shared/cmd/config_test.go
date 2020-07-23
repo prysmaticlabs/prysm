@@ -12,7 +12,7 @@ func TestInitFeatureConfig(t *testing.T) {
 	cfg := &Flags{
 		MinimalConfig: true,
 	}
-	Init(cfg)
+	OverrideConfig(cfg)
 	c := Get()
 	assert.Equal(t, true, c.MinimalConfig)
 }

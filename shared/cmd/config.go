@@ -16,29 +16,28 @@ type Flags struct {
 
 var sharedConfig *Flags
 
-func DefaultCMDConfig() *Flags {
-	return &Flags{
-		MaxRPCPageSize:     params.BeaconConfig().DefaultPageSize,
-		CustomGenesisDelay: params.BeaconConfig().GenesisDelay,
-	}
-}
-
 // Get retrieves feature config.
 func Get() *Flags {
+	if sharedConfig == nil {
+		return &Flags{
+			MaxRPCPageSize:     params.BeaconConfig().DefaultPageSize,
+			CustomGenesisDelay: params.BeaconConfig().GenesisDelay,
+		}
+	}
 	return sharedConfig
 }
 
-// Init sets the global config equal to the config that is passed in.
-func Init(c *Flags) {
+// OverrideConfig sets the global config equal to the config that is passed in.
+func OverrideConfig(c *Flags) {
 	sharedConfig = c
 }
 
 // InitWithReset sets the global config and returns function that is used to reset configuration.
 func InitWithReset(c *Flags) func() {
 	resetFunc := func() {
-		Init(&Flags{})
+		OverrideConfig(&Flags{})
 	}
-	Init(c)
+	OverrideConfig(c)
 	return resetFunc
 }
 
@@ -54,7 +53,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
 		log.Warnf("Starting beacon chain with max RPC page size of %d", cfg.MaxRPCPageSize)
 	}
-	Init(cfg)
+	OverrideConfig(cfg)
 }
 
 // ConfigureSlasher sets the global config based
@@ -65,18 +64,18 @@ func ConfigureSlasher(ctx *cli.Context) {
 		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
 		log.Warnf("Starting slasher with max RPC page size of %d", cfg.MaxRPCPageSize)
 	}
-	Init(cfg)
+	OverrideConfig(cfg)
 }
 
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
 	cfg := newConfig(ctx)
-	Init(cfg)
+	OverrideConfig(cfg)
 }
 
 func newConfig(ctx *cli.Context) *Flags {
-	cfg := DefaultCMDConfig()
+	cfg := Get()
 	if ctx.Bool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
