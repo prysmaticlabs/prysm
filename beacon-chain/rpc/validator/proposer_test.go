@@ -1119,7 +1119,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	require.NoError(t, err)
 
 	if !proto.Equal(result, defEth1Data) {
-		t.Errorf("Did not receive default eth1data. Wanted %v but Got %v", defEth1Data, result)
+		t.Errorf("Did not receive default eth1data. Wanted %v but got %v", defEth1Data, result)
 	}
 }
 
