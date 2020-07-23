@@ -64,5 +64,16 @@ func TestImport_Noninteractive(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
+
+	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
 	require.NoError(t, ImportAccount(cliCtx))
+
+	wallet, err = OpenWallet(cliCtx)
+	require.NoError(t, err)
+	km, err := wallet.InitializeKeymanager(ctx, true)
+	require.NoError(t, err)
+	keys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+
+	assert.Equal(t, len(keys), 1)
 }

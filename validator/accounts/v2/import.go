@@ -41,7 +41,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not parse output directory")
 	}
 
-	accountsImported, err := unzipArchiveToTarget(backupDir, walletDir)
+	accountsImported, err := unzipArchiveToTarget(backupDir, filepath.Dir(walletDir))
 	if err != nil {
 		return errors.Wrap(err, "could not unzip archive")
 	}
