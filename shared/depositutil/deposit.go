@@ -85,19 +85,19 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 
 // VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
 func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
-	ddCopy := *dd
 	if featureconfig.Get().SkipBLSVerify {
 		return nil
 	}
+	ddCopy := *dd
+	publicKey, err := bls.PublicKeyFromBytes(dd.PublicKey)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to public key")
+	}
+	sig, err := bls.SignatureFromBytes(dd.Signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
 	cfg := params.BeaconConfig()
-	blsPubkey, err := bls.PublicKeyFromBytes(ddCopy.PublicKey)
-	if err != nil {
-		return err
-	}
-	blsSig, err := bls.SignatureFromBytes(ddCopy.Signature)
-	if err != nil {
-		return err
-	}
 	domain, err := helpers.ComputeDomain(
 		cfg.DomainDeposit,
 		cfg.GenesisForkVersion,
@@ -106,19 +106,21 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data) error {
 	if err != nil {
 		return err
 	}
-
 	ddCopy.Signature = nil
 	root, err := ssz.SigningRoot(ddCopy)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get signing root")
 	}
-	sigRoot, err := ssz.HashTreeRoot(&p2ppb.SigningData{ObjectRoot: root[:], Domain: domain})
+	signingData := &p2ppb.SigningData{
+		ObjectRoot: root[:],
+		Domain:     domain,
+	}
+	ctrRoot, err := ssz.HashTreeRoot(signingData)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get container root")
 	}
-	if !blsSig.Verify(blsPubkey, sigRoot[:]) {
-		err = errors.New("invalid deposit signature")
-		return err
+	if !sig.Verify(publicKey, ctrRoot[:]) {
+		return helpers.ErrSigFailedToVerify
 	}
 	return nil
 }
