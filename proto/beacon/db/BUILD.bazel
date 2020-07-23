@@ -7,7 +7,6 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 proto_library(
     name = "db_proto",
     srcs = [
-        "attestation_container.proto",
         "finalized_block_root_container.proto",
         "powchain.proto",
     ],
@@ -34,23 +33,10 @@ go_proto_library(
 
 go_library(
     name = "go_default_library",
-    srcs = ["attestation_container_helper.go"],
     embed = [":db_go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/db",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_test",
-    size = "small",
-    srcs = ["attestation_container_helper_test.go"],
-    deps = [
-        ":go_default_library",
-        "//shared/bls:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )

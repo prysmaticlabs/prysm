@@ -32,7 +32,6 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		ctx,
 		wallet,
 		direct.DefaultConfig(),
-		true, /* skip confirm */
 	)
 	require.NoError(t, err)
 
@@ -42,10 +41,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		accountName, err := keymanager.CreateAccount(ctx, "hello world")
 		require.NoError(t, err)
-		depositData, err := wallet.ReadFileForAccount(accountName, direct.DepositTransactionFileName)
+		depositData, err := wallet.ReadFileAtPath(ctx, accountName, direct.DepositTransactionFileName)
 		require.NoError(t, err)
 		depositDataForAccounts[i] = depositData
-		unixTimestamp, err := wallet.ReadFileForAccount(accountName, direct.TimestampFileName)
+		unixTimestamp, err := wallet.ReadFileAtPath(ctx, accountName, direct.TimestampFileName)
 		require.NoError(t, err)
 		accountCreationTimestamps[i] = unixTimestamp
 	}
@@ -73,7 +72,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		t.Errorf("Did not find accounts path %s in output", wallet.accountsPath)
 	}
 
-	accountNames, err := wallet.AccountNames()
+	accountNames, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
@@ -123,7 +122,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	// Create a new wallet seed file and write it to disk.
 	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
 	require.NoError(t, err)
-	require.NoError(t, wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile))
+	require.NoError(t, wallet.WriteFileAtPath(ctx, "", derived.EncryptedSeedFileName, seedConfigFile))
 
 	keymanager, err := derived.NewKeymanager(
 		ctx,

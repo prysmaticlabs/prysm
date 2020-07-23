@@ -269,8 +269,9 @@ func ConfigureValidator(ctx *cli.Context) {
 		cfg.AltonaTestnet = true
 	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
-		log.Warn("Enabled validator slashing protection.")
 		cfg.LocalProtection = true
+	} else {
+		log.Warn("Validator slashing protection not enabled!")
 	}
 	if ctx.Bool(enableAccountsV2.Name) {
 		log.Warn("Enabling v2 of Prysm validator accounts")
