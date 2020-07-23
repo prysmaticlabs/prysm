@@ -352,7 +352,7 @@ func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, 
 
 // ReadPasswordForAccount when given an account name from the wallet's passwords' path.
 func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
-	passwordFilePath := filepathpath.Join(w.passwordsDir, accountName+PasswordFileSuffix)
+	passwordFilePath := filepath.Join(w.passwordsDir, accountName+PasswordFileSuffix)
 	passwordFile, err := os.Open(passwordFilePath)
 	if err != nil {
 		return "", errors.Wrapf(err, "could not read password file from directory: %s", w.passwordsDir)
