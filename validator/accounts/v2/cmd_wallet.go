@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -24,6 +25,7 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
 				flags.PasswordFileFlag,
+				featureconfig.AltonaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := CreateWallet(cliCtx); err != nil {
@@ -41,6 +43,7 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+				featureconfig.AltonaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := EditWalletConfiguration(cliCtx); err != nil {
@@ -57,6 +60,7 @@ var WalletCommands = &cli.Command{
 				flags.WalletPasswordsDirFlag,
 				flags.MnemonicFileFlag,
 				flags.PasswordFileFlag,
+				featureconfig.AltonaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := RecoverWallet(cliCtx); err != nil {

@@ -114,7 +114,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Node on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
@@ -257,7 +257,7 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Validator on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
