@@ -30,6 +30,11 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	s.rateLimiter.add(stream, 1)
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
+		// Descore peer for giving us a bad sequence number.
+		if err == errInvalidSequenceNum {
+			s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, seqError, stream)
+		}
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
 		}
@@ -111,7 +116,10 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
-		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
+		// Descore peer for giving us a bad sequence number.
+		if err == errInvalidSequenceNum {
+			s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
+		}
 		return err
 	}
 	if valid {
@@ -136,7 +144,11 @@ func (s *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
 	if md == nil {
 		return false, nil
 	}
-	if md.SeqNumber != seq {
+	// Return error on invalid sequence number.
+	if md.SeqNumber > seq {
+		return false, errInvalidSequenceNum
+	}
+	if md.SeqNumber < seq {
 		return false, nil
 	}
 	return true, nil
