@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -619,9 +618,6 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 
 // AppendValidator for the beacon state. Appends the new value
 // to the the end of list.
-// This only adds input validator's public key to validator ID mapping.
-// To reconstruct the whole validator public key to ID mapping, please
-// use `SetValidators`.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
@@ -640,11 +636,11 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	// it to the validator map
 	b.state.Validators = append(vals, val)
 	valIdx := uint64(len(b.state.Validators) - 1)
+	valMap := coreutils.ValidatorIndexMap(b.state.Validators)
 
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{valIdx})
-	b.valIdxMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
-
+	b.valIdxMap = valMap
 	return nil
 }
 
