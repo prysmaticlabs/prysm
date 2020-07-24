@@ -23,7 +23,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 		[]byte("FFFFFF"),
 		[]byte("GGGGGGG"),
 	}
-	m, err := GenerateTrieFromItems(items, 32)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
-	if len(proof) != 33 {
+	if len(proof) != int(params.BeaconConfig().DepositContractTreeDepth)+1 {
 		t.Errorf("Received len %d, wanted 33", len(proof))
 	}
 	someRoot := [32]byte{1, 2, 3, 4}
@@ -100,7 +100,7 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 }
 
 func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
-	if _, err := GenerateTrieFromItems(nil, 32); err == nil {
+	if _, err := GenerateTrieFromItems(nil, int(params.BeaconConfig().DepositContractTreeDepth)); err == nil {
 		t.Error("Expected error when providing nil items received nil")
 	}
 }
@@ -116,7 +116,7 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 		[]byte("G"),
 		[]byte("H"),
 	}
-	m, err := GenerateTrieFromItems(items, 32)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
-	if len(proof) != 33 {
+	if len(proof) != int(params.BeaconConfig().DepositContractTreeDepth)+1 {
 		t.Errorf("Received len %d, wanted 33", len(proof))
 	}
 	root := m.Root()
@@ -150,7 +150,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 		{3},
 		{4},
 	}
-	m, err := GenerateTrieFromItems(items, 33)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestRoundtripProto_OK(t *testing.T) {
 		{3},
 		{4},
 	}
-	m, err := GenerateTrieFromItems(items, 33)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestCopy_OK(t *testing.T) {
 		{3},
 		{4},
 	}
-	source, err := GenerateTrieFromItems(items, 33)
+	source, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
@@ -237,7 +237,7 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 		[]byte("GGGGGGG"),
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := GenerateTrieFromItems(items, 32); err != nil {
+		if _, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)); err != nil {
 			b.Fatalf("Could not generate Merkle trie from items: %v", err)
 		}
 	}
@@ -251,7 +251,7 @@ func BenchmarkInsertTrie_Optimized(b *testing.B) {
 		someRoot := bytesutil.ToBytes32([]byte(strconv.Itoa(i)))
 		items[i] = someRoot[:]
 	}
-	tr, err := GenerateTrieFromItems(items, 32)
+	tr, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		b.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
@@ -273,7 +273,7 @@ func BenchmarkGenerateProof(b *testing.B) {
 		[]byte("FFFFFF"),
 		[]byte("GGGGGGG"),
 	}
-	normalTrie, err := GenerateTrieFromItems(items, 32)
+	normalTrie, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 		[]byte("FFFFFF"),
 		[]byte("GGGGGGG"),
 	}
-	m, err := GenerateTrieFromItems(items, 32)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		b.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
