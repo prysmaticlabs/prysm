@@ -69,7 +69,7 @@ build:fuzz --copt=-fno-omit-frame-pointer
 build:fuzz --define=FUZZING_ENGINE=libfuzzer
 build:fuzz --copt=-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 build:fuzz --linkopt -Wl,--no-as-needed
-build:fuzz --define=gc_goopts=-d=libfuzzer
+build:fuzz --define=gc_goopts=-d=libfuzzer,checkptr
 build:fuzz --run_under=//tools:fuzz_wrapper
 build:fuzz --compilation_mode=opt
 

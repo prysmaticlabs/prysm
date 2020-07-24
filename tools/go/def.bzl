@@ -8,7 +8,7 @@ def go_library(name, **kwargs):
         go_goopts = kwargs["gc_goopts"]
 
     gc_goopts += select({
-        "@prysm//tools/go:libfuzz_enabled": ["-d=libfuzzer"],
+        "@prysm//tools/go:libfuzz_enabled": ["-d=libfuzzer,checkptr"],
         "//conditions:default": [],
     })
 

@@ -38,7 +38,7 @@ func main() {
 def _gen_fuzz_main_impl(ctx):
     if ctx.var.get("gotags") != "libfuzzer":
         fail("gotags must be set to libfuzzer. Use --config=fuzz or --config=fuzzit.")
-    if ctx.var.get("gc_goopts") != "-d=libfuzzer":
+    if "libfuzzer" not in ctx.var.get("gc_goopts"):
         fail("gc_goopts must be set to -d=libfuzzer. Use --config=fuzz or --config=fuzzit.")
 
     pkg = ctx.attr.target_pkg
