@@ -150,7 +150,7 @@ func ProcessAttestationNoVerify(
 	}
 	c := helpers.SlotCommitteeCount(activeValidatorCount)
 	if att.Data.CommitteeIndex > c {
-		return nil, fmt.Errorf("data index %d >= committee count %d", att.Data.CommitteeIndex, c)
+		return nil, fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
 	}
 
 	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {

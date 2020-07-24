@@ -553,7 +553,7 @@ func TestProcessAttestationsNoVerify_BadAttIdx(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 	_, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
-	require.ErrorContains(t, "data index 100 >= committee count 1", err)
+	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
