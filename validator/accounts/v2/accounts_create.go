@@ -16,9 +16,9 @@ import (
 
 var log = logrus.WithField("prefix", "accounts-v2")
 
-// NewAccount creates a new validator account from user input by opening
+// CreateAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
-func NewAccount(cliCtx *cli.Context) error {
+func CreateAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
