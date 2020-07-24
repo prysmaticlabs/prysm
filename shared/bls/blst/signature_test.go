@@ -57,13 +57,13 @@ func TestFastAggregateVerify(t *testing.T) {
 
 func TestMultipleSignatureVerification(t *testing.T) {
 	pubkeys := make([]iface.PublicKey, 0, 100)
-	sigs := make([]iface.Signature, 0, 100)
+	sigs := make([][]byte, 0, 100)
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
 		priv := blst.RandKey()
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:])
+		sig := priv.Sign(msg[:]).Marshal()
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
