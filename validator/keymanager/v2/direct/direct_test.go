@@ -12,46 +12,23 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-type mockMnemonicGenerator struct {
-	generatedMnemonics []string
-}
-
-func (m *mockMnemonicGenerator) Generate(data []byte) (string, error) {
-	newMnemonic, err := bip39.NewMnemonic(data)
-	if err != nil {
-		return "", err
-	}
-	m.generatedMnemonics = append(m.generatedMnemonics, newMnemonic)
-	return newMnemonic, nil
-}
-
-func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
-	return nil
-}
-
-func TestKeymanager_CreateAccount(t *testing.T) {
+func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}
-	mnemonicGenerator := &mockMnemonicGenerator{
-		generatedMnemonics: make([]string, 0),
-	}
 	dr := &Keymanager{
-		wallet:            wallet,
-		mnemonicGenerator: mnemonicGenerator,
+		wallet: wallet,
 	}
 	ctx := context.Background()
 	password := "secretPassw0rd$1999"
@@ -92,28 +69,10 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 		)
 	}
 
-	// We ensure the mnemonic phrase has successfully been generated.
-	require.Equal(t, 1, len(mnemonicGenerator.generatedMnemonics), "Expected to have generated new mnemonic for private key")
-	mnemonicPhrase := mnemonicGenerator.generatedMnemonics[0]
-	rawWithdrawalBytes, err := bip39.EntropyFromMnemonic(mnemonicPhrase)
-	require.NoError(t, err)
-	validatorWithdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalBytes)
-	require.NoError(t, err, "Could not instantiate bls secret key from bytes")
-
-	// We then verify the withdrawal hash created from the recovered withdrawal key
-	// given the mnemonic phrase does indeed verify with the deposit data that was persisted on disk.
-	withdrawalHash := depositutil.WithdrawalCredentialsHash(validatorWithdrawalKey)
-	if !bytes.Equal(withdrawalHash, depositData.WithdrawalCredentials) {
-		t.Errorf(
-			"Expected matching withdrawal credentials, got %#x, received %#x",
-			withdrawalHash,
-			depositData.WithdrawalCredentials,
-		)
-	}
 	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
 }
 
-func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -124,8 +83,9 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
-	numAccounts := 20
-	wantedPublicKeys := generateAccounts(t, numAccounts, dr)
+	numAccounts := 1
+	accountNames, wantedPublicKeys := generateAccounts(t, numAccounts, dr)
+	wallet.Directories = accountNames
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	// The results are not guaranteed to be ordered, so we ensure each
@@ -141,7 +101,7 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 }
 
-func TestKeymanager_Sign(t *testing.T) {
+func TestDirectKeymanager_Sign(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -153,9 +113,11 @@ func TestKeymanager_Sign(t *testing.T) {
 
 	// First, generate accounts and their keystore.json files.
 	numAccounts := 2
-	generateAccounts(t, numAccounts, dr)
+	accountNames, _ := generateAccounts(t, numAccounts, dr)
+	wallet.Directories = accountNames
+
 	ctx := context.Background()
-	require.NoError(t, dr.initializeSecretKeysCache())
+	require.NoError(t, dr.initializeSecretKeysCache(ctx))
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 
@@ -178,7 +140,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		t.Fatalf("Expected sig not to verify for pubkey %#x and data %v", wrongPubKey.Marshal(), data)
 	}
 }
-func TestKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
+func TestDirectKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: nil,
 	}
@@ -187,7 +149,7 @@ func TestKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	assert.ErrorContains(t, "nil public key", err)
 }
 
-func TestKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
+func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
@@ -219,8 +181,9 @@ func BenchmarkKeymanager_FetchValidatingPublicKeys(b *testing.B) {
 	}
 }
 
-func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte {
+func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) ([]string, [][48]byte) {
 	ctx := context.Background()
+	accountNames := make([]string, numAccounts)
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		validatingKey := bls.RandKey()
@@ -228,9 +191,11 @@ func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte 
 		password := strconv.Itoa(i)
 		encoded, err := dr.generateKeystoreFile(validatingKey, password)
 		require.NoError(t, err)
-		accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
+		accountName, err := dr.generateAccountName(validatingKey.PublicKey().Marshal())
 		require.NoError(t, err)
-		require.NoError(t, dr.wallet.WriteFileForAccount(ctx, accountName, KeystoreFileName, encoded))
+		assert.NoError(t, err, dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded))
+		assert.NoError(t, err, dr.wallet.WritePasswordToDisk(ctx, accountName+PasswordFileSuffix, password))
+		accountNames[i] = accountName
 	}
-	return wantedPublicKeys
+	return accountNames, wantedPublicKeys
 }

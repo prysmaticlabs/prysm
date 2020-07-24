@@ -159,9 +159,9 @@ var (
 		Name:  "accounts",
 		Usage: "List of account names to export, or \"all\" to backup all accounts",
 	}
-	// BackupPathFlag defines the path for the zip backup of the wallet will be created.
-	BackupPathFlag = &cli.StringFlag{
-		Name:  "backup-path",
+	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
+	BackupDirFlag = &cli.StringFlag{
+		Name:  "backup-dir",
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
 	}

@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -22,9 +21,9 @@ func TestImport_Noninteractive(t *testing.T) {
 	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
-	exportDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
-	importDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "import")
-	importPasswordDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "importpassword")
+	exportDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
+	importDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "import")
+	importPasswordDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "importpassword")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(exportDir), "Failed to remove directory")
 		require.NoError(t, os.RemoveAll(importDir), "Failed to remove directory")
@@ -41,21 +40,24 @@ func TestImport_Noninteractive(t *testing.T) {
 		keymanagerKind: v2keymanager.Direct,
 		passwordFile:   passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
-
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
+	keymanagerCfg := direct.DefaultConfig()
+	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
+	require.NoError(t, err)
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
 		ctx,
 		wallet,
-		direct.DefaultConfig(),
-		true, /* skip mnemonic */
+		keymanagerCfg,
 	)
 	require.NoError(t, err)
 	_, err = keymanager.CreateAccount(ctx, password)
 	require.NoError(t, err)
 
-	accounts, err := wallet.AccountNames()
+	accounts, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
 	assert.Equal(t, len(accounts), 1)
 

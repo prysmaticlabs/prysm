@@ -7,12 +7,12 @@ import (
 	"io"
 	"io/ioutil"
 	"sync"
-
-	petname "github.com/dustinkirkland/golang-petname"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.
 type Wallet struct {
+	InnerAccountsDir  string
+	Directories       []string
 	Files             map[string]map[string][]byte
 	EncryptedSeedFile []byte
 	AccountPasswords  map[string]string
@@ -33,61 +33,32 @@ func (m *Wallet) AccountNames() ([]string, error) {
 
 // AccountsDir --
 func (m *Wallet) AccountsDir() string {
-	return ""
+	return m.InnerAccountsDir
 }
 
-// CanUnlockAccounts --
-func (m *Wallet) CanUnlockAccounts() bool {
-	return m.UnlockAccounts
+// ListDirs --
+func (m *Wallet) ListDirs() ([]string, error) {
+	return m.Directories, nil
 }
 
-// WriteAccountToDisk --
-func (m *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
+// WritePasswordToDisk --
+func (m *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	accountName := petname.Generate(3, "-")
-	m.AccountPasswords[accountName] = password
-	return accountName, nil
-}
-
-// WriteFileForAccount --
-func (m *Wallet) WriteFileForAccount(
-	ctx context.Context,
-	accountName string,
-	fileName string,
-	data []byte,
-) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	if m.Files[accountName] == nil {
-		m.Files[accountName] = make(map[string][]byte)
-	}
-	m.Files[accountName][fileName] = data
+	m.AccountPasswords[passwordFileName] = password
 	return nil
 }
 
-// ReadPasswordForAccount --
-func (m *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
+// ReadPasswordFromDisk --
+func (m *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName string) (string, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for name, password := range m.AccountPasswords {
-		if name == accountName {
+		if name == passwordFileName {
 			return password, nil
 		}
 	}
 	return "", errors.New("account not found")
-}
-
-// ReadFileForAccount --
-func (m *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	for f, v := range m.Files[accountName] {
-		if f == fileName {
-			return v, nil
-		}
-	}
-	return nil, errors.New("file not found")
 }
 
 // WriteFileAtPath --

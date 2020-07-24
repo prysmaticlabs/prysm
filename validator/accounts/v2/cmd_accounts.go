@@ -1,6 +1,9 @@
 package v2
 
 import (
+	"log"
+
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -22,10 +25,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordsDirFlag,
 				flags.PasswordFileFlag,
 				flags.SkipMnemonicConfirmFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := CreateAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not create new account")
+					log.Fatalf("Could not create new account: %v", err)
 				}
 				return nil
 			},
@@ -36,11 +41,14 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
+				flags.PasswordFileFlag,
 				flags.ShowDepositDataFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ListAccounts(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not list accounts")
+					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
 			},
@@ -51,12 +59,14 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
+				flags.BackupDirFlag,
 				flags.AccountsFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ExportAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not export accounts")
+					log.Fatalf("Could not export accounts: %v", err)
 				}
 				return nil
 			},
@@ -67,12 +77,14 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
+				flags.BackupDirFlag,
 				flags.PasswordFileFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ImportAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not import accounts")
+					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil
 			},
