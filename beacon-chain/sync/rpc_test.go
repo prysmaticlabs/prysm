@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
