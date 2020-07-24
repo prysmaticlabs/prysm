@@ -2,37 +2,53 @@ package v2
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-
-	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
 
 // ImportAccount uses the archived account made from ExportAccount to import an account and
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
-	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil && !errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
-
-	backupDir, err := inputImportDir(cliCtx)
+	passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
+	if err != nil {
+		return err
+	}
+	backupDir, err := inputDirectory(cliCtx, importDirPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
 
-	accountsImported, err := unzipArchiveToTarget(backupDir, wallet.AccountsDir())
+	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
+	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create wallet directory")
+	}
+	if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create passwords directory")
+	}
+	accountsImported, err := unzipArchiveToTarget(backupDir, filepath.Dir(walletDir))
 	if err != nil {
 		return errors.Wrap(err, "could not unzip archive")
+	}
+
+	wallet := &Wallet{
+		accountsPath:   accountsPath,
+		passwordsDir:   passwordsDir,
+		keymanagerKind: v2keymanager.Direct,
 	}
 
 	au := aurora.NewAurora(true)
@@ -47,31 +63,19 @@ func ImportAccount(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not set account password")
 		}
 	}
-	if err := logAccountsImported(wallet, accountsImported); err != nil {
+	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	km, ok := keymanager.(*direct.Keymanager)
+	if !ok {
+		return errors.New("can only export accounts for a non-HD wallet")
+	}
+	if err := logAccountsImported(wallet, km, accountsImported); err != nil {
 		return errors.Wrap(err, "could not log accounts imported")
 	}
 
 	return nil
-}
-
-func inputImportDir(cliCtx *cli.Context) (string, error) {
-	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
-	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
-		return outputDir, nil
-	}
-	if outputDir == flags.DefaultValidatorDir() {
-		outputDir = path.Join(outputDir)
-	}
-	prompt := promptui.Prompt{
-		Label:    "Enter the file location of the exported wallet zip to import",
-		Validate: validateDirectoryPath,
-		Default:  outputDir,
-	}
-	outputPath, err := prompt.Run()
-	if err != nil {
-		return "", fmt.Errorf("could not determine import directory: %v", formatPromptError(err))
-	}
-	return outputPath, nil
 }
 
 func unzipArchiveToTarget(archiveDir string, target string) ([]string, error) {
@@ -136,7 +140,7 @@ func copyFileFromZipToPath(file *zip.File, path string) error {
 	return nil
 }
 
-func logAccountsImported(wallet *Wallet, accountNames []string) error {
+func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -150,7 +154,7 @@ func logAccountsImported(wallet *Wallet, accountNames []string) error {
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
 
-		publicKey, err := wallet.publicKeyForAccount(accountName)
+		publicKey, err := keymanager.PublicKeyForAccount(accountName)
 		if err != nil {
 			return errors.Wrap(err, "could not get public key")
 		}

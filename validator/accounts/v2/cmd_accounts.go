@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -13,7 +14,7 @@ var AccountCommands = &cli.Command{
 	Subcommands: []*cli.Command{
 		// AccountCommands for accounts-v2 for Prysm validators.
 		{
-			Name: "new",
+			Name: "create",
 			Description: `creates a new validator account for eth2. If no account exists at the wallet path, creates a new wallet for a user based on
 specified input, capable of creating a direct, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
@@ -22,10 +23,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordsDirFlag,
 				flags.PasswordFileFlag,
 				flags.SkipMnemonicConfirmFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := NewAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not create new account")
+				if err := CreateAccount(cliCtx); err != nil {
+					log.Fatalf("Could not create new account: %v", err)
 				}
 				return nil
 			},
@@ -36,11 +39,14 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
+				flags.PasswordFileFlag,
 				flags.ShowDepositDataFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ListAccounts(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not list accounts")
+					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
 			},
@@ -51,12 +57,14 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
+				flags.BackupDirFlag,
 				flags.AccountsFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ExportAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not export accounts")
+					log.Fatalf("Could not export accounts: %v", err)
 				}
 				return nil
 			},
@@ -67,12 +75,14 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
+				flags.BackupDirFlag,
 				flags.PasswordFileFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ImportAccount(cliCtx); err != nil {
-					log.WithError(err).Fatal("Could not import accounts")
+					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil
 			},

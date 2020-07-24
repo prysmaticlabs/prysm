@@ -9,6 +9,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/urfave/cli/v2"
 )
@@ -21,7 +22,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get mnemonic phrase")
 	}
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
 	if err != nil {
 		return errors.Wrap(err, "could not create new wallet")
 	}
@@ -38,6 +39,9 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
@@ -46,7 +50,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	}
 	log.WithField("wallet-path", wallet.AccountsDir()).Infof(
 		"Successfully recovered HD wallet and saved configuration to disk. " +
-			"Make a new validator account with ./prysm.sh validator accounts-2 new",
+			"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 	)
 	return nil
 }

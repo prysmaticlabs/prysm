@@ -52,6 +52,8 @@ const (
 	DepositTransactionFileName = "deposit_transaction.rlp"
 	// DepositDataFileName for the raw, ssz-encoded deposit data object.
 	DepositDataFileName = "deposit_data.ssz"
+	// EncryptedSeedFileName for persisting a wallet's seed when using a derived keymanager.
+	EncryptedSeedFileName = "seed.encrypted.json"
 )
 
 // Config for a derived keymanager.
@@ -99,7 +101,7 @@ func NewKeymanager(
 ) (*Keymanager, error) {
 	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read encrypted seed configuration file from disk")
+		return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
 	}
 	enc, err := ioutil.ReadAll(seedConfigFile)
 	if err != nil {
@@ -205,7 +207,7 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 // SeedFileFromMnemonic uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
 func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string) (*SeedConfig, error) {
-	walletSeed, err := bip39.MnemonicToByteArray(mnemonic)
+	walletSeed, err := bip39.EntropyFromMnemonic(mnemonic)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert mnemonic to wallet seed")
 	}
