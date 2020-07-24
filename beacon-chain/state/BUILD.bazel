@@ -22,6 +22,7 @@ go_library(
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/pcli:__pkg__",
         "//shared/aggregation:__subpackages__",
+        "//proto/testing:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",
