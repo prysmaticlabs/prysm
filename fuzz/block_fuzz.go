@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"os"
+	"path"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -35,7 +38,8 @@ func init() {
 	ssc = cache.NewStateSummaryCache()
 
 	var err error
-	db1, err = db.NewDB("/tmp/beacondb", ssc)
+
+	db1, err = db.NewDB(path.Join(os.TempDir(), "fuzz_beacondb"), ssc)
 	if err != nil {
 		panic(err)
 	}
@@ -66,7 +70,9 @@ func BeaconFuzzBlock(b []byte) {
 		return
 	}
 
-	_ = st
+	if err := db1.ClearDB(); err != nil {
+		_ = err
+	}
 
 	p2p := p2pt.NewFuzzTestP2P()
 
@@ -117,6 +123,10 @@ func BeaconFuzzBlock(b []byte) {
 	}
 
 	if err := s.FuzzBeaconBlockSubscriber(ctx, msg); err != nil {
+		_ = err
+	}
+
+	if _, err := state.ProcessBlock(ctx, st, input.Block); err != nil {
 		_ = err
 	}
 }
