@@ -79,11 +79,8 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
-	keyManagerV1, err := selectV1Keymanager(cliCtx)
-	if err != nil {
-		return nil, err
-	}
 
+	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager
 	if featureconfig.Get().EnableAccountsV2 {
 		walletDir := cliCtx.String(flags.WalletDirFlag.Name)
@@ -104,6 +101,11 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		)
 		if err != nil {
 			log.Fatalf("Could not read existing keymanager for wallet: %v", err)
+		}
+	} else {
+		keyManagerV1, err = selectV1Keymanager(cliCtx)
+		if err != nil {
+			return nil, err
 		}
 	}
 
