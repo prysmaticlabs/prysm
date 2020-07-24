@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "score_bad_responses.go",
+        "score_block_providers.go",
         "scorer.go",
         "status.go",
         "store.go",
