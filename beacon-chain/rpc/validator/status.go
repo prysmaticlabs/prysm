@@ -166,8 +166,8 @@ func (vs *Server) validatorStatus(
 		}
 		domain, err := helpers.ComputeDomain(
 			params.BeaconConfig().DomainDeposit,
-			params.BeaconConfig().GenesisForkVersion,
-			params.BeaconConfig().ZeroHash[:],
+			nil,
+			nil,
 		)
 		if err != nil {
 			return resp, nonExistentIndex
