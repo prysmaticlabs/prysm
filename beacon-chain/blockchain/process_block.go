@@ -210,7 +210,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	sigSet := &bls.SignatureSet{
-		Signatures: []bls.Signature{},
+		Signatures: [][]byte{},
 		PublicKeys: []bls.PublicKey{},
 		Messages:   [][32]byte{},
 	}
@@ -232,7 +232,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
 		sigSet.Join(set)
 	}
-	verify, err := bls.VerifyMultipleSignatures(sigSet.Signatures, sigSet.Messages, sigSet.PublicKeys)
+	verify, err := sigSet.Verify()
 	if err != nil {
 		return nil, nil, err
 	}

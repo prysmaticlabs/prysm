@@ -159,24 +159,24 @@ func Aggregate(sigs []iface.Signature) iface.Signature {
 // P'_{i,j} = P_{i,j} * r_i
 // e(S*, G) = \prod_{i=1}^n \prod_{j=1}^{m_i} e(P'_{i,j}, M_{i,j})
 // Using this we can verify multiple signatures safely.
-func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
+func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return true, nil
 	}
 	if len(sigs) == 0 || len(pubKeys) == 0 {
 		return false, nil
 	}
+	rawSigs := new(blst.P2Affine).BatchUncompress(sigs)
+
 	length := len(sigs)
 	if length != len(pubKeys) || length != len(msgs) {
 		return false, errors.Errorf("provided signatures, pubkeys and messages have differing lengths. S: %d, P: %d,M %d",
 			length, len(pubKeys), len(msgs))
 	}
-	mulP2Aff := make([]*blst.P2Affine, length)
 	mulP1Aff := make([]*blst.P1Affine, length)
 	rawMsgs := make([]blst.Message, length)
 
 	for i := 0; i < length; i++ {
-		mulP2Aff[i] = sigs[i].(*Signature).s
 		mulP1Aff[i] = pubKeys[i].(*PublicKey).p
 		rawMsgs[i] = msgs[i][:]
 	}
@@ -189,7 +189,7 @@ func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys [
 		scalar.FromBEndian(rbytes[:])
 	}
 	dummySig := new(blst.P2Affine)
-	return dummySig.MultipleAggregateVerify(mulP2Aff, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
+	return dummySig.MultipleAggregateVerify(rawSigs, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
 }
 
 // Marshal a signature into a LittleEndian byte slice.

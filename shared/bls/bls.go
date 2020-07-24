@@ -51,11 +51,21 @@ func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 }
 
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
-func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
+func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
 	if featureconfig.Get().EnableBlst {
 		return blst.VerifyMultipleSignatures(sigs, msgs, pubKeys)
 	}
-	return herumi.VerifyMultipleSignatures(sigs, msgs, pubKeys)
+	// Manually decompress each signature as herumi does not
+	// have a batch decompress method.
+	rawSigs := make([]Signature, len(sigs))
+	var err error
+	for i, s := range sigs {
+		rawSigs[i], err = herumi.SignatureFromBytes(s)
+		if err != nil {
+			return false, err
+		}
+	}
+	return herumi.VerifyMultipleSignatures(rawSigs, msgs, pubKeys)
 }
 
 // NewAggregateSignature creates a blank aggregate signature.

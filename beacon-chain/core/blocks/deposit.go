@@ -243,7 +243,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		return nil
 	}
 	pks := make([]bls.PublicKey, len(deps))
-	sigs := make([]bls.Signature, len(deps))
+	sigs := make([][]byte, len(deps))
 	msgs := make([][32]byte, len(deps))
 	for i, dep := range deps {
 		if ctx.Err() != nil {
@@ -252,17 +252,12 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		if dep == nil || dep.Data == nil {
 			return errors.New("nil deposit")
 		}
-
 		dpk, err := bls.PublicKeyFromBytes(dep.Data.PublicKey)
 		if err != nil {
 			return err
 		}
 		pks[i] = dpk
-		dsig, err := bls.SignatureFromBytes(dep.Data.Signature)
-		if err != nil {
-			return err
-		}
-		sigs[i] = dsig
+		sigs[i] = dep.Data.Signature
 		root, err := ssz.SigningRoot(dep.Data)
 		if err != nil {
 			return errors.Wrap(err, "could not get signing root")

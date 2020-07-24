@@ -308,7 +308,7 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 	if err != nil {
 		return err
 	}
-	verify, err := bls.VerifyMultipleSignatures(set.Signatures, set.Messages, set.PublicKeys)
+	verify, err := set.Verify()
 	if err != nil {
 		return errors.Errorf("got error in multiple verification: %v", err)
 	}

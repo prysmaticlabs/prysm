@@ -4,7 +4,7 @@ package bls
 // signatures and its respective public keys and
 // messages required to verify it.
 type SignatureSet struct {
-	Signatures []Signature
+	Signatures [][]byte
 	PublicKeys []PublicKey
 	Messages   [][32]byte
 }
@@ -12,7 +12,7 @@ type SignatureSet struct {
 // NewSet constructs an empty signature set object.
 func NewSet() *SignatureSet {
 	return &SignatureSet{
-		Signatures: []Signature{},
+		Signatures: [][]byte{},
 		PublicKeys: []PublicKey{},
 		Messages:   [][32]byte{},
 	}

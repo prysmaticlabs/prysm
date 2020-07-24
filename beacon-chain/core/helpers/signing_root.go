@@ -92,7 +92,11 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte
 	publicKey := set.PublicKeys[0]
 	root := set.Messages[0]
 
-	if !sig.Verify(publicKey, root[:]) {
+	rSig, err := bls.SignatureFromBytes(sig)
+	if err != nil {
+		return err
+	}
+	if !rSig.Verify(publicKey, root[:]) {
 		return ErrSigFailedToVerify
 	}
 	return nil
@@ -105,10 +109,6 @@ func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []b
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	sig, err := bls.SignatureFromBytes(signature)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert bytes to signature")
-	}
 	root, err := signingData(func() ([32]byte, error) {
 		// utilize custom block hashing function
 		return stateutil.BlockRoot(blk)
@@ -117,7 +117,7 @@ func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []b
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
 	return &bls.SignatureSet{
-		Signatures: []bls.Signature{sig},
+		Signatures: [][]byte{signature},
 		PublicKeys: []bls.PublicKey{publicKey},
 		Messages:   [][32]byte{root},
 	}, nil

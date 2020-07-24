@@ -21,10 +21,6 @@ func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domai
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	sig, err := bls.SignatureFromBytes(signature)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert bytes to signature")
-	}
 	signingData := &pb.SigningData{
 		ObjectRoot: signedData,
 		Domain:     domain,
@@ -34,7 +30,7 @@ func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domai
 		return nil, errors.Wrap(err, "could not hash container")
 	}
 	return &bls.SignatureSet{
-		Signatures: []bls.Signature{sig},
+		Signatures: [][]byte{signature},
 		PublicKeys: []bls.PublicKey{publicKey},
 		Messages:   [][32]byte{root},
 	}, nil
@@ -127,15 +123,11 @@ func createAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.B
 		return nil, nil
 	}
 
-	sigs := make([]bls.Signature, len(atts))
+	sigs := make([][]byte, len(atts))
 	pks := make([]bls.PublicKey, len(atts))
 	msgs := make([][32]byte, len(atts))
 	for i, a := range atts {
-		sig, err := bls.SignatureFromBytes(a.Signature)
-		if err != nil {
-			return nil, err
-		}
-		sigs[i] = sig
+		sigs[i] = a.Signature
 		c, err := helpers.BeaconCommitteeFromState(beaconState, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
