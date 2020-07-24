@@ -112,6 +112,6 @@ func ConfigFilePath(t *testing.T, config string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	configFilePath := path.Join(filepath, "config.yaml")
+	configFilePath := path.Join(filepath, "config", "phase0.yaml")
 	return configFilePath
 }
