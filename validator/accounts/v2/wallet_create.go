@@ -16,7 +16,11 @@ import (
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
 func CreateWallet(cliCtx *cli.Context) error {
-	w, err := NewWallet(cliCtx)
+	keymanagerKind, err := inputKeymanagerKind(cliCtx)
+	if err != nil {
+		return err
+	}
+	w, err := NewWallet(cliCtx, keymanagerKind)
 	if err != nil {
 		return errors.Wrap(err, "could not check if wallet directory exists")
 	}
@@ -51,6 +55,9 @@ func CreateWallet(cliCtx *cli.Context) error {
 }
 
 func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
 	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), direct.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -64,11 +71,7 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	ctx := context.Background()
-	walletPassword, err := inputPassword(cliCtx, newWalletPasswordPromptText, confirmPass)
-	if err != nil {
-		return err
-	}
-	seedConfig, err := derived.InitializeWalletSeedFile(ctx, walletPassword, skipMnemonicConfirm)
+	seedConfig, err := derived.InitializeWalletSeedFile(ctx, wallet.walletPassword, skipMnemonicConfirm)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
 	}
@@ -79,6 +82,9 @@ func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
@@ -98,6 +104,9 @@ func createRemoteKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	keymanagerConfig, err := remote.MarshalConfigFile(ctx, conf)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
