@@ -4,6 +4,27 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
+// ScoreBadResponses returns score (penalty) of bad responses peer produced.
+func (s *PeerScorer) ScoreBadResponses(pid peer.ID) float64 {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return s.scoreBadResponses(pid)
+}
+
+// scoreBadResponses is a lock-free version of ScoreBadResponses.
+func (s *PeerScorer) scoreBadResponses(pid peer.ID) float64 {
+	score := float64(0)
+	peerData, ok := s.store.peers[pid]
+	if !ok {
+		return score
+	}
+	if peerData.badResponses > 0 {
+		score = float64(peerData.badResponses) / float64(s.config.BadResponsesThreshold)
+		score = score * s.config.BadResponsesWeight
+	}
+	return score
+}
+
 // BadResponsesThreshold returns the maximum number of bad responses a peer can provide before it is considered bad.
 func (s *PeerScorer) BadResponsesThreshold() int {
 	return s.config.BadResponsesThreshold

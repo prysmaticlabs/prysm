@@ -2,6 +2,7 @@ package peers
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -15,6 +16,14 @@ const (
 	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
 	// Every interval bad responses counter will be decremented by 1.
 	DefaultBadResponsesDecayInterval = time.Hour
+	// DefaultBlockProviderReturnedBlocksWeight default weight of a returned/requested ratio in an overall score.
+	DefaultBlockProviderReturnedBlocksWeight = 0.2
+	// DefaultBlockProviderProcessedBlocksWeight default weight of a processed/requested ratio in an overall score.
+	DefaultBlockProviderProcessedBlocksWeight = 0.2
+	// DefaultBlockProviderDecayInterval defines how often block provider's stats should be decayed.
+	DefaultBlockProviderDecayInterval = 5 * time.Minute
+	// DefaultBlockProviderDecay specifies a decay factor (as a left-over percentage of the original value).
+	DefaultBlockProviderDecay = 0.95
 )
 
 // PeerScorer keeps track of peer counters that are used to calculate peer score.
@@ -27,9 +36,20 @@ type PeerScorer struct {
 // PeerScorerConfig holds configuration parameters for scoring service.
 type PeerScorerConfig struct {
 	// BadResponsesThreshold specifies number of bad responses tolerated, before peer is banned.
-	BadResponsesThreshold     int
-	BadResponsesWeight        float64
+	BadResponsesThreshold int
+	// BadResponsesWeight defines weight of bad response/threshold ratio on overall score.
+	BadResponsesWeight float64
+	// BadResponsesDecayInterval specifies how often bad response stats should be decayed.
 	BadResponsesDecayInterval time.Duration
+
+	// BlockProviderReturnedBlocksWeight defines weight of a returned/requested ratio in overall an score.
+	BlockProviderReturnedBlocksWeight float64
+	// BlockProviderProcessedBlocksWeight defines weight of a processed/requested ratio in overall an score.
+	BlockProviderProcessedBlocksWeight float64
+	// BlockProviderDecayInterval defines how often requested/returned/processed stats should be decayed.
+	BlockProviderDecayInterval time.Duration
+	// BlockProviderDecay specifies the factor (must be < 1.0) by which block provider's stats is decayed.
+	BlockProviderDecay float64
 }
 
 // newPeerScorer provides fully initialized peer scoring service.
@@ -39,6 +59,8 @@ func newPeerScorer(ctx context.Context, store *peerDataStore, config *PeerScorer
 		config: config,
 		store:  store,
 	}
+
+	// Bad responses stats parameters.
 	if scorer.config.BadResponsesThreshold == 0 {
 		scorer.config.BadResponsesThreshold = DefaultBadResponsesThreshold
 	}
@@ -47,6 +69,20 @@ func newPeerScorer(ctx context.Context, store *peerDataStore, config *PeerScorer
 	}
 	if scorer.config.BadResponsesDecayInterval == 0 {
 		scorer.config.BadResponsesDecayInterval = DefaultBadResponsesDecayInterval
+	}
+
+	// Peer providers stats parameters.
+	if scorer.config.BlockProviderReturnedBlocksWeight == 0.0 {
+		scorer.config.BlockProviderReturnedBlocksWeight = DefaultBlockProviderReturnedBlocksWeight
+	}
+	if scorer.config.BlockProviderProcessedBlocksWeight == 0.0 {
+		scorer.config.BlockProviderProcessedBlocksWeight = DefaultBlockProviderProcessedBlocksWeight
+	}
+	if scorer.config.BlockProviderDecayInterval == 0 {
+		scorer.config.BlockProviderDecayInterval = DefaultBlockProviderDecayInterval
+	}
+	if scorer.config.BlockProviderDecay == 0.0 {
+		scorer.config.BlockProviderDecay = DefaultBlockProviderDecay
 	}
 
 	go scorer.loop(scorer.ctx)
@@ -59,16 +95,17 @@ func (s *PeerScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
 
-	var score float64
+	score := float64(0)
 	if _, ok := s.store.peers[pid]; !ok {
 		return 0
 	}
-
-	badResponsesScore := float64(s.store.peers[pid].badResponses) / float64(s.config.BadResponsesThreshold)
-	badResponsesScore = badResponsesScore * s.config.BadResponsesWeight
-	score += badResponsesScore
-
-	return score
+	if badResponsesScore := s.scoreBadResponses(pid); badResponsesScore != 0.0 {
+		score += badResponsesScore
+	}
+	if blockProviderScore := s.scoreBlockProvider(pid); blockProviderScore != 0.0 {
+		score += blockProviderScore
+	}
+	return math.Round(score*10000) / 10000
 }
 
 // Params exposes peer scorer parameters.
@@ -78,13 +115,17 @@ func (s *PeerScorer) Params() *PeerScorerConfig {
 
 // loop handles background tasks.
 func (s *PeerScorer) loop(ctx context.Context) {
-	decayBadResponsesScores := time.NewTicker(s.config.BadResponsesDecayInterval)
-	defer decayBadResponsesScores.Stop()
+	decayBadResponsesStats := time.NewTicker(s.config.BadResponsesDecayInterval)
+	defer decayBadResponsesStats.Stop()
+	decayBlockProvidersStats := time.NewTicker(s.config.BlockProviderDecayInterval)
+	defer decayBlockProvidersStats.Stop()
 
 	for {
 		select {
-		case <-decayBadResponsesScores.C:
+		case <-decayBadResponsesStats.C:
 			s.DecayBadResponsesStats()
+		case <-decayBlockProvidersStats.C:
+			s.DecayBlockProvidersStats()
 		case <-ctx.Done():
 			return
 		}
