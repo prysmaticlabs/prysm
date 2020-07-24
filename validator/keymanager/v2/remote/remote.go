@@ -164,9 +164,9 @@ func (c *Config) String() string {
 	return b.String()
 }
 
-// CreateAccount based on the keymanager's logic. Returns the account name.
-func (k *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
-	return "", errors.New("a remote validator account cannot be created from the client")
+// Config for the remote keymanager.
+func (k *Keymanager) Config() *Config {
+	return k.cfg
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
