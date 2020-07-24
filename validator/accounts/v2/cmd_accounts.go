@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -22,6 +23,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordsDirFlag,
 				flags.PasswordFileFlag,
 				flags.SkipMnemonicConfirmFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := NewAccount(cliCtx); err != nil {
@@ -38,6 +41,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordsDirFlag,
 				flags.PasswordFileFlag,
 				flags.ShowDepositDataFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ListAccounts(cliCtx); err != nil {
@@ -54,6 +59,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordsDirFlag,
 				flags.BackupDirFlag,
 				flags.AccountsFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ExportAccount(cliCtx); err != nil {
@@ -70,6 +77,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordsDirFlag,
 				flags.BackupDirFlag,
 				flags.PasswordFileFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ImportAccount(cliCtx); err != nil {

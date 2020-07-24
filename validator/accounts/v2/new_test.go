@@ -35,11 +35,52 @@ func Test_validatePasswordInput(t *testing.T) {
 			input:   "aaaaaaa1$",
 			wantErr: true,
 		},
+		{
+			name:    "Unicode strings separated by a space character",
+			input:   "x*329293@aAJSD i22903saj",
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := validatePasswordInput(tt.input); (err != nil) != tt.wantErr {
 				t.Errorf("validatePasswordInput() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_isValidUnicode(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{
+			name:  "Regular alphanumeric",
+			input: "Someone23xx",
+			want:  true,
+		},
+		{
+			name:  "Unicode strings separated by a space character",
+			input: "x*329293@aAJSD i22903saj",
+			want:  false,
+		},
+		{
+			name:  "Japanese",
+			input: "僕は絵お見るのが好きです",
+			want:  true,
+		},
+		{
+			name:  "Other foreign",
+			input: "Etérium",
+			want:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isValidUnicode(tt.input); got != tt.want {
+				t.Errorf("isValidUnicode() = %v, want %v", got, tt.want)
 			}
 		})
 	}

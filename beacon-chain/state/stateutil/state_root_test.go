@@ -8,7 +8,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -27,36 +26,6 @@ func TestState_FieldCount(t *testing.T) {
 		numFields++
 	}
 	assert.Equal(t, count, numFields)
-}
-
-func BenchmarkHashTreeRootState_Custom_512(b *testing.B) {
-	b.StopTimer()
-	genesisState := setupGenesisState(b, 512)
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := stateutil.HashTreeRootState(genesisState)
-		require.NoError(b, err)
-	}
-}
-
-func BenchmarkHashTreeRootState_Custom_16384(b *testing.B) {
-	b.StopTimer()
-	genesisState := setupGenesisState(b, 16384)
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := stateutil.HashTreeRootState(genesisState)
-		require.NoError(b, err)
-	}
-}
-
-func BenchmarkHashTreeRootState_Custom_300000(b *testing.B) {
-	b.StopTimer()
-	genesisState := setupGenesisState(b, 300000)
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := stateutil.HashTreeRootState(genesisState)
-		require.NoError(b, err)
-	}
 }
 
 func BenchmarkHashTreeRoot_Generic_512(b *testing.B) {
