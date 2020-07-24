@@ -16,7 +16,10 @@ go_library(
         "setter.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",

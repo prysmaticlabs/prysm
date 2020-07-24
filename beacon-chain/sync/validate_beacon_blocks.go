@@ -104,8 +104,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Handle block when the parent is unknown.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		s.pendingQueueLock.Lock()
-		s.slotToPendingBlocks[blk.Block.Slot] = blk
-		s.seenPendingBlocks[blockRoot] = true
+		if len(s.slotToPendingBlocks) < 2000 {
+			s.slotToPendingBlocks[blk.Block.Slot] = blk
+			s.seenPendingBlocks[blockRoot] = true
+		}
 		s.pendingQueueLock.Unlock()
 		return pubsub.ValidationIgnore
 	}
@@ -121,6 +123,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("No access to parent state")
 		return pubsub.ValidationIgnore
 	}
+
 	parentState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get parent state")

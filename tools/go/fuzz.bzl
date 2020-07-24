@@ -57,6 +57,40 @@ gen_fuzz_main = rule(
     },
 )
 
+fuzzer_options_tpl = """[libfuzzer]
+max_len=%d
+"""
+
+def _generate_libfuzzer_config(ctx):
+    output_file_name = ctx.label.name + ".options"
+    output = fuzzer_options_tpl % (
+        ctx.attr.max_len,
+    )
+    output_file = ctx.actions.declare_file(output_file_name)
+    ctx.actions.write(output_file, output)
+    return [DefaultInfo(files = depset([output_file]))]
+
+gen_libfuzzer_config = rule(
+    implementation = _generate_libfuzzer_config,
+    attrs = {
+        "max_len": attr.int(default = 0),
+    },
+)
+
+def _upload_to_gcp_impl(ctx):
+    return [
+        DefaultInfo(),
+    ]
+
+upload_to_gcp = rule(
+    implementation = _upload_to_gcp_impl,
+    attrs = {
+        "gcp_bucket": attr.string(mandatory = True),
+        "libfuzzer_bundle": attr.label(mandatory = True),
+        "afl_bundle": attr.label(mandatory = True),
+    },
+)
+
 def go_fuzz_test(
         name,
         corpus,
@@ -65,6 +99,7 @@ def go_fuzz_test(
         func = "Fuzz",
         repository = "",
         max_len = 0,
+        gcp_bucket = "gs://builds.prysmaticlabs.appspot.com",
         size = "medium",
         tags = [],
         **kwargs):
@@ -84,6 +119,10 @@ def go_fuzz_test(
         tags = ["manual"] + tags,
         testonly = 1,
         visibility = ["//visibility:private"],
+    )
+    gen_libfuzzer_config(
+        name = name + "_options",
+        max_len = max_len,
     )
     go_binary(
         name = name + "_binary",
@@ -137,7 +176,7 @@ def go_fuzz_test(
     )
 
     native.genrule(
-        name = name + "_with_afl_bundle",
+        name = name + "_afl_bundle",
         outs = [name + "_afl_bundle.zip"],
         srcs = [
             "//third_party/afl:libs",
@@ -167,4 +206,25 @@ def go_fuzz_test(
         ] + additional_args,
         data = [corpus_name],
         timeout = "eternal",
+    )
+
+    native.genrule(
+        name = name + "_libfuzzer_bundle",
+        outs = [name + "_libfuzzer_bundle.zip"],
+        srcs = [
+            ":" + name + "_with_libfuzzer",
+            ":" + name + "_options",
+        ],
+        cmd = "cp $(location :" + name + "_with_libfuzzer) fuzzer; " +
+              "cp $(location :" + name + "_options) fuzzer.options; " +
+              "$(location @bazel_tools//tools/zip:zipper) cf $@ fuzzer fuzzer.options",
+        tools = ["@bazel_tools//tools/zip:zipper"],
+        testonly = 1,
+    )
+
+    upload_to_gcp(
+        name = name + "_uploader",
+        gcp_bucket = gcp_bucket,
+        afl_bundle = ":" + name + "_afl_bundle",
+        libfuzzer_bundle = ":" + name + "_libfuzzer_bundle",
     )

@@ -48,3 +48,7 @@ func (s *Service) FuzzValidateBeaconBlockPubSub(ctx context.Context, pid peer.ID
 func (s *Service) FuzzBeaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
 	return s.beaconBlockSubscriber(ctx, msg)
 }
+
+func (s *Service) InitCaches() error {
+	return s.initCaches()
+}
