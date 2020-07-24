@@ -14,7 +14,7 @@ var AccountCommands = &cli.Command{
 	Subcommands: []*cli.Command{
 		// AccountCommands for accounts-v2 for Prysm validators.
 		{
-			Name: "new",
+			Name: "create",
 			Description: `creates a new validator account for eth2. If no account exists at the wallet path, creates a new wallet for a user based on
 specified input, capable of creating a direct, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
@@ -27,7 +27,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := NewAccount(cliCtx); err != nil {
+				if err := CreateAccount(cliCtx); err != nil {
 					log.Fatalf("Could not create new account: %v", err)
 				}
 				return nil

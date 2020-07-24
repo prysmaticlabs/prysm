@@ -98,7 +98,7 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 }
 
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
-	sourcePath := w.accountsPath
+	sourcePath := filepath.Dir(w.accountsPath)
 	archivePath := filepath.Join(targetPath, archiveFilename)
 	if err := os.MkdirAll(targetPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return errors.Wrap(err, "could not create target folder")
@@ -122,7 +122,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 
 	err = filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return errors.Wrap(err, "could not walk")
+			return errors.Wrapf(err, "could not walk %s", sourcePath)
 		}
 
 		var isAccount bool
