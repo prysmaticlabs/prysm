@@ -111,6 +111,9 @@ func (s *PeerScorer) processedBlocks(pid peer.ID) uint64 {
 	return 0
 }
 
+// DecayBlockProvidersStats updates block provider counters by decaying them.
+// This urges peers to keep up the performance to get a high score (and allows new peers to contest previously high
+// scoring ones).
 func (s *PeerScorer) DecayBlockProvidersStats() {
 	s.store.Lock()
 	defer s.store.Unlock()
