@@ -9,6 +9,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/urfave/cli/v2"
 )
@@ -21,7 +22,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get mnemonic phrase")
 	}
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
 	if err != nil {
 		return errors.Wrap(err, "could not create new wallet")
 	}
@@ -37,6 +38,9 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
