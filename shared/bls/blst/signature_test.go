@@ -55,6 +55,19 @@ func TestFastAggregateVerify(t *testing.T) {
 	}
 }
 
+func TestVerifyCompressed(t *testing.T) {
+	priv := blst.RandKey()
+	pub := priv.PublicKey()
+	msg := []byte("hello")
+	sig := priv.Sign(msg)
+	if !sig.Verify(pub, msg) {
+		t.Error("Non compressed signature did not verify")
+	}
+	if !blst.VerifyCompressed(sig.Marshal(), pub.Marshal(), msg) {
+		t.Error("Compressed signatures and pubkeys did not verify")
+	}
+}
+
 func TestMultipleSignatureVerification(t *testing.T) {
 	pubkeys := make([]iface.PublicKey, 0, 100)
 	sigs := make([][]byte, 0, 100)
