@@ -17,6 +17,7 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -64,6 +65,7 @@ func init() {
 // create and write a new wallet to disk for a Prysm validator.
 func NewWallet(
 	cliCtx *cli.Context,
+	keymanagerKind v2keymanager.Kind,
 ) (*Wallet, error) {
 	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
@@ -82,17 +84,17 @@ func NewWallet(
 				"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit",
 		)
 	}
-	keymanagerKind, err := inputKeymanagerKind(cliCtx)
-	if err != nil {
-		return nil, err
-	}
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
-	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
-		return nil, errors.Wrap(err, "could not create wallet directory")
-	}
 	w := &Wallet{
 		accountsPath:   accountsPath,
 		keymanagerKind: keymanagerKind,
+	}
+	if keymanagerKind == v2keymanager.Derived {
+		walletPassword, err := inputPassword(cliCtx, newWalletPasswordPromptText, confirmPass)
+		if err != nil {
+			return nil, err
+		}
+		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
 		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
@@ -144,6 +146,19 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	return w, nil
 }
 
+// SaveWallet persists the wallet's directories to disk.
+func (w *Wallet) SaveWallet() error {
+	if err := os.MkdirAll(w.accountsPath, DirectoryPermissions); err != nil {
+		return errors.Wrap(err, "could not create wallet directory")
+	}
+	if w.keymanagerKind == v2keymanager.Direct {
+		if err := os.MkdirAll(w.passwordsDir, DirectoryPermissions); err != nil {
+			return errors.Wrap(err, "could not create passwords directory")
+		}
+	}
+	return nil
+}
+
 // KeymanagerKind used by the wallet.
 func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 	return w.keymanagerKind
@@ -183,6 +198,15 @@ func (w *Wallet) InitializeKeymanager(
 		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, w.walletPassword)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
+		}
+	case v2keymanager.Remote:
+		cfg, err := remote.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
+		}
+		keymanager, err = remote.NewKeymanager(ctx, 100000000, cfg)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)

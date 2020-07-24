@@ -9,17 +9,67 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
+
+func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
+	walletSeed := make([]byte, 32)
+	n, err := rand.NewGenerator().Read(walletSeed)
+	require.NoError(t, err)
+	require.Equal(t, n, len(walletSeed))
+	encryptor := keystorev4.New()
+	password := "Passwz0rdz2020%"
+	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	require.NoError(t, err)
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	cfg := &SeedConfig{
+		Crypto:      cryptoFields,
+		ID:          id.String(),
+		NextAccount: 0,
+		Version:     encryptor.Version(),
+		Name:        encryptor.Name(),
+	}
+
+	phrase, err := bip39.NewMnemonic(walletSeed)
+	require.NoError(t, err)
+	recoveredSeed, err := bip39.EntropyFromMnemonic(phrase)
+	require.NoError(t, err)
+
+	// Ensure the recovered seed matches the old wallet seed.
+	assert.DeepEqual(t, walletSeed, recoveredSeed)
+
+	cryptoFields, err = encryptor.Encrypt(recoveredSeed, []byte(password))
+	require.NoError(t, err)
+	newCfg := &SeedConfig{
+		Crypto:      cryptoFields,
+		ID:          cfg.ID,
+		NextAccount: 0,
+		Version:     encryptor.Version(),
+		Name:        encryptor.Name(),
+	}
+
+	// Ensure we can decrypt the newly recovered config.
+	decryptor := keystorev4.New()
+	seed, err := decryptor.Decrypt(newCfg.Crypto, []byte(password))
+	assert.NoError(t, err)
+
+	// Ensure the decrypted seed matches the old wallet seed and the new wallet seed.
+	assert.DeepEqual(t, walletSeed, seed)
+	assert.DeepEqual(t, recoveredSeed, seed)
+}
 
 func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()

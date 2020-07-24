@@ -23,7 +23,9 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/petnames:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/derived:go_default_library",
@@ -56,6 +58,10 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/petnames:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
