@@ -9,6 +9,11 @@ func Equal(tb assertions.AssertionTestingTB, expected, actual interface{}, msg .
 	assertions.Equal(tb.Fatalf, expected, actual, msg...)
 }
 
+// NotEqual compares values using comparison operator.
+func NotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
+	assertions.NotEqual(tb.Fatalf, expected, actual, msg...)
+}
+
 // DeepEqual compares values using DeepEqual.
 func DeepEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	assertions.DeepEqual(tb.Fatalf, expected, actual, msg...)
