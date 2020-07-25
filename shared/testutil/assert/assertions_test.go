@@ -77,6 +77,64 @@ func TestAssert_Equal(t *testing.T) {
 	}
 }
 
+func TestAssert_NotEqual(t *testing.T) {
+	type args struct {
+		tb       *assertions.TBMock
+		expected interface{}
+		actual   interface{}
+		msgs     []interface{}
+	}
+	tests := []struct {
+		name        string
+		args        args
+		expectedErr string
+	}{
+		{
+			name: "equal values",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: 42,
+				actual:   42,
+			},
+			expectedErr: "Values are equal, both values are equal: 42 (int)",
+		},
+		{
+			name: "equal values different types",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: uint64(42),
+				actual:   42,
+			},
+		},
+		{
+			name: "non-equal values",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: 42,
+				actual:   41,
+			},
+		},
+		{
+			name: "custom error message",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: 42,
+				actual:   42,
+				msgs:     []interface{}{"Custom values are equal"},
+			},
+			expectedErr: "Custom values are equal, both values are equal",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			NotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			}
+		})
+	}
+}
+
 func TestAssert_DeepEqual(t *testing.T) {
 	type args struct {
 		tb       *assertions.TBMock
