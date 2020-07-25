@@ -159,6 +159,12 @@ var (
 		Name:  "accounts",
 		Usage: "List of account names to export, or \"all\" to backup all accounts",
 	}
+	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
+	NumAccountsFlag = &cli.Int64Flag{
+		Name:  "num-accounts",
+		Usage: "Number of accounts to generate for derived wallets",
+		Value: 1,
+	}
 	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
 	BackupDirFlag = &cli.StringFlag{
 		Name:  "backup-dir",
