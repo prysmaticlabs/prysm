@@ -41,10 +41,10 @@ func ProcessAttestations(
 // Spec pseudocode definition:
 //  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
 //    data = attestation.data
-//    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
 //    assert data.target.epoch == compute_epoch_at_slot(data.slot)
 //    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
+//    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
 //
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    assert len(attestation.aggregation_bits) == len(committee)
@@ -158,6 +158,14 @@ func ProcessAttestationNoVerify(
 			s,
 			params.BeaconConfig().SlotsPerEpoch,
 		)
+	}
+	activeValidatorCount, err := helpers.ActiveValidatorCount(beaconState, att.Data.Target.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	c := helpers.SlotCommitteeCount(activeValidatorCount)
+	if att.Data.CommitteeIndex > c {
+		return nil, fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
 	}
 
 	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
