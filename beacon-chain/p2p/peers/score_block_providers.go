@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 )
 
 // ScoreBlockProvider calculates and returns total score based on returned and processed blocks.
@@ -120,6 +121,13 @@ func (s *PeerScorer) DecayBlockProvidersStats() {
 
 	for _, peerData := range s.store.peers {
 		peerData.requestedBlocks = uint64(math.Round(float64(peerData.requestedBlocks) * s.config.BlockProviderDecay))
+		// Once requested blocks stats drops to the half of batch size, reset stats.
+		if peerData.requestedBlocks < uint64(flags.Get().BlockBatchLimit/2) {
+			peerData.requestedBlocks = 0
+			peerData.returnedBlocks = 0
+			peerData.processedBlocks = 0
+			continue
+		}
 		peerData.returnedBlocks = uint64(math.Round(float64(peerData.returnedBlocks) * s.config.BlockProviderDecay))
 		peerData.processedBlocks = uint64(math.Round(float64(peerData.processedBlocks) * s.config.BlockProviderDecay))
 	}

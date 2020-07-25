@@ -181,9 +181,11 @@ func TestPeerScorer_loop(t *testing.T) {
 	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold:     5,
-			BadResponsesWeight:        -0.5,
-			BadResponsesDecayInterval: 50 * time.Millisecond,
+			BadResponsesThreshold:      5,
+			BadResponsesWeight:         -0.5,
+			BadResponsesDecayInterval:  50 * time.Millisecond,
+			BlockProviderDecay:         0.95,
+			BlockProviderDecayInterval: 25 * time.Millisecond,
 		},
 	})
 	scorer := peerStatuses.Scorer()
@@ -195,6 +197,10 @@ func TestPeerScorer_loop(t *testing.T) {
 	}
 	assert.Equal(t, true, scorer.IsBadPeer(pid1), "Peer should be marked as bad")
 
+	scorer.IncrementRequestedBlocks("peer1", 64)
+	scorer.IncrementReturnedBlocks("peer1", 60)
+	scorer.IncrementProcessedBlocks("peer1", 50)
+
 	done := make(chan struct{}, 1)
 	go func() {
 		defer func() {
@@ -204,7 +210,7 @@ func TestPeerScorer_loop(t *testing.T) {
 		for {
 			select {
 			case <-ticker.C:
-				if scorer.IsBadPeer(pid1) == false {
+				if scorer.IsBadPeer(pid1) == false && scorer.ScoreBlockProvider("peer1") == 0 {
 					return
 				}
 			case <-ctx.Done():
@@ -216,4 +222,5 @@ func TestPeerScorer_loop(t *testing.T) {
 
 	<-done
 	assert.Equal(t, false, scorer.IsBadPeer(pid1), "Peer should not be marked as bad")
+	assert.Equal(t, 0.0, scorer.ScoreBlockProvider("peer1"), "Peer should not have any block fetcher score")
 }

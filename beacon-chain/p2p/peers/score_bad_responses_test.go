@@ -4,7 +4,6 @@ import (
 	"context"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -56,9 +55,8 @@ func TestPeerScorer_decayBadResponsesStats(t *testing.T) {
 	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold:     maxBadResponses,
-			BadResponsesWeight:        1,
-			BadResponsesDecayInterval: 50 * time.Nanosecond,
+			BadResponsesThreshold: maxBadResponses,
+			BadResponsesWeight:    1,
 		},
 	})
 	scorer := peerStatuses.Scorer()
