@@ -15,10 +15,12 @@ import (
 const genericError = "internal service error"
 const rateLimitedError = "rate limited"
 const stepError = "invalid range or step"
+const seqError = "invalid sequence number provided"
 
 var errWrongForkDigestVersion = errors.New("wrong fork digest version")
 var errInvalidEpoch = errors.New("invalid epoch")
 var errInvalidFinalizedRoot = errors.New("invalid finalized root")
+var errInvalidSequenceNum = errors.New(seqError)
 var errGeneric = errors.New(genericError)
 
 var responseCodeSuccess = byte(0x00)
