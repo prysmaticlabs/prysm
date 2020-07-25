@@ -99,12 +99,8 @@ func (s *PeerScorer) Score(pid peer.ID) float64 {
 	if _, ok := s.store.peers[pid]; !ok {
 		return 0
 	}
-	if badResponsesScore := s.scoreBadResponses(pid); badResponsesScore != 0.0 {
-		score += badResponsesScore
-	}
-	if blockProviderScore := s.scoreBlockProvider(pid); blockProviderScore != 0.0 {
-		score += blockProviderScore
-	}
+	score += s.scoreBadResponses(pid)
+	score += s.scoreBlockProvider(pid)
 	return math.Round(score*10000) / 10000
 }
 
