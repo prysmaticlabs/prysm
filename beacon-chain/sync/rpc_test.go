@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -16,6 +15,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func init() {
