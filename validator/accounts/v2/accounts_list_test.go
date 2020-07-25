@@ -173,7 +173,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx)
+		_, err := keymanager.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
 		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositTransactionFileName)

@@ -63,12 +63,12 @@ func RecoverWallet(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
 	if numAccounts == 1 {
-		if _, err := km.CreateAccount(ctx, true); err != nil {
+		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
 			return errors.Wrap(err, "could not create account in wallet")
 		}
 	} else {
 		for i := 0; i < int(numAccounts); i++ {
-			if _, err := km.CreateAccount(ctx, false); err != nil {
+			if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
 				return errors.Wrap(err, "could not create account in wallet")
 			}
 		}
