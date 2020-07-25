@@ -60,7 +60,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	seqNumber := uint64(1)
+	seqNumber := uint64(2)
 
 	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
