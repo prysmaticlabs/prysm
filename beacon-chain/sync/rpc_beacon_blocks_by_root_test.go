@@ -39,7 +39,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blk := &ethpb.BeaconBlock{
 			Slot: uint64(i),
 		}
-		root, err := ssz.HashTreeRoot(blk)
+		root, err := blk.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: blk}))
 		blkRoots = append(blkRoots, root)

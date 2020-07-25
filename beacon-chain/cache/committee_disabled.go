@@ -17,7 +17,6 @@ type Committees struct {
 
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type CommitteeCache struct {
-
 }
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.

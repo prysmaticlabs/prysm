@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -296,7 +295,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 		stateGen: stategen.New(db, sc),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, err := ssz.HashTreeRoot(b)
+	r, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	newState := testutil.NewBeaconState()
 	require.NoError(t, s.stateGen.SaveState(ctx, r, newState))

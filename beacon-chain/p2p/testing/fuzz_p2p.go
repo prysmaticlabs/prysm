@@ -19,7 +19,6 @@ import (
 )
 
 type fakeP2P struct {
-
 }
 
 func NewFuzzTestP2P() *fakeP2P {
@@ -98,7 +97,7 @@ func (p *fakeP2P) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 }
 
 func (p *fakeP2P) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
- return nil, nil
+	return nil, nil
 }
 
 func (p *fakeP2P) Host() host.Host {

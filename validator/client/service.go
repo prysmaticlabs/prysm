@@ -13,7 +13,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -208,7 +207,7 @@ func (v *validator) signObject(
 		})
 	}
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		root, err := ssz.HashTreeRoot(object)
+		root, err := object.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}

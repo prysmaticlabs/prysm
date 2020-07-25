@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -106,7 +105,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	}
 	deposits[0].Data.PublicKey = []byte("junk")
 
-	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
+	leaf, err := deposits[0].Data.HashTreeRoot()
 	if err != nil {
 		t.Fatalf("Could not hash deposit %v", err)
 	}
@@ -153,7 +152,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
 
-	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
+	leaf, err := deposits[0].Data.HashTreeRoot()
 	if err != nil {
 		t.Fatalf("Could not hash deposit %v", err)
 	}
@@ -265,7 +264,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataRoot, err := ssz.HashTreeRoot(deposit.Data)
+	dataRoot, err := deposit.Data.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}

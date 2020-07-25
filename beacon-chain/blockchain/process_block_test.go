@@ -7,7 +7,6 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -380,42 +379,42 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 // (B1, and B3 are all from the same slots)
 func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
-	r0, err := ssz.HashTreeRoot(b0)
+	r0, err := b0.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
-	r1, err := ssz.HashTreeRoot(b1)
+	r1, err := b1.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r0[:]}
-	r3, err := ssz.HashTreeRoot(b3)
+	r3, err := b3.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: r3[:]}
-	r4, err := ssz.HashTreeRoot(b4)
+	r4, err := b4.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: r4[:]}
-	r5, err := ssz.HashTreeRoot(b5)
+	r5, err := b5.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	b6 := &ethpb.BeaconBlock{Slot: 6, ParentRoot: r4[:]}
-	r6, err := ssz.HashTreeRoot(b6)
+	r6, err := b6.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	b7 := &ethpb.BeaconBlock{Slot: 7, ParentRoot: r5[:]}
-	r7, err := ssz.HashTreeRoot(b7)
+	r7, err := b7.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
-	r8, err := ssz.HashTreeRoot(b8)
+	r8, err := b8.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -461,13 +460,13 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	require.NoError(t, err)
 
 	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'a'}}
-	r1, err := ssz.HashTreeRoot(b1)
+	r1, err := b1.HashTreeRoot()
 	require.NoError(t, err)
 	b100 := &ethpb.BeaconBlock{Slot: 100, ParentRoot: r1[:]}
-	r100, err := ssz.HashTreeRoot(b100)
+	r100, err := b100.HashTreeRoot()
 	require.NoError(t, err)
 	b200 := &ethpb.BeaconBlock{Slot: 200, ParentRoot: r100[:]}
-	r200, err := ssz.HashTreeRoot(b200)
+	r200, err := b200.HashTreeRoot()
 	require.NoError(t, err)
 	for _, b := range []*ethpb.BeaconBlock{b1, b100, b200} {
 		beaconBlock := testutil.NewBeaconBlock()
@@ -557,10 +556,10 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 
 		if test.args.diffFinalizedCheckPoint {
 			b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'a'}}
-			r1, err := ssz.HashTreeRoot(b1)
+			r1, err := b1.HashTreeRoot()
 			require.NoError(t, err)
 			b100 := &ethpb.BeaconBlock{Slot: 100, ParentRoot: r1[:]}
-			r100, err := ssz.HashTreeRoot(b100)
+			r100, err := b100.HashTreeRoot()
 			require.NoError(t, err)
 			for _, b := range []*ethpb.BeaconBlock{b1, b100} {
 				beaconBlock := testutil.NewBeaconBlock()

@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -166,7 +165,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader())
+	lbhsr, err := state.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
 		t.Error(err)
 	}

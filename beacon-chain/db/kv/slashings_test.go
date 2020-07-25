@@ -6,7 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 func TestStore_ProposerSlashing_CRUD(t *testing.T) {
@@ -32,7 +31,7 @@ func TestStore_ProposerSlashing_CRUD(t *testing.T) {
 			Signature: make([]byte, 96),
 		},
 	}
-	slashingRoot, err := ssz.HashTreeRoot(prop)
+	slashingRoot, err := prop.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +98,7 @@ func TestStore_AttesterSlashing_CRUD(t *testing.T) {
 			Signature: make([]byte, 96),
 		},
 	}
-	slashingRoot, err := ssz.HashTreeRoot(att)
+	slashingRoot, err := att.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}

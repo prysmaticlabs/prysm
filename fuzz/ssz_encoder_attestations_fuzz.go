@@ -11,7 +11,7 @@ import (
 var buf = new(bytes.Buffer)
 
 // SszEncoderAttestationFuzz -- TODO.
-func SszEncoderAttestationFuzz(b []byte)  {
+func SszEncoderAttestationFuzz(b []byte) {
 	params.UseMainnetConfig()
 	buf.Reset()
 	input := &ethpb.Attestation{}

@@ -10,7 +10,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -163,7 +162,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	s := testutil.NewBeaconState()
@@ -230,7 +229,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, s.SetValidators(validators))
@@ -294,7 +293,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, s.SetValidators(validators))

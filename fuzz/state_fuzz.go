@@ -18,7 +18,7 @@ func init() {
 }
 
 // BeaconStateFuzz --
-func BeaconStateFuzz(input []byte)  {
+func BeaconStateFuzz(input []byte) {
 	params.UseMainnetConfig()
 	st := &pb.BeaconState{}
 	if err := st.UnmarshalSSZ(input); err != nil {
@@ -28,7 +28,7 @@ func BeaconStateFuzz(input []byte)  {
 	if err != nil {
 		panic(err)
 	}
-	nextEpoch := helpers.SlotToEpoch(s.Slot())+1
+	nextEpoch := helpers.SlotToEpoch(s.Slot()) + 1
 	if _, err := stateutil.ProcessSlots(context.Background(), s, helpers.StartSlot(nextEpoch)); err != nil {
 		_ = err
 		return

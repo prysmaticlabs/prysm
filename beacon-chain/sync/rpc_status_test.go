@@ -14,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -155,10 +154,10 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	finalizedRoot, err := &ethpb.BeaconBlock{Slot: blkSlot}.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -252,7 +251,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
 	require.NoError(t, db.SaveBlock(context.Background(), blk))
-	finalizedRoot, err := ssz.HashTreeRoot(blk.Block)
+	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	r := &Service{
@@ -367,9 +366,9 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
 	require.NoError(t, err)
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
+	finalizedRoot, err := &ethpb.BeaconBlock{Slot: 40}.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -437,10 +436,10 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	finalizedRoot, err := &ethpb.BeaconBlock{Slot: blkSlot}.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -517,9 +516,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
 	require.NoError(t, err)
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
+	finalizedRoot, err := &ethpb.BeaconBlock{Slot: 40}.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -591,10 +590,10 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 
 func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	finalizedRoot, err := &ethpb.BeaconBlock{Slot: blkSlot}.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)

@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	fssz "github.com/ferranbt/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -41,6 +42,9 @@ func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 		case *ethpb.AttestationData:
 			return stateutil.AttestationDataRoot(object.(*ethpb.AttestationData))
 		default:
+			if v, ok := object.(fssz.HashRoot); ok {
+				return v.HashTreeRoot()
+			}
 			// utilise generic ssz library
 			return ssz.HashTreeRoot(object)
 		}
@@ -58,7 +62,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 		ObjectRoot: objRoot[:],
 		Domain:     domain,
 	}
-	return ssz.HashTreeRoot(container)
+	return container.HashTreeRoot()
 }
 
 // VerifySigningRoot verifies the signing root of an object given it's public key, signature and domain.

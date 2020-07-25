@@ -2,76 +2,85 @@
 package fuzz
 
 import (
-	"fmt"
-
 	ssz "github.com/ferranbt/fastssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-)
-
-var (
-	errDivideInt           = fmt.Errorf("incorrect int divide")
-	errListTooBig          = fmt.Errorf("incorrect list size, too big")
-	errMarshalDynamicBytes = fmt.Errorf("incorrect dynamic bytes marshalling")
-	errMarshalFixedBytes   = fmt.Errorf("incorrect fixed bytes marshalling")
-	errMarshalList         = fmt.Errorf("incorrect vector list")
-	errMarshalVector       = fmt.Errorf("incorrect vector marshalling")
-	errOffset              = fmt.Errorf("incorrect offset")
-	errSize                = fmt.Errorf("incorrect size")
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // MarshalSSZ ssz marshals the InputBlockWithPrestate object
 func (i *InputBlockWithPrestate) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
+	return ssz.MarshalSSZ(i)
 }
 
 // MarshalSSZTo ssz marshals the InputBlockWithPrestate object to a target array
-func (i *InputBlockWithPrestate) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(6)
+func (i *InputBlockWithPrestate) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+	offset := int(8)
 
-	// Field (0) 'StateID'
-	dst = ssz.MarshalUint16(dst, i.StateID)
+	// Offset (0) 'State'
+	dst = ssz.WriteOffset(dst, offset)
+	if i.State == nil {
+		i.State = new(pb.BeaconState)
+	}
+	offset += i.State.SizeSSZ()
 
 	// Offset (1) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
 	if i.Block == nil {
-		i.Block = new(ethpb.BeaconBlock)
+		i.Block = new(ethpb.SignedBeaconBlock)
 	}
 	offset += i.Block.SizeSSZ()
 
-	// Field (1) 'Block'
-	if dst, err = i.Block.MarshalSSZTo(dst); err != nil {
-		return nil, err
+	// Field (0) 'State'
+	if dst, err = i.State.MarshalSSZTo(dst); err != nil {
+		return
 	}
 
-	return dst, err
+	// Field (1) 'Block'
+	if dst, err = i.Block.MarshalSSZTo(dst); err != nil {
+		return
+	}
+
+	return
 }
 
 // UnmarshalSSZ ssz unmarshals the InputBlockWithPrestate object
 func (i *InputBlockWithPrestate) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size < 6 {
-		return errSize
+	if size < 8 {
+		return ssz.ErrSize
 	}
 
 	tail := buf
-	var o1 uint64
+	var o0, o1 uint64
 
-	// Field (0) 'StateID'
-	i.StateID = ssz.UnmarshallUint16(buf[0:2])
+	// Offset (0) 'State'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return ssz.ErrOffset
+	}
 
 	// Offset (1) 'Block'
-	if o1 = ssz.ReadOffset(buf[2:6]); o1 > size {
-		return errOffset
+	if o1 = ssz.ReadOffset(buf[4:8]); o1 > size || o0 > o1 {
+		return ssz.ErrOffset
+	}
+
+	// Field (0) 'State'
+	{
+		buf = tail[o0:o1]
+		if i.State == nil {
+			i.State = new(pb.BeaconState)
+		}
+		if err = i.State.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
 	}
 
 	// Field (1) 'Block'
 	{
 		buf = tail[o1:]
 		if i.Block == nil {
-			i.Block = new(ethpb.BeaconBlock)
+			i.Block = new(ethpb.SignedBeaconBlock)
 		}
 		if err = i.Block.UnmarshalSSZ(buf); err != nil {
 			return err
@@ -82,317 +91,42 @@ func (i *InputBlockWithPrestate) UnmarshalSSZ(buf []byte) error {
 
 // SizeSSZ returns the ssz encoded size in bytes for the InputBlockWithPrestate object
 func (i *InputBlockWithPrestate) SizeSSZ() (size int) {
-	size = 6
+	size = 8
+
+	// Field (0) 'State'
+	if i.State == nil {
+		i.State = new(pb.BeaconState)
+	}
+	size += i.State.SizeSSZ()
 
 	// Field (1) 'Block'
 	if i.Block == nil {
-		i.Block = new(ethpb.BeaconBlock)
+		i.Block = new(ethpb.SignedBeaconBlock)
 	}
 	size += i.Block.SizeSSZ()
 
 	return
 }
 
-// MarshalSSZ ssz marshals the InputAttesterSlashingWrapper object
-func (i *InputAttesterSlashingWrapper) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
+// HashTreeRoot ssz hashes the InputBlockWithPrestate object
+func (i *InputBlockWithPrestate) HashTreeRoot() ([]byte, error) {
+	return ssz.HashWithDefaultHasher(i)
 }
 
-// MarshalSSZTo ssz marshals the InputAttesterSlashingWrapper object to a target array
-func (i *InputAttesterSlashingWrapper) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(6)
+// HashTreeRootWith ssz hashes the InputBlockWithPrestate object with a hasher
+func (i *InputBlockWithPrestate) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
 
-	// Field (0) 'StateID'
-	dst = ssz.MarshalUint16(dst, i.StateID)
-
-	// Offset (1) 'AttesterSlashing'
-	dst = ssz.WriteOffset(dst, offset)
-	if i.AttesterSlashing == nil {
-		i.AttesterSlashing = new(ethpb.AttesterSlashing)
-	}
-	offset += i.AttesterSlashing.SizeSSZ()
-
-	// Field (1) 'AttesterSlashing'
-	if dst, err = i.AttesterSlashing.MarshalSSZTo(dst); err != nil {
-		return nil, err
+	// Field (0) 'State'
+	if err = i.State.HashTreeRootWith(hh); err != nil {
+		return
 	}
 
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the InputAttesterSlashingWrapper object
-func (i *InputAttesterSlashingWrapper) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 6 {
-		return errSize
+	// Field (1) 'Block'
+	if err = i.Block.HashTreeRootWith(hh); err != nil {
+		return
 	}
 
-	tail := buf
-	var o1 uint64
-
-	// Field (0) 'StateID'
-	i.StateID = ssz.UnmarshallUint16(buf[0:2])
-
-	// Offset (1) 'AttesterSlashing'
-	if o1 = ssz.ReadOffset(buf[2:6]); o1 > size {
-		return errOffset
-	}
-
-	// Field (1) 'AttesterSlashing'
-	{
-		buf = tail[o1:]
-		if i.AttesterSlashing == nil {
-			i.AttesterSlashing = new(ethpb.AttesterSlashing)
-		}
-		if err = i.AttesterSlashing.UnmarshalSSZ(buf); err != nil {
-			return err
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the InputAttesterSlashingWrapper object
-func (i *InputAttesterSlashingWrapper) SizeSSZ() (size int) {
-	size = 6
-
-	// Field (1) 'AttesterSlashing'
-	if i.AttesterSlashing == nil {
-		i.AttesterSlashing = new(ethpb.AttesterSlashing)
-	}
-	size += i.AttesterSlashing.SizeSSZ()
-
-	return
-}
-
-// MarshalSSZ ssz marshals the InputAttestationWrapper object
-func (i *InputAttestationWrapper) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the InputAttestationWrapper object to a target array
-func (i *InputAttestationWrapper) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-	offset := int(6)
-
-	// Field (0) 'StateID'
-	dst = ssz.MarshalUint16(dst, i.StateID)
-
-	// Offset (1) 'Attestation'
-	dst = ssz.WriteOffset(dst, offset)
-	if i.Attestation == nil {
-		i.Attestation = new(ethpb.Attestation)
-	}
-	offset += i.Attestation.SizeSSZ()
-
-	// Field (1) 'Attestation'
-	if dst, err = i.Attestation.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the InputAttestationWrapper object
-func (i *InputAttestationWrapper) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 6 {
-		return errSize
-	}
-
-	tail := buf
-	var o1 uint64
-
-	// Field (0) 'StateID'
-	i.StateID = ssz.UnmarshallUint16(buf[0:2])
-
-	// Offset (1) 'Attestation'
-	if o1 = ssz.ReadOffset(buf[2:6]); o1 > size {
-		return errOffset
-	}
-
-	// Field (1) 'Attestation'
-	{
-		buf = tail[o1:]
-		if i.Attestation == nil {
-			i.Attestation = new(ethpb.Attestation)
-		}
-		if err = i.Attestation.UnmarshalSSZ(buf); err != nil {
-			return err
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the InputAttestationWrapper object
-func (i *InputAttestationWrapper) SizeSSZ() (size int) {
-	size = 6
-
-	// Field (1) 'Attestation'
-	if i.Attestation == nil {
-		i.Attestation = new(ethpb.Attestation)
-	}
-	size += i.Attestation.SizeSSZ()
-
-	return
-}
-
-// MarshalSSZ ssz marshals the InputDepositWrapper object
-func (i *InputDepositWrapper) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the InputDepositWrapper object to a target array
-func (i *InputDepositWrapper) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'StateID'
-	dst = ssz.MarshalUint16(dst, i.StateID)
-
-	// Field (1) 'Deposit'
-	if i.Deposit == nil {
-		i.Deposit = new(ethpb.Deposit)
-	}
-	if dst, err = i.Deposit.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the InputDepositWrapper object
-func (i *InputDepositWrapper) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 1242 {
-		return errSize
-	}
-
-	// Field (0) 'StateID'
-	i.StateID = ssz.UnmarshallUint16(buf[0:2])
-
-	// Field (1) 'Deposit'
-	if i.Deposit == nil {
-		i.Deposit = new(ethpb.Deposit)
-	}
-	if err = i.Deposit.UnmarshalSSZ(buf[2:1242]); err != nil {
-		return err
-	}
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the InputDepositWrapper object
-func (i *InputDepositWrapper) SizeSSZ() (size int) {
-	size = 1242
-	return
-}
-
-// MarshalSSZ ssz marshals the InputVoluntaryExitWrapper object
-func (i *InputVoluntaryExitWrapper) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the InputVoluntaryExitWrapper object to a target array
-func (i *InputVoluntaryExitWrapper) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'StateID'
-	dst = ssz.MarshalUint16(dst, i.StateID)
-
-	// Field (1) 'VoluntaryExit'
-	if i.VoluntaryExit == nil {
-		i.VoluntaryExit = new(ethpb.VoluntaryExit)
-	}
-	if dst, err = i.VoluntaryExit.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the InputVoluntaryExitWrapper object
-func (i *InputVoluntaryExitWrapper) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 18 {
-		return errSize
-	}
-
-	// Field (0) 'StateID'
-	i.StateID = ssz.UnmarshallUint16(buf[0:2])
-
-	// Field (1) 'VoluntaryExit'
-	if i.VoluntaryExit == nil {
-		i.VoluntaryExit = new(ethpb.VoluntaryExit)
-	}
-	if err = i.VoluntaryExit.UnmarshalSSZ(buf[2:18]); err != nil {
-		return err
-	}
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the InputVoluntaryExitWrapper object
-func (i *InputVoluntaryExitWrapper) SizeSSZ() (size int) {
-	size = 18
-	return
-}
-
-// MarshalSSZ ssz marshals the InputProposerSlashingWrapper object
-func (i *InputProposerSlashingWrapper) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, i.SizeSSZ())
-	return i.MarshalSSZTo(buf[:0])
-}
-
-// MarshalSSZTo ssz marshals the InputProposerSlashingWrapper object to a target array
-func (i *InputProposerSlashingWrapper) MarshalSSZTo(dst []byte) ([]byte, error) {
-	var err error
-
-	// Field (0) 'StateID'
-	dst = ssz.MarshalUint16(dst, i.StateID)
-
-	// Field (1) 'ProposerSlashing'
-	if i.ProposerSlashing == nil {
-		i.ProposerSlashing = new(ethpb.ProposerSlashing)
-	}
-	if dst, err = i.ProposerSlashing.MarshalSSZTo(dst); err != nil {
-		return nil, err
-	}
-
-	return dst, err
-}
-
-// UnmarshalSSZ ssz unmarshals the InputProposerSlashingWrapper object
-func (i *InputProposerSlashingWrapper) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 418 {
-		return errSize
-	}
-
-	// Field (0) 'StateID'
-	i.StateID = ssz.UnmarshallUint16(buf[0:2])
-
-	// Field (1) 'ProposerSlashing'
-	if i.ProposerSlashing == nil {
-		i.ProposerSlashing = new(ethpb.ProposerSlashing)
-	}
-	if err = i.ProposerSlashing.UnmarshalSSZ(buf[2:418]); err != nil {
-		return err
-	}
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the InputProposerSlashingWrapper object
-func (i *InputProposerSlashingWrapper) SizeSSZ() (size int) {
-	size = 418
+	hh.Merkleize(indx)
 	return
 }

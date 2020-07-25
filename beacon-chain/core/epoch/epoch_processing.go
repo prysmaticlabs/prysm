@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -311,7 +310,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 			BlockRoots: state.BlockRoots(),
 			StateRoots: state.StateRoots(),
 		}
-		batchRoot, err := ssz.HashTreeRoot(historicalBatch)
+		batchRoot, err := historicalBatch.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash historical batch")
 		}

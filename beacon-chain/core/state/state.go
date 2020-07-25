@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -70,7 +69,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		if deposit == nil || deposit.Data == nil {
 			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
 		}
-		hash, err := ssz.HashTreeRoot(deposit.Data)
+		hash, err := deposit.Data.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}

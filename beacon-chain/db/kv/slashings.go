@@ -4,7 +4,6 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -42,7 +41,7 @@ func (kv *Store) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte)
 func (kv *Store) SaveProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveProposerSlashing")
 	defer span.End()
-	slashingRoot, err := ssz.HashTreeRoot(slashing)
+	slashingRoot, err := slashing.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -111,7 +110,7 @@ func (kv *Store) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte)
 func (kv *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttesterSlashing")
 	defer span.End()
-	slashingRoot, err := ssz.HashTreeRoot(slashing)
+	slashingRoot, err := slashing.HashTreeRoot()
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -124,16 +123,16 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, err := ssz.HashTreeRoot(b2)
+	b2Root, err := b2.HashTreeRoot()
 	require.NoError(t, err)
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, err := ssz.HashTreeRoot(b5)
+	b5Root, err := b5.HashTreeRoot()
 	require.NoError(t, err)
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, err := ssz.HashTreeRoot(b3)
+	b3Root, err := b3.HashTreeRoot()
 	require.NoError(t, err)
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, err := ssz.HashTreeRoot(b4)
+	b4Root, err := b4.HashTreeRoot()
 	require.NoError(t, err)
 
 	r.slotToPendingBlocks[b4.Slot] = &ethpb.SignedBeaconBlock{Block: b4}
@@ -196,16 +195,16 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, err := ssz.HashTreeRoot(b2)
+	b2Root, err := b2.HashTreeRoot()
 	require.NoError(t, err)
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, err := ssz.HashTreeRoot(b5)
+	b5Root, err := b5.HashTreeRoot()
 	require.NoError(t, err)
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, err := ssz.HashTreeRoot(b3)
+	b3Root, err := b3.HashTreeRoot()
 	require.NoError(t, err)
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, err := ssz.HashTreeRoot(b4)
+	b4Root, err := b4.HashTreeRoot()
 	require.NoError(t, err)
 
 	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}

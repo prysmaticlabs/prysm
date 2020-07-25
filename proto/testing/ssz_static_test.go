@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"os"
 	"path"
 	"testing"
 
@@ -24,7 +25,9 @@ type SSZRoots struct {
 	SigningRoot string `json:"signing_root"`
 }
 
-func runSSZStaticTests(t *testing.T, config string) {
+var useFSSZHTR = false
+
+func runSSZStaticTests(t testing.TB, config string) {
 	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
@@ -35,77 +38,112 @@ func runSSZStaticTests(t *testing.T, config string) {
 		innerTestFolders, innerTestsFolderPath := testutil.TestFolders(t, config, innerPath)
 
 		for _, innerFolder := range innerTestFolders {
-			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
-				serializedBytes, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz")
-				if err != nil {
-					t.Fatal(err)
-				}
-				object, err := UnmarshalledSSZ(t, serializedBytes, folder.Name())
-				if err != nil {
-					t.Fatalf("Could not unmarshall serialized SSZ: %v", err)
-				}
-
-				rootsYamlFile, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
-				if err != nil {
-					t.Fatal(err)
-				}
-				rootsYaml := &SSZRoots{}
-				if err := testutil.UnmarshalYaml(rootsYamlFile, rootsYaml); err != nil {
-					t.Fatalf("Failed to Unmarshal: %v", err)
-				}
-
-				// Custom hash tree root for beacon state.
-				var htr func(interface{}) ([32]byte, error)
-				if _, ok := object.(*pb.BeaconState); ok {
-					htr = func(s interface{}) ([32]byte, error) {
-						beaconState, err := state.InitializeFromProto(s.(*pb.BeaconState))
-						require.NoError(t, err)
-						return beaconState.HashTreeRoot(context.Background())
+			testName := path.Join(folder.Name(), innerFolder.Name())
+			if b, ok := t.(*testing.B); ok {
+				//useFSSZHTR = false
+				//b.Run(testName+"_fssz_htr_off", func(b *testing.B) {
+				//	for i := 0; i < b.N; i++ {
+				//		innerTest(t, innerTestsFolderPath, innerFolder, folder)
+				//	}
+				//})
+				useFSSZHTR = true
+				b.Run(testName+"_fssz_htr_on", func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						innerTest(t, innerTestsFolderPath, innerFolder, folder)
 					}
-				} else {
-					htr = ssz.HashTreeRoot
-				}
-
-				root, err := htr(object)
-				if err != nil {
-					t.Fatal(err)
-				}
-				rootBytes, err := hex.DecodeString(rootsYaml.Root[2:])
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(root[:], rootBytes) {
-					t.Fatalf(
-						"Did not receive expected hash tree root, received: %#x, expected: %#x",
-						root[:],
-						rootBytes,
-					)
-				}
-
-				if rootsYaml.SigningRoot == "" {
-					return
-				}
-				signingRoot, err := ssz.HashTreeRoot(object)
-				if err != nil {
-					t.Fatal(err)
-				}
-				signingRootBytes, err := hex.DecodeString(rootsYaml.SigningRoot[2:])
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(signingRoot[:], signingRootBytes) {
-					t.Fatalf(
-						"Did not receive expected signing root, received: %#x, expected: %#x",
-						signingRoot[:],
-						signingRootBytes,
-					)
-				}
-			})
+				})
+			} else if t, ok := t.(*testing.T); ok {
+				t.Run(testName, func(t *testing.T) {
+					innerTest(t, innerTestsFolderPath, innerFolder, folder)
+				})
+			}
 		}
 	}
 }
 
-func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
+func innerTest(t testing.TB, innerTestsFolderPath string, innerFolder, folder os.FileInfo) {
+	serializedBytes, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	object, err := UnmarshalledSSZ(t, serializedBytes, folder.Name())
+	if err != nil {
+		t.Fatalf("Could not unmarshall serialized SSZ: %v", err)
+	}
+
+	rootsYamlFile, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootsYaml := &SSZRoots{}
+	if err := testutil.UnmarshalYaml(rootsYamlFile, rootsYaml); err != nil {
+		t.Fatalf("Failed to Unmarshal: %v", err)
+	}
+
+	// Custom hash tree root for beacon state.
+	var htr func(interface{}) ([32]byte, error)
+	if _, ok := object.(*pb.BeaconState); ok {
+		htr = func(s interface{}) ([32]byte, error) {
+			beaconState, err := state.InitializeFromProto(s.(*pb.BeaconState))
+			require.NoError(t, err)
+			if useFSSZHTR {
+				return s.(*pb.BeaconState).HashTreeRoot()
+			} else {
+				return beaconState.HashTreeRoot(context.Background())
+			}
+		}
+	} else {
+		htr = ssz.HashTreeRoot
+	}
+
+	var root [32]byte
+	if v, ok := object.(fssz.HashRoot); ok && useFSSZHTR {
+		root, err = v.HashTreeRoot()
+	} else {
+		root, err = htr(object)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootBytes, err := hex.DecodeString(rootsYaml.Root[2:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(root[:], rootBytes) {
+		t.Fatalf(
+			"Did not receive expected hash tree root, received: %#x, expected: %#x",
+			root[:],
+			rootBytes,
+		)
+	}
+
+	if rootsYaml.SigningRoot == "" {
+		return
+	}
+	var signingRoot [32]byte
+	if v, ok := object.(fssz.HashRoot); ok && useFSSZHTR {
+		signingRoot, err = v.HashTreeRoot()
+	} else {
+		signingRoot, err = ssz.HashTreeRoot(object)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRootBytes, err := hex.DecodeString(rootsYaml.SigningRoot[2:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(signingRoot[:], signingRootBytes) {
+		t.Fatalf(
+			"Did not receive expected signing root, received: %#x, expected: %#x",
+			signingRoot[:],
+			signingRootBytes,
+		)
+	}
+}
+
+func UnmarshalledSSZ(t testing.TB, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {
 	case "Attestation":

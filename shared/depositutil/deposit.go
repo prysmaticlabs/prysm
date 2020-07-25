@@ -56,13 +56,13 @@ func DepositInput(
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
+	root, err := &pb.SigningData{ObjectRoot: sr[:], Domain: domain}.HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
 	di.Signature = depositKey.Sign(root[:]).Marshal()
 
-	dr, err := ssz.HashTreeRoot(di)
+	dr, err := di.HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

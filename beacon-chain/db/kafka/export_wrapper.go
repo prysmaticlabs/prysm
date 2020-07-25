@@ -9,7 +9,6 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -55,7 +54,7 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 		return err
 	}
 
-	key, err := ssz.HashTreeRoot(msg)
+	key, err := msg.HashTreeRoot()
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err

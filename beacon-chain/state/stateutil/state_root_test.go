@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,7 +32,7 @@ func BenchmarkHashTreeRoot_Generic_512(b *testing.B) {
 	genesisState := setupGenesisState(b, 512)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := ssz.HashTreeRoot(genesisState)
+		_, err := genesisState.HashTreeRoot()
 		require.NoError(b, err)
 	}
 }
@@ -43,7 +42,7 @@ func BenchmarkHashTreeRoot_Generic_16384(b *testing.B) {
 	genesisState := setupGenesisState(b, 16384)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := ssz.HashTreeRoot(genesisState)
+		_, err := genesisState.HashTreeRoot()
 		require.NoError(b, err)
 	}
 }
@@ -53,7 +52,7 @@ func BenchmarkHashTreeRoot_Generic_300000(b *testing.B) {
 	genesisState := setupGenesisState(b, 300000)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := ssz.HashTreeRoot(genesisState)
+		_, err := genesisState.HashTreeRoot()
 		require.NoError(b, err)
 	}
 }
