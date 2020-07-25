@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
@@ -528,6 +529,31 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
+}
+
+func TestProcessAttestationsNoVerify_BadAttIdx(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	aggBits := bitfield.NewBitlist(3)
+	aggBits.SetBitAt(1, true)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			CommitteeIndex: 100,
+			Source:         &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+			Target:         &ethpb.Checkpoint{Epoch: 0},
+		},
+		AggregationBits: aggBits,
+	}
+	zeroSig := [96]byte{}
+	att.Signature = zeroSig[:]
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
+	ckp := beaconState.CurrentJustifiedCheckpoint()
+	copy(ckp.Root, "hello-world")
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
+	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
+	_, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
+	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
