@@ -200,6 +200,7 @@ func TestPeerScorer_loop(t *testing.T) {
 	scorer.IncrementRequestedBlocks("peer1", 64)
 	scorer.IncrementReturnedBlocks("peer1", 60)
 	scorer.IncrementProcessedBlocks("peer1", 50)
+	assert.NotEqual(t, 0.0, scorer.ScoreBlockProvider("peer1"))
 
 	done := make(chan struct{}, 1)
 	go func() {
