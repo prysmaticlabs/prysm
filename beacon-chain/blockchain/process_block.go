@@ -25,34 +25,51 @@ var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 // computation in this method and methods it calls into.
 //
 // Spec pseudocode definition:
-//   def on_block(store: Store, block: BeaconBlock) -> None:
-//    # Make a copy of the state to avoid mutability issues
+//   def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
+//    block = signed_block.message
+//    # Parent block must be known
 //    assert block.parent_root in store.block_states
-//    pre_state = store.block_states[block.parent_root].copy()
+//    # Make a copy of the state to avoid mutability issues
+//    pre_state = copy(store.block_states[block.parent_root])
 //    # Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
-//    assert store.time >= pre_state.genesis_time + block.slot * SECONDS_PER_SLOT
-//    # Add new block to the store
-//    store.blocks[signing_root(block)] = block
-//    # Check block is a descendant of the finalized block
-//    assert (
-//        get_ancestor(store, signing_root(block), store.blocks[store.finalized_checkpoint.root].slot) ==
-//        store.finalized_checkpoint.root
-//    )
-//    # Check that block is later than the finalized epoch slot
-//    assert block.slot > compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//    assert get_current_slot(store) >= block.slot
+//
+//    # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
+//    finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//    assert block.slot > finalized_slot
+//    # Check block is a descendant of the finalized block at the checkpoint finalized slot
+//    assert get_ancestor(store, block.parent_root, finalized_slot) == store.finalized_checkpoint.root
+//
 //    # Check the block is valid and compute the post-state
-//    state = state_transition(pre_state, block)
+//    state = state_transition(pre_state, signed_block, True)
+//    # Add new block to the store
+//    store.blocks[hash_tree_root(block)] = block
 //    # Add new state for this block to the store
-//    store.block_states[signing_root(block)] = state
+//    store.block_states[hash_tree_root(block)] = state
 //
 //    # Update justified checkpoint
 //    if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
 //        if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
 //            store.best_justified_checkpoint = state.current_justified_checkpoint
+//        if should_update_justified_checkpoint(store, state.current_justified_checkpoint):
+//            store.justified_checkpoint = state.current_justified_checkpoint
 //
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
+//
+//        # Potentially update justified if different from store
+//        if store.justified_checkpoint != state.current_justified_checkpoint:
+//            # Update justified if new justified is later than store justified
+//            if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
+//                store.justified_checkpoint = state.current_justified_checkpoint
+//                return
+//
+//            # Update justified if store justified is not in chain with finalized checkpoint
+//            finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
+//            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
+//                store.justified_checkpoint = state.current_justified_checkpoint
 func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
