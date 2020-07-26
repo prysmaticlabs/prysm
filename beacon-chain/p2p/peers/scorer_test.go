@@ -27,7 +27,9 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 		assert.Equal(t, peers.DefaultBadResponsesDecayInterval, scorer.Params().BadResponsesDecayInterval, "Unexpected decay interval value")
 		// Block providers stats.
 		assert.Equal(t, peers.DefaultBlockProviderReturnedBlocksWeight, scorer.Params().BlockProviderReturnedBlocksWeight)
+		assert.Equal(t, peers.DefaultBlockProviderNoReturnedBlocksPenalty, scorer.Params().BlockProviderNoReturnedBlocksPenalty)
 		assert.Equal(t, peers.DefaultBlockProviderProcessedBlocksWeight, scorer.Params().BlockProviderProcessedBlocksWeight)
+		assert.Equal(t, peers.DefaultBlockProviderNoProcessedBlocksPenalty, scorer.Params().BlockProviderNoProcessedBlocksPenalty)
 		assert.Equal(t, peers.DefaultBlockProviderDecayInterval, scorer.Params().BlockProviderDecayInterval)
 		assert.Equal(t, peers.DefaultBlockProviderDecay, scorer.Params().BlockProviderDecay)
 	})
@@ -36,13 +38,15 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit: 30,
 			ScorerParams: &peers.PeerScorerConfig{
-				BadResponsesThreshold:              2,
-				BadResponsesWeight:                 -1,
-				BadResponsesDecayInterval:          1 * time.Minute,
-				BlockProviderReturnedBlocksWeight:  0.5,
-				BlockProviderProcessedBlocksWeight: 0.6,
-				BlockProviderDecayInterval:         1 * time.Minute,
-				BlockProviderDecay:                 0.8,
+				BadResponsesThreshold:                 2,
+				BadResponsesWeight:                    -1,
+				BadResponsesDecayInterval:             1 * time.Minute,
+				BlockProviderReturnedBlocksWeight:     0.5,
+				BlockProviderNoReturnedBlocksPenalty:  -0.2,
+				BlockProviderProcessedBlocksWeight:    0.6,
+				BlockProviderNoProcessedBlocksPenalty: -0.3,
+				BlockProviderDecayInterval:            1 * time.Minute,
+				BlockProviderDecay:                    0.8,
 			},
 		})
 		scorer := peerStatuses.Scorer()
@@ -52,7 +56,9 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 		assert.Equal(t, 1*time.Minute, scorer.Params().BadResponsesDecayInterval, "Unexpected decay interval value")
 		// Block providers stats.
 		assert.Equal(t, 0.5, scorer.Params().BlockProviderReturnedBlocksWeight)
+		assert.Equal(t, -0.2, scorer.Params().BlockProviderNoReturnedBlocksPenalty)
 		assert.Equal(t, 0.6, scorer.Params().BlockProviderProcessedBlocksWeight)
+		assert.Equal(t, -0.3, scorer.Params().BlockProviderNoProcessedBlocksPenalty)
 		assert.Equal(t, 1*time.Minute, scorer.Params().BlockProviderDecayInterval)
 		assert.Equal(t, 0.8, scorer.Params().BlockProviderDecay)
 	})
@@ -74,11 +80,13 @@ func TestPeerScorer_Score(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit: 30,
 			ScorerParams: &peers.PeerScorerConfig{
-				BadResponsesThreshold:              5,
-				BadResponsesWeight:                 -1.0,
-				BlockProviderReturnedBlocksWeight:  0.1,
-				BlockProviderProcessedBlocksWeight: 0.2,
-				BlockProviderDecay:                 0.5, // 50% decay
+				BadResponsesThreshold:                 5,
+				BadResponsesWeight:                    -1.0,
+				BlockProviderReturnedBlocksWeight:     0.1,
+				BlockProviderNoReturnedBlocksPenalty:  -0.1,
+				BlockProviderProcessedBlocksWeight:    0.2,
+				BlockProviderNoProcessedBlocksPenalty: -0.2,
+				BlockProviderDecay:                    0.5, // 50% decay
 			},
 		})
 		s := peerStatuses.Scorer()

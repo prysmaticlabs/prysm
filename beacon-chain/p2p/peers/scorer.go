@@ -16,10 +16,14 @@ const (
 	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
 	// Every interval bad responses counter will be decremented by 1.
 	DefaultBadResponsesDecayInterval = time.Hour
-	// DefaultBlockProviderReturnedBlocksWeight default weight of a returned/requested ratio in an overall score.
+	// DefaultBlockProviderReturnedBlocksWeight is a default weight of a returned/requested ratio in an overall score.
 	DefaultBlockProviderReturnedBlocksWeight = 0.2
-	// DefaultBlockProviderProcessedBlocksWeight default weight of a processed/requested ratio in an overall score.
+	// DefaultBlockProviderNoReturnedBlocksPenalty is a default penalty for non-responsive peers.
+	DefaultBlockProviderNoReturnedBlocksPenalty = -0.02
+	// DefaultBlockProviderProcessedBlocksWeight is a default weight of a processed/requested ratio in an overall score.
 	DefaultBlockProviderProcessedBlocksWeight = 0.2
+	// DefaultBlockProviderNoProcessedBlocksPenalty is a default penalty for non-responsive peers.
+	DefaultBlockProviderNoProcessedBlocksPenalty = -0.02
 	// DefaultBlockProviderDecayInterval defines how often block provider's stats should be decayed.
 	DefaultBlockProviderDecayInterval = 5 * time.Minute
 	// DefaultBlockProviderDecay specifies a decay factor (as a left-over percentage of the original value).
@@ -44,8 +48,15 @@ type PeerScorerConfig struct {
 
 	// BlockProviderReturnedBlocksWeight defines weight of a returned/requested ratio in overall an score.
 	BlockProviderReturnedBlocksWeight float64
+	// BlockProviderNoReturnedBlocksPenalty defines a penalty applied to score, if blocks were requested,
+	// but none have been returned yet (to distinguish between non-responsive peers and peers that
+	// haven't been requested any blocks yet).
+	BlockProviderNoReturnedBlocksPenalty float64
 	// BlockProviderProcessedBlocksWeight defines weight of a processed/requested ratio in overall an score.
 	BlockProviderProcessedBlocksWeight float64
+	// BlockProviderNoProcessedBlocksPenalty defines a penalty applied to score, if blocks have been
+	// requested, but none have been processed yet.
+	BlockProviderNoProcessedBlocksPenalty float64
 	// BlockProviderDecayInterval defines how often requested/returned/processed stats should be decayed.
 	BlockProviderDecayInterval time.Duration
 	// BlockProviderDecay specifies the factor (must be < 1.0) by which block provider's stats is decayed.
@@ -75,8 +86,14 @@ func newPeerScorer(ctx context.Context, store *peerDataStore, config *PeerScorer
 	if scorer.config.BlockProviderReturnedBlocksWeight == 0.0 {
 		scorer.config.BlockProviderReturnedBlocksWeight = DefaultBlockProviderReturnedBlocksWeight
 	}
+	if scorer.config.BlockProviderNoReturnedBlocksPenalty == 0.0 {
+		scorer.config.BlockProviderNoReturnedBlocksPenalty = DefaultBlockProviderNoReturnedBlocksPenalty
+	}
 	if scorer.config.BlockProviderProcessedBlocksWeight == 0.0 {
 		scorer.config.BlockProviderProcessedBlocksWeight = DefaultBlockProviderProcessedBlocksWeight
+	}
+	if scorer.config.BlockProviderNoProcessedBlocksPenalty == 0.0 {
+		scorer.config.BlockProviderNoProcessedBlocksPenalty = DefaultBlockProviderNoProcessedBlocksPenalty
 	}
 	if scorer.config.BlockProviderDecayInterval == 0 {
 		scorer.config.BlockProviderDecayInterval = DefaultBlockProviderDecayInterval
