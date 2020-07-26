@@ -24,20 +24,36 @@ func TestPeerScorer_ScoreBlockProvider(t *testing.T) {
 	scorer := peerStatuses.Scorer()
 
 	assert.Equal(t, 0.0, scorer.ScoreBlockProvider("peer1"), "Unexpected score for unregistered provider")
-
 	scorer.IncrementRequestedBlocks("peer1", 128)
 	assert.Equal(t, -0.3, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
-
 	scorer.IncrementReturnedBlocks("peer1", 64)
 	assert.Equal(t, -0.15, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
-
 	scorer.IncrementReturnedBlocks("peer1", 64)
 	assert.Equal(t, -0.1, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
-
 	scorer.IncrementProcessedBlocks("peer1", 64)
 	assert.Equal(t, 0.2, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
-
 	scorer.IncrementProcessedBlocks("peer1", 64)
 	assert.Equal(t, 0.3, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
+}
 
+func TestPeerScorer_GettersSetters(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+		ScorerParams: &peers.PeerScorerConfig{},
+	})
+	scorer := peerStatuses.Scorer()
+
+	assert.Equal(t, uint64(0), scorer.RequestedBlocks("peer1"), "Unexpected count for unregistered peer")
+	scorer.IncrementRequestedBlocks("peer1", 64)
+	assert.Equal(t, uint64(64), scorer.RequestedBlocks("peer1"))
+
+	assert.Equal(t, uint64(0), scorer.ReturnedBlocks("peer2"), "Unexpected count for unregistered peer")
+	scorer.IncrementReturnedBlocks("peer2", 64)
+	assert.Equal(t, uint64(64), scorer.ReturnedBlocks("peer2"))
+
+	assert.Equal(t, uint64(0), scorer.ProcessedBlocks("peer3"), "Unexpected count for unregistered peer")
+	scorer.IncrementProcessedBlocks("peer3", 64)
+	assert.Equal(t, uint64(64), scorer.ProcessedBlocks("peer3"))
 }

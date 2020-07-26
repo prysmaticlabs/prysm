@@ -99,6 +99,16 @@ func TestPeerScorer_Score(t *testing.T) {
 		return s, pids
 	}
 
+	t.Run("no peer registered", func(t *testing.T) {
+		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+			ScorerParams: &peers.PeerScorerConfig{},
+		})
+		s := peerStatuses.Scorer()
+		assert.Equal(t, 0.0, s.ScoreBadResponses("peer1"))
+		assert.Equal(t, 0.0, s.ScoreBlockProvider("peer1"))
+		assert.Equal(t, 0.0, s.Score("peer1"))
+	})
+
 	t.Run("bad responses score", func(t *testing.T) {
 		s, pids := setupScorer()
 
