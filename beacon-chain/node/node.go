@@ -98,7 +98,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	if cliCtx.Bool(flags.HistoricalSlasherNode.Name) {
 		c := params.BeaconConfig()
-		// Save a state every 2 epochs.
+		// Save a state every 4 epochs.
 		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 4
 		params.OverrideBeaconConfig(c)
 		cmdConfig := cmd.Get()
