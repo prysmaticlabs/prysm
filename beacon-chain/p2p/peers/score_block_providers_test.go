@@ -62,19 +62,19 @@ func TestPeerScorer_GettersSetters(t *testing.T) {
 func TestPeerScorer_SortBlockProviders(t *testing.T) {
 	tests := []struct {
 		name   string
-		change func(s *peers.PeerScorer)
+		update func(s *peers.PeerScorer)
 		have   []peer.ID
 		want   []peer.ID
 	}{
 		{
 			name:   "no peers",
-			change: func(s *peers.PeerScorer) {},
+			update: func(s *peers.PeerScorer) {},
 			have:   []peer.ID{},
 			want:   []peer.ID{},
 		},
 		{
 			name: "same scores",
-			change: func(s *peers.PeerScorer) {
+			update: func(s *peers.PeerScorer) {
 				s.IncrementRequestedBlocks("peer1", 64)
 				s.IncrementRequestedBlocks("peer2", 64)
 				s.IncrementRequestedBlocks("peer3", 64)
@@ -84,7 +84,7 @@ func TestPeerScorer_SortBlockProviders(t *testing.T) {
 		},
 		{
 			name: "different scores",
-			change: func(s *peers.PeerScorer) {
+			update: func(s *peers.PeerScorer) {
 				s.IncrementRequestedBlocks("peer1", 64)
 				s.IncrementRequestedBlocks("peer2", 128)
 				s.IncrementRequestedBlocks("peer3", 64)
@@ -94,7 +94,7 @@ func TestPeerScorer_SortBlockProviders(t *testing.T) {
 		},
 		{
 			name: "positive and negative scores",
-			change: func(s *peers.PeerScorer) {
+			update: func(s *peers.PeerScorer) {
 				s.IncrementRequestedBlocks("peer1", 64)
 				s.IncrementReturnedBlocks("peer1", 32)
 				s.IncrementProcessedBlocks("peer1", 16)
@@ -114,7 +114,7 @@ func TestPeerScorer_SortBlockProviders(t *testing.T) {
 				ScorerParams: &peers.PeerScorerConfig{},
 			})
 			scorer := peerStatuses.Scorer()
-			tt.change(scorer)
+			tt.update(scorer)
 			assert.DeepEqual(t, tt.want, scorer.SortBlockProviders(tt.have))
 		})
 	}
