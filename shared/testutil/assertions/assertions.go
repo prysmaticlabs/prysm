@@ -25,6 +25,15 @@ func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...inte
 	}
 }
 
+// NotEqual compares values using comparison operator.
+func NotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
+	errMsg := parseMsg("Values are equal", msg...)
+	if expected == actual {
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s, both values are equal: %[4]v (%[4]T)", filepath.Base(file), line, errMsg, expected)
+	}
+}
+
 // DeepEqual compares values using DeepEqual.
 func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
 	errMsg := parseMsg("Values are not equal", msg...)
