@@ -264,7 +264,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 
 	blocks := []*eth.SignedBeaconBlock{}
 	var err error
-	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	peers, err = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	if err != nil {
 		return blocks, err
 	}
@@ -277,7 +277,9 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Step:      1,
 	}
 	for i := 0; i < len(peers); i++ {
+		f.p2p.Peers().Scorer().IncrementRequestedBlocks(peers[i], count)
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
+			f.p2p.Peers().Scorer().IncrementReturnedBlocks(peers[i], uint64(len(blocks)))
 			return blocks, err
 		}
 	}
@@ -416,36 +418,43 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 
 // filterPeers returns transformed list of peers,
 // weight ordered or randomized, constrained if necessary.
-func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+	ctx, span := trace.StartSpan(ctx, "initialsync.filterPeers")
+	defer span.End()
+
 	if len(peers) == 0 {
 		return peers, nil
 	}
 
-	// Shuffle peers to prevent a bad peer from
-	// stalling sync with invalid blocks.
+	// Shuffle peers to make sure that peers having the same score are selected at random.
 	f.rand.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
 
+	// Sort peers by their score (in descending order), non-responsive peers will be constantly
+	// pushed down the list and trimmed when percentage is selected.
+	peers = f.p2p.Peers().Scorer().SortBlockProviders(peers)
+
 	// Select sub-sample from peers (honoring min-max invariants).
-	required := params.BeaconConfig().MaxPeersToSync
-	if flags.Get().MinimumSyncPeers < required {
-		required = flags.Get().MinimumSyncPeers
-	}
 	limit := uint64(math.Round(float64(len(peers)) * peersPercentage))
-	limit = mathutil.Max(limit, uint64(required))
+	limit = mathutil.Max(limit, uint64(flags.Get().MinimumSyncPeers))
 	limit = mathutil.Min(limit, uint64(len(peers)))
 	peers = peers[:limit]
 
-	// Order peers by remaining capacity, effectively turning in-order
-	// round robin peer processing into a weighted one (peers with higher
-	// remaining capacity are preferred). Peers with the same capacity
-	// are selected at random, since we have already shuffled peers
-	// at this point.
+	// Order peers by score and remaining capacity, effectively turning in-order
+	// round robin peer processing into a weighted one (peers with higher scores and higher
+	// remaining capacity are preferred). Peers with the same score/capacity are selected at random,
+	// since we have already shuffled peers at this point.
 	sort.SliceStable(peers, func(i, j int) bool {
-		cap1 := f.rateLimiter.Remaining(peers[i].String())
-		cap2 := f.rateLimiter.Remaining(peers[j].String())
-		return cap1 > cap2
+		score1 := f.p2p.Peers().Scorer().ScoreBlockProvider(peers[i])
+		score2 := f.p2p.Peers().Scorer().ScoreBlockProvider(peers[j])
+		// If scores are equal, rely on remaining capacity as tie-breaker.
+		if score1 == score2 {
+			cap1 := f.rateLimiter.Remaining(peers[i].String())
+			cap2 := f.rateLimiter.Remaining(peers[j].String())
+			return cap1 > cap2
+		}
+		return score1 > score2
 	})
 
 	return peers, nil
@@ -472,7 +481,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		return 0, errSlotIsTooHigh
 	}
 	var err error
-	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	peers, err = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	if err != nil {
 		return 0, err
 	}

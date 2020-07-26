@@ -18,6 +18,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -665,11 +666,17 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 		peers           []weightedPeer
 		peersPercentage float64
 	}
-	fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
+
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+	fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
+		headFetcher: mc,
+		p2p:         p2p,
+	})
 	tests := []struct {
-		name string
-		args args
-		want []peer.ID
+		name   string
+		args   args
+		update func(s *peers.PeerScorer)
+		want   []peer.ID
 	}{
 		{
 			name: "no peers available",
@@ -715,6 +722,31 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			},
 			want: []peer.ID{"ghi", "def", "abc", "xyz", "jkl"},
 		},
+		{
+			name: "multiple peers with scores",
+			args: args{
+				peers: []weightedPeer{
+					{"abc", 20},
+					{"def", 15},
+					{"ghi", 10},
+					{"jkl", 90},
+					{"xyz", 20},
+				},
+				peersPercentage: 0.8,
+			},
+			update: func(s *peers.PeerScorer) {
+				// Make sure that score takes priority over capacity.
+				s.IncrementRequestedBlocks("ghi", 64)
+				s.IncrementRequestedBlocks("def", 64)
+				s.IncrementReturnedBlocks("def", 32)
+				// Break tie using capacity as a tie-breaker (abc and ghi have the same score).
+				s.IncrementRequestedBlocks("abc", 64)
+				s.IncrementRequestedBlocks("xyz", 64)
+				// Exclude peer (peers percentage is 80%).
+				s.IncrementRequestedBlocks("jkl", 128)
+			},
+			want: []peer.ID{"def", "ghi", "abc", "xyz"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -725,16 +757,23 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				pids = append(pids, pid.ID)
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
-			got, err := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			if tt.update != nil {
+				tt.update(fetcher.p2p.Peers().Scorer())
+			}
+			got, err := fetcher.filterPeers(context.Background(), pids, tt.args.peersPercentage)
 			require.NoError(t, err)
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
 			sort.SliceStable(got, func(i, j int) bool {
-				cap1 := fetcher.rateLimiter.Remaining(pids[i].String())
-				cap2 := fetcher.rateLimiter.Remaining(pids[j].String())
-				if cap1 == cap2 {
-					return pids[i].String() < pids[j].String()
+				score1 := fetcher.p2p.Peers().Scorer().ScoreBlockProvider(got[i])
+				score2 := fetcher.p2p.Peers().Scorer().ScoreBlockProvider(got[j])
+				if score1 == score2 {
+					cap1 := fetcher.rateLimiter.Remaining(got[i].String())
+					cap2 := fetcher.rateLimiter.Remaining(got[j].String())
+					if cap1 == cap2 {
+						return got[i].String() < got[j].String()
+					}
 				}
 				return i < j
 			})
