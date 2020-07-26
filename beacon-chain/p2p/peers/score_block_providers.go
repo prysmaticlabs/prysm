@@ -2,10 +2,31 @@ package peers
 
 import (
 	"math"
+	"sort"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 )
+
+// SortBlockProviders returns list of block providers sorted by score in descending order.
+func (s *PeerScorer) SortBlockProviders(pids []peer.ID) []peer.ID {
+	s.store.Lock()
+	defer s.store.Unlock()
+
+	if len(pids) == 0 {
+		return pids
+	}
+	scores := make(map[peer.ID]float64, len(pids))
+	peers := make([]peer.ID, len(pids))
+	for i, pid := range pids {
+		scores[pid] = s.scoreBlockProvider(pid)
+		peers[i] = pid
+	}
+	sort.SliceStable(peers, func(i, j int) bool {
+		return scores[peers[i]] > scores[peers[j]]
+	})
+	return peers
+}
 
 // ScoreBlockProvider calculates and returns total score based on returned and processed blocks.
 func (s *PeerScorer) ScoreBlockProvider(pid peer.ID) float64 {
@@ -24,7 +45,8 @@ func (s *PeerScorer) scoreBlockProvider(pid peer.ID) float64 {
 	if peerData.requestedBlocks > 0 {
 		// Score returned/requested ratio. If no blocks has been returned, apply as a penalty.
 		if peerData.returnedBlocks == 0 {
-			score += s.config.BlockProviderNoReturnedBlocksPenalty
+			emptyBatches := float64(peerData.requestedBlocks) / float64(flags.Get().BlockBatchLimit)
+			score += s.config.BlockProviderNoReturnedBlocksPenalty * emptyBatches
 		} else {
 			returnedBlocksScore := float64(peerData.returnedBlocks) / float64(peerData.requestedBlocks)
 			returnedBlocksScore = returnedBlocksScore * s.config.BlockProviderReturnedBlocksWeight
@@ -32,7 +54,8 @@ func (s *PeerScorer) scoreBlockProvider(pid peer.ID) float64 {
 		}
 		// Score processed/requested ratio. If no blocks has been processed, apply as a penalty.
 		if peerData.processedBlocks == 0 {
-			score += s.config.BlockProviderNoProcessedBlocksPenalty
+			emptyBatches := float64(peerData.requestedBlocks) / float64(flags.Get().BlockBatchLimit)
+			score += s.config.BlockProviderNoProcessedBlocksPenalty * emptyBatches
 		} else {
 			processedBlocksScore := float64(peerData.processedBlocks) / float64(peerData.requestedBlocks)
 			processedBlocksScore = processedBlocksScore * s.config.BlockProviderProcessedBlocksWeight
