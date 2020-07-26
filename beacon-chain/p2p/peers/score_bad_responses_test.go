@@ -12,6 +12,29 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
+func TestPeerScorer_ScoreBadResponses(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesThreshold: 4,
+		},
+	})
+	scorer := peerStatuses.Scorer()
+
+	assert.Equal(t, 0.0, scorer.ScoreBlockProvider("peer1"), "Unexpected score for unregistered peer")
+	scorer.IncrementBadResponses("peer1")
+	assert.Equal(t, -0.25, scorer.ScoreBadResponses("peer1"))
+	scorer.IncrementBadResponses("peer1")
+	assert.Equal(t, -0.5, scorer.ScoreBadResponses("peer1"))
+	scorer.IncrementBadResponses("peer1")
+	scorer.IncrementBadResponses("peer1")
+	assert.Equal(t, -1.0, scorer.ScoreBadResponses("peer1"))
+	assert.Equal(t, true, scorer.IsBadPeer("peer1"))
+}
+
 func TestPeerScorer_BadResponsesThreshold(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
