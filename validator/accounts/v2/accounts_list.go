@@ -93,8 +93,6 @@ func listDirectKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		fmt.Printf("%s\n", au.BrightGreen(accountNames[i]).Bold())
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), pubKeys[i])
 
 		// Retrieve the account creation timestamp.
 		createdAtBytes, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.TimestampFileName)
@@ -106,7 +104,9 @@ func listDirectKeymanagerAccounts(
 			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
 		}
 		unixTimestamp := time.Unix(unixTimestampStr, 0)
-		fmt.Printf("%s %s\n", au.BrightCyan("[created at]").Bold(), humanize.Time(unixTimestamp))
+
+		fmt.Printf("%s | %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if !showDepositData {
 			continue
 		}
