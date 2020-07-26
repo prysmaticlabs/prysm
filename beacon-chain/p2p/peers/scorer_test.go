@@ -123,10 +123,10 @@ func TestPeerScorer_Score(t *testing.T) {
 		// Test setting individual (returned blocks and processed blocks) scores.
 		s.IncrementRequestedBlocks("peer2", 128)
 		s.IncrementReturnedBlocks("peer2", 64)
-		assert.DeepEqual(t, map[string]float64{"peer1": 0.125, "peer2": 0.05, "peer3": 0}, peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, map[string]float64{"peer1": 0.125, "peer2": -0.15, "peer3": 0}, peerScores(s, pids), "Unexpected scores")
 		s.IncrementRequestedBlocks("peer3", 128)
-		s.IncrementProcessedBlocks("peer3", 64)
-		assert.DeepEqual(t, map[string]float64{"peer1": 0.125, "peer2": 0.05, "peer3": 0.1}, peerScores(s, pids), "Unexpected scores")
+		s.IncrementProcessedBlocks("peer3", 32)
+		assert.DeepEqual(t, map[string]float64{"peer1": 0.125, "peer2": -0.15, "peer3": -0.05}, peerScores(s, pids), "Unexpected scores")
 
 		// See effect of decaying.
 		assert.Equal(t, uint64(128), s.RequestedBlocks("peer1"), "Unexpected number of requested blocks in %q", "peer1")
@@ -137,9 +137,10 @@ func TestPeerScorer_Score(t *testing.T) {
 		assert.Equal(t, uint64(0), s.ReturnedBlocks("peer3"), "Unexpected number of returned blocks in %q", "peer3")
 		assert.Equal(t, uint64(64), s.ProcessedBlocks("peer1"), "Unexpected number of processed blocks in %q", "peer1")
 		assert.Equal(t, uint64(0), s.ProcessedBlocks("peer2"), "Unexpected number of processed blocks in %q", "peer2")
-		assert.Equal(t, uint64(64), s.ProcessedBlocks("peer3"), "Unexpected number of processed blocks in %q", "peer3")
+		assert.Equal(t, uint64(32), s.ProcessedBlocks("peer3"), "Unexpected number of processed blocks in %q", "peer3")
+		assert.DeepEqual(t, map[string]float64{"peer1": 0.125, "peer2": -0.15, "peer3": -0.05}, peerScores(s, pids), "Unexpected scores")
 		s.DecayBlockProvidersStats()
-		assert.DeepEqual(t, map[string]float64{"peer1": 0.125, "peer2": 0.05, "peer3": 0.1}, peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, map[string]float64{"peer1": 0.125, "peer2": -0.15, "peer3": -0.05}, peerScores(s, pids), "Unexpected scores")
 		assert.Equal(t, uint64(128/2), s.RequestedBlocks("peer1"), "Unexpected number of requested blocks in %q", "peer1")
 		assert.Equal(t, uint64(128/2), s.RequestedBlocks("peer2"), "Unexpected number of requested blocks in %q", "peer2")
 		assert.Equal(t, uint64(128/2), s.RequestedBlocks("peer3"), "Unexpected number of requested blocks in %q", "peer3")
@@ -148,7 +149,7 @@ func TestPeerScorer_Score(t *testing.T) {
 		assert.Equal(t, uint64(0/2), s.ReturnedBlocks("peer3"), "Unexpected number of returned blocks in %q", "peer3")
 		assert.Equal(t, uint64(64/2), s.ProcessedBlocks("peer1"), "Unexpected number of processed blocks in %q", "peer1")
 		assert.Equal(t, uint64(0/2), s.ProcessedBlocks("peer2"), "Unexpected number of processed blocks in %q", "peer2")
-		assert.Equal(t, uint64(64/2), s.ProcessedBlocks("peer3"), "Unexpected number of processed blocks in %q", "peer3")
+		assert.Equal(t, uint64(32/2), s.ProcessedBlocks("peer3"), "Unexpected number of processed blocks in %q", "peer3")
 	})
 
 	t.Run("overall score", func(t *testing.T) {

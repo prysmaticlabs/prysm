@@ -22,14 +22,22 @@ func (s *PeerScorer) scoreBlockProvider(pid peer.ID) float64 {
 		return score
 	}
 	if peerData.requestedBlocks > 0 {
-		// Score returned/requested ratio.
-		returnedBlocksScore := float64(peerData.returnedBlocks) / float64(peerData.requestedBlocks)
-		returnedBlocksScore = returnedBlocksScore * s.config.BlockProviderReturnedBlocksWeight
-		score += returnedBlocksScore
-		// Score processed/requested ratio.
-		processedBlocksScore := float64(peerData.processedBlocks) / float64(peerData.requestedBlocks)
-		processedBlocksScore = processedBlocksScore * s.config.BlockProviderProcessedBlocksWeight
-		score += processedBlocksScore
+		// Score returned/requested ratio. If no blocks has been returned, apply as a penalty.
+		if peerData.returnedBlocks == 0 {
+			score += -1.0 * s.config.BlockProviderReturnedBlocksWeight
+		} else {
+			returnedBlocksScore := float64(peerData.returnedBlocks) / float64(peerData.requestedBlocks)
+			returnedBlocksScore = returnedBlocksScore * s.config.BlockProviderReturnedBlocksWeight
+			score += returnedBlocksScore
+		}
+		// Score processed/requested ratio. If no blocks has been processed, apply as a penalty.
+		if peerData.processedBlocks == 0 {
+			score += -1.0 * s.config.BlockProviderProcessedBlocksWeight
+		} else {
+			processedBlocksScore := float64(peerData.processedBlocks) / float64(peerData.requestedBlocks)
+			processedBlocksScore = processedBlocksScore * s.config.BlockProviderProcessedBlocksWeight
+			score += processedBlocksScore
+		}
 	}
 	return math.Round(score*10000) / 10000
 }
