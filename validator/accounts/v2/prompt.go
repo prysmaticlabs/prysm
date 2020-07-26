@@ -110,11 +110,11 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		if err != nil {
 			return "", err
 		}
-		enteredPassword := string(data)
+		enteredPassword := strings.TrimRight(string(data), "\r\n")
 		if err := validatePasswordInput(enteredPassword); err != nil {
 			return "", errors.Wrap(err, "password did not pass validation")
 		}
-		return strings.TrimRight(enteredPassword, "\r\n"), nil
+		return enteredPassword, nil
 	}
 
 	var hasValidPassword bool
