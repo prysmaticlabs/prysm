@@ -46,15 +46,6 @@ const (
 	DirectoryPermissions = os.ModePerm
 )
 
-// WalletConfig for a wallet struct, containing important information
-// such as the passwords directory, the wallet's directory, and keymanager.
-type WalletConfig struct {
-	WalletDir         string
-	PasswordsDir      string
-	KeymanagerKind    v2keymanager.Kind
-	CanUnlockAccounts bool
-}
-
 // Wallet is a primitive in Prysm's v2 account management which
 // has the capability of creating new accounts, reading existing accounts,
 // and providing secure access to eth2 secrets depending on an
