@@ -54,6 +54,10 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if s.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
 		return pubsub.ValidationIgnore
 	}
+	// Check that the block being voted on isn't invalid.
+	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) {
+		return pubsub.ValidationReject
+	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
 	seen, err := s.attPool.HasAggregatedAttestation(m.Message.Aggregate)

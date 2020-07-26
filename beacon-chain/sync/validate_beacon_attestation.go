@@ -67,6 +67,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return pubsub.ValidationIgnore
 	}
+	// Reject an attestation if it references an invalid block.
+	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
+		return pubsub.ValidationReject
+	}
 
 	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
