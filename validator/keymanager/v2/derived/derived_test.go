@@ -89,7 +89,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 		walletPassword: password,
 	}
 	ctx := context.Background()
-	accountName, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+	accountName, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
 	require.NoError(t, err)
 	assert.Equal(t, "0", accountName)
 
