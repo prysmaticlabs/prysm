@@ -32,7 +32,7 @@ func (s *PeerScorer) scoreBlockProvider(pid peer.ID) float64 {
 		}
 		// Score processed/requested ratio. If no blocks has been processed, apply as a penalty.
 		if peerData.processedBlocks == 0 {
-			score +=  s.config.BlockProviderNoProcessedBlocksPenalty
+			score += s.config.BlockProviderNoProcessedBlocksPenalty
 		} else {
 			processedBlocksScore := float64(peerData.processedBlocks) / float64(peerData.requestedBlocks)
 			processedBlocksScore = processedBlocksScore * s.config.BlockProviderProcessedBlocksWeight
