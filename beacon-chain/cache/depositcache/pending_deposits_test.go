@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -30,9 +31,9 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 
 func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := DepositCache{}
-	proof1 := make([][]byte, 33)
+	proof1 := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	proof1[0] = bytesutil.PadTo([]byte{'A'}, 32)
-	proof2 := make([][]byte, 33)
+	proof2 := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	proof2[0] = bytesutil.PadTo([]byte{'A'}, 32)
 	depToRemove := &ethpb.Deposit{Proof: proof1}
 	otherDep := &ethpb.Deposit{Proof: proof2}
@@ -56,7 +57,7 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 
 func TestPendingDeposit_RoundTrip(t *testing.T) {
 	dc := DepositCache{}
-	proof := make([][]byte, 33)
+	proof := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	proof[0] = bytesutil.PadTo([]byte{'A'}, 32)
 	dep := &ethpb.Deposit{Proof: proof}
 	dc.InsertPendingDeposit(context.Background(), dep, 111, 100, [32]byte{})
