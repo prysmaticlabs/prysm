@@ -13,6 +13,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/consts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
@@ -130,7 +131,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 			if strings.Contains(path, accountName) {
 				// Add all files under the account folder to the archive.
 				isAccount = true
-			} else if !info.IsDir() && info.Name() == KeymanagerConfigFileName {
+			} else if !info.IsDir() && info.Name() == consts.KeymanagerConfigFileName {
 				// Add the keymanager config file to the archive as well.
 				isAccount = true
 			}

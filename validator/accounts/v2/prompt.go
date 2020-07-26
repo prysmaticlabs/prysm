@@ -290,6 +290,13 @@ func validateCACertPath(input string) error {
 	return nil
 }
 
+func validateDirectoryPath(input string) error {
+	if len(input) == 0 {
+		return errors.New("directory path must not be empty")
+	}
+	return nil
+}
+
 func formatPromptError(err error) error {
 	switch err {
 	case promptui.ErrAbort:
