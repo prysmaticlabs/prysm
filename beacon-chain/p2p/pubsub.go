@@ -11,6 +11,9 @@ import (
 
 // JoinTopic will join PubSub topic, if not already joined.
 func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
+	s.joinedTopicsLock.Lock()
+	defer s.joinedTopicsLock.Unlock()
+
 	if _, ok := s.joinedTopics[topic]; !ok {
 		topicHandle, err := s.pubsub.Join(topic, opts...)
 		if err != nil {
@@ -25,6 +28,9 @@ func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topi
 // LeaveTopic closes topic and removes corresponding handler from list of joined topics.
 // This method will return error if there are outstanding event handlers or subscriptions.
 func (s *Service) LeaveTopic(topic string) error {
+	s.joinedTopicsLock.Lock()
+	defer s.joinedTopicsLock.Unlock()
+
 	if t, ok := s.joinedTopics[topic]; ok {
 		if err := t.Close(); err != nil {
 			return err
