@@ -269,11 +269,35 @@ func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName s
 		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
 	}
 	fullPath := filepath.Join(accountPath, fileName)
-	rawData, err := ioutil.ReadFile(fullPath)
+	matches, err := filepath.Glob(fullPath)
+	if err != nil {
+		return []byte{}, errors.Wrap(err, "could not find file")
+	}
+	if len(matches) == 0 {
+		return []byte{}, fmt.Errorf("no files found %s", fullPath)
+	}
+	rawData, err := ioutil.ReadFile(matches[0])
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read %s", filePath)
 	}
 	return rawData, nil
+}
+
+func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName string) (string, error) {
+	accountPath := filepath.Join(w.accountsPath, filePath)
+	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
+		return "", errors.Wrapf(err, "could not create path: %s", accountPath)
+	}
+	fullPath := filepath.Join(accountPath, fileName)
+	matches, err := filepath.Glob(fullPath)
+	if err != nil {
+		return "", errors.Wrap(err, "could not find file")
+	}
+	if len(matches) == 0 {
+		return "", fmt.Errorf("no files found %s", fullPath)
+	}
+	fullFileName := filepath.Base(matches[0])
+	return fullFileName, nil
 }
 
 // ReadKeymanagerConfigFromDisk opens a keymanager config file
