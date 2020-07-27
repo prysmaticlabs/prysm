@@ -108,7 +108,7 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
-			return "", err
+			return "", errors.Wrap(err, "could not read password file")
 		}
 		enteredPassword := string(data)
 		if err := validatePasswordInput(enteredPassword); err != nil {

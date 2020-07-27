@@ -50,8 +50,19 @@ func CreateAccount(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("not a derived keymanager")
 		}
-		if _, err := km.CreateAccount(ctx); err != nil {
-			return errors.Wrap(err, "could not create account in wallet")
+		startNum := km.NextAccountNumber(ctx)
+		numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
+		if numAccounts == 1 {
+			if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
+				return errors.Wrap(err, "could not create account in wallet")
+			}
+		} else {
+			for i := 0; i < int(numAccounts); i++ {
+				if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
+					return errors.Wrap(err, "could not create account in wallet")
+				}
+			}
+			log.Infof("Successfully created %d accounts. Please use accounts-v2 list to view details for accounts %d through %d.", numAccounts, startNum, startNum+uint64(numAccounts)-1)
 		}
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
