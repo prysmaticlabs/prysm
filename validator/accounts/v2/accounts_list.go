@@ -184,7 +184,7 @@ func listDerivedKeymanagerAccounts(
 			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
 		}
 		unixTimestamp := time.Unix(unixTimestampInt, 0)
-		fmt.Printf("%s | %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s | %s | Created %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
 		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
 

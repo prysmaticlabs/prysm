@@ -2,12 +2,9 @@ package v2
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -40,7 +36,7 @@ func (m *mockKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Si
 }
 
 func TestListAccounts_DirectKeymanager(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		passwordsDir:   passwordsDir,
@@ -127,20 +123,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 }
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err)
-	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords-file")
-	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
-	})
-	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
-	password := "PasszW0rdzzz2%"
-	require.NoError(
-		t,
-		ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm),
-	)
+	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		passwordsDir:   passwordsDir,
@@ -173,7 +156,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx)
+		_, err := keymanager.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
 		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositTransactionFileName)
@@ -241,7 +224,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 }
 
 func TestListAccounts_RemoteKeymanager(t *testing.T) {
-	walletDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, _, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
