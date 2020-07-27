@@ -5,6 +5,16 @@ import (
 )
 
 var (
+	// AltonaTestnet flag for the multiclient eth2 testnet configuration.
+	AltonaTestnet = &cli.BoolFlag{
+		Name:  "altona",
+		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
+	}
+	// MedallaTestnet flag for the multiclient eth2 testnet configuration.
+	MedallaTestnet = &cli.BoolFlag{
+		Name:  "medalla",
+		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
+	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
@@ -135,10 +145,6 @@ var (
 	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
-	}
-	altonaTestnet = &cli.BoolFlag{
-		Name:  "altona",
-		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
 	enableAccountsV2 = &cli.BoolFlag{
 		Name:  "enable-accounts-v2",
@@ -565,7 +571,8 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
-	altonaTestnet,
+	AltonaTestnet,
+	MedallaTestnet,
 	enableAccountsV2,
 }...)
 
@@ -607,7 +614,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	attestationAggregationStrategy,
 	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
-	altonaTestnet,
+	AltonaTestnet,
+	MedallaTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
