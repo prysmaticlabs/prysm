@@ -80,7 +80,8 @@ func NewWallet(
 	}
 	if walletExists {
 		return nil, errors.New(
-			,
+			"you already have a wallet at the specified path. You can " +
+				"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
 		)
 	}
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
