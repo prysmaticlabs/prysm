@@ -68,7 +68,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 	// Reject an attestation if it references an invalid block.
-	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
+	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) || s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) {
 		return pubsub.ValidationReject
 	}
 
