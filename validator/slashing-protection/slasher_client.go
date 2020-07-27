@@ -137,9 +137,8 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status ...
-//
-// WIP - not done.
+// Status checks if the connection to slasher server is ready,
+// returns error otherwise.
 func (s *Service) Status() error {
 	if s.conn == nil {
 		return errors.New("no connection to slasher RPC")
