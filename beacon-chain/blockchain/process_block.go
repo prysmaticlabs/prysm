@@ -174,6 +174,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, true /* init sync */); err != nil {
 		return err
 	}
+	// Save the latest block as head in cache.
+	if err := s.saveHeadNoDB(ctx, signed, blockRoot, postState); err != nil {
+		return err
+	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
@@ -262,7 +266,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		}
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
-	if err := s.stateGen.SaveState(ctx, blockRoots[len(blockRoots)-1], preState); err != nil {
+	lastB := blks[len(blks)-1]
+	lastBR := blockRoots[len(blockRoots)-1]
+	if err := s.stateGen.SaveState(ctx, lastBR, preState); err != nil {
+		return nil, nil, err
+	}
+	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
 		return nil, nil, err
 	}
 	return fCheckpoints, jCheckpoints, nil
