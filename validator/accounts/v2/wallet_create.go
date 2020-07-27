@@ -29,7 +29,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
 			return errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
-		log.WithField("wallet-path", w.accountsPath).Infof(
+		log.WithField("wallet-dir", w.accountsPath).Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
 				"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 		)
@@ -37,7 +37,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		if err = createDerivedKeymanagerWallet(cliCtx, w); err != nil {
 			return errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
-		log.WithField("wallet-path", w.accountsPath).Infof(
+		log.WithField("wallet-dir", w.accountsPath).Infof(
 			"Successfully created HD wallet and saved configuration to disk. " +
 				"Make a new validator account with ./prysm.sh validator accounts-2 create",
 		)
