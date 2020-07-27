@@ -14,7 +14,7 @@ import (
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, _, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
