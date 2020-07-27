@@ -6,6 +6,7 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
+	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -69,6 +70,7 @@ type Service struct {
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
+	joinedTopicsLock      sync.Mutex
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
