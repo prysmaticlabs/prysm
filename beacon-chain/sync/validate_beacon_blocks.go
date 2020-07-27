@@ -78,6 +78,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if s.db.HasBlock(ctx, blockRoot) {
 		return pubsub.ValidationIgnore
 	}
+	// Check if parent is a bad block and then reject the block.
+	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+		log.Errorf("Received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block.ParentRoot)
+		s.setBadBlock(blockRoot)
+		return pubsub.ValidationReject
+	}
 
 	s.pendingQueueLock.RLock()
 	if s.seenPendingBlocks[blockRoot] {
@@ -112,6 +118,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)); err != nil {
 		log.WithError(err).Warn("Rejecting block")
+		s.setBadBlock(blockRoot)
 		return pubsub.ValidationReject
 	}
 
@@ -129,6 +136,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
+		s.setBadBlock(blockRoot)
 		return pubsub.ValidationReject
 	}
 
@@ -144,6 +152,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	if blk.Block.ProposerIndex != idx {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Incorrect proposer index")
+		s.setBadBlock(blockRoot)
 		return pubsub.ValidationReject
 	}
 
@@ -166,6 +175,21 @@ func (s *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
 	defer s.seenBlockLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
 	s.seenBlockCache.Add(string(b), true)
+}
+
+// Returns true if the block is marked as a bad block.
+func (s *Service) hasBadBlock(root [32]byte) bool {
+	s.badBlockLock.RLock()
+	defer s.badBlockLock.RUnlock()
+	_, seen := s.badBlockCache.Get(string(root[:]))
+	return seen
+}
+
+// Set bad block in the cache.
+func (s *Service) setBadBlock(root [32]byte) {
+	s.badBlockLock.Lock()
+	defer s.badBlockLock.Unlock()
+	s.badBlockCache.Add(string(root[:]), true)
 }
 
 // This captures metrics for block arrival time by subtracts slot start time.
