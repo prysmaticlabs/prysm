@@ -31,6 +31,8 @@ type NetworkConfig struct {
 	// Chain Network Config
 	ContractDeploymentBlock uint64   // ContractDeploymentBlock is the eth1 block in which the deposit contract is deployed.
 	DepositContractAddress  string   // DepositContractAddress is the address of the deposit contract.
+	ChainID                 uint64   // ChainID of the eth1 network. This used for replay protection.
+	NetworkID               uint64   // NetworkID of the eth1 network. This used for replay protection.
 	BootstrapNodes          []string // BootstrapNodes are the addresses of the bootnodes.
 }
 
