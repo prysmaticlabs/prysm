@@ -622,6 +622,16 @@ func TestConsistentGenesisState(t *testing.T) {
 	cancel()
 }
 
+func TestCheckForChainstart_NoValidator(t *testing.T) {
+	hook := logTest.NewGlobal()
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	beaconDB, _ := testDB.SetupDB(t)
+	s := newPowchainService(t, testAcc, beaconDB)
+	s.checkForChainstart([32]byte{}, nil, 0)
+	testutil.AssertLogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
+}
+
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
