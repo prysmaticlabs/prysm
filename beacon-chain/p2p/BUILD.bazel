@@ -98,6 +98,7 @@ go_test(
         "gossip_topic_mappings_test.go",
         "options_test.go",
         "parameter_test.go",
+        "pubsub_test.go",
         "rpc_topic_mappings_test.go",
         "sender_test.go",
         "service_test.go",
