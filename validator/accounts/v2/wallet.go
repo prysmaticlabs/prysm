@@ -8,7 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/logrusorgru/aurora"
@@ -298,6 +300,21 @@ func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName s
 	}
 	fullFileName := filepath.Base(matches[0])
 	return fullFileName, nil
+}
+
+func AccountTimestamp(fileName string) (time.Time, error) {
+	timestampStart := strings.LastIndex(fileName, "-") + 1
+	timestampEnd := strings.LastIndex(fileName, ".")
+	// Return an error if the text we expect cannot be found.
+	if timestampStart == -1 || timestampEnd == -1 {
+		return time.Unix(0, 0), fmt.Errorf("could not find timestamp in file name %s", fileName)
+	}
+	unixTimestampStr, err := strconv.ParseInt(fileName[timestampStart:timestampEnd], 10, 64)
+	if err != nil {
+		return time.Unix(0, 0), errors.Wrapf(err, "could not parse account created at timestamp: %s", fileName)
+	}
+	unixTimestamp := time.Unix(unixTimestampStr, 0)
+	return unixTimestamp, nil
 }
 
 // ReadKeymanagerConfigFromDisk opens a keymanager config file

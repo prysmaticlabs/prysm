@@ -37,8 +37,8 @@ const (
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
 	KeystoreFileName = "keystore-*.json"
-	// FormattedKeystoreFileName exposes the filename the keystore should be formatted in.
-	FormattedKeystoreFileName = "keystore-%d.json"
+	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
+	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
 	PasswordFileSuffix  = ".pass"
 	depositDataFileName = "deposit_data.ssz"
@@ -175,7 +175,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := roughtime.Now().Unix()
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, fmt.Sprintf(FormattedKeystoreFileName, createdAt), encoded); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, fmt.Sprintf(KeystoreFileNameFormat, createdAt), encoded); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -102,13 +101,10 @@ func listDirectKeymanagerAccounts(
 		if err != nil {
 			return errors.Wrapf(err, "could not get keystore file name for account: %s", accountNames[i])
 		}
-		timestampStart := strings.LastIndex(keystoreFileName, "-") + 1
-		timestampEnd := strings.LastIndex(keystoreFileName, ".")
-		unixTimestampStr, err := strconv.ParseInt(keystoreFileName[timestampStart:timestampEnd], 10, 64)
+		unixTimestamp, err := AccountTimestamp(keystoreFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not parse account created at timestamp: %s", keystoreFileName)
+			return errors.Wrap(err, "could not get timestamp from keystore file name")
 		}
-		unixTimestamp := time.Unix(unixTimestampStr, 0)
 		fmt.Printf("%s %s\n", au.BrightCyan("[created at]").Bold(), humanize.Time(unixTimestamp))
 		if !showDepositData {
 			continue
