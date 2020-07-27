@@ -304,6 +304,7 @@ func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName s
 	return fullFileName, nil
 }
 
+// AccountTimestamp retrieves the timestamp from a given keystore file name.
 func AccountTimestamp(fileName string) (time.Time, error) {
 	timestampStart := strings.LastIndex(fileName, "-") + 1
 	timestampEnd := strings.LastIndex(fileName, ".")
