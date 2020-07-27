@@ -40,6 +40,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
+	err := r.initCaches()
+	require.NoError(t, err)
 
 	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
@@ -109,6 +111,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
+	err := r.initCaches()
+	require.NoError(t, err)
 	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
@@ -181,6 +185,8 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
+	err := r.initCaches()
+	require.NoError(t, err)
 	p1.Peers().Add(new(enr.Record), p1.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p1.PeerID(), &pb.Status{})
