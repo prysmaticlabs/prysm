@@ -3,6 +3,11 @@ package params
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
 	beaconConfig = E2ETestConfig()
+
+	cfg := BeaconNetworkConfig().Copy()
+	cfg.ChainID = 1337   // Chain ID of eth1 dev net.
+	cfg.NetworkID = 1337 // Network ID of eth1 dev net.
+	OverrideBeaconNetworkConfig(cfg)
 }
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
