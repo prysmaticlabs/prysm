@@ -26,7 +26,6 @@ import (
 )
 
 func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
-	t.Skip("Temporarily disabled, fixed in v0.12 branch.")
 
 	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
@@ -49,6 +48,12 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
+	err = s.initCaches()
+	require.NoError(t, err)
+
+	invalidRoot := [32]byte{'A', 'B', 'C', 'D'}
+	s.setBadBlock(invalidRoot)
+
 	digest, err := s.forkDigest()
 	require.NoError(t, err)
 
@@ -108,6 +113,22 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			validAttestationSignature: true,
 			want:                      false,
 		},
+		{
+			name: "invalid beacon block",
+			msg: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0b1010},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: invalidRoot[:],
+					CommitteeIndex:  0,
+					Slot:            1,
+					Target:          &ethpb.Checkpoint{},
+				},
+			},
+			topic:                     fmt.Sprintf("/eth2/%x/beacon_attestation_1", digest),
+			validAttestationSignature: true,
+			want:                      false,
+		},
+
 		{
 			name: "wrong committee index",
 			msg: &ethpb.Attestation{
