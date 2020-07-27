@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -48,7 +49,37 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
 		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
-	log.WithField("wallet-path", wallet.AccountsDir()).Infof(
+	keymanager, err := wallet.InitializeKeymanager(ctx, true)
+	if err != nil {
+		return err
+	}
+	km, ok := keymanager.(*derived.Keymanager)
+	if !ok {
+		return errors.New("not a derived keymanager")
+	}
+
+	numAccounts, err := inputNumAccounts(cliCtx)
+	if err != nil {
+		return errors.Wrap(err, "could not get number of accounts to recover")
+	}
+	if numAccounts == 1 {
+		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
+			return errors.Wrap(err, "could not create account in wallet")
+		}
+	} else {
+		for i := 0; i < int(numAccounts); i++ {
+			if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
+				return errors.Wrap(err, "could not create account in wallet")
+			}
+		}
+		log.WithField("wallet-path", wallet.AccountsDir()).Infof(
+			"Successfully recovered HD wallet with %d accounts. Please use accounts-v2 list to view details for your accounts.",
+			numAccounts,
+		)
+		return nil
+	}
+
+	log.Infof(
 		"Successfully recovered HD wallet and saved configuration to disk. " +
 			"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 	)
@@ -77,6 +108,33 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 		return "", fmt.Errorf("could not determine wallet directory: %v", formatPromptError(err))
 	}
 	return menmonicPhrase, nil
+}
+
+func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
+	if cliCtx.IsSet(flags.NumAccountsFlag.Name) {
+		numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
+		return numAccounts, nil
+	}
+	prompt := promptui.Prompt{
+		Label: "Enter how many accounts you would like to recover",
+		Validate: func(input string) error {
+			_, err := strconv.Atoi(input)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		Default: "0",
+	}
+	numAccounts, err := prompt.Run()
+	if err != nil {
+		return 0, formatPromptError(err)
+	}
+	numAccountsInt, err := strconv.Atoi(numAccounts)
+	if err != nil {
+		return 0, err
+	}
+	return int64(numAccountsInt), nil
 }
 
 func validateMnemonic(mnemonic string) error {

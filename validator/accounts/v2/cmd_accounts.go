@@ -22,6 +22,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
 				flags.PasswordFileFlag,
+				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.MedallaTestnet,
 			},

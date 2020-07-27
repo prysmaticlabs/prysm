@@ -96,14 +96,14 @@ func NewWallet(
 	if keymanagerKind == v2keymanager.Derived {
 		walletPassword, err := inputPassword(cliCtx, newWalletPasswordPromptText, confirmPass)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not get password")
 		}
 		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
 		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not get password directory")
 		}
 		if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
 			return nil, errors.Wrap(err, "could not create passwords directory")
