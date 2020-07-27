@@ -166,14 +166,16 @@ func (vs *Server) validatorStatus(
 		}
 		domain, err := helpers.ComputeDomain(
 			params.BeaconConfig().DomainDeposit,
-			nil,
-			nil,
+			nil, /*forkVersion*/
+			nil, /*genesisValidatorsRoot*/
 		)
 		if err != nil {
+			log.Warn("Could not compute domain")
 			return resp, nonExistentIndex
 		}
 		if err := depositutil.VerifyDepositSignature(deposit.Data, domain); err != nil {
 			resp.Status = ethpb.ValidatorStatus_INVALID
+			log.Warn("Invalid Eth1 deposit")
 			return resp, nonExistentIndex
 		}
 		// Mark a validator as DEPOSITED if their deposit is visible.
