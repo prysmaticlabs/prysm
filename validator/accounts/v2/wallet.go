@@ -285,6 +285,8 @@ func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName s
 	return rawData, nil
 }
 
+// FileNameAtPath return the full file name for the requested file. It allows for finding the file
+// with a regex pattern.
 func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName string) (string, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
