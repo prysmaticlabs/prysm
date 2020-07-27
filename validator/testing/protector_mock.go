@@ -41,7 +41,7 @@ func (mp MockProtector) CommitBlock(ctx context.Context, blockHeader *eth.Signed
 	return mp.AllowBlock
 }
 
-// CommitBlock returns bool with allow block value.
+// Status returns nil.
 func (mp MockProtector) Status() error {
 	mp.StatusCalled = true
 	return nil
