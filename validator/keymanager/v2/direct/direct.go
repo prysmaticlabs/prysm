@@ -37,7 +37,7 @@ const (
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
 	KeystoreFileName = "keystore-*.json"
-	// FormattedKeystoreFileName exposes the expected filename for the keystore file for an account.
+	// FormattedKeystoreFileName exposes the filename the keystore should be formatted in.
 	FormattedKeystoreFileName = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
 	PasswordFileSuffix  = ".pass"
