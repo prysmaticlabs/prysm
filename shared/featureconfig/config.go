@@ -33,7 +33,8 @@ type Flags struct {
 	// State locks
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
-	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
+	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
+	MedallaTestnet bool // MedallaTestnet defines the flag through which we can enable the node to run on the medalla testnet.
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -115,11 +116,17 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Node on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
+	}
+	if ctx.Bool(MedallaTestnet.Name) {
+		log.Warn("Running Node on Medalla Testnet")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -262,11 +269,17 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Validator on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
+	}
+	if ctx.Bool(MedallaTestnet.Name) {
+		log.Warn("Running Validator on Medalla Testnet")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
 	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true

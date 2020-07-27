@@ -5,6 +5,7 @@ package powchain
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"reflect"
 	"runtime/debug"
@@ -362,8 +363,19 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 	httpClient := ethclient.NewClient(httpRPCClient)
 
 	// Make a simple call to ensure we are actually connected to a working node.
-	if _, err := httpClient.ChainID(s.ctx); err != nil {
+	cID, err := httpClient.ChainID(s.ctx)
+	if err != nil {
 		return nil, nil, err
+	}
+	nID, err := httpClient.NetworkID(s.ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if cID.Uint64() != params.BeaconNetworkConfig().ChainID {
+		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconNetworkConfig().ChainID)
+	}
+	if nID.Uint64() != params.BeaconNetworkConfig().NetworkID {
+		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconNetworkConfig().NetworkID)
 	}
 
 	return httpClient, httpRPCClient, nil

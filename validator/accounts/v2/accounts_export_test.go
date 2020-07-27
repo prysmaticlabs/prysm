@@ -17,7 +17,7 @@ import (
 )
 
 func TestZipAndUnzip(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	exportDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
@@ -32,8 +32,9 @@ func TestZipAndUnzip(t *testing.T) {
 		exportDir:      exportDir,
 		keymanagerKind: v2keymanager.Direct,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanager, err := direct.NewKeymanager(
 		ctx,
@@ -69,7 +70,7 @@ func TestZipAndUnzip(t *testing.T) {
 }
 
 func TestExport_Noninteractive(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	exportDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
@@ -84,8 +85,9 @@ func TestExport_Noninteractive(t *testing.T) {
 		accountsToExport: accounts,
 		keymanagerKind:   v2keymanager.Direct,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()
 	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)

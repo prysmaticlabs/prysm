@@ -14,13 +14,14 @@ import (
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, _, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
-	wallet, err := NewWallet(cliCtx)
+	wallet, err := NewWallet(cliCtx, v2keymanager.Remote)
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 
 	originalCfg := &remote.Config{
