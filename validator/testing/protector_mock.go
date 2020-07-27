@@ -14,6 +14,7 @@ type MockProtector struct {
 	CommitAttestationCalled bool
 	VerifyBlockCalled       bool
 	CommitBlockCalled       bool
+	StatusCalled            bool
 }
 
 // CheckAttestationSafety returns bool with allow attestation value.
@@ -38,4 +39,10 @@ func (mp MockProtector) CheckBlockSafety(ctx context.Context, blockHeader *eth.B
 func (mp MockProtector) CommitBlock(ctx context.Context, blockHeader *eth.SignedBeaconBlockHeader) bool {
 	mp.CommitBlockCalled = true
 	return mp.AllowBlock
+}
+
+// CommitBlock returns bool with allow block value.
+func (mp MockProtector) Status() error {
+	mp.StatusCalled = true
+	return nil
 }

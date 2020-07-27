@@ -3,6 +3,7 @@ package slashingprotection
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
@@ -141,6 +143,9 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	if s.conn == nil {
 		return errors.New("no connection to slasher RPC")
+	}
+	if s.conn.GetState() != connectivity.Ready {
+		return fmt.Errorf("can`t connect to slasher server at: %v", s.endpoint)
 	}
 	return nil
 }
