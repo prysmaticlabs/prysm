@@ -46,6 +46,13 @@ const (
 	DirectoryPermissions = os.ModePerm
 )
 
+var (
+	// Wallet error vars.
+	ErrWalletExists = errors.New("you already have a wallet at the specified path. You can " +
+		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
+	)
+)
+
 // Wallet is a primitive in Prysm's v2 account management which
 // has the capability of creating new accounts, reading existing accounts,
 // and providing secure access to eth2 secrets depending on an
@@ -79,10 +86,7 @@ func NewWallet(
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
 	if walletExists {
-		return nil, errors.New(
-			"you already have a wallet at the specified path. You can " +
-				"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
-		)
+		return nil, ErrWalletExists
 	}
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
 	w := &Wallet{
