@@ -211,9 +211,10 @@ func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string)
 	walletSeed, err := bip39.EntropyFromMnemonic(mnemonic)
 	if err != nil && strings.Contains(err.Error(), "not found in reverse map") {
 		return nil, errors.New("could not convert mnemonic to wallet seed: invalid seed word entered")
-	}
-	if errors.Is(err, bip39.ErrInvalidMnemonic) {
+	} else if errors.Is(err, bip39.ErrInvalidMnemonic) {
 		return nil, errors.Wrap(bip39.ErrInvalidMnemonic, "could not convert mnemonic to wallet seed")
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not convert mnemonic to wallet seed")
 	}
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
