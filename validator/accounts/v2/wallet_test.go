@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -30,6 +31,7 @@ type testWalletConfig struct {
 	exportDir        string
 	accountsToExport string
 	passwordFile     string
+	numAccounts      int64
 	keymanagerKind   v2keymanager.Kind
 }
 
@@ -45,31 +47,40 @@ func setupWalletCtx(
 	set.String(flags.BackupDirFlag.Name, cfg.exportDir, "")
 	set.String(flags.AccountsFlag.Name, cfg.accountsToExport, "")
 	set.String(flags.PasswordFileFlag.Name, cfg.passwordFile, "")
+	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
+	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
 	assert.NoError(tb, set.Set(flags.WalletPasswordsDirFlag.Name, cfg.passwordsDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.exportDir))
 	assert.NoError(tb, set.Set(flags.AccountsFlag.Name, cfg.accountsToExport))
 	assert.NoError(tb, set.Set(flags.PasswordFileFlag.Name, cfg.passwordFile))
+	assert.NoError(tb, set.Set(flags.SkipMnemonicConfirmFlag.Name, "true"))
+	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
 	return cli.NewContext(&app, set, nil)
 }
 
-func setupWalletAndPasswordsDir(t testing.TB) (string, string) {
+func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
 	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
 	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
+	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwordFile")
+	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
+	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
+	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
 		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
 	})
-	return walletDir, passwordsDir
+	return walletDir, passwordsDir, passwordFilePath
 }
 
 func TestCreateAndReadWallet(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		passwordsDir:   passwordsDir,
