@@ -176,6 +176,20 @@ func (v *validator) WaitForSynced(ctx context.Context) error {
 	return nil
 }
 
+// SlasherReady checks if slasher that was configured as external protection
+// is reachable.
+func (v *validator) SlasherReady(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
+	defer span.End()
+	if featureconfig.Get().SlasherProtection {
+		err := v.protector.Status()
+		if err != nil {
+			return errors.Wrap(err, "could not setup slasher protection client")
+		}
+	}
+	return nil
+}
+
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
