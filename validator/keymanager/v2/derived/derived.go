@@ -263,7 +263,7 @@ func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, err
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
-func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (string, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
@@ -316,8 +316,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
-	// Log the deposit transaction data to the user.
-	depositutil.LogDepositTransaction(log, tx)
+	if logAccountInfo {
+		// Log the deposit transaction data to the user.
+		depositutil.LogDepositTransaction(log, tx)
+	}
 
 	// We write the raw deposit transaction as an .rlp encoded file.
 	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositTransactionFileName, tx.Data()); err != nil {
@@ -344,13 +346,15 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	}
 
 	newAccountNumber := dr.seedCfg.NextAccount
-	log.WithFields(logrus.Fields{
-		"accountNumber":       newAccountNumber,
-		"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
-		"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
-		"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
-		"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
-	}).Info("Successfully created new validator account")
+	if logAccountInfo {
+		log.WithFields(logrus.Fields{
+			"accountNumber":       newAccountNumber,
+			"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
+			"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
+			"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
+			"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
+		}).Info("Successfully created new validator account")
+	}
 	dr.seedCfg.NextAccount++
 	encodedCfg, err := MarshalEncryptedSeedFile(ctx, dr.seedCfg)
 	if err != nil {

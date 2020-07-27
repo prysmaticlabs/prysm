@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,6 +34,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	mnemonicFilePath := filepath.Join(testDir, mnemonicFileName)
 	require.NoError(t, ioutil.WriteFile(mnemonicFilePath, []byte(mnemonic), os.ModePerm))
 
+	numAccounts := int64(4)
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.WalletDirFlag.Name, walletDir, "")
@@ -40,11 +42,13 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	set.String(flags.PasswordFileFlag.Name, passwordFilePath, "")
 	set.String(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String(), "")
 	set.String(flags.MnemonicFileFlag.Name, mnemonicFilePath, "")
+	set.Int64(flags.NumAccountsFlag.Name, numAccounts, "")
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
 	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
 	assert.NoError(t, set.Set(flags.PasswordFileFlag.Name, passwordFilePath))
 	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String()))
 	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
+	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(numAccounts))))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	require.NoError(t, RecoverWallet(cliCtx))
@@ -61,4 +65,15 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	// We assert the created configuration was as desired.
 	wantCfg := derived.DefaultConfig()
 	assert.DeepEqual(t, wantCfg, cfg)
+
+	keymanager, err := wallet.InitializeKeymanager(ctx, true)
+	require.NoError(t, err)
+	km, ok := keymanager.(*derived.Keymanager)
+	if !ok {
+		t.Fatal("not a derived keymanager")
+	}
+	names, err := km.ValidatingAccountNames(ctx)
+	assert.NoError(t, err)
+	require.Equal(t, len(names), int(numAccounts))
+
 }

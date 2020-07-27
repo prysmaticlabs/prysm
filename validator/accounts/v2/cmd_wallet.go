@@ -62,6 +62,7 @@ var WalletCommands = &cli.Command{
 				flags.WalletPasswordsDirFlag,
 				flags.MnemonicFileFlag,
 				flags.PasswordFileFlag,
+				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.MedallaTestnet,
 			},
