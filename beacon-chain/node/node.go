@@ -106,7 +106,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
 		cmd.OverrideConfig(cmdConfig)
 		log.Warnf(
-			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage",
+			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage.",
 			c.SlotsPerArchivedPoint,
 			cmdConfig.MaxRPCPageSize,
 		)
