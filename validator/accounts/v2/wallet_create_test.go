@@ -11,13 +11,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
 )
 
 func TestCreateWallet_Direct(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		passwordsDir:   passwordsDir,
@@ -40,6 +41,33 @@ func TestCreateWallet_Direct(t *testing.T) {
 
 	// We assert the created configuration was as desired.
 	assert.DeepEqual(t, direct.DefaultConfig(), cfg)
+}
+
+func TestCreateWallet_Derived(t *testing.T) {
+	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		passwordsDir:   passwordsDir,
+		passwordFile:   passwordFile,
+		keymanagerKind: v2keymanager.Derived,
+	})
+
+	// We attempt to create the wallet.
+	require.NoError(t, CreateWallet(cliCtx))
+
+	// We attempt to open the newly created wallet.
+	ctx := context.Background()
+	wallet, err := OpenWallet(cliCtx)
+	assert.NoError(t, err)
+
+	// We read the keymanager config for the newly created wallet.
+	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	assert.NoError(t, err)
+	cfg, err := derived.UnmarshalConfigFile(encoded)
+	assert.NoError(t, err)
+
+	// We assert the created configuration was as desired.
+	assert.DeepEqual(t, derived.DefaultConfig(), cfg)
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
