@@ -48,6 +48,7 @@ const (
 
 var (
 	// Wallet error vars.
+	// ErrWalletExists is an error returned when a wallet already exists in the path provided.
 	ErrWalletExists = errors.New("you already have a wallet at the specified path. You can " +
 		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
 	)
