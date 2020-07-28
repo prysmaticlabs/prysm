@@ -100,7 +100,7 @@ func TestVerifySelection_BadSignature(t *testing.T) {
 	sig := privKeys[0].Sign([]byte{'A'})
 	data := &ethpb.AttestationData{}
 
-	wanted := "could not validate slot signature"
+	wanted := "signature did not verify"
 	assert.ErrorContains(t, wanted, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
 }
 
