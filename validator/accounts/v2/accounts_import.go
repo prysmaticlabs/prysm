@@ -29,7 +29,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	keysDir, err := inputDirectory(cliCtx, keysDirPromptText, flags.KeysDirFlag)
+	keysDir, err := inputDirectory(cliCtx, importKeysDirPromptText, flags.KeysDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
