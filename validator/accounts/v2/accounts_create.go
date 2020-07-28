@@ -20,23 +20,13 @@ var log = logrus.WithField("prefix", "accounts-v2")
 // a wallet from the user's specified path.
 func CreateAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return errors.Wrapf(err, "Could not retrieve input directory")
-	}
-	ok, err := hasDir(walletDir)
-	if err != nil {
-		return err
-	}
-	// Create a new wallet if no directory exists.
-	if !ok {
-		err = CreateWallet(cliCtx)
+	wallet, err := OpenWallet(cliCtx)
+	if errors.Is(err, ErrNoWalletFound) {
+		wallet, err = CreateWallet(cliCtx)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create wallet")
 		}
-	}
-	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
+	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
@@ -52,7 +42,7 @@ func CreateAccount(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("not a direct keymanager")
 		}
-		password, err := inputPassword(cliCtx, newAccountPasswordPromptText, confirmPass)
+		password, err := inputPassword(cliCtx, flags.AccountPasswordFileFlag, newAccountPasswordPromptText, confirmPass)
 		if err != nil {
 			return errors.Wrap(err, "could not input new account password")
 		}

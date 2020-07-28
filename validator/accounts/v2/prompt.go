@@ -16,9 +16,8 @@ import (
 )
 
 const (
-	importDirPromptText          = "Enter the file location of the exported wallet zip to import"
 	importKeysDirPromptText      = "Enter the directory where your keystores to import are located"
-	exportDirPromptText          = "Enter a file location to write the exported wallet to"
+	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
 	walletDirPromptText          = "Enter a wallet directory"
 	passwordsDirPromptText       = "Directory where passwords will be stored"
 	newWalletPasswordPromptText  = "New wallet password"
@@ -93,9 +92,14 @@ func validateDirectoryPath(input string) error {
 	return nil
 }
 
-func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passwordConfirm) (string, error) {
-	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+func inputPassword(
+	cliCtx *cli.Context,
+	passwordFileFlag *cli.StringFlag,
+	promptText string,
+	confirmPassword passwordConfirm,
+) (string, error) {
+	if cliCtx.IsSet(passwordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
@@ -141,9 +145,9 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 	return strings.TrimRight(walletPassword, "\r\n"), nil
 }
 
-func inputWeakPassword(cliCtx *cli.Context, promptText string) (string, error) {
-	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
+	if cliCtx.IsSet(passwordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")

@@ -24,8 +24,10 @@ func ListAccounts(cliCtx *cli.Context) error {
 	// Read the wallet from the specified path.
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
-		return errors.Wrapf(err, "could not read wallet at specified path %s", wallet.AccountsDir())
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
+	} else if err != nil {
+		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
@@ -103,7 +105,7 @@ func listDirectKeymanagerAccounts(
 		if err != nil {
 			return errors.Wrap(err, "could not get timestamp from keystore file name")
 		}
-		fmt.Printf("%s | %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s | %s | Created %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if !showDepositData {
 			continue

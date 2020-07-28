@@ -15,22 +15,22 @@ import (
 // CreateWallet from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateWallet(cliCtx *cli.Context) error {
+func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 	keymanagerKind, err := inputKeymanagerKind(cliCtx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	w, err := NewWallet(cliCtx, keymanagerKind)
 	if err != nil && !errors.Is(err, ErrWalletExists) {
-		return errors.Wrap(err, "could not check if wallet directory exists")
+		return nil, errors.Wrap(err, "could not check if wallet directory exists")
 	}
 	if errors.Is(err, ErrWalletExists) {
-		return ErrWalletExists
+		return nil, ErrWalletExists
 	}
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-			return errors.Wrap(err, "could not initialize wallet with direct keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
 		log.WithField("wallet-path", w.walletDir).Infof(
 			"Successfully created wallet with on-disk keymanager configuration. " +
@@ -38,7 +38,7 @@ func CreateWallet(cliCtx *cli.Context) error {
 		)
 	case v2keymanager.Derived:
 		if err = createDerivedKeymanagerWallet(cliCtx, w); err != nil {
-			return errors.Wrap(err, "could not initialize wallet with derived keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
 		log.WithField("wallet-path", w.walletDir).Infof(
 			"Successfully created HD wallet and saved configuration to disk. " +
@@ -46,22 +46,24 @@ func CreateWallet(cliCtx *cli.Context) error {
 		)
 	case v2keymanager.Remote:
 		if err = createRemoteKeymanagerWallet(cliCtx, w); err != nil {
-			return errors.Wrap(err, "could not initialize wallet with remote keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet with remote keymanager")
 		}
 		log.WithField("wallet-path", w.walletDir).Infof(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		return errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
+		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
 	}
-	return nil
+	return w, nil
 }
 
 func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), direct.DefaultConfig())
+	defaultConfig := direct.DefaultConfig()
+	defaultConfig.AccountPasswordsDirectory = wallet.passwordsDir
+	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), defaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}

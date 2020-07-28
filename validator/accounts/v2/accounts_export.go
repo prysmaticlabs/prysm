@@ -28,9 +28,10 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
-
 	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
+	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
