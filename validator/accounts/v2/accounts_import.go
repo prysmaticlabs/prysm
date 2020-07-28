@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -107,7 +108,11 @@ func (w *Wallet) importKeystore(ctx context.Context, keystoreFilePath string) (s
 	if err := json.Unmarshal(keystoreBytes, keystoreFile); err != nil {
 		return "", errors.Wrap(err, "could not decode keystore json")
 	}
-	accountName := petnames.DeterministicName([]byte(keystoreFile.Pubkey), "-")
+	pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
+	if err != nil {
+		return "", errors.Wrap(err, "could not decode public key string in keystore")
+	}
+	accountName := petnames.DeterministicName(pubKeyBytes, "-")
 	keystoreFileName := filepath.Base(keystoreFilePath)
 	if err := w.WriteFileAtPath(ctx, accountName, keystoreFileName, keystoreBytes); err != nil {
 		return "", errors.Wrap(err, "could not write keystore to account dir")
