@@ -62,9 +62,11 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		depositData, err := wallet.ReadFileAtPath(ctx, accountName, direct.DepositTransactionFileName)
 		require.NoError(t, err)
 		depositDataForAccounts[i] = depositData
-		unixTimestamp, err := wallet.ReadFileAtPath(ctx, accountName, direct.TimestampFileName)
+		keystoreFileName, err := wallet.FileNameAtPath(ctx, accountName, direct.KeystoreFileName)
 		require.NoError(t, err)
-		accountCreationTimestamps[i] = unixTimestamp
+		timestampStart := strings.LastIndex(keystoreFileName, "-") + 1
+		timestampEnd := strings.LastIndex(keystoreFileName, ".")
+		accountCreationTimestamps[i] = []byte(keystoreFileName[timestampStart:timestampEnd])
 	}
 	rescueStdout := os.Stdout
 	r, w, err := os.Pipe()
