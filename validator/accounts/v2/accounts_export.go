@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -95,6 +96,8 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 	exit := "Exit Account Selection"
 	results := []string{}
 	au := aurora.NewAurora(true)
+	// Alphabetical Sort of accounts.
+	sort.Strings(accounts)
 
 	for result != exit {
 		prompt := promptui.Select{
