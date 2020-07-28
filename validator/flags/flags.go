@@ -10,8 +10,17 @@ import (
 	"time"
 
 	"github.com/urfave/cli/v2"
+)
 
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+const (
+	// WalletDefaultDirName for accounts-v2.
+	WalletDefaultDirName = "prysm-wallet-v2"
+	// PasswordsDefaultDirName where account passwords are stored.
+	PasswordsDefaultDirName = "prysm-wallet-v2-passwords"
+	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
+	KeymanagerConfigFileName = "keymanageropts.json"
+	// DirectoryPermissions for directories created under the wallet path.
+	DirectoryPermissions = os.ModePerm
 )
 
 var (
@@ -126,14 +135,14 @@ var (
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
-		Value: DefaultValidatorDir()+v2.WalletDefaultDirName,
+		Value: DefaultValidatorDir() + WalletDefaultDirName,
 	}
 	// WalletPasswordsDirFlag defines the path for a passwords directory for
 	// Prysm accounts-v2.
 	WalletPasswordsDirFlag = &cli.StringFlag{
 		Name:  "passwords-dir",
 		Usage: "Path to a directory on-disk where account passwords are stored",
-		Value: DefaultValidatorDir()+v2.PasswordsDefaultDirName,
+		Value: DefaultValidatorDir() + PasswordsDefaultDirName,
 	}
 	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
 	PasswordFileFlag = &cli.StringFlag{
