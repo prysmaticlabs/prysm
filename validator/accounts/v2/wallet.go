@@ -42,6 +42,7 @@ var (
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
+	walletDir      string
 	accountsPath   string
 	passwordsDir   string
 	keymanagerKind v2keymanager.Kind
@@ -79,6 +80,7 @@ func NewWallet(
 	w := &Wallet{
 		accountsPath:   accountsPath,
 		keymanagerKind: keymanagerKind,
+		walletDir:      walletDir,
 	}
 	if keymanagerKind == v2keymanager.Derived {
 		walletPassword, err := inputPassword(cliCtx, newWalletPasswordPromptText, confirmPass)
