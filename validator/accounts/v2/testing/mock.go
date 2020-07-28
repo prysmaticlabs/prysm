@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"strings"
 	"sync"
 )
 
@@ -77,7 +78,7 @@ func (m *Wallet) ReadFileAtPath(ctx context.Context, pathName string, fileName s
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for f, v := range m.Files[pathName] {
-		if f == fileName {
+		if strings.Contains(fileName, f) {
 			return v, nil
 		}
 	}
