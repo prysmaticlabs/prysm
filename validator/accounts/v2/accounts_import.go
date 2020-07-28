@@ -75,11 +75,11 @@ func ImportAccount(cliCtx *cli.Context) error {
 			return nil
 		}
 
-		accountName, err := wallet.importKeystore(ctx, path)
+		accountName, pubKey, err := wallet.importKeystore(ctx, path)
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
+		if err := wallet.enterPasswordForAccount(cliCtx, accountName, pubKey); err != nil {
 			return errors.Wrap(err, "could not verify password for keystore")
 		}
 		accountsImported = append(accountsImported, accountName)
@@ -103,25 +103,25 @@ func ImportAccount(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (w *Wallet) importKeystore(ctx context.Context, keystoreFilePath string) (string, error) {
+func (w *Wallet) importKeystore(ctx context.Context, keystoreFilePath string) (string, []byte, error) {
 	keystoreBytes, err := ioutil.ReadFile(keystoreFilePath)
 	if err != nil {
-		return "", errors.Wrap(err, "could not read keystore file")
+		return "", nil, errors.Wrap(err, "could not read keystore file")
 	}
 	keystoreFile := &v2keymanager.Keystore{}
 	if err := json.Unmarshal(keystoreBytes, keystoreFile); err != nil {
-		return "", errors.Wrap(err, "could not decode keystore json")
+		return "", nil, errors.Wrap(err, "could not decode keystore json")
 	}
 	pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
 	if err != nil {
-		return "", errors.Wrap(err, "could not decode public key string in keystore")
+		return "", nil, errors.Wrap(err, "could not decode public key string in keystore")
 	}
 	accountName := petnames.DeterministicName(pubKeyBytes, "-")
 	keystoreFileName := filepath.Base(keystoreFilePath)
 	if err := w.WriteFileAtPath(ctx, accountName, keystoreFileName, keystoreBytes); err != nil {
-		return "", errors.Wrap(err, "could not write keystore to account dir")
+		return "", nil, errors.Wrap(err, "could not write keystore to account dir")
 	}
-	return accountName, nil
+	return accountName, pubKeyBytes, nil
 }
 
 func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {

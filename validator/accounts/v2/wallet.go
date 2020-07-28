@@ -15,6 +15,7 @@ import (
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -389,7 +390,7 @@ func (w *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName stri
 
 // enterPasswordForAccount checks if a user has a password specified for the new account
 // either from a file or from stdin. Then, it saves the password to the wallet.
-func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string) error {
+func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string, pubKey []byte) error {
 	au := aurora.NewAurora(true)
 	var password string
 	var err error
@@ -402,7 +403,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		password = string(data)
 		err = w.checkPasswordForAccount(accountName, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			return fmt.Errorf("invalid password entered for account %s", accountName)
+			return fmt.Errorf("invalid password entered for account with public key %#x", pubKey)
 		}
 		if err != nil {
 			return err
@@ -415,7 +416,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 			password, err = inputWeakPassword(
 				cliCtx,
 				flags.AccountPasswordFileFlag,
-				fmt.Sprintf(passwordForAccountPromptText, accountName),
+				fmt.Sprintf(passwordForAccountPromptText, bytesutil.Trunc(pubKey)),
 			)
 			if err != nil {
 				return errors.Wrap(err, "could not input password")
