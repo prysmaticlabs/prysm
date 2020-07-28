@@ -8,8 +8,10 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -92,4 +94,42 @@ func TestCreateAndReadWallet(t *testing.T) {
 	// We should be able to now read the wallet as well.
 	_, err = OpenWallet(cliCtx)
 	require.NoError(t, err)
+}
+
+func TestAccountTimestamp(t *testing.T) {
+	tests := []struct {
+		name     string
+		fileName string
+		want     time.Time
+		wantErr  bool
+	}{
+		{
+			name:     "keystore with timestamp",
+			fileName: "keystore-1234567.json",
+			want:     time.Unix(1234567, 0),
+		},
+		{
+			name:     "keystore with deriv path and timestamp",
+			fileName: "keystore-12313-313-00-0-5500550.json",
+			want:     time.Unix(5500550, 0),
+		},
+		{
+			name:     "keystore with no timestamp",
+			fileName: "keystore.json",
+			want:     time.Unix(0, 0),
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := AccountTimestamp(tt.fileName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AccountTimestamp() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AccountTimestamp() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
