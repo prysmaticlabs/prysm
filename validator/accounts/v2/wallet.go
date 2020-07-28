@@ -403,7 +403,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		// Loop asking for the password until the user enters it correctly.
 		for attemptingPassword {
 			// Ask the user for the password to their account.
-			password, err = inputWeakPassword(cliCtx, fmt.Sprintf(passwordForAccountPromptText, accountName))
+			password, err = inputWeakPassword(cliCtx, fmt.Sprintf(passwordForAccountPromptText, au.BrightGreen(accountName)))
 			if err != nil {
 				return errors.Wrap(err, "could not input password")
 			}
