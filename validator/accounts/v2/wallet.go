@@ -121,16 +121,10 @@ func NewWallet(
 func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return nil, err
-	}
-	// Check if the user has a wallet at the specified path. If so, only let them continue if it is a non-HD wallet.
-	walletExists, err := hasDir(walletDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not check if wallet exists")
-	}
-	if !walletExists {
+	if errors.Is(err, ErrNoWalletFound) {
 		return nil, errors.New("no wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
+	} else if err != nil {
+		return nil, err
 	}
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
 	if err != nil {
