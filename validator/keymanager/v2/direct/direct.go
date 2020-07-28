@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 
 	"github.com/google/uuid"
@@ -37,7 +36,9 @@ const (
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore.json"
+	KeystoreFileName = "keystore-*.json"
+	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
+	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
 	PasswordFileSuffix  = ".pass"
 	depositDataFileName = "deposit_data.ssz"
@@ -172,16 +173,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
 
-	// Write the encoded keystore to disk.
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded); err != nil {
-		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
-	}
-
-	// Finally, write the account creation timestamp as a file.
+	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := roughtime.Now().Unix()
-	createdAtStr := strconv.FormatInt(createdAt, 10)
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, TimestampFileName, []byte(createdAtStr)); err != nil {
-		return "", errors.Wrapf(err, "could not write timestamp file for account %s", accountName)
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, fmt.Sprintf(KeystoreFileNameFormat, createdAt), encoded); err != nil {
+		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 
 	log.WithFields(logrus.Fields{
