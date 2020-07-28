@@ -35,8 +35,8 @@ const (
 	// TimestampFileName stores a timestamp for account creation as a
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
-	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore.json"
+	// KeystoreFilePattern exposes the expected filename for the keystore file for an account.
+	KeystoreFilePattern = "keystore.json"
 	// EIPVersion used by this derived keymanager implementation.
 	EIPVersion = "EIP-2334"
 	// WithdrawalKeyDerivationPathTemplate defining the hierarchical path for withdrawal
@@ -263,7 +263,7 @@ func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, err
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
-func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (string, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
@@ -294,10 +294,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	}
 
 	// Write both keystores to disk at their respective derived paths.
-	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, KeystoreFileName, encodedWithdrawalKeystore); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, KeystoreFilePattern, encodedWithdrawalKeystore); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, KeystoreFileName, encodedValidatingKeystore); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern, encodedValidatingKeystore); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
 	}
 
@@ -316,8 +316,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
-	// Log the deposit transaction data to the user.
-	depositutil.LogDepositTransaction(log, tx)
+	if logAccountInfo {
+		// Log the deposit transaction data to the user.
+		depositutil.LogDepositTransaction(log, tx)
+	}
 
 	// We write the raw deposit transaction as an .rlp encoded file.
 	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositTransactionFileName, tx.Data()); err != nil {
@@ -344,13 +346,15 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	}
 
 	newAccountNumber := dr.seedCfg.NextAccount
-	log.WithFields(logrus.Fields{
-		"accountNumber":       newAccountNumber,
-		"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
-		"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
-		"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
-		"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
-	}).Info("Successfully created new validator account")
+	if logAccountInfo {
+		log.WithFields(logrus.Fields{
+			"accountNumber":       newAccountNumber,
+			"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
+			"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
+			"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
+			"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
+		}).Info("Successfully created new validator account")
+	}
 	dr.seedCfg.NextAccount++
 	encodedCfg, err := MarshalEncryptedSeedFile(ctx, dr.seedCfg)
 	if err != nil {
@@ -394,7 +398,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
+		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern)
 		if err != nil {
 			return nil, err
 		}
@@ -416,7 +420,7 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 	publicKeys := make([][48]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKeystore, err := dr.wallet.ReadFileAtPath(ctx, withdrawalKeyPath, KeystoreFileName)
+		withdrawalKeystore, err := dr.wallet.ReadFileAtPath(ctx, withdrawalKeyPath, KeystoreFilePattern)
 		if err != nil {
 			return nil, err
 		}

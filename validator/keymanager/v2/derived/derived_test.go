@@ -89,15 +89,15 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 		walletPassword: password,
 	}
 	ctx := context.Background()
-	accountName, err := dr.CreateAccount(ctx)
+	accountName, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
 	require.NoError(t, err)
 	assert.Equal(t, "0", accountName)
 
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	validatingAccount0 := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, 0)
-	encodedKeystore, ok := wallet.Files[validatingAccount0][KeystoreFileName]
-	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFileName))
+	encodedKeystore, ok := wallet.Files[validatingAccount0][KeystoreFilePattern]
+	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFilePattern))
 	keystoreFile := &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
@@ -114,8 +114,8 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	withdrawalAccount0 := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, 0)
-	encodedKeystore, ok = wallet.Files[withdrawalAccount0][KeystoreFileName]
-	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFileName))
+	encodedKeystore, ok = wallet.Files[withdrawalAccount0][KeystoreFilePattern]
+	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFilePattern))
 	keystoreFile = &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
@@ -169,10 +169,10 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	var err error
 	var accountName string
 	for i := 0; i < numAccounts; i++ {
-		accountName, err = dr.CreateAccount(ctx)
+		accountName, err = dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		enc, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
+		enc, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern)
 		require.NoError(t, err)
 		keystore := &v2keymanager.Keystore{}
 		require.NoError(t, json.Unmarshal(enc, keystore))
@@ -221,7 +221,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	var err error
 	var accountName string
 	for i := 0; i < numAccounts; i++ {
-		accountName, err = dr.CreateAccount(ctx)
+		accountName, err = dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
 	}
 	assert.Equal(t, fmt.Sprintf("%d", numAccounts-1), accountName)
