@@ -8,28 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-const (
-	// DefaultBadResponsesThreshold defines how many bad responses to tolerate before peer is deemed bad.
-	DefaultBadResponsesThreshold = 6
-	// DefaultBadResponsesWeight is a default weight. Since score represents penalty, it has negative weight.
-	DefaultBadResponsesWeight = -1.0
-	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
-	// Every interval bad responses counter will be decremented by 1.
-	DefaultBadResponsesDecayInterval = time.Hour
-	// DefaultBlockProviderReturnedBlocksWeight is a default weight of a returned/requested ratio in an overall score.
-	DefaultBlockProviderReturnedBlocksWeight = 0.2
-	// DefaultBlockProviderNoReturnedBlocksPenalty is a default penalty for non-responsive peers.
-	DefaultBlockProviderNoReturnedBlocksPenalty = -0.02
-	// DefaultBlockProviderProcessedBlocksWeight is a default weight of a processed/requested ratio in an overall score.
-	DefaultBlockProviderProcessedBlocksWeight = 0.2
-	// DefaultBlockProviderNoProcessedBlocksPenalty is a default penalty for non-responsive peers.
-	DefaultBlockProviderNoProcessedBlocksPenalty = -0.02
-	// DefaultBlockProviderDecayInterval defines how often block provider's stats should be decayed.
-	DefaultBlockProviderDecayInterval = 5 * time.Minute
-	// DefaultBlockProviderDecay specifies a decay factor (as a left-over percentage of the original value).
-	DefaultBlockProviderDecay = 0.95
-)
-
 // PeerScorer keeps track of peer counters that are used to calculate peer score.
 type PeerScorer struct {
 	ctx    context.Context
@@ -48,15 +26,15 @@ type PeerScorerConfig struct {
 
 	// BlockProviderReturnedBlocksWeight defines weight of a returned/requested ratio in overall an score.
 	BlockProviderReturnedBlocksWeight float64
-	// BlockProviderNoReturnedBlocksPenalty defines a penalty applied to score, if blocks were requested,
+	// BlockProviderEmptyReturnedBatchPenalty defines a penalty applied to score, if blocks were requested,
 	// but none have been returned yet (to distinguish between non-responsive peers and peers that
-	// haven't been requested any blocks yet).
-	BlockProviderNoReturnedBlocksPenalty float64
+	// haven't been requested any blocks yet). Penalty is applied per empty batch.
+	BlockProviderEmptyReturnedBatchPenalty float64
 	// BlockProviderProcessedBlocksWeight defines weight of a processed/requested ratio in overall an score.
 	BlockProviderProcessedBlocksWeight float64
-	// BlockProviderNoProcessedBlocksPenalty defines a penalty applied to score, if blocks have been
-	// requested, but none have been processed yet.
-	BlockProviderNoProcessedBlocksPenalty float64
+	// BlockProviderEmptyProcessedBatchPenalty defines a penalty applied to score, if blocks have been
+	// requested, but none have been processed yet. Penalty is applied per empty batch.
+	BlockProviderEmptyProcessedBatchPenalty float64
 	// BlockProviderDecayInterval defines how often requested/returned/processed stats should be decayed.
 	BlockProviderDecayInterval time.Duration
 	// BlockProviderDecay specifies the factor (must be < 1.0) by which block provider's stats is decayed.
@@ -86,14 +64,14 @@ func newPeerScorer(ctx context.Context, store *peerDataStore, config *PeerScorer
 	if scorer.config.BlockProviderReturnedBlocksWeight == 0.0 {
 		scorer.config.BlockProviderReturnedBlocksWeight = DefaultBlockProviderReturnedBlocksWeight
 	}
-	if scorer.config.BlockProviderNoReturnedBlocksPenalty == 0.0 {
-		scorer.config.BlockProviderNoReturnedBlocksPenalty = DefaultBlockProviderNoReturnedBlocksPenalty
+	if scorer.config.BlockProviderEmptyReturnedBatchPenalty == 0.0 {
+		scorer.config.BlockProviderEmptyReturnedBatchPenalty = DefaultBlockProviderEmptyReturnedBatchPenalty
 	}
 	if scorer.config.BlockProviderProcessedBlocksWeight == 0.0 {
 		scorer.config.BlockProviderProcessedBlocksWeight = DefaultBlockProviderProcessedBlocksWeight
 	}
-	if scorer.config.BlockProviderNoProcessedBlocksPenalty == 0.0 {
-		scorer.config.BlockProviderNoProcessedBlocksPenalty = DefaultBlockProviderNoProcessedBlocksPenalty
+	if scorer.config.BlockProviderEmptyProcessedBatchPenalty == 0.0 {
+		scorer.config.BlockProviderEmptyProcessedBatchPenalty = DefaultBlockProviderEmptyProcessedBatchPenalty
 	}
 	if scorer.config.BlockProviderDecayInterval == 0 {
 		scorer.config.BlockProviderDecayInterval = DefaultBlockProviderDecayInterval

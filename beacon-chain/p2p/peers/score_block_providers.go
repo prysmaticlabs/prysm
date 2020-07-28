@@ -1,32 +1,32 @@
 package peers
 
 import (
+	"fmt"
 	"math"
 	"sort"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 )
 
-// SortBlockProviders returns list of block providers sorted by score in descending order.
-func (s *PeerScorer) SortBlockProviders(pids []peer.ID) []peer.ID {
-	s.store.Lock()
-	defer s.store.Unlock()
-
-	if len(pids) == 0 {
-		return pids
-	}
-	scores := make(map[peer.ID]float64, len(pids))
-	peers := make([]peer.ID, len(pids))
-	for i, pid := range pids {
-		scores[pid] = s.scoreBlockProvider(pid)
-		peers[i] = pid
-	}
-	sort.SliceStable(peers, func(i, j int) bool {
-		return scores[peers[i]] > scores[peers[j]]
-	})
-	return peers
-}
+const (
+	// DefaultBlockProviderReturnedBlocksWeight is a default weight of a returned/requested ratio in an overall score.
+	DefaultBlockProviderReturnedBlocksWeight = 0.2
+	// DefaultBlockProviderEmptyReturnedBatchPenalty is a default penalty for non-responsive peers.
+	DefaultBlockProviderEmptyReturnedBatchPenalty = -0.02
+	// DefaultBlockProviderProcessedBlocksWeight is a default weight of a processed/requested ratio in an overall score.
+	DefaultBlockProviderProcessedBlocksWeight = 0.2
+	// DefaultBlockProviderEmptyProcessedBatchPenalty is a default penalty for non-responsive peers.
+	DefaultBlockProviderEmptyProcessedBatchPenalty = 0.0
+	// DefaultBlockProviderDecayInterval defines how often block provider's stats should be decayed.
+	DefaultBlockProviderDecayInterval = 1 * time.Minute
+	// DefaultBlockProviderDecay specifies a decay factor (as a left-over percentage of the original value).
+	DefaultBlockProviderDecay = 0.95
+	// blockProviderStartScore defines initial score before any stats updates takes place.
+	// By setting this to positive value, peers are given a chance to be used for the first time.
+	blockProviderStartScore = 0.1
+)
 
 // ScoreBlockProvider calculates and returns total score based on returned and processed blocks.
 func (s *PeerScorer) ScoreBlockProvider(pid peer.ID) float64 {
@@ -37,32 +37,41 @@ func (s *PeerScorer) ScoreBlockProvider(pid peer.ID) float64 {
 
 // scoreBlockProvider is a lock-free version of ScoreBlockProvider.
 func (s *PeerScorer) scoreBlockProvider(pid peer.ID) float64 {
-	score := float64(0)
+	score := s.BlockProviderStartScore()
 	peerData, ok := s.store.peers[pid]
 	if !ok {
 		return score
 	}
 	if peerData.requestedBlocks > 0 {
-		// Score returned/requested ratio. If no blocks has been returned, apply as a penalty.
-		if peerData.returnedBlocks == 0 {
-			emptyBatches := float64(peerData.requestedBlocks) / float64(flags.Get().BlockBatchLimit)
-			score += s.config.BlockProviderNoReturnedBlocksPenalty * emptyBatches
-		} else {
-			returnedBlocksScore := float64(peerData.returnedBlocks) / float64(peerData.requestedBlocks)
-			returnedBlocksScore = returnedBlocksScore * s.config.BlockProviderReturnedBlocksWeight
-			score += returnedBlocksScore
+		// Score returned/requested ratio. If there's more than 1 empty batch, apply as a penalty.
+		returnedBlocksScore := float64(peerData.returnedBlocks) / float64(peerData.requestedBlocks)
+		returnedBlocksScore = returnedBlocksScore * s.config.BlockProviderReturnedBlocksWeight
+		score += returnedBlocksScore
+
+		emptyBatches := float64(peerData.requestedBlocks-peerData.returnedBlocks) / float64(flags.Get().BlockBatchLimit)
+		if emptyBatches > 1 {
+			score += s.config.BlockProviderEmptyReturnedBatchPenalty * emptyBatches
 		}
-		// Score processed/requested ratio. If no blocks has been processed, apply as a penalty.
-		if peerData.processedBlocks == 0 {
-			emptyBatches := float64(peerData.requestedBlocks) / float64(flags.Get().BlockBatchLimit)
-			score += s.config.BlockProviderNoProcessedBlocksPenalty * emptyBatches
-		} else {
-			processedBlocksScore := float64(peerData.processedBlocks) / float64(peerData.requestedBlocks)
-			processedBlocksScore = processedBlocksScore * s.config.BlockProviderProcessedBlocksWeight
-			score += processedBlocksScore
+
+		// Score processed/requested ratio. If there's more than 1 empty batch, apply as a penalty.
+		processedBlocksScore := float64(peerData.processedBlocks) / float64(peerData.requestedBlocks)
+		processedBlocksScore = processedBlocksScore * s.config.BlockProviderProcessedBlocksWeight
+		score += processedBlocksScore
+
+		emptyBatches = float64(peerData.requestedBlocks-peerData.processedBlocks) / float64(flags.Get().BlockBatchLimit)
+		if emptyBatches > 1 {
+			score += s.config.BlockProviderEmptyProcessedBatchPenalty * emptyBatches
 		}
+	} else {
+		// Boost peers that have never been selected.
+		return s.BlockProviderMaxScore()
 	}
 	return math.Round(score*10000) / 10000
+}
+
+// BlockProviderStartScore exposes block provider's start score.
+func (s *PeerScorer) BlockProviderStartScore() float64 {
+	return blockProviderStartScore
 }
 
 // IncrementRequestedBlocks increments the number of blocks that have been requested from peer.
@@ -162,4 +171,41 @@ func (s *PeerScorer) DecayBlockProvidersStats() {
 		peerData.returnedBlocks = uint64(math.Round(float64(peerData.returnedBlocks) * s.config.BlockProviderDecay))
 		peerData.processedBlocks = uint64(math.Round(float64(peerData.processedBlocks) * s.config.BlockProviderDecay))
 	}
+}
+
+// SortBlockProviders returns list of block providers sorted by score in descending order.
+func (s *PeerScorer) SortBlockProviders(pids []peer.ID) []peer.ID {
+	s.store.Lock()
+	defer s.store.Unlock()
+
+	if len(pids) == 0 {
+		return pids
+	}
+	scores := make(map[peer.ID]float64, len(pids))
+	peers := make([]peer.ID, len(pids))
+	for i, pid := range pids {
+		scores[pid] = s.scoreBlockProvider(pid)
+		peers[i] = pid
+	}
+	sort.SliceStable(peers, func(i, j int) bool {
+		return scores[peers[i]] > scores[peers[j]]
+	})
+	return peers
+}
+
+// BlockProviderScorePretty returns full scoring information about a given peer.
+func (s *PeerScorer) BlockProviderScorePretty(pid peer.ID) string {
+	s.store.Lock()
+	defer s.store.Unlock()
+	score := s.scoreBlockProvider(pid)
+	return fmt.Sprintf("[%0.2f%%, raw: %v,  req: %d, ret: %d, proc: %d]",
+		(score/s.BlockProviderMaxScore())*100, score,
+		s.requestedBlocks(pid), s.returnedBlocks(pid), s.processedBlocks(pid))
+}
+
+// BlockProviderMaxScore exposes maximum score attainable by peers.
+func (s *PeerScorer) BlockProviderMaxScore() float64 {
+	return s.BlockProviderStartScore() +
+		s.config.BlockProviderReturnedBlocksWeight +
+		s.config.BlockProviderProcessedBlocksWeight
 }

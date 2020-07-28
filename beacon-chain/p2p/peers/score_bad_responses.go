@@ -1,7 +1,19 @@
 package peers
 
 import (
+	"time"
+
 	"github.com/libp2p/go-libp2p-core/peer"
+)
+
+const (
+	// DefaultBadResponsesThreshold defines how many bad responses to tolerate before peer is deemed bad.
+	DefaultBadResponsesThreshold = 6
+	// DefaultBadResponsesWeight is a default weight. Since score represents penalty, it has negative weight.
+	DefaultBadResponsesWeight = -1.0
+	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
+	// Every interval bad responses counter will be decremented by 1.
+	DefaultBadResponsesDecayInterval = time.Hour
 )
 
 // ScoreBadResponses returns score (penalty) of bad responses peer produced.

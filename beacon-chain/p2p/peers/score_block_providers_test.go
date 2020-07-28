@@ -2,6 +2,7 @@ package peers_test
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -16,30 +17,34 @@ func TestPeerScorer_ScoreBlockProvider(t *testing.T) {
 	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &peers.PeerScorerConfig{
-			BlockProviderReturnedBlocksWeight:     0.1,
-			BlockProviderNoReturnedBlocksPenalty:  -0.1,
-			BlockProviderProcessedBlocksWeight:    0.2,
-			BlockProviderNoProcessedBlocksPenalty: -0.2,
+			BlockProviderReturnedBlocksWeight:       0.2,
+			BlockProviderEmptyReturnedBatchPenalty:  -0.02,
+			BlockProviderProcessedBlocksWeight:      0.2,
+			BlockProviderEmptyProcessedBatchPenalty: 0.0,
 		},
 	})
 	scorer := peerStatuses.Scorer()
+	adjustScore := func(score float64) float64 {
+		startScore := scorer.BlockProviderStartScore()
+		return math.Round((startScore+score)*10000) / 10000
+	}
 
-	assert.Equal(t, 0.0, scorer.ScoreBlockProvider("peer1"), "Unexpected score for unregistered provider")
-	// 128/64 = 2 batches of penalty is applied, so score is -0.1*2 + -0.2*2 = -0.6.
+	assert.Equal(t, scorer.BlockProviderStartScore(), scorer.ScoreBlockProvider("peer1"), "Unexpected score for unregistered provider")
+	// 128/64 = 2 batches of penalty is applied.
 	scorer.IncrementRequestedBlocks("peer1", 128)
-	assert.Equal(t, -0.6, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
-	// Now only processed blocks cause penalty: 0.1*0.5 + -0.2*2 = -0.35.
+	assert.Equal(t, adjustScore(-0.04), scorer.ScoreBlockProvider("peer1"), "Unexpected score")
+	// Now only processed blocks cause penalty (disabled as BlockProviderEmptyProcessedBatchPenalty: 0.0).
 	scorer.IncrementReturnedBlocks("peer1", 64)
-	assert.Equal(t, -0.35, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
-	// Full score for returned blocks, penalty for processed blocks: 0.1*1 + -0.2*2 = -0.3.
+	assert.Equal(t, adjustScore(0.1), scorer.ScoreBlockProvider("peer1"), "Unexpected score")
+	// Full score for returned blocks, penalty for processed blocks.
 	scorer.IncrementReturnedBlocks("peer1", 64)
-	assert.Equal(t, -0.3, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
+	assert.Equal(t, adjustScore(0.2), scorer.ScoreBlockProvider("peer1"), "Unexpected score")
 	// No penalty, partial score.
 	scorer.IncrementProcessedBlocks("peer1", 64)
-	assert.Equal(t, 0.2, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
+	assert.Equal(t, adjustScore(0.2+0.1), scorer.ScoreBlockProvider("peer1"), "Unexpected score")
 	// No penalty, full score.
 	scorer.IncrementProcessedBlocks("peer1", 64)
-	assert.Equal(t, 0.3, scorer.ScoreBlockProvider("peer1"), "Unexpected score")
+	assert.Equal(t, adjustScore(0.2+0.2), scorer.ScoreBlockProvider("peer1"), "Unexpected score")
 }
 
 func TestPeerScorer_GettersSetters(t *testing.T) {

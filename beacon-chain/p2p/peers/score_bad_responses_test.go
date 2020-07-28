@@ -24,7 +24,7 @@ func TestPeerScorer_ScoreBadResponses(t *testing.T) {
 	})
 	scorer := peerStatuses.Scorer()
 
-	assert.Equal(t, 0.0, scorer.ScoreBlockProvider("peer1"), "Unexpected score for unregistered peer")
+	assert.Equal(t, 0.0, scorer.ScoreBadResponses("peer1"), "Unexpected score for unregistered peer")
 	scorer.IncrementBadResponses("peer1")
 	assert.Equal(t, -0.25, scorer.ScoreBadResponses("peer1"))
 	scorer.IncrementBadResponses("peer1")
