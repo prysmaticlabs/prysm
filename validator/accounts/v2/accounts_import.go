@@ -21,52 +21,36 @@ import (
 // ImportAccount uses the archived account made from ExportAccount to import an account and
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil && !errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrapf(err, "Could not retrieve input directory")
-	}
-	ok, err := hasDir(walletDir)
-	if err != nil {
-		return err
-	}
-	// Create a new wallet if no directory exists.
-	if !ok {
+	ctx := context.Background()
+	wallet, err := createOrOpenWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		w, err := NewWallet(cliCtx, v2keymanager.Direct)
 		if err != nil && !errors.Is(err, ErrWalletExists) {
-			return errors.Wrap(err, "could not check if wallet directory exists")
+			return nil, errors.Wrap(err, "could not create new wallet")
 		}
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-			return errors.Wrap(err, "could not initialize wallet")
+			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("wallet-path", w.walletDir).Infof(
 			"Successfully created new wallet",
 		)
-	}
-	passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
+		return w, err
+	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not initialize wallet")
+	}
+	if wallet.KeymanagerKind() != v2keymanager.Direct {
+		return errors.New(
+			"only non-HD wallets can import accounts, try creating a new wallet with wallet-v2 create",
+		)
 	}
 	keysDir, err := inputDirectory(cliCtx, importKeysDirPromptText, flags.KeysDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
-
-	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
-	if err := os.MkdirAll(accountsPath, flags.DirectoryPermissions); err != nil {
-		return errors.Wrap(err, "could not create wallet directory")
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet")
 	}
-	if err := os.MkdirAll(passwordsDir, flags.DirectoryPermissions); err != nil {
-		return errors.Wrap(err, "could not create passwords directory")
-	}
-
-	wallet := &Wallet{
-		accountsPath:   accountsPath,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
-	}
-
 	var accountsImported []string
-	ctx := context.Background()
 	if err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

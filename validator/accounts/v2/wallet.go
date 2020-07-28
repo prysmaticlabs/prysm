@@ -487,6 +487,27 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 	return v2keymanager.ParseKind(list[0])
 }
 
+func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
+	directory := cliCtx.String(flags.WalletDirFlag.Name)
+	ok, err := hasDir(directory)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
+	}
+	var wallet *Wallet
+	if !ok {
+		wallet, err = creationFunc(cliCtx)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not create wallet")
+		}
+	} else {
+		wallet, err = OpenWallet(cliCtx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not open wallet")
+		}
+	}
+	return wallet, nil
+}
+
 // Returns true if a file is not a directory and exists
 // at the specified path.
 func fileExists(filename string) bool {

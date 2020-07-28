@@ -6,12 +6,13 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -20,14 +21,9 @@ var log = logrus.WithField("prefix", "accounts-v2")
 // a wallet from the user's specified path.
 func CreateAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		wallet, err = CreateWallet(cliCtx)
-		if err != nil {
-			return errors.Wrapf(err, "Could not create wallet")
-		}
-	} else if err != nil {
-		return errors.Wrap(err, "could not open wallet")
+	wallet, err := createOrOpenWallet(cliCtx, CreateWallet)
+	if err != nil {
+		return err
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
