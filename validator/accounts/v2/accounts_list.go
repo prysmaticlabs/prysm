@@ -103,7 +103,7 @@ func listDirectKeymanagerAccounts(
 		if err != nil {
 			return errors.Wrap(err, "could not get timestamp from keystore file name")
 		}
-		fmt.Printf("%s | %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s | Created %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if !showDepositData {
 			continue
