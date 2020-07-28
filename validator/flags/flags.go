@@ -136,7 +136,7 @@ var (
 	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
 	PasswordFileFlag = &cli.StringFlag{
 		Name:  "password-file",
-		Usage: "Path to a file containing a password to interact with wallets/accounts in a non-interactive way",
+		Usage: "Path to a plaintext password.txt file",
 	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{

@@ -83,6 +83,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeyManagerOpts,
 			flags.KeystorePathFlag,
 			flags.PasswordFlag,
+			flags.PasswordFileFlag,
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,

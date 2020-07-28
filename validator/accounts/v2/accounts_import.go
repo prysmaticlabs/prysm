@@ -25,6 +25,23 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
+	// Check if the user has a wallet at the specified path. If so, only let them continue if it is a non-HD wallet.
+	walletExists, err := hasDir(walletDir)
+	if err != nil {
+		return errors.Wrap(err, "could not check if wallet exists")
+	}
+	if walletExists {
+		keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+		if err != nil {
+			return errors.Wrap(err, "could not read keymanager kind for existing wallet")
+		}
+		if keymanagerKind != v2keymanager.Direct {
+			return fmt.Errorf(
+				"importing non-HD accounts into a non-direct wallet is not allowed, given wallet path contains a %s wallet",
+				keymanagerKind.String(),
+			)
+		}
+	}
 	passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 	if err != nil {
 		return err
