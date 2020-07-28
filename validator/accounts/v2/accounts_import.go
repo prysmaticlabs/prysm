@@ -7,12 +7,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/prysmaticlabs/prysm/shared/petnames"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -52,19 +50,26 @@ func ImportAccount(cliCtx *cli.Context) error {
 	var accountsImported []string
 	ctx := context.Background()
 	if err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
-		keystoreBytes, err := ioutil.ReadFile(path)
-		if err != nil {
-			return errors.Wrap(err, "could not read keystore file")
-		}
-		keystoreFile := &v2keymanager.Keystore{}
-		if err := json.Unmarshal(keystoreBytes, keystoreFile); err != nil {
-			return errors.Wrap(err, "could not decode keystore json")
-		}
-
-		fileName := filepath.Base(path)
-		if !info.IsDir() && !strings.Contains(fileName, "keystore") {
+		if info.IsDir() {
 			return nil
 		}
+
+		parentDir := filepath.Dir(path)
+		matches, err := filepath.Glob(filepath.Join(parentDir, direct.KeystoreFileName))
+		if err != nil {
+			return err
+		}
+
+		var keystoreFileFound bool
+		for _, match := range matches {
+			if match == path {
+				keystoreFileFound = true
+			}
+		}
+		if !keystoreFileFound {
+			return nil
+		}
+
 		accountName, err := wallet.importKeystore(ctx, path)
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
@@ -76,11 +81,6 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "could not walk files")
-	}
-	au := aurora.NewAurora(true)
-	var loggedAccounts []string
-	for _, accountName := range accountsImported {
-		loggedAccounts = append(loggedAccounts, fmt.Sprintf("%s", au.BrightGreen(accountName).Bold()))
 	}
 
 	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)

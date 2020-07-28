@@ -175,7 +175,6 @@ var (
 	KeysDirFlag = &cli.StringFlag{
 		Name:  "keys-dir",
 		Usage: "Path to a directory where keystores to be imported are stored",
-		Value: DefaultValidatorDir(),
 	}
 	// GrpcRemoteAddressFlag defines the host:port address for a remote keymanager to connect to.
 	GrpcRemoteAddressFlag = &cli.StringFlag{
