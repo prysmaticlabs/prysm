@@ -89,9 +89,9 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 func appendDirName(inputtedDir string, flagName string) string {
 	switch flagName {
 	case flags.WalletDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, WalletDefaultDirName)
+		inputtedDir = filepath.Join(inputtedDir, flags.WalletDefaultDirName)
 	case flags.WalletPasswordsDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, PasswordsDefaultDirName)
+		inputtedDir = filepath.Join(inputtedDir, flags.PasswordsDefaultDirName)
 	}
 	return inputtedDir
 }

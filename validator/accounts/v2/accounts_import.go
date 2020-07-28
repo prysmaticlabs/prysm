@@ -34,10 +34,10 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 
 	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
-	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
+	if err := os.MkdirAll(accountsPath, flags.DirectoryPermissions); err != nil {
 		return errors.Wrap(err, "could not create wallet directory")
 	}
-	if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
+	if err := os.MkdirAll(passwordsDir, flags.DirectoryPermissions); err != nil {
 		return errors.Wrap(err, "could not create passwords directory")
 	}
 	accountsImported, err := unzipArchiveToTarget(backupDir, filepath.Dir(walletDir))
