@@ -16,7 +16,7 @@ const (
 	// DefaultBlockProviderEmptyReturnedBatchPenalty is a default penalty for non-responsive peers.
 	DefaultBlockProviderEmptyReturnedBatchPenalty = -0.02
 	// DefaultBlockProviderProcessedBlocksWeight is a default weight of a processed/requested ratio in an overall score.
-	DefaultBlockProviderProcessedBlocksWeight = 0.2
+	DefaultBlockProviderProcessedBlocksWeight = 0.0
 	// DefaultBlockProviderEmptyProcessedBatchPenalty is a default penalty for non-responsive peers.
 	DefaultBlockProviderEmptyProcessedBatchPenalty = 0.0
 	// DefaultBlockProviderDecayInterval defines how often block provider's stats should be decayed.

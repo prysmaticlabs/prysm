@@ -43,6 +43,9 @@ const (
 	// nonSkippedSlotsFullSearchEpochs how many epochs to check in full, before resorting to random
 	// sampling of slots once per epoch
 	nonSkippedSlotsFullSearchEpochs = 10
+	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
+	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
+	peerFilterCapacityWeight = 0.2
 )
 
 var (
@@ -306,6 +309,7 @@ func (f *blocksFetcher) requestBlocks(
 		"count":    req.Count,
 		"step":     req.Step,
 		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorer().BlockProviderScorePretty(pid),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
@@ -426,11 +430,6 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersP
 		return peers, nil
 	}
 
-	// Shuffle peers to make sure that peers having the same score are selected at random.
-	f.rand.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
-
 	// Sort peers by their score (in descending order), non-responsive peers will be constantly
 	// pushed down the list and trimmed when percentage is selected.
 	peers = f.p2p.Peers().Scorer().SortBlockProviders(peers)
@@ -443,18 +442,26 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersP
 
 	// Order peers by score and remaining capacity, effectively turning in-order
 	// round robin peer processing into a weighted one (peers with higher scores and higher
-	// remaining capacity are preferred). Peers with the same score/capacity are selected at random,
-	// since we have already shuffled peers at this point.
+	// remaining capacity are preferred). The effect of capacity on overall score is controlled
+	// via peerFilterCapacityWeight constant.
 	sort.SliceStable(peers, func(i, j int) bool {
-		score1 := f.p2p.Peers().Scorer().ScoreBlockProvider(peers[i])
-		score2 := f.p2p.Peers().Scorer().ScoreBlockProvider(peers[j])
-		// If scores are equal, rely on remaining capacity as tie-breaker.
-		if score1 == score2 {
-			cap1 := f.rateLimiter.Remaining(peers[i].String())
-			cap2 := f.rateLimiter.Remaining(peers[j].String())
-			return cap1 > cap2
+		aggScore := func(pid peer.ID) float64 {
+			blockProviderScore := f.p2p.Peers().Scorer().ScoreBlockProvider(pid)
+			l := f.getPeerLock(pid)
+			if l == nil {
+				return blockProviderScore
+			}
+			l.Lock()
+			defer l.Unlock()
+			remaining, capacity := float64(f.rateLimiter.Remaining(pid.String())), float64(f.rateLimiter.Capacity())
+			if remaining < float64(f.blocksPerSecond) {
+				// When no capacity for a good peer left, allow less performant peer to take a chance.
+				return f.p2p.Peers().Scorer().BlockProviderStartScore() * -1.0
+			}
+			capScore := remaining / capacity
+			return blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
 		}
-		return score1 > score2
+		return aggScore(peers[i]) > aggScore(peers[j])
 	})
 
 	return peers, nil
