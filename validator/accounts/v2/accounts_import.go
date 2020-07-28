@@ -1,16 +1,17 @@
 package v2
 
 import (
-	"archive/zip"
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -24,13 +25,30 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil && !errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
+	// Check if the user has a wallet at the specified path. If so, only let them continue if it is a non-HD wallet.
+	walletExists, err := hasDir(walletDir)
+	if err != nil {
+		return errors.Wrap(err, "could not check if wallet exists")
+	}
+	if walletExists {
+		keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+		if err != nil {
+			return errors.Wrap(err, "could not read keymanager kind for existing wallet")
+		}
+		if keymanagerKind != v2keymanager.Direct {
+			return fmt.Errorf(
+				"importing non-HD accounts into a non-direct wallet is not allowed, given wallet path contains a %s wallet",
+				keymanagerKind.String(),
+			)
+		}
+	}
 	passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 	if err != nil {
 		return err
 	}
-	backupDir, err := inputDirectory(cliCtx, importDirPromptText, flags.BackupDirFlag)
+	keysDir, err := inputDirectory(cliCtx, importKeysDirPromptText, flags.KeysDirFlag)
 	if err != nil {
-		return errors.Wrap(err, "could not parse output directory")
+		return errors.Wrap(err, "could not parse keys directory")
 	}
 
 	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
@@ -40,10 +58,6 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err := os.MkdirAll(passwordsDir, flags.DirectoryPermissions); err != nil {
 		return errors.Wrap(err, "could not create passwords directory")
 	}
-	accountsImported, err := unzipArchiveToTarget(backupDir, filepath.Dir(walletDir))
-	if err != nil {
-		return errors.Wrap(err, "could not unzip archive")
-	}
 
 	wallet := &Wallet{
 		accountsPath:   accountsPath,
@@ -51,18 +65,42 @@ func ImportAccount(cliCtx *cli.Context) error {
 		keymanagerKind: v2keymanager.Direct,
 	}
 
-	au := aurora.NewAurora(true)
-	var loggedAccounts []string
-	for _, accountName := range accountsImported {
-		loggedAccounts = append(loggedAccounts, fmt.Sprintf("%s", au.BrightGreen(accountName).Bold()))
-	}
-	fmt.Printf("Importing accounts: %s\n", strings.Join(loggedAccounts, ", "))
-
-	for _, accountName := range accountsImported {
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-			return errors.Wrap(err, "could not set account password")
+	var accountsImported []string
+	ctx := context.Background()
+	if err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
 		}
+
+		parentDir := filepath.Dir(path)
+		matches, err := filepath.Glob(filepath.Join(parentDir, direct.KeystoreFileName))
+		if err != nil {
+			return err
+		}
+
+		var keystoreFileFound bool
+		for _, match := range matches {
+			if match == path {
+				keystoreFileFound = true
+			}
+		}
+		if !keystoreFileFound {
+			return nil
+		}
+
+		accountName, err := wallet.importKeystore(ctx, path)
+		if err != nil {
+			return errors.Wrap(err, "could not import keystore")
+		}
+		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
+			return errors.Wrap(err, "could not verify password for keystore")
+		}
+		accountsImported = append(accountsImported, accountName)
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "could not walk files")
 	}
+
 	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
@@ -78,66 +116,25 @@ func ImportAccount(cliCtx *cli.Context) error {
 	return nil
 }
 
-func unzipArchiveToTarget(archiveDir string, target string) ([]string, error) {
-	archiveFile := filepath.Join(archiveDir, archiveFilename)
-	reader, err := zip.OpenReader(archiveFile)
+func (w *Wallet) importKeystore(ctx context.Context, keystoreFilePath string) (string, error) {
+	keystoreBytes, err := ioutil.ReadFile(keystoreFilePath)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not open reader for archive")
+		return "", errors.Wrap(err, "could not read keystore file")
 	}
-
-	perms := os.FileMode(0700)
-	if err := os.MkdirAll(target, perms); err != nil {
-		return nil, errors.Wrap(err, "could not parent path for folder")
+	keystoreFile := &v2keymanager.Keystore{}
+	if err := json.Unmarshal(keystoreBytes, keystoreFile); err != nil {
+		return "", errors.Wrap(err, "could not decode keystore json")
 	}
-
-	var accounts []string
-	for _, file := range reader.File {
-		path := filepath.Join(target, file.Name)
-		parentFolder := filepath.Dir(path)
-		if file.FileInfo().IsDir() {
-			accounts = append(accounts, file.FileInfo().Name())
-			if err := os.MkdirAll(path, perms); err != nil {
-				return nil, errors.Wrap(err, "could not make path for file")
-			}
-			continue
-		} else {
-			if err := os.MkdirAll(parentFolder, perms); err != nil {
-				return nil, errors.Wrap(err, "could not make path for file")
-			}
-		}
-
-		if err := copyFileFromZipToPath(file, path); err != nil {
-			return nil, err
-		}
-	}
-	return accounts, nil
-}
-
-func copyFileFromZipToPath(file *zip.File, path string) error {
-	fileReader, err := file.Open()
+	pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
 	if err != nil {
-		return err
+		return "", errors.Wrap(err, "could not decode public key string in keystore")
 	}
-	defer func() {
-		if err := fileReader.Close(); err != nil {
-			log.WithError(err).Error("Could not close file")
-		}
-	}()
-
-	targetFile, err := os.Create(path)
-	if err != nil {
-		return errors.Wrap(err, "could not open file")
+	accountName := petnames.DeterministicName(pubKeyBytes, "-")
+	keystoreFileName := filepath.Base(keystoreFilePath)
+	if err := w.WriteFileAtPath(ctx, accountName, keystoreFileName, keystoreBytes); err != nil {
+		return "", errors.Wrap(err, "could not write keystore to account dir")
 	}
-	defer func() {
-		if err := targetFile.Close(); err != nil {
-			log.WithError(err).Error("Could not close target")
-		}
-	}()
-
-	if _, err := io.Copy(targetFile, fileReader); err != nil {
-		return errors.Wrap(err, "could not copy file")
-	}
-	return nil
+	return accountName, nil
 }
 
 func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {

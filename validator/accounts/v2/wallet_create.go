@@ -21,8 +21,11 @@ func CreateWallet(cliCtx *cli.Context) error {
 		return err
 	}
 	w, err := NewWallet(cliCtx, keymanagerKind)
-	if err != nil {
-		return errors.Wrap(err, "could not create a new wallet")
+	if err != nil && !errors.Is(err, ErrWalletExists) {
+		return errors.Wrap(err, "could not check if wallet directory exists")
+	}
+	if errors.Is(err, ErrWalletExists) {
+		return ErrWalletExists
 	}
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:

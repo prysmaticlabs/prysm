@@ -3,7 +3,6 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -18,6 +17,7 @@ import (
 
 const (
 	importDirPromptText          = "Enter the file location of the exported wallet zip to import"
+	importKeysDirPromptText      = "Enter the directory where your keystores to import are located"
 	exportDirPromptText          = "Enter a file location to write the exported wallet to"
 	walletDirPromptText          = "Enter a wallet directory"
 	passwordsDirPromptText       = "Directory where passwords will be stored"
@@ -43,7 +43,7 @@ const (
 )
 
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
-	directory := appendDirName(cliCtx.String(flag.Name), flag.Name)
+	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
 		return directory, nil
 	}
@@ -83,17 +83,7 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	if inputtedDir == prompt.Default {
 		return directory, nil
 	}
-	return appendDirName(inputtedDir, flag.Name), nil
-}
-
-func appendDirName(inputtedDir string, flagName string) string {
-	switch flagName {
-	case flags.WalletDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, flags.WalletDefaultDirName)
-	case flags.WalletPasswordsDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, flags.PasswordsDefaultDirName)
-	}
-	return inputtedDir
+	return inputtedDir, nil
 }
 
 func validateDirectoryPath(input string) error {
@@ -110,13 +100,12 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
 		}
-		enteredPassword := string(data)
+		enteredPassword := strings.TrimRight(string(data), "\r\n")
 		if err := validatePasswordInput(enteredPassword); err != nil {
 			return "", errors.Wrap(err, "password did not pass validation")
 		}
-		return strings.TrimRight(enteredPassword, "\r\n"), nil
+		return enteredPassword, nil
 	}
-
 	var hasValidPassword bool
 	var walletPassword string
 	var err error
@@ -131,7 +120,6 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		if err != nil {
 			return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
 		}
-
 		if confirmPassword == confirmPass {
 			prompt = promptui.Prompt{
 				Label: confirmPasswordPromptText,
@@ -149,6 +137,37 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		} else {
 			return strings.TrimRight(walletPassword, "\r\n"), nil
 		}
+	}
+	return strings.TrimRight(walletPassword, "\r\n"), nil
+}
+
+func inputWeakPassword(cliCtx *cli.Context, promptText string) (string, error) {
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", errors.Wrap(err, "could not read password file")
+		}
+		return strings.TrimRight(string(data), "\r\n"), nil
+	}
+
+	prompt := promptui.Prompt{
+		Label: promptText,
+		Validate: func(input string) error {
+			if input == "" {
+				return errors.New("password cannot be empty")
+			}
+			if !isValidUnicode(input) {
+				return errors.New("not valid unicode")
+			}
+			return nil
+		},
+		Mask: '*',
+	}
+
+	walletPassword, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
 	}
 	return strings.TrimRight(walletPassword, "\r\n"), nil
 }

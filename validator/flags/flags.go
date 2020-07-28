@@ -147,7 +147,7 @@ var (
 	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
 	PasswordFileFlag = &cli.StringFlag{
 		Name:  "password-file",
-		Usage: "Path to a file containing a password to interact with wallets/accounts in a non-interactive way",
+		Usage: "Path to a plaintext password.txt file",
 	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{
@@ -181,6 +181,11 @@ var (
 		Name:  "backup-dir",
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
+	}
+	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
+	KeysDirFlag = &cli.StringFlag{
+		Name:  "keys-dir",
+		Usage: "Path to a directory where keystores to be imported are stored",
 	}
 	// GrpcRemoteAddressFlag defines the host:port address for a remote keymanager to connect to.
 	GrpcRemoteAddressFlag = &cli.StringFlag{
