@@ -18,6 +18,7 @@ import (
 
 const (
 	importDirPromptText          = "Enter the file location of the exported wallet zip to import"
+	importKeysDirPromptText      = "Enter the directory where your keystores to import are located"
 	exportDirPromptText          = "Enter a file location to write the exported wallet to"
 	walletDirPromptText          = "Enter a wallet directory"
 	passwordsDirPromptText       = "Directory where passwords will be stored"
@@ -116,7 +117,6 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		}
 		return strings.TrimRight(enteredPassword, "\r\n"), nil
 	}
-
 	var hasValidPassword bool
 	var walletPassword string
 	var err error
@@ -131,7 +131,6 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		if err != nil {
 			return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
 		}
-
 		if confirmPassword == confirmPass {
 			prompt = promptui.Prompt{
 				Label: confirmPasswordPromptText,
@@ -149,6 +148,37 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		} else {
 			return strings.TrimRight(walletPassword, "\r\n"), nil
 		}
+	}
+	return strings.TrimRight(walletPassword, "\r\n"), nil
+}
+
+func inputWeakPassword(cliCtx *cli.Context, promptText string) (string, error) {
+	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", errors.Wrap(err, "could not read password file")
+		}
+		return strings.TrimRight(string(data), "\r\n"), nil
+	}
+
+	prompt := promptui.Prompt{
+		Label: promptText,
+		Validate: func(input string) error {
+			if input == "" {
+				return errors.New("password cannot be empty")
+			}
+			if !isValidUnicode(input) {
+				return errors.New("not valid unicode")
+			}
+			return nil
+		},
+		Mask: '*',
+	}
+
+	walletPassword, err := prompt.Run()
+	if err != nil {
+		return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
 	}
 	return strings.TrimRight(walletPassword, "\r\n"), nil
 }

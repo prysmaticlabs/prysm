@@ -8,7 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/logrusorgru/aurora"
@@ -269,11 +271,53 @@ func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName s
 		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
 	}
 	fullPath := filepath.Join(accountPath, fileName)
-	rawData, err := ioutil.ReadFile(fullPath)
+	matches, err := filepath.Glob(fullPath)
+	if err != nil {
+		return []byte{}, errors.Wrap(err, "could not find file")
+	}
+	if len(matches) == 0 {
+		return []byte{}, fmt.Errorf("no files found %s", fullPath)
+	}
+	rawData, err := ioutil.ReadFile(matches[0])
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read %s", filePath)
 	}
 	return rawData, nil
+}
+
+// FileNameAtPath return the full file name for the requested file. It allows for finding the file
+// with a regex pattern.
+func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName string) (string, error) {
+	accountPath := filepath.Join(w.accountsPath, filePath)
+	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
+		return "", errors.Wrapf(err, "could not create path: %s", accountPath)
+	}
+	fullPath := filepath.Join(accountPath, fileName)
+	matches, err := filepath.Glob(fullPath)
+	if err != nil {
+		return "", errors.Wrap(err, "could not find file")
+	}
+	if len(matches) == 0 {
+		return "", fmt.Errorf("no files found %s", fullPath)
+	}
+	fullFileName := filepath.Base(matches[0])
+	return fullFileName, nil
+}
+
+// AccountTimestamp retrieves the timestamp from a given keystore file name.
+func AccountTimestamp(fileName string) (time.Time, error) {
+	timestampStart := strings.LastIndex(fileName, "-") + 1
+	timestampEnd := strings.LastIndex(fileName, ".")
+	// Return an error if the text we expect cannot be found.
+	if timestampStart == -1 || timestampEnd == -1 {
+		return time.Unix(0, 0), fmt.Errorf("could not find timestamp in file name %s", fileName)
+	}
+	unixTimestampStr, err := strconv.ParseInt(fileName[timestampStart:timestampEnd], 10, 64)
+	if err != nil {
+		return time.Unix(0, 0), errors.Wrapf(err, "could not parse account created at timestamp: %s", fileName)
+	}
+	unixTimestamp := time.Unix(unixTimestampStr, 0)
+	return unixTimestamp, nil
 }
 
 // ReadKeymanagerConfigFromDisk opens a keymanager config file
@@ -355,7 +399,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 		// Loop asking for the password until the user enters it correctly.
 		for attemptingPassword {
 			// Ask the user for the password to their account.
-			password, err = inputPassword(cliCtx, fmt.Sprintf(passwordForAccountPromptText, accountName), noConfirmPass)
+			password, err = inputWeakPassword(cliCtx, fmt.Sprintf(passwordForAccountPromptText, accountName))
 			if err != nil {
 				return errors.Wrap(err, "could not input password")
 			}

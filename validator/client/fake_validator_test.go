@@ -13,6 +13,7 @@ type fakeValidator struct {
 	WaitForChainStartCalled          bool
 	WaitForSyncCalled                bool
 	WaitForSyncedCalled              bool
+	SlasherReadyCalled               bool
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
 	UpdateDutiesCalled               bool
@@ -54,6 +55,11 @@ func (fv *fakeValidator) WaitForSync(_ context.Context) error {
 
 func (fv *fakeValidator) WaitForSynced(_ context.Context) error {
 	fv.WaitForSyncedCalled = true
+	return nil
+}
+
+func (fv *fakeValidator) SlasherReady(_ context.Context) error {
+	fv.SlasherReadyCalled = true
 	return nil
 }
 
