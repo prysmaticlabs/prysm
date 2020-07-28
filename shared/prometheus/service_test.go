@@ -185,5 +185,8 @@ func TestContentNegotiation(t *testing.T) {
 		if !strings.Contains(body, expectedJSON) {
 			t.Errorf("Unexpected data, want: %q got %q", expectedJSON, body)
 		}
+		if rr.Code < 500 {
+			t.Errorf("Expected a server error response code, but got %d", rr.Code)
+		}
 	})
 }
