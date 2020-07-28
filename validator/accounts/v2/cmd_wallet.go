@@ -44,6 +44,7 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+				flags.WalletPasswordsDirFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.MedallaTestnet,
 			},
