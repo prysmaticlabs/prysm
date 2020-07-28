@@ -61,9 +61,9 @@ var (
 
 // Status is the structure holding the peer status information.
 type Status struct {
-	ctx    context.Context
+	ctx     context.Context
 	scorers *PeerScorerManager
-	store  *peerDataStore
+	store   *peerDataStore
 }
 
 // StatusConfig represents peer status service params.
@@ -80,8 +80,8 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		maxPeers: maxLimitBuffer + config.PeerLimit,
 	})
 	return &Status{
-		ctx:    ctx,
-		store:  store,
+		ctx:     ctx,
+		store:   store,
 		scorers: newPeerScorerManager(ctx, store, config.ScorerParams),
 	}
 }
