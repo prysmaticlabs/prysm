@@ -62,7 +62,7 @@ var (
 // Status is the structure holding the peer status information.
 type Status struct {
 	ctx    context.Context
-	scorer *PeerScorer
+	scorers *PeerScorerManager
 	store  *peerDataStore
 }
 
@@ -82,13 +82,13 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 	return &Status{
 		ctx:    ctx,
 		store:  store,
-		scorer: newPeerScorer(ctx, store, config.ScorerParams),
+		scorers: newPeerScorerManager(ctx, store, config.ScorerParams),
 	}
 }
 
-// Scorer exposes peer scoring service.
-func (p *Status) Scorer() *PeerScorer {
-	return p.scorer
+// Scorers exposes peer scoring management service.
+func (p *Status) Scorers() *PeerScorerManager {
+	return p.scorers
 }
 
 // MaxPeerLimit returns the max peer limit stored in the current peer store.
@@ -284,7 +284,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 // IsBad states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	return p.scorer.IsBadPeer(pid)
+	return p.scorers.BadResponsesScorer().IsBadPeer(pid)
 }
 
 // Connecting returns the peers that are connecting.
@@ -367,7 +367,7 @@ func (p *Status) Inactive() []peer.ID {
 
 // Bad returns the peers that are bad.
 func (p *Status) Bad() []peer.ID {
-	return p.scorer.BadPeers()
+	return p.scorers.BadResponsesScorer().BadPeers()
 }
 
 // All returns all the peers regardless of state.
@@ -398,7 +398,7 @@ func (p *Status) Prune() {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.peers {
-		if peerData.connState == PeerDisconnected && !p.scorer.isBadPeer(pid) {
+		if peerData.connState == PeerDisconnected && !p.scorers.BadResponsesScorer().isBadPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
 				badResp: p.store.peers[pid].badResponses,
