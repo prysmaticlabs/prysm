@@ -171,6 +171,12 @@ var (
 		Usage: "Path to a directory where accounts will be exported into a zip file",
 		Value: DefaultValidatorDir(),
 	}
+	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
+	KeysDirFlag = &cli.StringFlag{
+		Name:  "keys-dir",
+		Usage: "Path to a directory where keystores to be imported are stored",
+		Value: DefaultValidatorDir(),
+	}
 	// GrpcRemoteAddressFlag defines the host:port address for a remote keymanager to connect to.
 	GrpcRemoteAddressFlag = &cli.StringFlag{
 		Name:  "grpc-remote-address",

@@ -18,6 +18,7 @@ import (
 
 const (
 	importDirPromptText          = "Enter the file location of the exported wallet zip to import"
+	keysDirPromptText            = "Enter the directory where your saved "
 	exportDirPromptText          = "Enter a file location to write the exported wallet to"
 	walletDirPromptText          = "Enter a wallet directory"
 	passwordsDirPromptText       = "Directory where passwords will be stored"
