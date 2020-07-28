@@ -247,7 +247,9 @@ func TestPeerScorer_loop(t *testing.T) {
 	scorer.IncrementRequestedBlocks("peer1", 64)
 	scorer.IncrementReturnedBlocks("peer1", 60)
 	scorer.IncrementProcessedBlocks("peer1", 50)
-	assert.NotEqual(t, 0.0, scorer.ScoreBlockProvider("peer1"))
+	assert.NotEqual(t, uint64(0), scorer.RequestedBlocks("peer1"))
+	assert.NotEqual(t, uint64(0), scorer.ReturnedBlocks("peer1"))
+	assert.NotEqual(t, uint64(0), scorer.ProcessedBlocks("peer1"))
 
 	done := make(chan struct{}, 1)
 	go func() {
@@ -258,7 +260,7 @@ func TestPeerScorer_loop(t *testing.T) {
 		for {
 			select {
 			case <-ticker.C:
-				if scorer.IsBadPeer(pid1) == false && scorer.ScoreBlockProvider("peer1") == 0 {
+				if scorer.IsBadPeer(pid1) == false && scorer.RequestedBlocks("peer1") == 0 {
 					return
 				}
 			case <-ctx.Done():
@@ -270,5 +272,7 @@ func TestPeerScorer_loop(t *testing.T) {
 
 	<-done
 	assert.Equal(t, false, scorer.IsBadPeer(pid1), "Peer should not be marked as bad")
-	assert.Equal(t, 0.0, scorer.ScoreBlockProvider("peer1"), "Peer should not have any block fetcher score")
+	assert.Equal(t, uint64(0), scorer.RequestedBlocks("peer1"), "No blocks are expected")
+	assert.Equal(t, uint64(0), scorer.ReturnedBlocks("peer1"), "No blocks are expected")
+	assert.Equal(t, uint64(0), scorer.ProcessedBlocks("peer1"), "No blocks are expected")
 }
