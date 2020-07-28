@@ -31,6 +31,7 @@ type testWalletConfig struct {
 	walletDir        string
 	passwordsDir     string
 	exportDir        string
+	keysDir          string
 	accountsToExport string
 	passwordFile     string
 	numAccounts      int64
@@ -45,6 +46,7 @@ func setupWalletCtx(
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
 	set.String(flags.WalletPasswordsDirFlag.Name, cfg.passwordsDir, "")
+	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.BackupDirFlag.Name, cfg.exportDir, "")
 	set.String(flags.AccountsFlag.Name, cfg.accountsToExport, "")
@@ -53,6 +55,7 @@ func setupWalletCtx(
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
 	assert.NoError(tb, set.Set(flags.WalletPasswordsDirFlag.Name, cfg.passwordsDir))
+	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.exportDir))
 	assert.NoError(tb, set.Set(flags.AccountsFlag.Name, cfg.accountsToExport))
