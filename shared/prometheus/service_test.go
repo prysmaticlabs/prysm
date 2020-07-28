@@ -95,7 +95,7 @@ func TestHealthz(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusServiceUnavailable {
-		t.Errorf("expected OK status but got %v", rr.Code)
+		t.Errorf("expected StatusServiceUnavailable status but got %v", rr.Code)
 	}
 
 	body = rr.Body.String()
