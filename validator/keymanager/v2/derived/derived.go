@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -208,7 +209,11 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 // appropriate seed file for recovering a derived wallets.
 func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string) (*SeedConfig, error) {
 	walletSeed, err := bip39.EntropyFromMnemonic(mnemonic)
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "not found in reverse map") {
+		return nil, errors.New("could not convert mnemonic to wallet seed: invalid seed word entered")
+	} else if errors.Is(err, bip39.ErrInvalidMnemonic) {
+		return nil, errors.Wrap(bip39.ErrInvalidMnemonic, "could not convert mnemonic to wallet seed")
+	} else if err != nil {
 		return nil, errors.Wrap(err, "could not convert mnemonic to wallet seed")
 	}
 	encryptor := keystorev4.New()
