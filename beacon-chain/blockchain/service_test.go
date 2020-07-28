@@ -15,8 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -121,59 +119,16 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		OpsService:        opsService,
 	}
 
+	// Safe a state in stategen to purposes of testing a service stop / shutdown.
+	if err := cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState); err != nil {
+		t.Fatal(err)
+	}
+
 	chainService, err := NewService(ctx, cfg)
 	require.NoError(t, err, "Unable to setup chain service")
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
 	return chainService
-}
-
-func TestChainStartStop_Uninitialized(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db, sc := testDB.SetupDB(t)
-	chainService := setupBeaconChain(t, db, sc)
-
-	// Listen for state events.
-	stateSubChannel := make(chan *feed.Event, 1)
-	stateSub := chainService.stateNotifier.StateFeed().Subscribe(stateSubChannel)
-
-	// Test the chain start state notifier.
-	genesisTime := time.Unix(1, 0)
-	chainService.Start()
-	event := &feed.Event{
-		Type: statefeed.ChainStarted,
-		Data: &statefeed.ChainStartedData{
-			StartTime: genesisTime,
-		},
-	}
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 1; sent == 1; {
-		sent = chainService.stateNotifier.StateFeed().Send(event)
-		if sent == 1 {
-			// Flush our local subscriber.
-			<-stateSubChannel
-		}
-	}
-
-	// Now wait for notification the state is ready.
-	for stateInitialized := false; stateInitialized == false; {
-		recv := <-stateSubChannel
-		if recv.Type == statefeed.Initialized {
-			stateInitialized = true
-		}
-	}
-	stateSub.Unsubscribe()
-
-	beaconState, err := db.HeadState(context.Background())
-	require.NoError(t, err)
-	if beaconState == nil || beaconState.Slot() != 0 {
-		t.Error("Expected canonical state feed to send a state with genesis block")
-	}
-	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
-	// The context should have been canceled.
-	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
-	testutil.AssertLogsContain(t, hook, "Waiting")
-	testutil.AssertLogsContain(t, hook, "Initialized beacon chain genesis state")
 }
 
 func TestChainStartStop_Initialized(t *testing.T) {
