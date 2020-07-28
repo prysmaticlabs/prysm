@@ -163,6 +163,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		au := aurora.NewAurora(true)
 		log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
 	}
+	log.Info("Successfully opened wallet")
 	return w, nil
 }
 
