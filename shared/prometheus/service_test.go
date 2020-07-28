@@ -94,7 +94,7 @@ func TestHealthz(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status := rr.Code; status != http.StatusServiceUnavailable {
 		t.Errorf("expected OK status but got %v", rr.Code)
 	}
 
