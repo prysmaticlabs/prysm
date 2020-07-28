@@ -31,7 +31,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 	keysDir, err := inputDirectory(cliCtx, keysDirPromptText, flags.KeysDirFlag)
 	if err != nil {
-		return errors.Wrap(err, "could not parse output directory")
+		return errors.Wrap(err, "could not parse keys directory")
 	}
 
 	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
