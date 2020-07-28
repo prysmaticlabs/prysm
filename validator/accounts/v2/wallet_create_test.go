@@ -26,7 +26,8 @@ func TestCreateWallet_Direct(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	require.NoError(t, CreateWallet(cliCtx))
+	_, err := CreateWallet(cliCtx)
+	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
@@ -40,20 +41,23 @@ func TestCreateWallet_Direct(t *testing.T) {
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	assert.DeepEqual(t, direct.DefaultConfig(), cfg)
+	wantedCfg := direct.DefaultConfig()
+	wantedCfg.AccountPasswordsDirectory = passwordsDir
+	assert.DeepEqual(t, wantedCfg, cfg)
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
 	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		passwordFile:   passwordFile,
-		keymanagerKind: v2keymanager.Derived,
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		walletPasswordFile: passwordFile,
+		keymanagerKind:     v2keymanager.Derived,
 	})
 
 	// We attempt to create the wallet.
-	require.NoError(t, CreateWallet(cliCtx))
+	_, err := CreateWallet(cliCtx)
+	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
@@ -101,7 +105,8 @@ func TestCreateWallet_Remote(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.
-	require.NoError(t, CreateWallet(cliCtx))
+	_, err := CreateWallet(cliCtx)
+	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()

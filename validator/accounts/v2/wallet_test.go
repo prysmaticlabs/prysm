@@ -95,8 +95,8 @@ func TestCreateAndReadWallet(t *testing.T) {
 		keymanagerKind: v2keymanager.Direct,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
-	require.NoError(t, wallet.SaveWallet())
 	require.NoError(t, err)
+	require.NoError(t, createDirectKeymanagerWallet(cliCtx, wallet))
 	// We should be able to now read the wallet as well.
 	_, err = OpenWallet(cliCtx)
 	require.NoError(t, err)

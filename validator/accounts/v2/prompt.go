@@ -221,19 +221,9 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
 	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
-
 	log.Infof("Input desired configuration")
-	var remoteAddr string
-	var crtPath string
-	var keyPath string
-	var caPath string
 	var err error
-	if addr != "" {
-		if isValidUnicode(addr) {
-			return nil, errors.New("flag inputs contain non-unicode characters")
-		}
-		remoteAddr = addr
-	} else {
+	if addr == "" {
 		prompt := promptui.Prompt{
 			Label: "Remote gRPC address (such as host.example.com:4000)",
 			Validate: func(input string) error {
@@ -246,32 +236,22 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 				return nil
 			},
 		}
-		remoteAddr, err = prompt.Run()
+		addr, err = prompt.Run()
 		if err != nil {
 			return nil, err
 		}
 	}
-	if crt != "" {
-		if isValidUnicode(crt) {
-			return nil, errors.New("flag inputs contain non-unicode characters")
-		}
-		crtPath = crt
-	} else {
+	if crt == "" {
 		prompt := promptui.Prompt{
 			Label:    "Path to TLS crt (such as /path/to/client.crt)",
 			Validate: validateCertPath,
 		}
-		crtPath, err = prompt.Run()
+		crt, err = prompt.Run()
 		if err != nil {
 			return nil, err
 		}
 	}
-	if key != "" {
-		if isValidUnicode(key) {
-			return nil, errors.New("flag inputs contain non-unicode characters")
-		}
-		keyPath = key
-	} else {
+	if key == "" {
 		prompt := promptui.Prompt{
 			Label:    "Path to TLS key (such as /path/to/client.key)",
 			Validate: validateCertPath,
@@ -281,28 +261,23 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 			return nil, err
 		}
 	}
-	if ca != "" {
-		if isValidUnicode(ca) {
-			return nil, errors.New("flag inputs contain non-unicode characters")
-		}
-		caPath = ca
-	} else {
+	if ca == "" {
 		prompt := promptui.Prompt{
 			Label:    "Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
 			Validate: validateCertPath,
 		}
-		caPath, err = prompt.Run()
+		ca, err = prompt.Run()
 		if err != nil {
 			return nil, err
 		}
 	}
 	newCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: strings.TrimRight(crtPath, "\r\n"),
-			ClientKeyPath:  strings.TrimRight(keyPath, "\r\n"),
-			CACertPath:     strings.TrimRight(caPath, "\r\n"),
+			ClientCertPath: strings.TrimRight(crt, "\r\n"),
+			ClientKeyPath:  strings.TrimRight(key, "\r\n"),
+			CACertPath:     strings.TrimRight(ca, "\r\n"),
 		},
-		RemoteAddr: strings.TrimRight(remoteAddr, "\r\n"),
+		RemoteAddr: strings.TrimRight(addr, "\r\n"),
 	}
 	fmt.Printf("%s\n", newCfg)
 	return newCfg, nil

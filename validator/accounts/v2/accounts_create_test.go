@@ -14,15 +14,17 @@ func TestCreateAccount_Derived(t *testing.T) {
 	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
 	numAccounts := int64(5)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		passwordFile:   passwordFile,
-		keymanagerKind: v2keymanager.Derived,
-		numAccounts:    numAccounts,
+		walletDir:           walletDir,
+		passwordsDir:        passwordsDir,
+		walletPasswordFile:  passwordFile,
+		accountPasswordFile: passwordFile,
+		keymanagerKind:      v2keymanager.Derived,
+		numAccounts:         numAccounts,
 	})
 
 	// We attempt to create the wallet.
-	require.NoError(t, CreateWallet(cliCtx))
+	_, err := CreateWallet(cliCtx)
+	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
