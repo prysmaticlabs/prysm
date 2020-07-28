@@ -30,7 +30,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 	wallet, err := OpenWallet(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
+		return errors.Wrap(err, "nothing to export, no wallet found")
 	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
