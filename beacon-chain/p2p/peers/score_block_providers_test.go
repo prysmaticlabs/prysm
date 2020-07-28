@@ -121,7 +121,9 @@ func TestPeerScorer_SortBlockProviders(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
-				ScorerParams: &peers.PeerScorerConfig{},
+				ScorerParams: &peers.PeerScorerConfig{
+					BlockProviderEmptyReturnedBatchPenalty: -0.02,
+				},
 			})
 			scorer := peerStatuses.Scorer()
 			tt.update(scorer)

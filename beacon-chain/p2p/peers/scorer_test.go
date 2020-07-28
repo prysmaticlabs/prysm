@@ -113,9 +113,10 @@ func TestPeerScorer_Score(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit: 30,
 			ScorerParams: &peers.PeerScorerConfig{
-				BadResponsesThreshold:              5,
-				BlockProviderDecay:                 0.5, // 50% decay
-				BlockProviderProcessedBlocksWeight: 0.2,
+				BadResponsesThreshold:                  5,
+				BlockProviderDecay:                     0.5, // 50% decay
+				BlockProviderProcessedBlocksWeight:     0.2,
+				BlockProviderEmptyReturnedBatchPenalty: -0.02,
 			},
 		})
 		s := peerStatuses.Scorer()
