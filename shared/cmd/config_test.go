@@ -14,7 +14,8 @@ func TestOverrideConfig(t *testing.T) {
 	cfg := &Flags{
 		MinimalConfig: true,
 	}
-	OverrideConfig(cfg)
+	reset := InitWithReset(cfg)
+	defer reset()
 	c := Get()
 	assert.Equal(t, true, c.MinimalConfig)
 }
@@ -27,7 +28,8 @@ func TestDefaultConfig(t *testing.T) {
 	c := Get()
 	assert.DeepEqual(t, c, cfg)
 
-	OverrideConfig(cfg)
+	reset := InitWithReset(cfg)
+	defer reset()
 	c = Get()
 	assert.DeepEqual(t, c, cfg)
 }

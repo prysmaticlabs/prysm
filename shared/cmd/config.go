@@ -35,7 +35,7 @@ func OverrideConfig(c *Flags) {
 // InitWithReset sets the global config and returns function that is used to reset configuration.
 func InitWithReset(c *Flags) func() {
 	resetFunc := func() {
-		OverrideConfig(&Flags{})
+		OverrideConfig(nil)
 	}
 	OverrideConfig(c)
 	return resetFunc
