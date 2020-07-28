@@ -1,8 +1,41 @@
 package peers
 
 import (
+	"time"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 )
+
+const (
+	// DefaultBadResponsesThreshold defines how many bad responses to tolerate before peer is deemed bad.
+	DefaultBadResponsesThreshold = 6
+	// DefaultBadResponsesWeight is a default weight. Since score represents penalty, it has negative weight.
+	DefaultBadResponsesWeight = -1.0
+	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
+	// Every interval bad responses counter will be decremented by 1.
+	DefaultBadResponsesDecayInterval = time.Hour
+)
+
+// ScoreBadResponses returns score (penalty) of bad responses peer produced.
+func (s *PeerScorer) ScoreBadResponses(pid peer.ID) float64 {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return s.scoreBadResponses(pid)
+}
+
+// scoreBadResponses is a lock-free version of ScoreBadResponses.
+func (s *PeerScorer) scoreBadResponses(pid peer.ID) float64 {
+	score := float64(0)
+	peerData, ok := s.store.peers[pid]
+	if !ok {
+		return score
+	}
+	if peerData.badResponses > 0 {
+		score = float64(peerData.badResponses) / float64(s.config.BadResponsesThreshold)
+		score = score * s.config.BadResponsesWeight
+	}
+	return score
+}
 
 // BadResponsesThreshold returns the maximum number of bad responses a peer can provide before it is considered bad.
 func (s *PeerScorer) BadResponsesThreshold() int {
@@ -19,7 +52,7 @@ func (s *PeerScorer) BadResponses(pid peer.ID) (int, error) {
 // badResponses is a lock-free version of BadResponses.
 func (s *PeerScorer) badResponses(pid peer.ID) (int, error) {
 	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.badResponsesCount, nil
+		return peerData.badResponses, nil
 	}
 	return -1, ErrPeerUnknown
 }
@@ -32,11 +65,11 @@ func (s *PeerScorer) IncrementBadResponses(pid peer.ID) {
 
 	if _, ok := s.store.peers[pid]; !ok {
 		s.store.peers[pid] = &peerData{
-			badResponsesCount: 1,
+			badResponses: 1,
 		}
 		return
 	}
-	s.store.peers[pid].badResponsesCount++
+	s.store.peers[pid].badResponses++
 }
 
 // IsBadPeer states if the peer is to be considered bad.
@@ -50,7 +83,7 @@ func (s *PeerScorer) IsBadPeer(pid peer.ID) bool {
 // isBadPeer is lock-free version of IsBadPeer.
 func (s *PeerScorer) isBadPeer(pid peer.ID) bool {
 	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.badResponsesCount >= s.config.BadResponsesThreshold
+		return peerData.badResponses >= s.config.BadResponsesThreshold
 	}
 	return false
 }
@@ -77,8 +110,8 @@ func (s *PeerScorer) DecayBadResponsesStats() {
 	defer s.store.Unlock()
 
 	for _, peerData := range s.store.peers {
-		if peerData.badResponsesCount > 0 {
-			peerData.badResponsesCount--
+		if peerData.badResponses > 0 {
+			peerData.badResponses--
 		}
 	}
 }

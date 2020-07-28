@@ -2,7 +2,7 @@ package peers_test
 
 import (
 	"context"
-	"sort"
+	"math"
 	"testing"
 	"time"
 
@@ -22,9 +22,11 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 			ScorerParams: &peers.PeerScorerConfig{},
 		})
 		scorer := peerStatuses.Scorer()
-		assert.Equal(t, peers.DefaultBadResponsesThreshold, scorer.Params().BadResponsesThreshold, "Unexpected threshold value")
-		assert.Equal(t, peers.DefaultBadResponsesWeight, scorer.Params().BadResponsesWeight, "Unexpected weight value")
-		assert.Equal(t, peers.DefaultBadResponsesDecayInterval, scorer.Params().BadResponsesDecayInterval, "Unexpected decay interval value")
+		params := scorer.Params()
+		// Bad responses stats.
+		assert.Equal(t, peers.DefaultBadResponsesThreshold, params.BadResponsesThreshold, "Unexpected threshold value")
+		assert.Equal(t, peers.DefaultBadResponsesWeight, params.BadResponsesWeight, "Unexpected weight value")
+		assert.Equal(t, peers.DefaultBadResponsesDecayInterval, params.BadResponsesDecayInterval, "Unexpected decay interval value")
 	})
 
 	t.Run("explicit config", func(t *testing.T) {
@@ -37,9 +39,11 @@ func TestPeerScorer_NewPeerScorer(t *testing.T) {
 			},
 		})
 		scorer := peerStatuses.Scorer()
-		assert.Equal(t, 2, scorer.Params().BadResponsesThreshold, "Unexpected threshold value")
-		assert.Equal(t, -1.0, scorer.Params().BadResponsesWeight, "Unexpected weight value")
-		assert.Equal(t, 1*time.Minute, scorer.Params().BadResponsesDecayInterval, "Unexpected decay interval value")
+		params := scorer.Params()
+		// Bad responses stats.
+		assert.Equal(t, 2, params.BadResponsesThreshold, "Unexpected threshold value")
+		assert.Equal(t, -1.0, params.BadResponsesWeight, "Unexpected weight value")
+		assert.Equal(t, 1*time.Minute, params.BadResponsesDecayInterval, "Unexpected decay interval value")
 	})
 }
 
@@ -47,49 +51,63 @@ func TestPeerScorer_Score(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
-		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold:     5,
-			BadResponsesWeight:        -0.5,
-			BadResponsesDecayInterval: 50 * time.Millisecond,
-		},
-	})
-	scorer := peerStatuses.Scorer()
-
-	sortByScore := func(pids []peer.ID) []peer.ID {
-		sort.Slice(pids, func(i, j int) bool {
-			scr1, scr2 := scorer.Score(pids[i]), scorer.Score(pids[j])
-			if scr1 == scr2 {
-				// Sort by peer ID, whenever peers have equal score.
-				return pids[i] < pids[j]
-			}
-			return scr1 > scr2
-		})
-		return pids
+	peerScores := func(s *peers.PeerScorer, pids []peer.ID) map[string]float64 {
+		scores := make(map[string]float64, len(pids))
+		for _, pid := range pids {
+			scores[string(pid)] = s.Score(pid)
+		}
+		return scores
 	}
 
-	pids := []peer.ID{"peer1", "peer2", "peer3"}
-	for _, pid := range pids {
-		peerStatuses.Add(nil, pid, nil, network.DirUnknown)
-		if score := scorer.Score(pid); score < 0 {
-			t.Errorf("Unexpected peer score, want: >=0, got: %v", score)
+	pack := func(scorer *peers.PeerScorer, s1, s2, s3 float64) map[string]float64 {
+		return map[string]float64{
+			"peer1": math.Round(s1*10000) / 10000,
+			"peer2": math.Round(s2*10000) / 10000,
+			"peer3": math.Round(s3*10000) / 10000,
 		}
 	}
-	assert.DeepEqual(t, []peer.ID{"peer1", "peer2", "peer3"}, sortByScore(pids), "Unexpected scores")
 
-	// Update peers' stats and test the effect on peer order.
-	scorer.IncrementBadResponses("peer2")
-	assert.DeepEqual(t, []peer.ID{"peer1", "peer3", "peer2"}, sortByScore(pids), "Unexpected scores")
-	scorer.IncrementBadResponses("peer1")
-	scorer.IncrementBadResponses("peer1")
-	assert.DeepEqual(t, []peer.ID{"peer3", "peer2", "peer1"}, sortByScore(pids), "Unexpected scores")
+	setupScorer := func() (*peers.PeerScorer, []peer.ID) {
+		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+			PeerLimit: 30,
+			ScorerParams: &peers.PeerScorerConfig{
+				BadResponsesThreshold: 5,
+			},
+		})
+		s := peerStatuses.Scorer()
+		pids := []peer.ID{"peer1", "peer2", "peer3"}
+		for _, pid := range pids {
+			peerStatuses.Add(nil, pid, nil, network.DirUnknown)
+			assert.Equal(t, 0.0, s.Score(pid), "Unexpected score")
+		}
+		return s, pids
+	}
 
-	// See how decaying affects order of peers.
-	scorer.DecayBadResponsesStats()
-	assert.DeepEqual(t, []peer.ID{"peer2", "peer3", "peer1"}, sortByScore(pids), "Unexpected scores")
-	scorer.DecayBadResponsesStats()
-	assert.DeepEqual(t, []peer.ID{"peer1", "peer2", "peer3"}, sortByScore(pids), "Unexpected scores")
+	t.Run("no peer registered", func(t *testing.T) {
+		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+			ScorerParams: &peers.PeerScorerConfig{},
+		})
+		s := peerStatuses.Scorer()
+		assert.Equal(t, 0.0, s.ScoreBadResponses("peer1"))
+		assert.Equal(t, 0.0, s.Score("peer1"))
+	})
+
+	t.Run("bad responses score", func(t *testing.T) {
+		s, pids := setupScorer()
+
+		// Update peers' stats and test the effect on peer order.
+		s.IncrementBadResponses("peer2")
+		assert.DeepEqual(t, pack(s, 0, -0.2, 0), peerScores(s, pids), "Unexpected scores")
+		s.IncrementBadResponses("peer1")
+		s.IncrementBadResponses("peer1")
+		assert.DeepEqual(t, pack(s, -0.4, -0.2, 0), peerScores(s, pids), "Unexpected scores")
+
+		// See how decaying affects order of peers.
+		s.DecayBadResponsesStats()
+		assert.DeepEqual(t, pack(s, -0.2, 0, 0), peerScores(s, pids), "Unexpected scores")
+		s.DecayBadResponsesStats()
+		assert.DeepEqual(t, pack(s, 0, 0, 0), peerScores(s, pids), "Unexpected scores")
+	})
 }
 
 func TestPeerScorer_loop(t *testing.T) {

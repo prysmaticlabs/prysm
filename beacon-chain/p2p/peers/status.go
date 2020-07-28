@@ -401,7 +401,7 @@ func (p *Status) Prune() {
 		if peerData.connState == PeerDisconnected && !p.scorer.isBadPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
-				badResp: p.store.peers[pid].badResponsesCount,
+				badResp: p.store.peers[pid].badResponses,
 			})
 		}
 	}

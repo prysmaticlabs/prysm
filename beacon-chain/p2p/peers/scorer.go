@@ -2,19 +2,10 @@ package peers
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-)
-
-const (
-	// DefaultBadResponsesThreshold defines how many bad responses to tolerate before peer is deemed bad.
-	DefaultBadResponsesThreshold = 6
-	// DefaultBadResponsesWeight is a default weight. Since score represents penalty, it has negative weight.
-	DefaultBadResponsesWeight = -1.0
-	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
-	// Every interval bad responses counter will be decremented by 1.
-	DefaultBadResponsesDecayInterval = time.Hour
 )
 
 // PeerScorer keeps track of peer counters that are used to calculate peer score.
@@ -27,8 +18,10 @@ type PeerScorer struct {
 // PeerScorerConfig holds configuration parameters for scoring service.
 type PeerScorerConfig struct {
 	// BadResponsesThreshold specifies number of bad responses tolerated, before peer is banned.
-	BadResponsesThreshold     int
-	BadResponsesWeight        float64
+	BadResponsesThreshold int
+	// BadResponsesWeight defines weight of bad response/threshold ratio on overall score.
+	BadResponsesWeight float64
+	// BadResponsesDecayInterval specifies how often bad response stats should be decayed.
 	BadResponsesDecayInterval time.Duration
 }
 
@@ -39,6 +32,8 @@ func newPeerScorer(ctx context.Context, store *peerDataStore, config *PeerScorer
 		config: config,
 		store:  store,
 	}
+
+	// Bad responses stats parameters.
 	if scorer.config.BadResponsesThreshold == 0 {
 		scorer.config.BadResponsesThreshold = DefaultBadResponsesThreshold
 	}
@@ -59,16 +54,12 @@ func (s *PeerScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
 
-	var score float64
+	score := float64(0)
 	if _, ok := s.store.peers[pid]; !ok {
 		return 0
 	}
-
-	badResponsesScore := float64(s.store.peers[pid].badResponsesCount) / float64(s.config.BadResponsesThreshold)
-	badResponsesScore = badResponsesScore * s.config.BadResponsesWeight
-	score += badResponsesScore
-
-	return score
+	score += s.scoreBadResponses(pid)
+	return math.Round(score*10000) / 10000
 }
 
 // Params exposes peer scorer parameters.
@@ -78,12 +69,12 @@ func (s *PeerScorer) Params() *PeerScorerConfig {
 
 // loop handles background tasks.
 func (s *PeerScorer) loop(ctx context.Context) {
-	decayBadResponsesScores := time.NewTicker(s.config.BadResponsesDecayInterval)
-	defer decayBadResponsesScores.Stop()
+	decayBadResponsesStats := time.NewTicker(s.config.BadResponsesDecayInterval)
+	defer decayBadResponsesStats.Stop()
 
 	for {
 		select {
-		case <-decayBadResponsesScores.C:
+		case <-decayBadResponsesStats.C:
 			s.DecayBadResponsesStats()
 		case <-ctx.Done():
 			return
