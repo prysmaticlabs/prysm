@@ -8,7 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
@@ -51,6 +53,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not save wallet")
 	}
 	var accountsImported []string
+	var pubKeysImported [][]byte
 	if err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -79,13 +82,19 @@ func ImportAccount(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName, pubKey); err != nil {
-			return errors.Wrap(err, "could not verify password for keystore")
-		}
 		accountsImported = append(accountsImported, accountName)
+		pubKeysImported = append(pubKeysImported, pubKey)
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "could not walk files")
+	}
+
+	au := aurora.NewAurora(true)
+	fmt.Printf("Importing accounts: %s\n", au.BrightGreen(strings.Join(accountsImported, ", ")).Bold())
+	for i, accountName := range accountsImported {
+		if err := wallet.enterPasswordForAccount(cliCtx, accountName, pubKeysImported[i]); err != nil {
+			return errors.Wrap(err, "could not verify password for keystore")
+		}
 	}
 
 	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
@@ -96,7 +105,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if !ok {
 		return errors.New("can only export accounts for a non-HD wallet")
 	}
-	if err := logAccountsImported(wallet, km, accountsImported); err != nil {
+	if err := logAccountsImported(ctx, wallet, km, accountsImported); err != nil {
 		return errors.Wrap(err, "could not log accounts imported")
 	}
 
@@ -124,7 +133,7 @@ func (w *Wallet) importKeystore(ctx context.Context, keystoreFilePath string) (s
 	return accountName, pubKeyBytes, nil
 }
 
-func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
+func logAccountsImported(ctx context.Context, wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -136,13 +145,22 @@ func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountN
 	}
 	for _, accountName := range accountNames {
 		fmt.Println("")
-		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
+		// Retrieve the account creation timestamp.
+		keystoreFileName, err := wallet.FileNameAtPath(ctx, accountName, direct.KeystoreFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not get keystore file name for account: %s", accountName)
+		}
+		unixTimestamp, err := AccountTimestamp(keystoreFileName)
+		if err != nil {
+			return errors.Wrap(err, "could not get timestamp from keystore file name")
+		}
+		fmt.Printf("%s | Created %s\n", au.BrightGreen(accountName).Bold(), humanize.Time(unixTimestamp))
 
 		publicKey, err := keymanager.PublicKeyForAccount(accountName)
 		if err != nil {
 			return errors.Wrap(err, "could not get public key")
 		}
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), publicKey)
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), publicKey)
 
 		dirPath := au.BrightCyan("(wallet dir)")
 		fmt.Printf("%s %s\n", dirPath, filepath.Join(wallet.AccountsDir(), accountName))
