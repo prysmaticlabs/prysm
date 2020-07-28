@@ -10,9 +10,10 @@ import (
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -221,68 +222,85 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
 	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
 
-	if addr != "" && crt != "" && key != "" && ca != "" {
-		if !(isValidUnicode(addr) && isValidUnicode(crt) && isValidUnicode(key) && isValidUnicode(ca)) {
+	log.Infof("Input desired configuration")
+	var remoteAddr string
+	var crtPath string
+	var keyPath string
+	var caPath string
+	var err error
+	if addr != "" {
+		if isValidUnicode(addr) {
 			return nil, errors.New("flag inputs contain non-unicode characters")
 		}
-		newCfg := &remote.Config{
-			RemoteCertificate: &remote.CertificateConfig{
-				ClientCertPath: strings.TrimRight(crt, "\r\n"),
-				ClientKeyPath:  strings.TrimRight(key, "\r\n"),
-				CACertPath:     strings.TrimRight(ca, "\r\n"),
+		remoteAddr = addr
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Remote gRPC address (such as host.example.com:4000)",
+			Validate: func(input string) error {
+				if input == "" {
+					return errors.New("remote host address cannot be empty")
+				}
+				if !isValidUnicode(input) {
+					return errors.New("not valid unicode")
+				}
+				return nil
 			},
-			RemoteAddr: strings.TrimRight(addr, "\r\n"),
 		}
-		log.Infof("New configuration")
-		fmt.Printf("%s\n", newCfg)
-		return newCfg, nil
+		remoteAddr, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
-	log.Infof("Input desired configuration")
-	prompt := promptui.Prompt{
-		Label: "Remote gRPC address (such as host.example.com:4000)",
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("remote host address cannot be empty")
-			}
-			if !isValidUnicode(input) {
-				return errors.New("not valid unicode")
-			}
-			return nil
-		},
+	if crt != "" {
+		if isValidUnicode(crt) {
+			return nil, errors.New("flag inputs contain non-unicode characters")
+		}
+		crtPath = crt
+	} else {
+		prompt := promptui.Prompt{
+			Label:    "Path to TLS crt (such as /path/to/client.crt)",
+			Validate: validateCertPath,
+		}
+		crtPath, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
-	remoteAddr, err := prompt.Run()
-	if err != nil {
-		return nil, err
+	if key != "" {
+		if isValidUnicode(key) {
+			return nil, errors.New("flag inputs contain non-unicode characters")
+		}
+		keyPath = key
+	} else {
+		prompt := promptui.Prompt{
+			Label:    "Path to TLS key (such as /path/to/client.key)",
+			Validate: validateCertPath,
+		}
+		key, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
-	prompt = promptui.Prompt{
-		Label:    "Path to TLS crt (such as /path/to/client.crt)",
-		Validate: validateCertPath,
-	}
-	clientCrtPath, err := prompt.Run()
-	if err != nil {
-		return nil, err
-	}
-	prompt = promptui.Prompt{
-		Label:    "Path to TLS key (such as /path/to/client.key)",
-		Validate: validateCertPath,
-	}
-	clientKeyPath, err := prompt.Run()
-	if err != nil {
-		return nil, err
-	}
-	prompt = promptui.Prompt{
-		Label:    "(Optional) Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
-		Validate: validateCACertPath,
-	}
-	caCrtPath, err := prompt.Run()
-	if err != nil {
-		return nil, err
+	if ca != "" {
+		if isValidUnicode(ca) {
+			return nil, errors.New("flag inputs contain non-unicode characters")
+		}
+		caPath = ca
+	} else {
+		prompt := promptui.Prompt{
+			Label:    "Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
+			Validate: validateCertPath,
+		}
+		caPath, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
 	newCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: strings.TrimRight(clientCrtPath, "\r\n"),
-			ClientKeyPath:  strings.TrimRight(clientKeyPath, "\r\n"),
-			CACertPath:     strings.TrimRight(caCrtPath, "\r\n"),
+			ClientCertPath: strings.TrimRight(crtPath, "\r\n"),
+			ClientKeyPath:  strings.TrimRight(keyPath, "\r\n"),
+			CACertPath:     strings.TrimRight(caPath, "\r\n"),
 		},
 		RemoteAddr: strings.TrimRight(remoteAddr, "\r\n"),
 	}
@@ -299,16 +317,6 @@ func validateCertPath(input string) error {
 	}
 	if !fileExists(input) {
 		return fmt.Errorf("no crt found at path: %s", input)
-	}
-	return nil
-}
-
-func validateCACertPath(input string) error {
-	if input != "" && !fileExists(input) {
-		return fmt.Errorf("no crt found at path: %s", input)
-	}
-	if !isValidUnicode(input) {
-		return errors.New("not valid unicode")
 	}
 	return nil
 }
