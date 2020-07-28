@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -37,8 +38,13 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
-	encodedKeystore, ok := wallet.Files[accountName][KeystoreFileName]
-	require.Equal(t, true, ok, "Expected to have stored %s in wallet", KeystoreFileName)
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[accountName] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	require.NotNil(t, encodedKeystore, "could not find keystore file")
 	keystoreFile := &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 

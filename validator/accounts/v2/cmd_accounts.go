@@ -75,7 +75,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupDirFlag,
+				flags.KeysDirFlag,
 				flags.PasswordFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.MedallaTestnet,
