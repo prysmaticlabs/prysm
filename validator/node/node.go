@@ -85,11 +85,11 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if featureconfig.Get().EnableAccountsV2 {
 		walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 		if walletDir == flags.DefaultValidatorDir() {
-			walletDir = path.Join(walletDir, accountsv2.WalletDefaultDirName)
+			walletDir = path.Join(walletDir, flags.WalletDefaultDirName)
 		}
 		passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
 		if passwordsDir == flags.DefaultValidatorDir() {
-			passwordsDir = path.Join(passwordsDir, accountsv2.PasswordsDefaultDirName)
+			passwordsDir = path.Join(passwordsDir, flags.PasswordsDefaultDirName)
 		}
 		// Read the wallet from the specified path.
 		wallet, err := accountsv2.OpenWallet(cliCtx)
