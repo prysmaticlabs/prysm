@@ -220,7 +220,7 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
 	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
-	log.Infof("Input desired configuration")
+	log.Info("Input desired configuration")
 	var err error
 	if addr == "" {
 		prompt := promptui.Prompt{

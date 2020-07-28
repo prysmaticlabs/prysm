@@ -31,8 +31,9 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not unmarshal config")
 		}
-		log.Infof("Current configuration")
-		fmt.Printf("%s\n", cfg)
+		log.Info("Current configuration")
+		// Prints the current configuration to stdout.
+		fmt.Println(cfg)
 		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
 		if err != nil {
 			return errors.Wrap(err, "could not get password directory")
@@ -57,8 +58,9 @@ func EditWalletConfiguration(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not unmarshal config")
 		}
-		log.Infof("Current configuration")
-		fmt.Printf("%s\n", cfg)
+		log.Info("Current configuration")
+		// Prints the current configuration to stdout.
+		fmt.Println(cfg)
 		newCfg, err := inputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return errors.Wrap(err, "could not get keymanager config")
