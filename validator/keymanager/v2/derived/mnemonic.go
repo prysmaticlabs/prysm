@@ -2,6 +2,7 @@ package derived
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/tyler-smith/go-bip39"
@@ -55,7 +56,7 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 	expected := "y"
 	var result string
 	var err error
-	for result != expected {
+	for strings.ToLower(result) != expected {
 		result, err = prompt.Run()
 		if err != nil {
 			log.Errorf("Could not confirm acknowledgement of prompt, please enter y")

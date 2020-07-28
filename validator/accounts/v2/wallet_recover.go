@@ -100,7 +100,7 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 		return enteredMnemonic, nil
 	}
 	prompt := promptui.Prompt{
-		Label:    "Enter the wallet recovery seed phrase you would like to recover",
+		Label:    "Enter the seed phrase for the wallet you would like to recover",
 		Validate: validateMnemonic,
 	}
 	menmonicPhrase, err := prompt.Run()
