@@ -15,12 +15,8 @@ import (
 const (
 	// WalletDefaultDirName for accounts-v2.
 	WalletDefaultDirName = "prysm-wallet-v2"
-	// PasswordsDefaultDirName where account passwords are stored.
+	// PasswordsDefaultDirName where account-v2 passwords are stored.
 	PasswordsDefaultDirName = "prysm-wallet-v2-passwords"
-	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
-	KeymanagerConfigFileName = "keymanageropts.json"
-	// DirectoryPermissions for directories created under the wallet path.
-	DirectoryPermissions = os.ModePerm
 )
 
 var (

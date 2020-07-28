@@ -224,7 +224,7 @@ func listRemoteKeymanagerAccounts(
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
 	fmt.Printf(
 		"(configuration file path) %s\n",
-		au.BrightGreen(filepath.Join(wallet.AccountsDir(), flags.KeymanagerConfigFileName)).Bold(),
+		au.BrightGreen(filepath.Join(wallet.AccountsDir(), KeymanagerConfigFileName)).Bold(),
 	)
 	ctx := context.Background()
 	fmt.Println(" ")
