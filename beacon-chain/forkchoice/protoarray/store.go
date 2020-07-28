@@ -146,10 +146,7 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 	defer f.store.nodeIndicesLock.RUnlock()
 
 	i, ok := f.store.NodeIndices[root]
-	if !ok {
-		return false
-	}
-	if i >= uint64(len(f.store.Nodes)) {
+	if !ok || i >= uint64(len(f.store.Nodes)) {
 		return false
 	}
 
