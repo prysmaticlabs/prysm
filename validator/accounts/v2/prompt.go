@@ -117,7 +117,6 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		}
 		return strings.TrimRight(enteredPassword, "\r\n"), nil
 	}
-
 	var hasValidPassword bool
 	var walletPassword string
 	var err error
@@ -132,7 +131,6 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 		if err != nil {
 			return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
 		}
-
 		if confirmPassword == confirmPass {
 			prompt = promptui.Prompt{
 				Label: confirmPasswordPromptText,
