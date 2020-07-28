@@ -138,3 +138,41 @@ func (f *ForkChoice) HasNode(root [32]byte) bool {
 	_, ok := f.store.NodeIndices[root]
 	return ok
 }
+
+// HasParent returns true if the node parent exists in fork choice store,
+// false else wise.
+func (f *ForkChoice) HasParent(root [32]byte) bool {
+	f.store.nodeIndicesLock.RLock()
+	defer f.store.nodeIndicesLock.RUnlock()
+
+	i, ok := f.store.NodeIndices[root]
+	if !ok || i >= uint64(len(f.store.Nodes)) {
+		return false
+	}
+
+	return f.store.Nodes[i].Parent != NonExistentNode
+}
+
+// AncestorRoot returns the ancestor root of input block root at a given slot.
+func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error) {
+	i, ok := f.store.NodeIndices[root]
+	if !ok {
+		return nil, errors.New("node does not exist")
+	}
+	if i >= uint64(len(f.store.Nodes)) {
+		return nil, errors.New("node index out of range")
+	}
+
+	for f.store.Nodes[i].Slot > slot {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		i = f.store.Nodes[i].Parent
+	}
+	if i >= uint64(len(f.store.Nodes)) {
+		return nil, errors.New("node index out of range")
+	}
+
+	return f.store.Nodes[i].Root[:], nil
+}
