@@ -24,7 +24,9 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 0,
 		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold: 3,
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: 3,
+			},
 		},
 	})
 	s.cfg = &Config{MaxPeers: 0}
@@ -65,7 +67,9 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 1,
 		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold: 3,
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: 3,
+			},
 		},
 	})
 	s.cfg = &Config{MaxPeers: 1}

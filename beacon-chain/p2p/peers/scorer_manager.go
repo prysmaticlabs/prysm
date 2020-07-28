@@ -55,7 +55,7 @@ func (m *PeerScorerManager) Score(pid peer.ID) float64 {
 
 // loop handles background tasks.
 func (m *PeerScorerManager) loop(ctx context.Context) {
-	decayBadResponsesStats := time.NewTicker(m.scorers.badResponsesScorer.config.DecayInterval)
+	decayBadResponsesStats := time.NewTicker(m.scorers.badResponsesScorer.Params().DecayInterval)
 	defer decayBadResponsesStats.Stop()
 
 	for {
