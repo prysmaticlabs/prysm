@@ -13,12 +13,6 @@ func UseMedallaNetworkConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
-// UseMedallaConfig sets the main beacon chain
-// config for medalla.
-func UseMedallaConfig() {
-	beaconConfig = MedallaConfig()
-}
-
 // MedallaConfig defines the config for the
 // medalla testnet.
 func MedallaConfig() *BeaconChainConfig {
