@@ -102,7 +102,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(duty.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
-	_ = &ethpb.Attestation{
+	attestation := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggregationBitfield,
 		Signature:       sig,
@@ -117,14 +117,14 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	//attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
-	//if err != nil {
-	//	log.WithError(err).Error("Could not submit attestation to beacon node")
-	//	if v.emitAccountMetrics {
-	//		ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-	//	}
-	//	return
-	//}
+	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
+	if err != nil {
+		log.WithError(err).Error("Could not submit attestation to beacon node")
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
@@ -136,7 +136,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
-		//trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
+		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
 		trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
