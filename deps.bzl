@@ -2601,8 +2601,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:aRmdlw7lbzJwuykpA/kdCrwhXf6/xaxS3s/UpHVlBiE=",
-        version = "v0.0.0-20200724235904-8a5e41ba473e",
+        sum = "h1:JGFp3CjAR4SXnYbzsJwCPJe0dL9E9l7VyNHT/rQTFq0=",
+        version = "v0.0.0-20200729044127-8027cc96e2c0",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2817,8 +2817,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_google_grpc",
         importpath = "google.golang.org/grpc",
-        sum = "h1:EC2SB8S04d2r73uptxphDSUG+kTKVgjRPF+N3xpxRB4=",
-        version = "v1.29.1",
+        sum = "h1:M5a8xTlYTxwMn5ZFkwhRabsygDY5G8TYLyQDBxJNAxE=",
+        version = "v1.30.0",
     )
     go_repository(
         name = "org_golang_x_crypto",
