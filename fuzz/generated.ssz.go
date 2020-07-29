@@ -370,7 +370,7 @@ func (i *InputVoluntaryExitWrapper) MarshalSSZTo(buf []byte) (dst []byte, err er
 	dst = buf
 
 	// Field (0) 'StateID'
-	dst = ssz.MarshalUint16(dst, i.StateID)
+	dst = ssz.MarshalUint64(dst, i.StateID)
 
 	// Field (1) 'VoluntaryExit'
 	if i.VoluntaryExit == nil {
@@ -387,18 +387,18 @@ func (i *InputVoluntaryExitWrapper) MarshalSSZTo(buf []byte) (dst []byte, err er
 func (i *InputVoluntaryExitWrapper) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 18 {
+	if size != 24 {
 		return ssz.ErrSize
 	}
 
 	// Field (0) 'StateID'
-	i.StateID = ssz.UnmarshallUint16(buf[0:2])
+	i.StateID = ssz.UnmarshallUint64(buf[0:8])
 
 	// Field (1) 'VoluntaryExit'
 	if i.VoluntaryExit == nil {
 		i.VoluntaryExit = new(ethpb.VoluntaryExit)
 	}
-	if err = i.VoluntaryExit.UnmarshalSSZ(buf[2:18]); err != nil {
+	if err = i.VoluntaryExit.UnmarshalSSZ(buf[8:24]); err != nil {
 		return err
 	}
 
@@ -407,7 +407,7 @@ func (i *InputVoluntaryExitWrapper) UnmarshalSSZ(buf []byte) error {
 
 // SizeSSZ returns the ssz encoded size in bytes for the InputVoluntaryExitWrapper object
 func (i *InputVoluntaryExitWrapper) SizeSSZ() (size int) {
-	size = 18
+	size = 24
 	return
 }
 
