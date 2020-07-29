@@ -143,6 +143,8 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithStrictSignatureVerification(false),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
+	// Set the pubsub global parameters that we require.
+	setPubSubParameters()
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
