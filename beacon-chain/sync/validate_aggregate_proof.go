@@ -45,6 +45,10 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if !ok {
 		return pubsub.ValidationReject
 	}
+	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.chain.GenesisTime()); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
 
 	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
 		return pubsub.ValidationReject
@@ -90,10 +94,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
-	if err := helpers.ValidateAttestationTime(attSlot, s.chain.GenesisTime()); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
 
 	bs, err := s.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
