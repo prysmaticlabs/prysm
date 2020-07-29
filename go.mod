@@ -99,7 +99,7 @@ require (
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.5.0
 	github.com/wealdtech/go-eth2-wallet v1.9.4
-	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.0.0
+	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0
 	github.com/wealdtech/go-eth2-wallet-nd v1.8.0
 	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.7.3
 	github.com/wealdtech/go-eth2-wallet-types/v2 v2.0.2

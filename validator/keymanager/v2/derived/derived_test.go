@@ -32,12 +32,9 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	mnemonic, err := bip39.NewMnemonic(mnemonicEntropy)
 	require.NoError(t, err)
 	walletSeed := bip39.NewSeed(mnemonic, "")
-	_ = walletSeed
-	t.Logf(mnemonic)
-	t.Logf("Seed: %#x\n", walletSeed)
 	encryptor := keystorev4.New()
 	password := "Passwz0rdz2020%"
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	require.NoError(t, err)
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
@@ -51,7 +48,7 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 
 	// Ensure we can decrypt the newly recovered config.
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(cfg.Crypto, []byte(password))
+	seed, err := decryptor.Decrypt(cfg.Crypto, password)
 	assert.NoError(t, err)
 
 	// Ensure the decrypted seed matches the old wallet seed and the new wallet seed.
@@ -92,7 +89,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	rawValidatingKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+	rawValidatingKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator signing key")
 
 	validatingKey, err := bls.SecretKeyFromBytes(rawValidatingKey)
@@ -109,7 +106,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
-	rawWithdrawalKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+	rawWithdrawalKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator withdrawal key")
 
 	withdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalKey)

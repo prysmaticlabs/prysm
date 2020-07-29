@@ -573,7 +573,7 @@ func (w *Wallet) checkPasswordForAccount(accountName string, password string) er
 		return errors.Wrap(err, "could not decode json")
 	}
 	decryptor := keystorev4.New()
-	_, err = decryptor.Decrypt(keystoreJSON.Crypto, []byte(password))
+	_, err = decryptor.Decrypt(keystoreJSON.Crypto, password)
 	if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}

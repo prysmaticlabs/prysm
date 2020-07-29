@@ -14,11 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/sirupsen/logrus"
-	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -28,6 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/sirupsen/logrus"
+	"github.com/tyler-smith/go-bip39"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
@@ -119,7 +118,7 @@ func NewKeymanager(
 	}
 	log.Info(seedConfig)
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, []byte(password))
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
@@ -187,7 +186,7 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 	walletSeed := bip39.NewSeed(phrase, "")
 	fmt.Printf("New wallet seed: %#x", walletSeed)
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
 	}
@@ -213,7 +212,7 @@ func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string)
 	walletSeed := bip39.NewSeed(mnemonic, "")
 	encryptor := keystorev4.New()
 	fmt.Printf("Seed: %#x\n", walletSeed)
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
 	}
@@ -468,7 +467,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 
 func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(privateKey, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(privateKey, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
 	}

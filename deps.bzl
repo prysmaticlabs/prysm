@@ -2673,8 +2673,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",
         importpath = "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4",
-        sum = "h1:IcpS4VpXhYz+TVupB5n6C6IQzaKwG+Rc8nvgCa/da4c=",
-        version = "v1.0.0",
+        sum = "h1:CWb82xeNaZQt1Z829RyDALUy7UZbc6VOfTS+82jRdEQ=",
+        version = "v1.1.0",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_hd_v2",
@@ -2818,7 +2818,7 @@ def prysm_deps():
         name = "org_golang_google_grpc",
         importpath = "google.golang.org/grpc",
         sum = "h1:EC2SB8S04d2r73uptxphDSUG+kTKVgjRPF+N3xpxRB4=",
-        version = "v1.29.1",
+        version = "v1.29.1"
     )
     go_repository(
         name = "org_golang_x_crypto",
@@ -2865,8 +2865,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_text",
         importpath = "golang.org/x/text",
-        sum = "h1:tW2bmiBqwgJj/UpqtC8EpXEZVYOwU0yG4iWbprSVAcs=",
-        version = "v0.3.2",
+        sum = "h1:cokOdA+Jmi5PJGXLlLllQSgYigAEfHXJAERHVMaCc2k=",
+        version = "v0.3.3",
     )
     go_repository(
         name = "org_golang_x_time",

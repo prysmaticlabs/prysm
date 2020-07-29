@@ -1080,6 +1080,8 @@ github.com/wealdtech/go-eth2-wallet v1.9.4 h1:9XFM1Y7dsyrgNFFCnE3Gd00PAsrpob70SA
 github.com/wealdtech/go-eth2-wallet v1.9.4/go.mod h1:UGd1bAPDEtP+UrFjj3HCbip7jggFGDIQoeGw8/XHMvo=
 github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.0.0 h1:IcpS4VpXhYz+TVupB5n6C6IQzaKwG+Rc8nvgCa/da4c=
 github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.0.0/go.mod h1:X8WRO5hEwbjx8ZOqoRmtS1ngyflKs25GkP7qGv7yOqE=
+github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0 h1:CWb82xeNaZQt1Z829RyDALUy7UZbc6VOfTS+82jRdEQ=
+github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0/go.mod h1:JelKMM10UzDJNXdIcojMj6SCIsHC8NYn4c1S2FFk7OQ=
 github.com/wealdtech/go-eth2-wallet-hd/v2 v2.0.3 h1:Oy25/XT42vEGO1g7qZNOztAGVHtVVdlD2YYy4j8/jgU=
 github.com/wealdtech/go-eth2-wallet-hd/v2 v2.0.3/go.mod h1:nNNZNXCP1BrJCu1hLlFUCAQBvCInD4zwE7eslf2U5XQ=
 github.com/wealdtech/go-eth2-wallet-nd v1.8.0 h1:DD7QRS3mPS6GH0vNFn2DcJ3mHRgc+gtQ0Uq189pWZ00=
@@ -1325,6 +1327,8 @@ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.2 h1:tW2bmiBqwgJj/UpqtC8EpXEZVYOwU0yG4iWbprSVAcs=
 golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
+golang.org/x/text v0.3.3 h1:cokOdA+Jmi5PJGXLlLllQSgYigAEfHXJAERHVMaCc2k=
+golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
 golang.org/x/time v0.0.0-20170424234030-8be79e1e0910/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
 golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
 golang.org/x/time v0.0.0-20181108054448-85acf8d2951c/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
