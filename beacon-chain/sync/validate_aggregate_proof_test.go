@@ -365,11 +365,12 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
 	require.NoError(t, err)
 
-	sig := privKeys[22].Sign(slotRoot[:])
+	ai := committee[0]
+	sig := privKeys[ai].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
@@ -377,7 +378,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
 	require.NoError(t, err)
-	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
+	aggreSig := privKeys[ai].Sign(signingRoot[:]).Marshal()
 	signedAggregateAndProof.Signature = aggreSig[:]
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
@@ -461,11 +462,12 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
 	require.NoError(t, err)
 
-	sig := privKeys[22].Sign(slotRoot[:])
+	ai := committee[0]
+	sig := privKeys[ai].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
@@ -473,7 +475,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
 	assert.NoError(t, err)
-	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
+	aggreSig := privKeys[ai].Sign(signingRoot[:]).Marshal()
 	signedAggregateAndProof.Signature = aggreSig[:]
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
@@ -581,11 +583,12 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
 	require.NoError(t, err)
 
-	sig := privKeys[22].Sign(slotRoot[:])
+	ai := committee[0]
+	sig := privKeys[ai].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
@@ -593,7 +596,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
 	require.NoError(t, err)
-	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
+	aggreSig := privKeys[ai].Sign(signingRoot[:]).Marshal()
 	signedAggregateAndProof.Signature = aggreSig[:]
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))

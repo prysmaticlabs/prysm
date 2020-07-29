@@ -278,7 +278,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 21,
+			ProposerIndex: 8,
 			ParentRoot:    parentRoot[:],
 			Slot:          1,
 			Body: &ethpb.BeaconBlockBody{
