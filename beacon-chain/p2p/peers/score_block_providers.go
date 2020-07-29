@@ -12,21 +12,25 @@ import (
 )
 
 const (
-	// DefaultBlockProviderReturnedBlocksWeight is a default weight of a returned/requested ratio in an overall score.
+	// DefaultBlockProviderStartScore defines initial score before any stats update takes place.
+	// By setting this to positive value, peers are given a chance to be used for the first time.
+	DefaultBlockProviderStartScore = 0.1
+	// DefaultBlockProviderReturnedBlocksWeight is a default weight of a returned/requested ratio
+	// on an overall score.
 	DefaultBlockProviderReturnedBlocksWeight = 0.2
-	// DefaultBlockProviderEmptyReturnedBatchPenalty is a default penalty for non-responsive peers.
-	DefaultBlockProviderEmptyReturnedBatchPenalty = 0.0
-	// DefaultBlockProviderProcessedBlocksWeight is a default weight of a processed/requested ratio in an overall score.
+	// DefaultSlowReturnedBlocksPenalty is a default penalty for non-responsive peers.
+	// Total penalty is calculated as ((requested - returned)/requested) * penalty.
+	DefaultSlowReturnedBlocksPenalty = -0.1
+	// DefaultBlockProviderProcessedBlocksWeight is a default weight of a processed/requested ratio
+	// on an overall score.
 	DefaultBlockProviderProcessedBlocksWeight = 0.0
-	// DefaultBlockProviderEmptyProcessedBatchPenalty is a default penalty for non-responsive peers.
-	DefaultBlockProviderEmptyProcessedBatchPenalty = 0.0
+	// DefaultSlowProcessedBlocksPenalty is a default penalty for peers feeding garbage.
+	// Total penalty is calculated as ((returned - processed)/returned) * penalty.
+	DefaultSlowProcessedBlocksPenalty = 0.0
 	// DefaultBlockProviderDecayInterval defines how often block provider's stats should be decayed.
 	DefaultBlockProviderDecayInterval = 1 * time.Minute
 	// DefaultBlockProviderDecay specifies a decay factor (as a left-over percentage of the original value).
 	DefaultBlockProviderDecay = 0.95
-	// DefaultBlockProviderStartScore defines initial score before any stats updates takes place.
-	// By setting this to positive value, peers are given a chance to be used for the first time.
-	DefaultBlockProviderStartScore = 0.1
 )
 
 // BlockProviderScorer represents block provider scoring service.
@@ -42,17 +46,18 @@ type BlockProviderScorerConfig struct {
 	// opportunity to be selected for block fetching (allows new peers to start participating,
 	// when there are already scored peers).
 	StartScore float64
-	// ReturnedBlocksWeight defines weight of a returned/requested ratio in overall an score.
+	// ReturnedBlocksWeight defines weight of a returned/requested ratio in overall score.
 	ReturnedBlocksWeight float64
-	// EmptyReturnedBatchPenalty defines a penalty applied to score, if blocks were requested,
+	// SlowReturnedBlocksPenalty defines a penalty applied to score, if blocks were requested,
 	// but none have been returned yet (to distinguish between non-responsive peers and peers that
-	// haven't been requested any blocks yet). Penalty is applied per empty batch.
-	EmptyReturnedBatchPenalty float64
-	// ProcessedBlocksWeight defines weight of a processed/requested ratio in overall an score.
+	// haven't been requested any blocks yet).
+	SlowReturnedBlocksPenalty float64
+	// ProcessedBlocksWeight defines weight of a processed/requested ratio in overall score.
 	ProcessedBlocksWeight float64
-	// EmptyProcessedBatchPenalty defines a penalty applied to score, if blocks have been
-	// requested, but none have been processed yet. Penalty is applied per empty batch.
-	EmptyProcessedBatchPenalty float64
+	// SlowProcessedBlocksPenalty defines a penalty applied to score, if blocks have been
+	// requested and returned, but none have been processed yet. Allows distinguishing between
+	// peers that haven't yet returned anything and peers that returned garbage.
+	SlowProcessedBlocksPenalty float64
 	// DecayInterval defines how often requested/returned/processed stats should be decayed.
 	DecayInterval time.Duration
 	// Decay specifies the factor (must be < 1.0) by which block provider's stats is decayed.
@@ -76,14 +81,14 @@ func newBlockProviderScorer(
 	if scorer.config.ReturnedBlocksWeight == 0.0 {
 		scorer.config.ReturnedBlocksWeight = DefaultBlockProviderReturnedBlocksWeight
 	}
-	if scorer.config.EmptyReturnedBatchPenalty == 0.0 {
-		scorer.config.EmptyReturnedBatchPenalty = DefaultBlockProviderEmptyReturnedBatchPenalty
+	if scorer.config.SlowReturnedBlocksPenalty == 0.0 {
+		scorer.config.SlowReturnedBlocksPenalty = DefaultSlowReturnedBlocksPenalty
 	}
 	if scorer.config.ProcessedBlocksWeight == 0.0 {
 		scorer.config.ProcessedBlocksWeight = DefaultBlockProviderProcessedBlocksWeight
 	}
-	if scorer.config.EmptyProcessedBatchPenalty == 0.0 {
-		scorer.config.EmptyProcessedBatchPenalty = DefaultBlockProviderEmptyProcessedBatchPenalty
+	if scorer.config.SlowProcessedBlocksPenalty == 0.0 {
+		scorer.config.SlowProcessedBlocksPenalty = DefaultSlowProcessedBlocksPenalty
 	}
 	if scorer.config.DecayInterval == 0 {
 		scorer.config.DecayInterval = DefaultBlockProviderDecayInterval
@@ -109,24 +114,24 @@ func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 		return score
 	}
 	if peerData.requestedBlocks > 0 {
-		// Score returned/requested ratio. If there's more than 1 empty batch, apply as a penalty.
+		// Score returned/requested ratio.
 		returnedBlocksScore := float64(peerData.returnedBlocks) / float64(peerData.requestedBlocks)
 		returnedBlocksScore = returnedBlocksScore * s.config.ReturnedBlocksWeight
 		score += returnedBlocksScore
 
-		emptyBatches := float64(peerData.requestedBlocks-peerData.returnedBlocks) / float64(flags.Get().BlockBatchLimit)
-		if emptyBatches > 1 {
-			score += s.config.EmptyReturnedBatchPenalty * emptyBatches
+		if peerData.requestedBlocks > peerData.returnedBlocks {
+			factor := float64(peerData.requestedBlocks-peerData.returnedBlocks) / float64(peerData.requestedBlocks)
+			score += s.config.SlowReturnedBlocksPenalty * factor
 		}
 
-		// Score processed/requested ratio. If there's more than 1 empty batch, apply as a penalty.
+		// Score processed/requested ratio.
 		processedBlocksScore := float64(peerData.processedBlocks) / float64(peerData.requestedBlocks)
 		processedBlocksScore = processedBlocksScore * s.config.ProcessedBlocksWeight
 		score += processedBlocksScore
 
-		emptyBatches = float64(peerData.requestedBlocks-peerData.processedBlocks) / float64(flags.Get().BlockBatchLimit)
-		if emptyBatches > 1 {
-			score += s.config.EmptyProcessedBatchPenalty * emptyBatches
+		if peerData.returnedBlocks > 0 && peerData.returnedBlocks > peerData.processedBlocks {
+			factor := float64(peerData.returnedBlocks-peerData.processedBlocks) / float64(peerData.returnedBlocks)
+			score += s.config.SlowProcessedBlocksPenalty * factor
 		}
 	} else {
 		// Boost peers that have never been selected.
