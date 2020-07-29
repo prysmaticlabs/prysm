@@ -9,10 +9,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -22,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -37,7 +39,9 @@ const (
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore.json"
+	KeystoreFileName = "keystore-*.json"
+	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
+	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
 	PasswordFileSuffix  = ".pass"
 	depositDataFileName = "deposit_data.ssz"
@@ -46,7 +50,8 @@ const (
 
 // Config for a direct keymanager.
 type Config struct {
-	EIPVersion string `json:"direct_eip_version"`
+	EIPVersion                string `json:"direct_eip_version"`
+	AccountPasswordsDirectory string `json:"direct_accounts_passwords_directory"`
 }
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
@@ -60,7 +65,8 @@ type Keymanager struct {
 // DefaultConfig for a direct keymanager implementation.
 func DefaultConfig() *Config {
 	return &Config{
-		EIPVersion: eipVersion,
+		EIPVersion:                eipVersion,
+		AccountPasswordsDirectory: flags.WalletPasswordsDirFlag.Value,
 	}
 }
 
@@ -103,6 +109,30 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 // MarshalConfigFile returns a marshaled configuration file for a keymanager.
 func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
+}
+
+// Config for the direct keymanager.
+func (dr *Keymanager) Config() *Config {
+	return dr.cfg
+}
+
+// String pretty-print of a direct keymanager configuration.
+func (c *Config) String() string {
+	au := aurora.NewAurora(true)
+	var b strings.Builder
+	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("EIP Version"), c.EIPVersion)
+	if _, err := b.WriteString(strAddr); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strCrt := fmt.Sprintf(
+		"%s: %s\n", au.BrightMagenta("Accounts Passwords Directory"), c.AccountPasswordsDirectory,
+	)
+	if _, err := b.WriteString(strCrt); err != nil {
+		log.Error(err)
+		return ""
+	}
+	return b.String()
 }
 
 // ValidatingAccountNames for a direct keymanager.
@@ -172,16 +202,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
 
-	// Write the encoded keystore to disk.
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encoded); err != nil {
-		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
-	}
-
-	// Finally, write the account creation timestamp as a file.
+	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := roughtime.Now().Unix()
-	createdAtStr := strconv.FormatInt(createdAt, 10)
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, TimestampFileName, []byte(createdAtStr)); err != nil {
-		return "", errors.Wrapf(err, "could not write timestamp file for account %s", accountName)
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, fmt.Sprintf(KeystoreFileNameFormat, createdAt), encoded); err != nil {
+		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 
 	log.WithFields(logrus.Fields{

@@ -154,10 +154,10 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
+	headRoot, err := (&ethpb.BeaconBlock{Slot: 111}).HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := &ethpb.BeaconBlock{Slot: blkSlot}.HashTreeRoot()
+	finalizedRoot, err := (&ethpb.BeaconBlock{Slot: blkSlot}).HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -249,7 +249,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		Slot: 5,
 	})
 	require.NoError(t, err)
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
+	blk := testutil.NewBeaconBlock()
+	blk.Slot = 0
 	require.NoError(t, db.SaveBlock(context.Background(), blk))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -366,9 +367,9 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
+	headRoot, err := (&ethpb.BeaconBlock{Slot: 111}).HashTreeRoot()
 	require.NoError(t, err)
-	finalizedRoot, err := &ethpb.BeaconBlock{Slot: 40}.HashTreeRoot()
+	finalizedRoot, err := (&ethpb.BeaconBlock{Slot: 40}).HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -436,10 +437,10 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
+	headRoot, err := (&ethpb.BeaconBlock{Slot: 111}).HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := &ethpb.BeaconBlock{Slot: blkSlot}.HashTreeRoot()
+	finalizedRoot, err := (&ethpb.BeaconBlock{Slot: blkSlot}).HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -516,9 +517,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
+	headRoot, err := (&ethpb.BeaconBlock{Slot: 111}).HashTreeRoot()
 	require.NoError(t, err)
-	finalizedRoot, err := &ethpb.BeaconBlock{Slot: 40}.HashTreeRoot()
+	finalizedRoot, err := (&ethpb.BeaconBlock{Slot: 40}).HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -583,17 +584,17 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	require.NoError(t, err, "Failed to obtain peer connection state")
 	assert.Equal(t, peers.PeerDisconnected, connectionState, "Expected peer to be disconnected")
 
-	badResponses, err := p1.Peers().Scorer().BadResponses(p2.PeerID())
+	badResponses, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.PeerID())
 	require.NoError(t, err, "Failed to obtain peer connection state")
 	assert.Equal(t, 1, badResponses, "Bad response was not bumped to one")
 }
 
 func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	// Set up a head state with data we expect.
-	headRoot, err := &ethpb.BeaconBlock{Slot: 111}.HashTreeRoot()
+	headRoot, err := (&ethpb.BeaconBlock{Slot: 111}).HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := &ethpb.BeaconBlock{Slot: blkSlot}.HashTreeRoot()
+	finalizedRoot, err := (&ethpb.BeaconBlock{Slot: blkSlot}).HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)

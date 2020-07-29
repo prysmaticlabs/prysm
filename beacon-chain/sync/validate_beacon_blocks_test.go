@@ -497,7 +497,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
-	parent := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	parent := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), parent))
 	parentRoot, err := stateutil.BlockRoot(parent.Block)
 	require.NoError(t, err)

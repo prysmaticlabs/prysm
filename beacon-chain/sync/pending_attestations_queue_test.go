@@ -78,7 +78,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{}}}}
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	r32, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
@@ -102,7 +102,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	sb := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	sb := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), sb))
 	root, err := stateutil.BlockRoot(sb.Block)
 	require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
-	sb = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	sb = testutil.NewBeaconBlock()
 	r32, err := stateutil.BlockRoot(sb.Block)
 	require.NoError(t, err)
 	require.NoError(t, r.db.SaveBlock(context.Background(), sb))

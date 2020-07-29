@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	fssz "github.com/ferranbt/fastssz"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -13,6 +14,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -207,7 +209,14 @@ func (v *validator) signObject(
 		})
 	}
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		root, err := object.HashTreeRoot()
+		var root [32]byte
+		var err error
+		if v, ok := object.(fssz.HashRoot); ok {
+			root, err = v.HashTreeRoot()
+		} else {
+			root, err = ssz.HashTreeRoot(object)
+		}
+
 		if err != nil {
 			return nil, err
 		}

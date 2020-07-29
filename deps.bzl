@@ -45,12 +45,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        commit = "e5a371bb08c28624823c89ac8671701913c3be99",
-        remote = "https://github.com/ferranbt/fastssz",  # keep
-        replace = None,  # keep
-        sum = None,  # keep
-        vcs = "git",  # keep
-        version = None,  # keep
+        sum = "h1:qLZC3oQLJ5eb18EZS3yDcnX7zmlEt8WTWlQR7x5wS5I=",
+        version = "v0.0.0-20200728110133-0b6e349af87a",
     )
     go_repository(
         name = "com_github_prysmaticlabs_bazel_go_ethereum",
@@ -213,8 +209,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_benbjohnson_clock",
         importpath = "github.com/benbjohnson/clock",
-        sum = "h1:lVM1R/o5khtrr7t3qAr+sS6uagZOP+7iprc7gS3V9CE=",
-        version = "v1.0.1",
+        sum = "h1:Z0CN0Yb4ig9sGPXkvAQcGJfnrrMQ5QYLCMPRi9iD7YE=",
+        version = "v1.0.2",
     )
     go_repository(
         name = "com_github_bradfitz_go_smtpd",
@@ -1031,8 +1027,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mitchellh_mapstructure",
         importpath = "github.com/mitchellh/mapstructure",
-        sum = "h1:fmNYVwqnSfB9mZU6OS2O6GsXM+wcskZDuKQzvN1EDeE=",
-        version = "v1.1.2",
+        sum = "h1:mRS76wmkOn3KkKAyXDu42V+6ebnXWIztFSYGN7GeoRg=",
+        version = "v1.3.2",
     )
     go_repository(
         name = "com_github_mmcloughlin_avo",
@@ -2211,8 +2207,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_eventbus",
         importpath = "github.com/libp2p/go-eventbus",
-        sum = "h1:mlawomSAjjkk97QnYiEmHsLu7E136+2oCWSHRUvMfzQ=",
-        version = "v0.1.0",
+        sum = "h1:VanAdErQnpTioN2TowqNcOijf6YwhuODe4pPKSDpxGc=",
+        version = "v0.2.1",
     )
     go_repository(
         name = "com_github_libp2p_go_flow_metrics",
@@ -2250,15 +2246,15 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_connmgr",
         importpath = "github.com/libp2p/go-libp2p-connmgr",
-        sum = "h1:v7skKI9n+0obPpzMIO6aIlOSdQOmhxTf40cbpzqaGMQ=",
-        version = "v0.2.3",
+        sum = "h1:TMS0vc0TCBomtQJyWr7fYxcVYYhx+q/2gF++G5Jkl/w=",
+        version = "v0.2.4",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_core",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-core",
-        sum = "h1:IxFH4PmtLlLdPf4fF/i129SnK/C+/v8WEX644MxhC48=",
-        version = "v0.5.6",
+        sum = "h1:QK3xRwFxqd0Xd9bSZL+8yZ8ncZZbl6Zngd/+Y+A6sgQ=",
+        version = "v0.5.7",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_crypto",
@@ -2331,8 +2327,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_pubsub",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-pubsub",
-        sum = "h1:7Hyv2d8BK/x1HGRJTZ8X++VQEP+WqDTSwpUSZGTVLYA=",
-        version = "v0.3.1",
+        sum = "h1:k3cJm5JW5mjaWZkobS50sJLJWaB2mBi0HW4eRlE8mSo=",
+        version = "v0.3.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_record",
@@ -2605,8 +2601,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:GjYix8Y4VpQhlsjA2ickr3HxjIns4bI36zOmC+lwaNw=",
-        version = "v0.0.0-20200709024211-e8095222f77b",
+        sum = "h1:JGFp3CjAR4SXnYbzsJwCPJe0dL9E9l7VyNHT/rQTFq0=",
+        version = "v0.0.0-20200729044127-8027cc96e2c0",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2773,8 +2769,8 @@ def prysm_deps():
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",
-        sum = "h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=",
-        version = "v2.2.8",
+        sum = "h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=",
+        version = "v2.3.0",
     )
     go_repository(
         name = "io_etcd_go_bbolt",

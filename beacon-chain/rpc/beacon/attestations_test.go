@@ -893,7 +893,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	numValidators := 64
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)

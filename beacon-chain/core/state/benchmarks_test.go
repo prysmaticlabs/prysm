@@ -135,7 +135,7 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := beaconState.HashTreeRoot(); err != nil {
+		if _, err := beaconState.HashTreeRoot(context.Background()); err != nil {
 			b.Fatal(err)
 		}
 	}

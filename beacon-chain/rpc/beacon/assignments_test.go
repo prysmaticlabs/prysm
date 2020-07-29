@@ -54,7 +54,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	headState, err := db.HeadState(ctx)
 	require.NoError(t, err)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)

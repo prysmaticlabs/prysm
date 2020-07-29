@@ -278,7 +278,8 @@ func TestStore_DeleteHeadState(t *testing.T) {
 func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	db := setupDB(t)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 1
 	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -367,7 +368,8 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 1
 	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)

@@ -37,6 +37,7 @@ go_library(
         "//validator/keymanager/v2:go_default_library",
         "//validator/slashing-protection:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",

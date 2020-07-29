@@ -28,7 +28,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, err := &pb.SigningData{ObjectRoot: buf, Domain: domain}.HashTreeRoot()
+	root, err := (&pb.SigningData{ObjectRoot: buf, Domain: domain}).HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}

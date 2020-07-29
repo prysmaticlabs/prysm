@@ -516,7 +516,7 @@ func (b *BeaconState) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the BeaconState object
-func (b *BeaconState) HashTreeRoot() ([]byte, error) {
+func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
@@ -798,7 +798,7 @@ func (f *Fork) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the Fork object
-func (f *Fork) HashTreeRoot() ([]byte, error) {
+func (f *Fork) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(f)
 }
 
@@ -917,7 +917,7 @@ func (p *PendingAttestation) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the PendingAttestation object
-func (p *PendingAttestation) HashTreeRoot() ([]byte, error) {
+func (p *PendingAttestation) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(p)
 }
 
@@ -1011,7 +1011,7 @@ func (h *HistoricalBatch) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the HistoricalBatch object
-func (h *HistoricalBatch) HashTreeRoot() ([]byte, error) {
+func (h *HistoricalBatch) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(h)
 }
 
@@ -1052,6 +1052,82 @@ func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		}
 		hh.Merkleize(subIndx)
 	}
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the SigningData object
+func (s *SigningData) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(s)
+}
+
+// MarshalSSZTo ssz marshals the SigningData object to a target array
+func (s *SigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'ObjectRoot'
+	if len(s.ObjectRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, s.ObjectRoot...)
+
+	// Field (1) 'Domain'
+	if len(s.Domain) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, s.Domain...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the SigningData object
+func (s *SigningData) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 64 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'ObjectRoot'
+	s.ObjectRoot = append(s.ObjectRoot, buf[0:32]...)
+
+	// Field (1) 'Domain'
+	s.Domain = append(s.Domain, buf[32:64]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the SigningData object
+func (s *SigningData) SizeSSZ() (size int) {
+	size = 64
+	return
+}
+
+// HashTreeRoot ssz hashes the SigningData object
+func (s *SigningData) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(s)
+}
+
+// HashTreeRootWith ssz hashes the SigningData object with a hasher
+func (s *SigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'ObjectRoot'
+	if len(s.ObjectRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(s.ObjectRoot)
+
+	// Field (1) 'Domain'
+	if len(s.Domain) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(s.Domain)
 
 	hh.Merkleize(indx)
 	return
@@ -1129,7 +1205,7 @@ func (s *Status) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the Status object
-func (s *Status) HashTreeRoot() ([]byte, error) {
+func (s *Status) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
@@ -1216,7 +1292,7 @@ func (b *BeaconBlocksByRangeRequest) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the BeaconBlocksByRangeRequest object
-func (b *BeaconBlocksByRangeRequest) HashTreeRoot() ([]byte, error) {
+func (b *BeaconBlocksByRangeRequest) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
@@ -1309,7 +1385,7 @@ func (b *BeaconBlocksByRootRequest) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the BeaconBlocksByRootRequest object
-func (b *BeaconBlocksByRootRequest) HashTreeRoot() ([]byte, error) {
+func (b *BeaconBlocksByRootRequest) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
@@ -1398,7 +1474,7 @@ func (e *ErrorResponse) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the ErrorResponse object
-func (e *ErrorResponse) HashTreeRoot() ([]byte, error) {
+func (e *ErrorResponse) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(e)
 }
 
@@ -1473,7 +1549,7 @@ func (e *ENRForkID) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the ENRForkID object
-func (e *ENRForkID) HashTreeRoot() ([]byte, error) {
+func (e *ENRForkID) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(e)
 }
 
@@ -1548,7 +1624,7 @@ func (m *MetaData) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the MetaData object
-func (m *MetaData) HashTreeRoot() ([]byte, error) {
+func (m *MetaData) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(m)
 }
 
