@@ -167,6 +167,7 @@ func GenerateFullBlock(
 			Attestations:      atts,
 			VoluntaryExits:    exits,
 			Deposits:          newDeposits,
+			Graffiti:          make([]byte, 32),
 		},
 	}
 	if err := bState.SetSlot(currentSlot); err != nil {
@@ -258,8 +259,9 @@ func GenerateAttesterSlashingForValidator(
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Slot:           bState.Slot(),
-			CommitteeIndex: 0,
+			Slot:            bState.Slot(),
+			CommitteeIndex:  0,
+			BeaconBlockRoot: make([]byte, 32),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -284,8 +286,9 @@ func GenerateAttesterSlashingForValidator(
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Slot:           bState.Slot(),
-			CommitteeIndex: 0,
+			Slot:            bState.Slot(),
+			CommitteeIndex:  0,
+			BeaconBlockRoot: make([]byte, 32),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  params.BeaconConfig().ZeroHash[:],

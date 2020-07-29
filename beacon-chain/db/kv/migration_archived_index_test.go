@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+
 	"go.etcd.io/bbolt"
 )
 
@@ -57,8 +58,9 @@ func Test_migrateArchivedIndex(t *testing.T) {
 					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
 						return err
 					}
-
-					b, err := encode(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2048}})
+					sb := testutil.NewBeaconBlock()
+					sb.Block.Slot = 2048
+					b, err := encode(context.Background(), sb)
 					if err != nil {
 						return err
 					}

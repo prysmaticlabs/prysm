@@ -1,4 +1,4 @@
-package epoch
+package epoch_test
 
 import (
 	"bytes"
@@ -7,10 +7,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
@@ -42,7 +44,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indices, err := unslashedAttestingIndices(state, atts)
+	indices, err := epoch.UnslashedAttestingIndices(state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +61,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	if err = state.SetValidators(validators); err != nil {
 		t.Fatal(err)
 	}
-	indices, err = unslashedAttestingIndices(state, atts)
+	indices, err = epoch.UnslashedAttestingIndices(state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +100,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indices, err := unslashedAttestingIndices(state, atts)
+	indices, err := epoch.UnslashedAttestingIndices(state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +150,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	balance, err := AttestingBalance(state, atts)
+	balance, err := epoch.AttestingBalance(state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,12 +181,12 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, err := BaseReward(state, 0)
+		c, err := epoch.BaseReward(state, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if c != tt.c {
-			t.Errorf("BaseReward(%d) = %d, want = %d",
+			t.Errorf("epoch.BaseReward(%d) = %d, want = %d",
 				tt.a, c, tt.c)
 		}
 	}
@@ -201,7 +203,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := ProcessSlashings(s)
+	newState, err := epoch.ProcessSlashings(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +287,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			newState, err := ProcessSlashings(s)
+			newState, err := epoch.ProcessSlashings(s)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -326,7 +328,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	if err := s.SetRandaoMixes(mixes); err != nil {
 		t.Fatal(err)
 	}
-	newS, err := ProcessFinalUpdates(s)
+	newS, err := epoch.ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +380,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := ProcessRegistryUpdates(state)
+	newState, err := epoch.ProcessRegistryUpdates(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +410,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	}
 	state, err := state.InitializeFromProto(base)
 	currentEpoch := helpers.CurrentEpoch(state)
-	newState, err := ProcessRegistryUpdates(state)
+	newState, err := epoch.ProcessRegistryUpdates(state)
 	if err != nil {
 		t.Error(err)
 	}
@@ -443,7 +445,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := ProcessRegistryUpdates(state)
+	newState, err := epoch.ProcessRegistryUpdates(state)
 	if err != nil {
 		t.Error(err)
 	}
@@ -474,7 +476,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := ProcessRegistryUpdates(state)
+	newState, err := epoch.ProcessRegistryUpdates(state)
 	if err != nil {
 		t.Error(err)
 	}
@@ -487,11 +489,11 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 }
 
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
-	epoch := uint64(5)
-	exitEpoch := helpers.ActivationExitEpoch(epoch)
+	e := uint64(5)
+	exitEpoch := helpers.ActivationExitEpoch(e)
 	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	base := &pb.BeaconState{
-		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot: e * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{
 				ExitEpoch:         exitEpoch,
@@ -506,7 +508,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := ProcessRegistryUpdates(state)
+	newState, err := epoch.ProcessRegistryUpdates(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -547,19 +549,16 @@ func buildState(slot uint64, validatorCount uint64) *state.BeaconState {
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
-	s, err := state.InitializeFromProto(&pb.BeaconState{
-		Slot:                        slot,
-		Balances:                    validatorBalances,
-		Validators:                  validators,
-		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		BlockRoots:                  make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
-		FinalizedCheckpoint:         &ethpb.Checkpoint{},
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},
-	})
-	if err != nil {
+	s := testutil.NewBeaconState()
+	if err := s.SetSlot(slot); err != nil {
 		panic(err)
 	}
+	if err := s.SetBalances(validatorBalances); err != nil {
+		panic(err)
+	}
+	if err := s.SetValidators(validators); err != nil {
+		panic(err)
+	}
+
 	return s
 }

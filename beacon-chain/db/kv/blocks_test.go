@@ -20,21 +20,17 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	slot := uint64(20)
 	ctx := context.Background()
 	// First we save a previous block to ensure the cache max size is reached.
-	prevBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       slot - 1,
-			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
-		},
-	}
+	prevBlock := testutil.NewBeaconBlock()
+	prevBlock.Block.Slot = slot - 1
+	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	if err := db.SaveBlock(ctx, prevBlock); err != nil {
 		t.Fatal(err)
 	}
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       slot,
-			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
-		},
-	}
+
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = slot
+	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+
 	// Even with a full cache, saving new blocks should not cause
 	// duplicated blocks in the DB.
 	for i := 0; i < 100; i++ {
@@ -57,12 +53,11 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       20,
-			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
-		},
-	}
+
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 20
+	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+
 	blockRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -500,12 +495,10 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 
 	b := make([]*ethpb.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		b[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				ParentRoot: bytesutil.PadTo([]byte("parent"), 32),
-				Slot:       uint64(i),
-			},
-		}
+		blk := testutil.NewBeaconBlock()
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		blk.Block.Slot = uint64(i)
+		b[i] = blk
 	}
 
 	if err := db.SaveBlock(ctx, b[0]); err != nil {

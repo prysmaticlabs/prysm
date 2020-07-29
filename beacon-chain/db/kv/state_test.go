@@ -203,12 +203,10 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: genesis[:],
-			Slot:       100,
-		},
-	}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.ParentRoot = genesis[:]
+	blk.Block.Slot = 100
+
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
@@ -245,12 +243,9 @@ func TestStore_DeleteHeadState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: genesis[:],
-			Slot:       100,
-		},
-	}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.ParentRoot = genesis[:]
+	blk.Block.Slot = 100
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +291,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
+	b.Block.Slot = 100
 	r1, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -313,7 +308,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
+	b.Block.Slot = 1000
 	r2, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
