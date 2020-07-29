@@ -352,7 +352,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{Eth1Data: &ethpb.Eth1Data{}},
 	}
 
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	bs := &Server{
@@ -469,7 +469,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
@@ -483,7 +483,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		Slot: beaconState.Slot(),
 	}
 
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	bs := &Server{
@@ -545,7 +545,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		Slot: beaconState.Slot(),
 	}
 
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	var mockSig [96]byte
@@ -604,7 +604,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
@@ -658,7 +658,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot(),
 	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	var mockSig [96]byte
@@ -704,7 +704,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
@@ -755,7 +755,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot(),
 	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -800,7 +800,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
@@ -849,7 +849,7 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot(),
 	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -894,7 +894,7 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
@@ -946,7 +946,7 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		Slot: beaconState.Slot(),
 	}
 
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	var mockSig [96]byte
@@ -1005,7 +1005,7 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(finalizedDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
@@ -1808,7 +1808,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot(),
 	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(b, err)
 
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
@@ -1854,7 +1854,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot(),
 	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
+	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	var mockSig [96]byte
@@ -1900,7 +1900,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))

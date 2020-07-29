@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -71,7 +70,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 			Signature: make([]byte, 96),
 		},
 	}
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := deposit.Data.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +168,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	}
 	sig := sk.Sign(sr[:])
 	deposit.Data.Signature = sig.Marshal()
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := deposit.Data.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}

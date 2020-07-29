@@ -14,7 +14,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -1704,7 +1703,7 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, s.SetValidators(validators))

@@ -13,7 +13,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -136,7 +135,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		WithdrawalCredentials: withdrawalCredentials,
 	}
 
-	depositHash, err := ssz.HashTreeRoot(depositData)
+	depositHash, err := depositData.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "Unable to determine hashed value of deposit")
 	}

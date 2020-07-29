@@ -10,7 +10,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -394,7 +393,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -844,7 +843,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			Amount:    params.BeaconConfig().MaxEffectiveBalance,
 		},
 	}
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := deposit.Data.HashTreeRoot()
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -877,7 +876,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		ObjectRoot: buf,
 		Domain:     domain,
 	}
-	root, err = ssz.HashTreeRoot(ctr)
+	root, err = ctr.HashTreeRoot()
 	if err != nil {
 		b.Fatal(err)
 	}

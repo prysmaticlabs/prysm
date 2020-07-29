@@ -6,7 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 func TestStore_VoluntaryExits_CRUD(t *testing.T) {
@@ -15,7 +14,7 @@ func TestStore_VoluntaryExits_CRUD(t *testing.T) {
 	exit := &ethpb.VoluntaryExit{
 		Epoch: 5,
 	}
-	exitRoot, err := ssz.HashTreeRoot(exit)
+	exitRoot, err := exit.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}

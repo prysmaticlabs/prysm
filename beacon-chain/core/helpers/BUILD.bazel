@@ -40,6 +40,7 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/sliceutil:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",

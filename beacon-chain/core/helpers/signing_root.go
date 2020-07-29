@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -35,6 +36,10 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 //        domain=domain,
 //    ))
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
+	if v, ok := object.(fssz.HashRoot); ok {
+		return v.HashTreeRoot()
+	}
+
 	return signingData(func() ([32]byte, error) {
 		switch object.(type) {
 		case *ethpb.BeaconBlock:
@@ -59,7 +64,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 		ObjectRoot: objRoot[:],
 		Domain:     domain,
 	}
-	return ssz.HashTreeRoot(container)
+	return container.HashTreeRoot()
 }
 
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.

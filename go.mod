@@ -22,7 +22,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
+	github.com/ferranbt/fastssz v0.0.0-20200728110133-0b6e349af87a
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -113,7 +113,7 @@ require (
 	google.golang.org/grpc v1.29.1
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.3
 	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v0.18.3

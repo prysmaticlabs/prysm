@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -367,7 +366,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	}
 	blockRoot, err := stateutil.BlockRoot(block)
 	require.NoError(t, err, "Could not hash beacon block")
-	blockRoot2, err := ssz.HashTreeRoot(block2)
+	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block2}))
 	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -313,7 +312,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 
 	var deps [][]byte
 	for _, d := range finalizedDeposits {
-		hash, err := ssz.HashTreeRoot(d.Deposit.Data)
+		hash, err := d.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
@@ -365,7 +364,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 
 	var deps [][]byte
 	for _, d := range append(oldFinalizedDeposits, &newFinalizedDeposit) {
-		hash, err := ssz.HashTreeRoot(d.Deposit.Data)
+		hash, err := d.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
