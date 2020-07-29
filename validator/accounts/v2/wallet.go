@@ -454,7 +454,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 				return err
 			}
 			attemptingPassword = false
-			fmt.Print(au.Green("✔️").Bold())
+			fmt.Print(au.Green("✔️\n").Bold())
 		}
 	}
 	ctx := context.Background()
