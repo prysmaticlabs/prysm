@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manifoldco/promptui"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -99,15 +100,11 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 		}
 		return enteredMnemonic, nil
 	}
-	prompt := promptui.Prompt{
-		Label:    "Enter the seed phrase for the wallet you would like to recover",
-		Validate: validateMnemonic,
-	}
-	menmonicPhrase, err := prompt.Run()
+	mnemonicPhrase, err := promptutil.ValidatePrompt("Enter the seed phrase for the wallet you would like to recover", validateMnemonic)
 	if err != nil {
-		return "", fmt.Errorf("could not determine wallet directory: %v", formatPromptError(err))
+		return "", fmt.Errorf("could not get mnemonic phrase: %v", err)
 	}
-	return menmonicPhrase, nil
+	return mnemonicPhrase, nil
 }
 
 func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
@@ -115,20 +112,9 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 		numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
 		return numAccounts, nil
 	}
-	prompt := promptui.Prompt{
-		Label: "Enter how many accounts you would like to recover",
-		Validate: func(input string) error {
-			_, err := strconv.Atoi(input)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-		Default: "0",
-	}
-	numAccounts, err := prompt.Run()
+	numAccounts, err := promptutil.DefaultAndValidatePrompt("Enter how many accounts you would like to recover", "0", promptutil.ValidateNumber)
 	if err != nil {
-		return 0, formatPromptError(err)
+		return 0, err
 	}
 	numAccountsInt, err := strconv.Atoi(numAccounts)
 	if err != nil {
