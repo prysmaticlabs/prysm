@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,10 +53,6 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatalf("Failed to get domain form state: %v", err)
-	}
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
@@ -71,12 +68,8 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 			ParentRoot: latestBlockSignedRoot[:],
 		},
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	blockSig := priv.Sign(signingRoot[:])
-	block.Signature = blockSig.Marshal()[:]
+	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
+	require.NoError(t, err)
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
@@ -125,16 +118,8 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 			ParentRoot: lbhdr[:],
 		},
 	}
-	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatalf("Failed to get domain form state: %v", err)
-	}
-	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	blockSig := privKeys[proposerIdx+1].Sign(signingRoot[:])
-	block.Signature = blockSig.Marshal()[:]
+	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
+	require.NoError(t, err)
 
 	_, err = blocks.ProcessBlockHeader(beaconState, block)
 	want := "signature did not verify"
@@ -350,10 +335,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatalf("Failed to get domain form state: %v", err)
-	}
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
@@ -369,12 +350,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 			ParentRoot: latestBlockSignedRoot[:],
 		},
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	blockSig := priv.Sign(signingRoot[:])
-	block.Signature = blockSig.Marshal()[:]
+	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
+	require.NoError(t, err)
 	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
@@ -438,10 +415,6 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatalf("Failed to get domain form state: %v", err)
-	}
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
@@ -457,13 +430,8 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 			ParentRoot: latestBlockSignedRoot[:],
 		},
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	blockSig := priv.Sign(signingRoot[:])
-	block.Signature = blockSig.Marshal()[:]
-
+	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
+	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
 		t.Fatal(err)
