@@ -94,8 +94,8 @@ func TestHealthz(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("expected OK status but got %v", rr.Code)
+	if status := rr.Code; status != http.StatusServiceUnavailable {
+		t.Errorf("expected StatusServiceUnavailable status but got %v", rr.Code)
 	}
 
 	body = rr.Body.String()
@@ -184,6 +184,9 @@ func TestContentNegotiation(t *testing.T) {
 		expectedJSON := "{\"error\":\"\",\"data\":[{\"service\":\"*prometheus.mockService\",\"status\":false,\"error\":\"something is wrong\"}]}"
 		if !strings.Contains(body, expectedJSON) {
 			t.Errorf("Unexpected data, want: %q got %q", expectedJSON, body)
+		}
+		if rr.Code < 500 {
+			t.Errorf("Expected a server error response code, but got %d", rr.Code)
 		}
 	})
 }
