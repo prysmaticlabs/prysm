@@ -375,3 +375,24 @@ go_repository(
     sum = "h1:tOpm7WcpBTn4fjmVfgpQq0EfczGlG91VSDkswnjF5A8=",
     version = "v2.0.3+incompatible",
 )
+
+go_repository(
+    name = "com_github_k0kubun_go_ansi",
+    importpath = "github.com/k0kubun/go-ansi",
+    sum = "h1:qGQQKEcAR99REcMpsXCp3lJ03zYT1PkRd3kQGPn9GVg=",
+    version = "v0.0.0-20180517002512-3bf9e2903213",
+)
+
+go_repository(
+    name = "com_github_mitchellh_colorstring",
+    importpath = "github.com/mitchellh/colorstring",
+    sum = "h1:62I3jR2EmQ4l5rM/4FEfDWcRD+abF5XlKShorW5LRoQ=",
+    version = "v0.0.0-20190213212951-d06e56a500db",
+)
+
+go_repository(
+    name = "com_github_schollz_progressbar_v3",
+    importpath = "github.com/schollz/progressbar/v3",
+    sum = "h1:nMinx+JaEm/zJz4cEyClQeAw5rsYSB5th3xv+5lV6Vg=",
+    version = "v3.3.4",
+)

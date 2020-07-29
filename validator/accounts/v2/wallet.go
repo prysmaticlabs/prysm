@@ -13,6 +13,7 @@ import (
 	"time"
 
 	petname "github.com/dustinkirkland/golang-petname"
+	"github.com/k0kubun/go-ansi"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -487,6 +489,20 @@ func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames [
 			"Enter the password for your imported accounts",
 		)
 		fmt.Println("Importing accounts, this may take a while...")
+		bar := progressbar.NewOptions(
+			len(accountNames),
+			progressbar.OptionFullWidth(),
+			progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+			progressbar.OptionEnableColorCodes(true),
+			progressbar.OptionShowBytes(true),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "[green]=[reset]",
+				SaucerHead:    "[green]>[reset]",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}),
+		)
 		ctx := context.Background()
 		for i := 0; i < len(accountNames); i++ {
 			// We check if the individual account unlocks with the global password.
@@ -501,6 +517,9 @@ func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames [
 				if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, individualPassword); err != nil {
 					return errors.Wrap(err, "could not write password to disk")
 				}
+				if err := bar.Add(1); err != nil {
+					return errors.Wrap(err, "could not add to progress bar")
+				}
 				continue
 			}
 			if err != nil {
@@ -509,6 +528,9 @@ func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames [
 			fmt.Printf("Finished importing %#x\n", au.BrightMagenta(bytesutil.Trunc(pubKeys[i])))
 			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
 				return errors.Wrap(err, "could not write password to disk")
+			}
+			if err := bar.Add(1); err != nil {
+				return errors.Wrap(err, "could not add to progress bar")
 			}
 		}
 	}
