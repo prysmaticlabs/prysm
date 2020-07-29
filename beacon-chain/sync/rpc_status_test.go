@@ -250,7 +250,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	})
 	require.NoError(t, err)
 	blk := testutil.NewBeaconBlock()
-	blk.Slot = 0
+	blk.Block.Slot = 0
 	require.NoError(t, db.SaveBlock(context.Background(), blk))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)

@@ -131,7 +131,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 
-	b.Slot = 1
+	b.Block.Slot = 1
 	s, err := state.InitializeFromProto(&pb.BeaconState{})
 	require.NoError(t, err)
 	c := &Service{}

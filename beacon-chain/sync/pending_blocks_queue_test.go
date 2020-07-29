@@ -148,9 +148,9 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	b4Root, err := b4.HashTreeRoot()
 	require.NoError(t, err)
 
-	r.slotToPendingBlocks[b4.Slot] = &ethpb.SignedBeaconBlock{Block: b4}
+	r.slotToPendingBlocks[b4.Block.Slot] = b4
 	r.seenPendingBlocks[b4Root] = true
-	r.slotToPendingBlocks[b5.Slot] = &ethpb.SignedBeaconBlock{Block: b5}
+	r.slotToPendingBlocks[b5.Block.Slot] = b5
 	r.seenPendingBlocks[b5Root] = true
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
@@ -158,18 +158,18 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b3 to the cache
-	r.slotToPendingBlocks[b3.Slot] = &ethpb.SignedBeaconBlock{Block: b3}
+	r.slotToPendingBlocks[b3.Block.Slot] = b3
 	r.seenPendingBlocks[b3Root] = true
-	require.NoError(t, r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b3}))
+	require.NoError(t, r.db.SaveBlock(context.Background(), b3))
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 1, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b2 to the cache
-	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}
+	r.slotToPendingBlocks[b2.Block.Slot] = b2
 	r.seenPendingBlocks[b2Root] = true
 
-	require.NoError(t, r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b2}))
+	require.NoError(t, r.db.SaveBlock(context.Background(), b2))
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 0, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
@@ -230,13 +230,13 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	b4Root, err := b4.HashTreeRoot()
 	require.NoError(t, err)
 
-	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}
+	r.slotToPendingBlocks[b2.Block.Slot] = b2
 	r.seenPendingBlocks[b2Root] = true
-	r.slotToPendingBlocks[b3.Slot] = &ethpb.SignedBeaconBlock{Block: b3}
+	r.slotToPendingBlocks[b3.Block.Slot] = b3
 	r.seenPendingBlocks[b3Root] = true
-	r.slotToPendingBlocks[b4.Slot] = &ethpb.SignedBeaconBlock{Block: b4}
+	r.slotToPendingBlocks[b4.Block.Slot] = b4
 	r.seenPendingBlocks[b4Root] = true
-	r.slotToPendingBlocks[b5.Slot] = &ethpb.SignedBeaconBlock{Block: b5}
+	r.slotToPendingBlocks[b5.Block.Slot] = b5
 	r.seenPendingBlocks[b5Root] = true
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
