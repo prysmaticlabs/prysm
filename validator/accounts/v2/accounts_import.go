@@ -97,6 +97,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		}
 	}
 
+	fmt.Println("Importing accounts, this may take a while...")
 	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
