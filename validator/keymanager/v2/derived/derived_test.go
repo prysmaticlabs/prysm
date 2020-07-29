@@ -32,6 +32,9 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	mnemonic, err := bip39.NewMnemonic(mnemonicEntropy)
 	require.NoError(t, err)
 	walletSeed := bip39.NewSeed(mnemonic, "")
+	_ = walletSeed
+	t.Logf(mnemonic)
+	t.Logf("Seed: %#x\n", walletSeed)
 	encryptor := keystorev4.New()
 	password := "Passwz0rdz2020%"
 	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
