@@ -25,6 +25,9 @@ func SetupWallet(t *testing.T) string {
 	// Create wallets with keys.
 	ctx := context.Background()
 	w1, err := nd.CreateWallet(ctx, "Wallet 1", store, encryptor)
+	unlocker, ok := w1.(e2wtypes.WalletLocker)
+	require.Equal(t, true, ok)
+	require.NoError(t, unlocker.Unlock(ctx, nil))
 	creator, ok := w1.(e2wtypes.WalletAccountCreator)
 	require.Equal(t, true, ok)
 	require.NoError(t, err, "Failed to create wallet")
