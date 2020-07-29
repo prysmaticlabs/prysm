@@ -317,7 +317,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 		// by utilizing the password and initialize a new BLS secret key from
 		// its raw bytes.
 		decryptor := keystorev4.New()
-		rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+		rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 		if err != nil {
 			return errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
 		}
@@ -335,7 +335,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 
 func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password string) ([]byte, error) {
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
 	}
@@ -375,7 +375,7 @@ func (dr *Keymanager) checkPasswordForAccount(accountName string, password strin
 		return errors.Wrap(err, "could not get keystore")
 	}
 	decryptor := keystorev4.New()
-	_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
+	_, err = decryptor.Decrypt(accountKeystore.Crypto, password)
 	if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
