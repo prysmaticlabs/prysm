@@ -323,11 +323,14 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = s.finalizedInfo.slot + 5
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b1))
-	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 10}}
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = s.finalizedInfo.slot + 10
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b2))
-	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 20}}
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = s.finalizedInfo.slot + 20
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b3))
 
 	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+100)
@@ -382,9 +385,11 @@ func TestLastSavedState_CanGet(t *testing.T) {
 		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 5}}
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = s.finalizedInfo.slot + 5
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b1))
-	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 10}}
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = s.finalizedInfo.slot + 10
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b2))
 	b2Root, err := stateutil.BlockRoot(b2.Block)
 	require.NoError(t, err)
@@ -392,7 +397,8 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	require.NoError(t, st.SetSlot(s.finalizedInfo.slot+10))
 
 	require.NoError(t, s.beaconDB.SaveState(ctx, st, b2Root))
-	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.finalizedInfo.slot + 20}}
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = s.finalizedInfo.slot + 20
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b3))
 
 	savedState, err := s.lastSavedState(ctx, s.finalizedInfo.slot+100)
