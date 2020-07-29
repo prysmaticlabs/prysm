@@ -90,7 +90,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 
 	au := aurora.NewAurora(true)
-	fmt.Printf("Importing accounts: %s\n", au.BrightGreen(strings.Join(accountsImported, ", ")).Bold())
+	fmt.Printf("Importing accounts: %s", au.BrightGreen(strings.Join(accountsImported, ", ")))
 	for i, accountName := range accountsImported {
 		if err := wallet.enterPasswordForAccount(cliCtx, accountName, pubKeysImported[i]); err != nil {
 			return errors.Wrap(err, "could not verify password for keystore")

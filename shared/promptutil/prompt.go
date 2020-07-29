@@ -80,7 +80,7 @@ func PasswordPrompt(promptText string, validateFunc func(string) error) (string,
 	var responseValid bool
 	var response string
 	for !responseValid {
-		fmt.Printf("%s:\n", au.Bold(promptText))
+		fmt.Printf("\n%s: ", au.Bold(promptText))
 		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			return "", err

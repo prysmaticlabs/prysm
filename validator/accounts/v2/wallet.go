@@ -135,9 +135,11 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	}
 	walletPath := filepath.Join(walletDir, keymanagerKind.String())
 	w := &Wallet{
+		walletDir:      walletDir,
 		accountsPath:   walletPath,
 		keymanagerKind: keymanagerKind,
 	}
+	log.Infof("%s %s", au.BrightMagenta("(wallet directory)"), w.walletDir)
 	if keymanagerKind == v2keymanager.Derived {
 		walletPassword, err := inputPassword(
 			cliCtx,
@@ -163,7 +165,6 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		au := aurora.NewAurora(true)
 		log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
 	}
-	log.Info("Successfully opened wallet")
 	return w, nil
 }
 
@@ -393,6 +394,22 @@ func (w *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName stri
 	return string(rawData), nil
 }
 
+//UUID: 4c1fafc0-aec3-4991-8380-8071fde80c44
+//Path: m/12381/3600/0/0
+//Public key: 0x8a14d3f81892d576ba9ff1f7bea372abf2ca097ae6873c4d47942626fdab545e56593c16bcf261fe76db1beb6a09c384
+//twi
+//UUID: 0d9cf49f-cb35-4fef-a411-7e583746060b
+//Path: m/12381/3600/1/0
+//Public key: 0x971d04f25a07c0983ef818eb94eebb3fc2acaed9c19f8ab22f8c0c82c05c115f6f249cdb123f5801457b4142a8c539a3
+//three
+//UUID: 31cda581-77c8-4286-bc41-78f30dc85bf7
+//Path: m/12381/3600/2/0
+//Public key: 0x9465f26ae3e44589f6ddb247e6576bd326519c86876e5e29f607370f970f998df81250451c52510f67b3f53e71e6bdea
+//four
+//UUID: 88e0a247-5faf-4b14-8ce7-f487928f8def
+//Path: m/12381/3600/3/0
+//Public key: 0x88369b922776a32c2e3fbc187831bbff8b496b745347a3218a8e233b864c595e4fa224b2364edad7837de51a488d794a
+
 // enterPasswordForAccount checks if a user has a password specified for the new account
 // either from a file or from stdin. Then, it saves the password to the wallet.
 func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string, pubKey []byte) error {
@@ -414,6 +431,7 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 			return err
 		}
 	} else {
+		pubKeyStr := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 		attemptingPassword := true
 		// Loop asking for the password until the user enters it correctly.
 		for attemptingPassword {
@@ -421,21 +439,22 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 			password, err = inputWeakPassword(
 				cliCtx,
 				flags.AccountPasswordFileFlag,
-				fmt.Sprintf(passwordForAccountPromptText, bytesutil.Trunc(pubKey)),
+				fmt.Sprintf(passwordForAccountPromptText, au.BrightGreen(pubKeyStr)),
 			)
 			if err != nil {
 				return errors.Wrap(err, "could not input password")
 			}
 			err = w.checkPasswordForAccount(accountName, password)
 			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				fmt.Println(au.Red("Incorrect password entered, please try again"))
+				fmt.Print(au.Red("X").Bold())
+				fmt.Print(au.Red("\nIncorrect password entered, please try again"))
 				continue
 			}
 			if err != nil {
 				return err
 			}
-
 			attemptingPassword = false
+			fmt.Print(au.Green("✔️").Bold())
 		}
 	}
 	ctx := context.Background()
