@@ -487,44 +487,58 @@ func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames [
 			"Enter the password for your imported accounts",
 		)
 		fmt.Println("Importing accounts, this may take a while...")
+		ctx := context.Background()
 		for i := 0; i < len(accountNames); i++ {
-			//attemptingPassword := true
-			//// Loop asking for the password until the user enters it correctly.
-			//for attemptingPassword {
+			// We check if the individual account unlocks with the global password.
 			err = w.checkPasswordForAccount(accountNames[i], password)
 			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				//// Ask the user for the password to their account.
-				//password, err = inputWeakPassword(
-				//	cliCtx,
-				//	flags.AccountPasswordFileFlag,
-				//	fmt.Sprintf(passwordForAccountPromptText, bytesutil.Trunc(pubKeys[i])),
-				//)
-				//if err != nil {
-				//	return errors.Wrap(err, "could not input password")
-				//}
-				//err = w.checkPasswordForAccount(accountNames[i], password)
-				//if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				//	fmt.Println(au.Red("Incorrect password entered, please try again"))
-				//	continue
-				//}
-				//if err != nil {
-				//	return err
-				//}
-				//attemptingPassword = false
-				fmt.Println(au.Red("Incorrect password entered, please try again"))
+				// If the password fails for an individual account, we ask the user to input
+				// that individual account's password until it succeeds.
+				individualPassword, err := w.askUntilPasswordConfirms(cliCtx, accountNames[i], pubKeys[i])
+				if err != nil {
+					return err
+				}
+				if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, individualPassword); err != nil {
+					return errors.Wrap(err, "could not write password to disk")
+				}
 				continue
 			}
 			if err != nil {
 				return err
 			}
-			ctx := context.Background()
+			fmt.Printf("Finished importing %#x\n", au.BrightMagenta(bytesutil.Trunc(pubKeys[i])))
 			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
 				return errors.Wrap(err, "could not write password to disk")
 			}
-			fmt.Printf("Finished importing %#x\n", au.BrightMagenta(bytesutil.Trunc(pubKeys[i])))
 		}
 	}
 	return nil
+}
+
+func (w *Wallet) askUntilPasswordConfirms(cliCtx *cli.Context, accountName string, pubKey []byte) (string, error) {
+	// Loop asking for the password until the user enters it correctly.
+	var password string
+	var err error
+	for {
+		password, err = inputWeakPassword(
+			cliCtx,
+			flags.AccountPasswordFileFlag,
+			fmt.Sprintf(passwordForAccountPromptText, bytesutil.Trunc(pubKey)),
+		)
+		if err != nil {
+			return "", errors.Wrap(err, "could not input password")
+		}
+		err = w.checkPasswordForAccount(accountName, password)
+		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+			fmt.Println(au.Red("Incorrect password entered, please try again"))
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		break
+	}
+	return password, nil
 }
 
 func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
