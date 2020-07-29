@@ -19,7 +19,7 @@ const (
 	// gossip parameters
 	gossipSubMcacheLen    = 6   // number of windows to retain full messages in cache for `IWANT` responses
 	gossipSubMcacheGossip = 3   // number of windows to gossip about
-	gossipSubSeenTtl      = 550 // number of heartbeat intervals to retain message IDs
+	gossipSubSeenTTL      = 550 // number of heartbeat intervals to retain message IDs
 
 	// fanout ttl
 	gossipSubFanoutTTL = 60000000000 // TTL for fanout maps for topics we are not subscribed to but have published to, in nano seconds
@@ -45,7 +45,7 @@ func TestGossipParameters(t *testing.T) {
 	val := (params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot * 1000) /
 		uint64(pubsub.GossipSubHeartbeatInterval.Milliseconds())
 	roundedUp := math.Round(float64(val) / 10)
-	assert.Equal(t, gossipSubSeenTtl, int(roundedUp)*10, "gossipSubSeenTtl")
+	assert.Equal(t, gossipSubSeenTTL, int(roundedUp)*10, "gossipSubSeenTtl")
 }
 
 func TestFanoutParameters(t *testing.T) {
