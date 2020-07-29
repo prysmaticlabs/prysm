@@ -56,7 +56,9 @@ func NewTestP2P(t *testing.T) *TestP2P {
 	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold: 5,
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: 5,
+			},
 		},
 	})
 	return &TestP2P{
