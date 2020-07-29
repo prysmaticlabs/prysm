@@ -80,7 +80,13 @@ func NewWallet(
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
 	if walletExists {
-		return nil, ErrWalletExists
+		isEmptyWallet, err := isEmptyDir(walletDir)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if wallet has files")
+		}
+		if !isEmptyWallet {
+			return nil, ErrWalletExists
+		}
 	}
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
 	w := &Wallet{
@@ -105,9 +111,6 @@ func NewWallet(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get password directory")
 		}
-		if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
-			return nil, errors.Wrap(err, "could not create passwords directory")
-		}
 		w.passwordsDir = passwordsDir
 	}
 	return w, nil
@@ -126,7 +129,15 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
-	if !ok {
+	if ok {
+		isEmptyWallet, err := isEmptyDir(walletDir)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if wallet has files")
+		}
+		if isEmptyWallet {
+			return nil, ErrNoWalletFound
+		}
+	} else {
 		return nil, ErrNoWalletFound
 	}
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
@@ -499,19 +510,16 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 	}
-	var wallet *Wallet
-	if !ok {
-		wallet, err = creationFunc(cliCtx)
+	if ok {
+		isEmptyWallet, err := isEmptyDir(directory)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Could not create wallet")
+			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
-	} else {
-		wallet, err = OpenWallet(cliCtx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not open wallet")
+		if !isEmptyWallet {
+			return OpenWallet(cliCtx)
 		}
 	}
-	return wallet, nil
+	return creationFunc(cliCtx)
 }
 
 // Returns true if a file is not a directory and exists
@@ -539,4 +547,21 @@ func hasDir(dirPath string) (bool, error) {
 		return false, nil
 	}
 	return info.IsDir(), err
+}
+
+func isEmptyDir(name string) (bool, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Debugf("Could not close directory: %s", name)
+		}
+	}()
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err // Either not empty or error, suits both cases
 }
