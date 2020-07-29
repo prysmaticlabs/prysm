@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -118,7 +117,7 @@ func NewKeymanager(
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, []byte(password))
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
@@ -169,26 +168,23 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 // InitializeWalletSeedFile creates a new, encrypted seed using a password input
 // and persists its encrypted file metadata to disk under the wallet path.
 func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonicConfirm bool) (*SeedConfig, error) {
-	walletSeed := make([]byte, 32)
-	n, err := rand.NewGenerator().Read(walletSeed)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wallet seed")
-	}
-	if n != len(walletSeed) {
-		return nil, errors.New("could not randomly create seed")
+	mnemonicRandomness := make([]byte, 32)
+	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
+		return nil, errors.Wrap(err, "could not initialize mnemonic source of randomness")
 	}
 	m := &EnglishMnemonicGenerator{
 		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
-	phrase, err := m.Generate(walletSeed)
+	phrase, err := m.Generate(mnemonicRandomness)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate wallet seed")
 	}
 	if err := m.ConfirmAcknowledgement(phrase); err != nil {
 		return nil, errors.Wrap(err, "could not confirm mnemonic acknowledgement")
 	}
+	walletSeed := bip39.NewSeed(phrase, "")
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
 	}
@@ -208,16 +204,12 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 // SeedFileFromMnemonic uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
 func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string) (*SeedConfig, error) {
-	walletSeed, err := bip39.EntropyFromMnemonic(mnemonic)
-	if err != nil && strings.Contains(err.Error(), "not found in reverse map") {
-		return nil, errors.New("could not convert mnemonic to wallet seed: invalid seed word entered")
-	} else if errors.Is(err, bip39.ErrInvalidMnemonic) {
-		return nil, errors.Wrap(bip39.ErrInvalidMnemonic, "could not convert mnemonic to wallet seed")
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not convert mnemonic to wallet seed")
+	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
+		return nil, bip39.ErrInvalidMnemonic
 	}
+	walletSeed := bip39.NewSeed(mnemonic, "")
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
 	}
@@ -469,7 +461,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 
 func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(privateKey, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(privateKey, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
 	}
