@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBlockSignature(t *testing.T) {
@@ -28,16 +29,8 @@ func TestBlockSignature(t *testing.T) {
 		t.Error(err)
 	}
 	epoch := helpers.SlotToEpoch(block.Block.Slot)
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain)
-	if err != nil {
-		t.Error(err)
-	}
-
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
+	blockSig, err := helpers.ComputeDomainAndSign(beaconState, epoch, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	signature, err := BlockSignature(beaconState, block.Block, privKeys)
 	if err != nil {
