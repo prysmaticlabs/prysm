@@ -35,12 +35,22 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
-	keystorePath, eth1PID := components.StartEth1Node(t)
-	bootnodeENR, bootnodePID := components.StartBootnode(t)
-	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
-	valProcessIDs := components.StartValidatorClients(t, config, keystorePath)
-	processIDs := append(valProcessIDs, bProcessIDs...)
-	processIDs = append(processIDs, []int{eth1PID, bootnodePID}...)
+	var keystorePath string
+	var processIDs []int
+	var pId int
+	keystorePath, pId = components.StartEth1Node(t)
+	processIDs = append(processIDs, pId)
+	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	go components.SendAndMineDeposits(t, keystorePath, validatorNum, 0)
+	pId = components.StartBootnode(t)
+	processIDs = append(processIDs, pId)
+
+	go func() {
+		bProcessIDs := components.StartBeaconNodes(t, config)
+		processIDs = append(processIDs, bProcessIDs...)
+		valProcessIDs := components.StartValidatorClients(t, config, keystorePath)
+		processIDs = append(processIDs, valProcessIDs...)
+	}()
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
 
@@ -128,7 +138,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	index := e2e.TestParams.BeaconNodeCount
-	processID := components.StartNewBeaconNode(t, config, index, bootnodeENR)
+	processID := components.StartNewBeaconNode(t, config, index)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)

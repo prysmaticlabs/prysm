@@ -21,7 +21,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},
 		ValidatorFlags: []string{},
-		EpochsToRun:    10,
+		EpochsToRun:    8,
 		TestSync:       true,
 		TestSlasher:    true,
 		TestDeposits:   false,

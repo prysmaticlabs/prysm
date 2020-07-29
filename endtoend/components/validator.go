@@ -39,11 +39,11 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 	processIDs := make([]int, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for i := 0; i < beaconNodeNum; i++ {
-		pID := StartNewValidatorClient(t, config, validatorsPerNode, i)
-		processIDs[i] = pID
+		go func(index int) {
+			pID := StartNewValidatorClient(t, config, validatorsPerNode, index)
+			processIDs[i] = pID
+		}(i)
 	}
-
-	SendAndMineDeposits(t, keystorePath, validatorNum, 0)
 
 	return processIDs
 }
