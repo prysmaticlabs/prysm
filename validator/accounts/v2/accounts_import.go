@@ -13,6 +13,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -90,7 +91,11 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 
 	au := aurora.NewAurora(true)
-	fmt.Printf("Importing accounts: %s\n", au.BrightGreen(strings.Join(accountsImported, ", ")).Bold())
+	formattedPubkeys := make([]string, len(pubKeysImported))
+	for i, pk := range pubKeysImported {
+		formattedPubkeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk))
+	}
+	fmt.Printf("Importing accounts: %s\n", au.BrightGreen(strings.Join(formattedPubkeys, ", ")))
 	if err := wallet.enterPasswordForAllAccounts(cliCtx, accountsImported, pubKeysImported); err != nil {
 		return errors.Wrap(err, "could not verify password for keystore")
 	}
