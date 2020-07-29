@@ -154,9 +154,11 @@ func NewService(cfg *Config) (*Service, error) {
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: int(s.cfg.MaxPeers),
 		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold:     maxBadResponses,
-			BadResponsesWeight:        -100,
-			BadResponsesDecayInterval: time.Hour,
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold:     maxBadResponses,
+				Weight:        -100,
+				DecayInterval: time.Hour,
+			},
 		},
 	})
 
@@ -399,7 +401,7 @@ func (s *Service) connectWithPeer(info peer.AddrInfo) error {
 	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
 	defer cancel()
 	if err := s.host.Connect(ctx, info); err != nil {
-		s.Peers().Scorer().IncrementBadResponses(info.ID)
+		s.Peers().Scorers().BadResponsesScorer().Increment(info.ID)
 		return err
 	}
 	return nil
