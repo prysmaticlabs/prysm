@@ -38,7 +38,11 @@ func ValidatePrompt(promptText string, validateFunc func(string) error) (string,
 // DefaultPrompt prompts the user for any text and performs no validation. If nothing is entered it returns the default.
 func DefaultPrompt(promptText string, defaultValue string) (string, error) {
 	var response string
-	fmt.Printf("%s %s:\n", promptText, fmt.Sprintf("(%s: %s)", au.BrightGreen("default"), defaultValue))
+	if defaultValue != "" {
+		fmt.Printf("%s %s:\n", promptText, fmt.Sprintf("(%s: %s)", au.BrightGreen("default"), defaultValue))
+	} else {
+		fmt.Printf("%s\n", promptText)
+	}
 	scanner := bufio.NewScanner(os.Stdin)
 	if ok := scanner.Scan(); ok {
 		item := scanner.Text()

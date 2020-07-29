@@ -3,6 +3,10 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/user"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -40,9 +44,8 @@ var au = aurora.NewAurora(true)
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return directory, nil
+		return expandPath(directory)
 	}
-
 	// Append and log the appropriate directory name depending on the flag used.
 	if flag.Name == flags.WalletDirFlag.Name {
 		ok, err := hasDir(directory)
@@ -71,7 +74,7 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	if inputtedDir == directory {
 		return directory, nil
 	}
-	return inputtedDir, nil
+	return expandPath(inputtedDir)
 }
 
 func inputPassword(
@@ -81,7 +84,11 @@ func inputPassword(
 	confirmPassword passwordConfirm,
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePath, err := expandPath(passwordFilePathInput)
+		if err != nil {
+			return "", errors.Wrap(err, "could not determine absolute path of password file")
+		}
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
@@ -120,7 +127,11 @@ func inputPassword(
 
 func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePath, err := expandPath(passwordFilePathInput)
+		if err != nil {
+			return "", errors.Wrap(err, "could not determine absolute path of password file")
+		}
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
@@ -166,11 +177,23 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 			return nil, err
 		}
 	}
+	crtPath, err := expandPath(strings.TrimRight(crt, "\r\n"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	}
+	keyPath, err := expandPath(strings.TrimRight(key, "\r\n"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	}
+	caPath, err := expandPath(strings.TrimRight(ca, "\r\n"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	}
 	newCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: crt,
-			ClientKeyPath:  key,
-			CACertPath:     ca,
+			ClientCertPath: crtPath,
+			ClientKeyPath:  keyPath,
+			CACertPath:     caPath,
 		},
 		RemoteAddr: addr,
 	}
@@ -202,4 +225,28 @@ func formatPromptError(err error) error {
 	default:
 		return err
 	}
+}
+
+// Expands a file path
+// 1. replace tilde with users home dir
+// 2. expands embedded environment variables
+// 3. cleans the path, e.g. /a/b/../c -> /a/c
+// Note, it has limitations, e.g. ~someuser/tmp will not be expanded
+func expandPath(p string) (string, error) {
+	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
+		if home := homeDir(); home != "" {
+			p = home + p[1:]
+		}
+	}
+	return filepath.Abs(path.Clean(os.ExpandEnv(p)))
+}
+
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
 }
