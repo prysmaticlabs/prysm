@@ -30,7 +30,7 @@ type InputDepositWrapper struct {
 
 // InputVoluntaryExitWrapper for fuzz testing voluntary exits.
 type InputVoluntaryExitWrapper struct {
-	StateID       uint16
+	StateID       uint64
 	VoluntaryExit *ethpb.VoluntaryExit
 }
 
