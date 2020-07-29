@@ -41,4 +41,6 @@ type Getter interface {
 	Node([32]byte) *protoarray.Node
 	HasNode([32]byte) bool
 	Store() *protoarray.Store
+	HasParent(root [32]byte) bool
+	AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error)
 }

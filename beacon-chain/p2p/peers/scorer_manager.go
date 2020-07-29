@@ -30,7 +30,6 @@ func newPeerScorerManager(ctx context.Context, store *peerDataStore, config *Pee
 		ctx:   ctx,
 		store: store,
 	}
-
 	mgr.scorers.badResponsesScorer = newBadResponsesScorer(ctx, store, config.BadResponsesScorerConfig)
 	mgr.scorers.blockProviderScorer = newBlockProviderScorer(ctx, store, config.BlockProviderScorerConfig)
 	go mgr.loop(mgr.ctx)

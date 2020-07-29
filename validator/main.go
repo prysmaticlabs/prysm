@@ -72,7 +72,7 @@ var appFlags = []cli.Flag{
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
 	flags.WalletPasswordsDirFlag,
-	flags.PasswordFileFlag,
+	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,

@@ -127,10 +127,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Derived,
-		passwordFile:   passwordFilePath,
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     v2keymanager.Derived,
+		walletPasswordFile: passwordFilePath,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
 	require.NoError(t, err)
