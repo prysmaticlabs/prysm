@@ -102,7 +102,10 @@ require (
 	github.com/wealdtech/go-eth2-util v1.5.0
 	github.com/wealdtech/go-eth2-wallet v1.12.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0
+	github.com/wealdtech/go-eth2-wallet-hd/v2 v2.3.0
+	github.com/wealdtech/go-eth2-wallet-nd/v2 v2.3.0
 	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.16.1
+	github.com/wealdtech/go-eth2-wallet-types v1.10.0 // indirect
 	github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4
