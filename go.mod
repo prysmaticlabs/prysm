@@ -88,7 +88,6 @@ require (
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
-	github.com/prysmaticlabs/remote-signer v0.0.0-20200723184756-81297a4d8d23 // indirect
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
