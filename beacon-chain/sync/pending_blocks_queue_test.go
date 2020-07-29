@@ -127,16 +127,24 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	require.NoError(t, err)
 
 	// Incomplete block links
-	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ParentRoot = b1Root[:]
 	b2Root, err := b2.HashTreeRoot()
 	require.NoError(t, err)
-	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
+	b5 := testutil.NewBeaconBlock()
+	b5.Block.Slot = 5
+	b5.Block.ParentRoot = b2Root[:]
 	b5Root, err := b5.HashTreeRoot()
 	require.NoError(t, err)
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 3
+	b3.Block.ParentRoot = b0Root[:]
 	b3Root, err := b3.HashTreeRoot()
 	require.NoError(t, err)
-	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
+	b4 := testutil.NewBeaconBlock()
+	b4.Block.Slot = 4
+	b4.Block.ParentRoot = b3Root[:]
 	b4Root, err := b4.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -201,16 +209,24 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	require.NoError(t, err)
 
 	// Incomplete block links
-	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ParentRoot = b1Root[:]
 	b2Root, err := b2.HashTreeRoot()
 	require.NoError(t, err)
-	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
+	b5 := testutil.NewBeaconBlock()
+	b5.Block.Slot = 5
+	b5.Block.ParentRoot = b2Root[:]
 	b5Root, err := b5.HashTreeRoot()
 	require.NoError(t, err)
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 3
+	b3.Block.ParentRoot = b0Root[:]
 	b3Root, err := b3.HashTreeRoot()
 	require.NoError(t, err)
-	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
+	b4 := testutil.NewBeaconBlock()
+	b4.Block.Slot = 4
+	b4.Block.ParentRoot = b3Root[:]
 	b4Root, err := b4.HashTreeRoot()
 	require.NoError(t, err)
 
