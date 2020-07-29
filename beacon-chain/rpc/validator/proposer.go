@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"reflect"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -38,6 +39,16 @@ var eth1DataNotification bool
 
 const eth1dataTimeout = 2 * time.Second
 
+type eth1DataSingleVote struct {
+	eth1Data    ethpb.Eth1Data
+	blockHeight *big.Int
+}
+
+type eth1DataAggregatedVote struct {
+	data  eth1DataSingleVote
+	votes int
+}
+
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
@@ -54,7 +65,13 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 	}
-	eth1Data, err := vs.eth1Data(ctx, req.Slot)
+
+	var eth1Data *ethpb.Eth1Data
+	if featureconfig.Get().EnableEth1DataMajorityVote {
+		eth1Data, err = vs.eth1DataMajorityVote(ctx, req.Slot)
+	} else {
+		eth1Data, err = vs.eth1Data(ctx, req.Slot)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
@@ -170,14 +187,12 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
 	}
-
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return vs.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
 
-	eth1VotingPeriodStartTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	eth1VotingPeriodStartTime += (slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) * params.BeaconConfig().SecondsPerSlot
+	eth1VotingPeriodStartTime := vs.slotStartTime(slot)
 
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
@@ -192,6 +207,143 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	}
 
 	return eth1Data, nil
+}
+
+// eth1DataMajorityVote determines the appropriate eth1data for a block proposal using an extended
+// simple voting algorithm - voting with the majority. The algorithm for this method is as follows:
+//  - Determine the timestamp for the start slot for the current eth1 voting period.
+//  - Determine the timestamp for the start slot for the previous eth1 voting period.
+//  - Determine the most recent eth1 block before each timestamp.
+//  - Subtract the current period's eth1block.number by ETH1_FOLLOW_DISTANCE to determine the voting upper bound.
+//  - Subtract the previous period's eth1block.number by ETH1_FOLLOW_DISTANCE to determine the voting lower bound.
+//  - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
+//  - If no blocks are left after filtering, use the current period's most recent eth1 block for proposal.
+//  - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
+//  - This vote's block is the eth1block to use for the block proposal.
+func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
+	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
+	defer cancel()
+
+	if vs.MockEth1Votes {
+		return vs.mockETH1DataVote(ctx, slot)
+	}
+	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+		return vs.randomETH1DataVote(ctx)
+	}
+	eth1DataNotification = false
+
+	slotsPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	currentPeriodVotingStartTime := vs.slotStartTime(slot)
+	// Can't use slotStartTime function because slot would be negative in the initial voting period.
+	previousPeriodVotingStartTime := currentPeriodVotingStartTime -
+		slotsPerVotingPeriod*params.BeaconConfig().SecondsPerSlot
+
+	currentPeriodBlockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, currentPeriodVotingStartTime)
+	if err != nil {
+		log.WithError(err).Error("Failed to get block number for current voting period")
+		return vs.randomETH1DataVote(ctx)
+	}
+	previousPeriodBlockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, previousPeriodVotingStartTime)
+	if err != nil {
+		log.WithError(err).Error("Failed to get block number for previous voting period")
+		return vs.randomETH1DataVote(ctx)
+	}
+
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	if len(headState.Eth1DataVotes()) == 0 {
+		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
+		if err != nil {
+			log.WithError(err).Error("Failed to get eth1 data from current period block number")
+			return vs.randomETH1DataVote(ctx)
+		}
+		return eth1Data, nil
+	}
+
+	inRangeVotes, err := vs.inRangeVotes(ctx, currentPeriodBlockNumber, previousPeriodBlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	if len(inRangeVotes) == 0 {
+		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
+		if err != nil {
+			log.WithError(err).Error("Failed to get eth1 data from current period block number")
+			return vs.randomETH1DataVote(ctx)
+		}
+		return eth1Data, nil
+	}
+
+	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
+	return &chosenVote.data.eth1Data, nil
+}
+
+func (vs *Server) slotStartTime(slot uint64) uint64 {
+	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+	startTime +=
+		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
+			params.BeaconConfig().SecondsPerSlot
+	return startTime
+}
+
+func (vs *Server) inRangeVotes(
+	ctx context.Context,
+	currentPeriodBlockNumber *big.Int,
+	previousPeriodBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
+
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
+	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
+	var inRangeVotes []eth1DataSingleVote
+	for _, eth1Data := range headState.Eth1DataVotes() {
+		ok, height, err := vs.BlockFetcher.BlockExists(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
+		if err != nil {
+			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
+		}
+		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
+			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
+		}
+	}
+
+	return inRangeVotes, nil
+}
+
+func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
+	var voteCount []eth1DataAggregatedVote
+	for _, singleVote := range votes {
+		newVote := true
+		for i, aggregatedVote := range voteCount {
+			aggregatedData := aggregatedVote.data
+			if reflect.DeepEqual(singleVote.eth1Data, aggregatedData.eth1Data) {
+				voteCount[i].votes++
+				newVote = false
+				break
+			}
+		}
+
+		if newVote {
+			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
+		}
+	}
+
+	currentVote := voteCount[0]
+	for _, aggregatedVote := range voteCount[1:] {
+		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
+		if aggregatedVote.votes > currentVote.votes ||
+			(aggregatedVote.votes == currentVote.votes &&
+				aggregatedVote.data.blockHeight.Cmp(currentVote.data.blockHeight) == 1) {
+			currentVote = aggregatedVote
+		}
+	}
+
+	return currentVote
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
@@ -329,7 +481,11 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 }
 
 // canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
-func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.BeaconState, currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
+func (vs *Server) canonicalEth1Data(
+	ctx context.Context,
+	beaconState *stateTrie.BeaconState,
+	currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
+
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally

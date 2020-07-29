@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "prompt.go",
+        "validate.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/promptutil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_logrusorgru_aurora//:go_default_library",
+        "@com_github_nbutton23_zxcvbn_go//:go_default_library",
+        "@org_golang_x_crypto//ssh/terminal:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["validate_test.go"],
+    embed = [":go_default_library"],
+)
