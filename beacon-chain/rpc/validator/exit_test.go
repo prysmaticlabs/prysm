@@ -64,11 +64,8 @@ func TestSub(t *testing.T) {
 			ValidatorIndex: validatorIndex,
 		},
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
+	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
-	sigRoot, err := helpers.ComputeSigningRoot(req.Exit, domain)
-	require.NoError(t, err, "Could not compute signing root")
-	req.Signature = keys[0].Sign(sigRoot[:]).Marshal()
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
