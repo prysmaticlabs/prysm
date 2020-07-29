@@ -6,6 +6,519 @@ import (
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
+// MarshalSSZ ssz marshals the Status object
+func (s *Status) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(s)
+}
+
+// MarshalSSZTo ssz marshals the Status object to a target array
+func (s *Status) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'ForkDigest'
+	if len(s.ForkDigest) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, s.ForkDigest...)
+
+	// Field (1) 'FinalizedRoot'
+	if len(s.FinalizedRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, s.FinalizedRoot...)
+
+	// Field (2) 'FinalizedEpoch'
+	dst = ssz.MarshalUint64(dst, s.FinalizedEpoch)
+
+	// Field (3) 'HeadRoot'
+	if len(s.HeadRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, s.HeadRoot...)
+
+	// Field (4) 'HeadSlot'
+	dst = ssz.MarshalUint64(dst, s.HeadSlot)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the Status object
+func (s *Status) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 84 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'ForkDigest'
+	s.ForkDigest = append(s.ForkDigest, buf[0:4]...)
+
+	// Field (1) 'FinalizedRoot'
+	s.FinalizedRoot = append(s.FinalizedRoot, buf[4:36]...)
+
+	// Field (2) 'FinalizedEpoch'
+	s.FinalizedEpoch = ssz.UnmarshallUint64(buf[36:44])
+
+	// Field (3) 'HeadRoot'
+	s.HeadRoot = append(s.HeadRoot, buf[44:76]...)
+
+	// Field (4) 'HeadSlot'
+	s.HeadSlot = ssz.UnmarshallUint64(buf[76:84])
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the Status object
+func (s *Status) SizeSSZ() (size int) {
+	size = 84
+	return
+}
+
+// HashTreeRoot ssz hashes the Status object
+func (s *Status) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(s)
+}
+
+// HashTreeRootWith ssz hashes the Status object with a hasher
+func (s *Status) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'ForkDigest'
+	if len(s.ForkDigest) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(s.ForkDigest)
+
+	// Field (1) 'FinalizedRoot'
+	if len(s.FinalizedRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(s.FinalizedRoot)
+
+	// Field (2) 'FinalizedEpoch'
+	hh.PutUint64(s.FinalizedEpoch)
+
+	// Field (3) 'HeadRoot'
+	if len(s.HeadRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(s.HeadRoot)
+
+	// Field (4) 'HeadSlot'
+	hh.PutUint64(s.HeadSlot)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the BeaconBlocksByRangeRequest object
+func (b *BeaconBlocksByRangeRequest) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(b)
+}
+
+// MarshalSSZTo ssz marshals the BeaconBlocksByRangeRequest object to a target array
+func (b *BeaconBlocksByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'StartSlot'
+	dst = ssz.MarshalUint64(dst, b.StartSlot)
+
+	// Field (1) 'Count'
+	dst = ssz.MarshalUint64(dst, b.Count)
+
+	// Field (2) 'Step'
+	dst = ssz.MarshalUint64(dst, b.Step)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the BeaconBlocksByRangeRequest object
+func (b *BeaconBlocksByRangeRequest) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 24 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'StartSlot'
+	b.StartSlot = ssz.UnmarshallUint64(buf[0:8])
+
+	// Field (1) 'Count'
+	b.Count = ssz.UnmarshallUint64(buf[8:16])
+
+	// Field (2) 'Step'
+	b.Step = ssz.UnmarshallUint64(buf[16:24])
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlocksByRangeRequest object
+func (b *BeaconBlocksByRangeRequest) SizeSSZ() (size int) {
+	size = 24
+	return
+}
+
+// HashTreeRoot ssz hashes the BeaconBlocksByRangeRequest object
+func (b *BeaconBlocksByRangeRequest) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(b)
+}
+
+// HashTreeRootWith ssz hashes the BeaconBlocksByRangeRequest object with a hasher
+func (b *BeaconBlocksByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'StartSlot'
+	hh.PutUint64(b.StartSlot)
+
+	// Field (1) 'Count'
+	hh.PutUint64(b.Count)
+
+	// Field (2) 'Step'
+	hh.PutUint64(b.Step)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the BeaconBlocksByRootRequest object
+func (b *BeaconBlocksByRootRequest) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(b)
+}
+
+// MarshalSSZTo ssz marshals the BeaconBlocksByRootRequest object to a target array
+func (b *BeaconBlocksByRootRequest) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+	offset := int(4)
+
+	// Offset (0) 'BlockRoots'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(b.BlockRoots) * 32
+
+	// Field (0) 'BlockRoots'
+	if len(b.BlockRoots) > 1024 {
+		err = ssz.ErrListTooBig
+		return
+	}
+	for ii := 0; ii < len(b.BlockRoots); ii++ {
+		if len(b.BlockRoots[ii]) != 32 {
+			err = ssz.ErrBytesLength
+			return
+		}
+		dst = append(dst, b.BlockRoots[ii]...)
+	}
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the BeaconBlocksByRootRequest object
+func (b *BeaconBlocksByRootRequest) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return ssz.ErrSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'BlockRoots'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return ssz.ErrOffset
+	}
+
+	// Field (0) 'BlockRoots'
+	{
+		buf = tail[o0:]
+		num, err := ssz.DivideInt2(len(buf), 32, 1024)
+		if err != nil {
+			return err
+		}
+		b.BlockRoots = make([][]byte, num)
+		for ii := 0; ii < num; ii++ {
+			b.BlockRoots[ii] = append(b.BlockRoots[ii], buf[ii*32:(ii+1)*32]...)
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlocksByRootRequest object
+func (b *BeaconBlocksByRootRequest) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'BlockRoots'
+	size += len(b.BlockRoots) * 32
+
+	return
+}
+
+// HashTreeRoot ssz hashes the BeaconBlocksByRootRequest object
+func (b *BeaconBlocksByRootRequest) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(b)
+}
+
+// HashTreeRootWith ssz hashes the BeaconBlocksByRootRequest object with a hasher
+func (b *BeaconBlocksByRootRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'BlockRoots'
+	{
+		if len(b.BlockRoots) > 1024 {
+			err = ssz.ErrListTooBig
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range b.BlockRoots {
+			if len(i) != 32 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.Append(i)
+		}
+		numItems := uint64(len(b.BlockRoots))
+		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(1024, numItems, 32))
+	}
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the ErrorResponse object
+func (e *ErrorResponse) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(e)
+}
+
+// MarshalSSZTo ssz marshals the ErrorResponse object to a target array
+func (e *ErrorResponse) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+	offset := int(4)
+
+	// Offset (0) 'Message'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(e.Message)
+
+	// Field (0) 'Message'
+	if len(e.Message) != 0 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.Message...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the ErrorResponse object
+func (e *ErrorResponse) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 4 {
+		return ssz.ErrSize
+	}
+
+	tail := buf
+	var o0 uint64
+
+	// Offset (0) 'Message'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return ssz.ErrOffset
+	}
+
+	// Field (0) 'Message'
+	{
+		buf = tail[o0:]
+		e.Message = append(e.Message, buf...)
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the ErrorResponse object
+func (e *ErrorResponse) SizeSSZ() (size int) {
+	size = 4
+
+	// Field (0) 'Message'
+	size += len(e.Message)
+
+	return
+}
+
+// HashTreeRoot ssz hashes the ErrorResponse object
+func (e *ErrorResponse) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(e)
+}
+
+// HashTreeRootWith ssz hashes the ErrorResponse object with a hasher
+func (e *ErrorResponse) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'Message'
+	if len(e.Message) != 0 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.Message)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the ENRForkID object
+func (e *ENRForkID) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(e)
+}
+
+// MarshalSSZTo ssz marshals the ENRForkID object to a target array
+func (e *ENRForkID) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'CurrentForkDigest'
+	if len(e.CurrentForkDigest) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.CurrentForkDigest...)
+
+	// Field (1) 'NextForkVersion'
+	if len(e.NextForkVersion) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.NextForkVersion...)
+
+	// Field (2) 'NextForkEpoch'
+	dst = ssz.MarshalUint64(dst, e.NextForkEpoch)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the ENRForkID object
+func (e *ENRForkID) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 16 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'CurrentForkDigest'
+	e.CurrentForkDigest = append(e.CurrentForkDigest, buf[0:4]...)
+
+	// Field (1) 'NextForkVersion'
+	e.NextForkVersion = append(e.NextForkVersion, buf[4:8]...)
+
+	// Field (2) 'NextForkEpoch'
+	e.NextForkEpoch = ssz.UnmarshallUint64(buf[8:16])
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the ENRForkID object
+func (e *ENRForkID) SizeSSZ() (size int) {
+	size = 16
+	return
+}
+
+// HashTreeRoot ssz hashes the ENRForkID object
+func (e *ENRForkID) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(e)
+}
+
+// HashTreeRootWith ssz hashes the ENRForkID object with a hasher
+func (e *ENRForkID) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'CurrentForkDigest'
+	if len(e.CurrentForkDigest) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.CurrentForkDigest)
+
+	// Field (1) 'NextForkVersion'
+	if len(e.NextForkVersion) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.NextForkVersion)
+
+	// Field (2) 'NextForkEpoch'
+	hh.PutUint64(e.NextForkEpoch)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the MetaData object
+func (m *MetaData) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(m)
+}
+
+// MarshalSSZTo ssz marshals the MetaData object to a target array
+func (m *MetaData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'SeqNumber'
+	dst = ssz.MarshalUint64(dst, m.SeqNumber)
+
+	// Field (1) 'Attnets'
+	if len(m.Attnets) != 8 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, m.Attnets...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the MetaData object
+func (m *MetaData) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 16 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'SeqNumber'
+	m.SeqNumber = ssz.UnmarshallUint64(buf[0:8])
+
+	// Field (1) 'Attnets'
+	m.Attnets = append(m.Attnets, buf[8:16]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the MetaData object
+func (m *MetaData) SizeSSZ() (size int) {
+	size = 16
+	return
+}
+
+// HashTreeRoot ssz hashes the MetaData object
+func (m *MetaData) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(m)
+}
+
+// HashTreeRootWith ssz hashes the MetaData object with a hasher
+func (m *MetaData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'SeqNumber'
+	hh.PutUint64(m.SeqNumber)
+
+	// Field (1) 'Attnets'
+	if len(m.Attnets) != 8 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(m.Attnets)
+
+	hh.Merkleize(indx)
+	return
+}
+
 // MarshalSSZ ssz marshals the BeaconState object
 func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
@@ -1133,514 +1646,179 @@ func (s *SigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the Status object
-func (s *Status) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the ForkData object
+func (f *ForkData) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(f)
+}
+
+// MarshalSSZTo ssz marshals the ForkData object to a target array
+func (f *ForkData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'CurrentVersion'
+	if len(f.CurrentVersion) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, f.CurrentVersion...)
+
+	// Field (1) 'GenesisValidatorsRoot'
+	if len(f.GenesisValidatorsRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, f.GenesisValidatorsRoot...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the ForkData object
+func (f *ForkData) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 36 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'CurrentVersion'
+	f.CurrentVersion = append(f.CurrentVersion, buf[0:4]...)
+
+	// Field (1) 'GenesisValidatorsRoot'
+	f.GenesisValidatorsRoot = append(f.GenesisValidatorsRoot, buf[4:36]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the ForkData object
+func (f *ForkData) SizeSSZ() (size int) {
+	size = 36
+	return
+}
+
+// HashTreeRoot ssz hashes the ForkData object
+func (f *ForkData) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(f)
+}
+
+// HashTreeRootWith ssz hashes the ForkData object with a hasher
+func (f *ForkData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'CurrentVersion'
+	if len(f.CurrentVersion) != 4 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(f.CurrentVersion)
+
+	// Field (1) 'GenesisValidatorsRoot'
+	if len(f.GenesisValidatorsRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(f.GenesisValidatorsRoot)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the SignedAggregateAndProof object
+func (s *SignedAggregateAndProof) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
 }
 
-// MarshalSSZTo ssz marshals the Status object to a target array
-func (s *Status) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the SignedAggregateAndProof object to a target array
+func (s *SignedAggregateAndProof) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
+	offset := int(100)
 
-	// Field (0) 'ForkDigest'
-	if len(s.ForkDigest) != 4 {
+	// Offset (0) 'Message'
+	dst = ssz.WriteOffset(dst, offset)
+	if s.Message == nil {
+		s.Message = new(v1alpha1.AggregateAttestationAndProof)
+	}
+	offset += s.Message.SizeSSZ()
+
+	// Field (1) 'Signature'
+	if len(s.Signature) != 96 {
 		err = ssz.ErrBytesLength
 		return
 	}
-	dst = append(dst, s.ForkDigest...)
+	dst = append(dst, s.Signature...)
 
-	// Field (1) 'FinalizedRoot'
-	if len(s.FinalizedRoot) != 32 {
-		err = ssz.ErrBytesLength
+	// Field (0) 'Message'
+	if dst, err = s.Message.MarshalSSZTo(dst); err != nil {
 		return
 	}
-	dst = append(dst, s.FinalizedRoot...)
-
-	// Field (2) 'FinalizedEpoch'
-	dst = ssz.MarshalUint64(dst, s.FinalizedEpoch)
-
-	// Field (3) 'HeadRoot'
-	if len(s.HeadRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, s.HeadRoot...)
-
-	// Field (4) 'HeadSlot'
-	dst = ssz.MarshalUint64(dst, s.HeadSlot)
 
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the Status object
-func (s *Status) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the SignedAggregateAndProof object
+func (s *SignedAggregateAndProof) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 84 {
+	if size < 100 {
 		return ssz.ErrSize
 	}
 
-	// Field (0) 'ForkDigest'
-	s.ForkDigest = append(s.ForkDigest, buf[0:4]...)
+	tail := buf
+	var o0 uint64
 
-	// Field (1) 'FinalizedRoot'
-	s.FinalizedRoot = append(s.FinalizedRoot, buf[4:36]...)
+	// Offset (0) 'Message'
+	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
+		return ssz.ErrOffset
+	}
 
-	// Field (2) 'FinalizedEpoch'
-	s.FinalizedEpoch = ssz.UnmarshallUint64(buf[36:44])
+	// Field (1) 'Signature'
+	s.Signature = append(s.Signature, buf[4:100]...)
 
-	// Field (3) 'HeadRoot'
-	s.HeadRoot = append(s.HeadRoot, buf[44:76]...)
-
-	// Field (4) 'HeadSlot'
-	s.HeadSlot = ssz.UnmarshallUint64(buf[76:84])
-
+	// Field (0) 'Message'
+	{
+		buf = tail[o0:]
+		if s.Message == nil {
+			s.Message = new(v1alpha1.AggregateAttestationAndProof)
+		}
+		if err = s.Message.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+	}
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Status object
-func (s *Status) SizeSSZ() (size int) {
-	size = 84
+// SizeSSZ returns the ssz encoded size in bytes for the SignedAggregateAndProof object
+func (s *SignedAggregateAndProof) SizeSSZ() (size int) {
+	size = 100
+
+	// Field (0) 'Message'
+	if s.Message == nil {
+		s.Message = new(v1alpha1.AggregateAttestationAndProof)
+	}
+	size += s.Message.SizeSSZ()
+
 	return
 }
 
-// HashTreeRoot ssz hashes the Status object
-func (s *Status) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the SignedAggregateAndProof object
+func (s *SignedAggregateAndProof) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
-// HashTreeRootWith ssz hashes the Status object with a hasher
-func (s *Status) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'ForkDigest'
-	if len(s.ForkDigest) != 4 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(s.ForkDigest)
-
-	// Field (1) 'FinalizedRoot'
-	if len(s.FinalizedRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(s.FinalizedRoot)
-
-	// Field (2) 'FinalizedEpoch'
-	hh.PutUint64(s.FinalizedEpoch)
-
-	// Field (3) 'HeadRoot'
-	if len(s.HeadRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(s.HeadRoot)
-
-	// Field (4) 'HeadSlot'
-	hh.PutUint64(s.HeadSlot)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the BeaconBlocksByRangeRequest object
-func (b *BeaconBlocksByRangeRequest) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(b)
-}
-
-// MarshalSSZTo ssz marshals the BeaconBlocksByRangeRequest object to a target array
-func (b *BeaconBlocksByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'StartSlot'
-	dst = ssz.MarshalUint64(dst, b.StartSlot)
-
-	// Field (1) 'Count'
-	dst = ssz.MarshalUint64(dst, b.Count)
-
-	// Field (2) 'Step'
-	dst = ssz.MarshalUint64(dst, b.Step)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the BeaconBlocksByRangeRequest object
-func (b *BeaconBlocksByRangeRequest) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 24 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'StartSlot'
-	b.StartSlot = ssz.UnmarshallUint64(buf[0:8])
-
-	// Field (1) 'Count'
-	b.Count = ssz.UnmarshallUint64(buf[8:16])
-
-	// Field (2) 'Step'
-	b.Step = ssz.UnmarshallUint64(buf[16:24])
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlocksByRangeRequest object
-func (b *BeaconBlocksByRangeRequest) SizeSSZ() (size int) {
-	size = 24
-	return
-}
-
-// HashTreeRoot ssz hashes the BeaconBlocksByRangeRequest object
-func (b *BeaconBlocksByRangeRequest) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(b)
-}
-
-// HashTreeRootWith ssz hashes the BeaconBlocksByRangeRequest object with a hasher
-func (b *BeaconBlocksByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'StartSlot'
-	hh.PutUint64(b.StartSlot)
-
-	// Field (1) 'Count'
-	hh.PutUint64(b.Count)
-
-	// Field (2) 'Step'
-	hh.PutUint64(b.Step)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the BeaconBlocksByRootRequest object
-func (b *BeaconBlocksByRootRequest) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(b)
-}
-
-// MarshalSSZTo ssz marshals the BeaconBlocksByRootRequest object to a target array
-func (b *BeaconBlocksByRootRequest) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-	offset := int(4)
-
-	// Offset (0) 'BlockRoots'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.BlockRoots) * 32
-
-	// Field (0) 'BlockRoots'
-	if len(b.BlockRoots) > 1024 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.BlockRoots); ii++ {
-		if len(b.BlockRoots[ii]) != 32 {
-			err = ssz.ErrBytesLength
-			return
-		}
-		dst = append(dst, b.BlockRoots[ii]...)
-	}
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the BeaconBlocksByRootRequest object
-func (b *BeaconBlocksByRootRequest) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return ssz.ErrSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'BlockRoots'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return ssz.ErrOffset
-	}
-
-	// Field (0) 'BlockRoots'
-	{
-		buf = tail[o0:]
-		num, err := ssz.DivideInt2(len(buf), 32, 1024)
-		if err != nil {
-			return err
-		}
-		b.BlockRoots = make([][]byte, num)
-		for ii := 0; ii < num; ii++ {
-			b.BlockRoots[ii] = append(b.BlockRoots[ii], buf[ii*32:(ii+1)*32]...)
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlocksByRootRequest object
-func (b *BeaconBlocksByRootRequest) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'BlockRoots'
-	size += len(b.BlockRoots) * 32
-
-	return
-}
-
-// HashTreeRoot ssz hashes the BeaconBlocksByRootRequest object
-func (b *BeaconBlocksByRootRequest) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(b)
-}
-
-// HashTreeRootWith ssz hashes the BeaconBlocksByRootRequest object with a hasher
-func (b *BeaconBlocksByRootRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'BlockRoots'
-	{
-		if len(b.BlockRoots) > 1024 {
-			err = ssz.ErrListTooBig
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.BlockRoots {
-			if len(i) != 32 {
-				err = ssz.ErrBytesLength
-				return
-			}
-			hh.Append(i)
-		}
-		numItems := uint64(len(b.BlockRoots))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(1024, numItems, 32))
-	}
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the ErrorResponse object
-func (e *ErrorResponse) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(e)
-}
-
-// MarshalSSZTo ssz marshals the ErrorResponse object to a target array
-func (e *ErrorResponse) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-	offset := int(4)
-
-	// Offset (0) 'Message'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(e.Message)
-
-	// Field (0) 'Message'
-	if len(e.Message) != 0 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, e.Message...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the ErrorResponse object
-func (e *ErrorResponse) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 4 {
-		return ssz.ErrSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Message'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return ssz.ErrOffset
-	}
-
-	// Field (0) 'Message'
-	{
-		buf = tail[o0:]
-		e.Message = append(e.Message, buf...)
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the ErrorResponse object
-func (e *ErrorResponse) SizeSSZ() (size int) {
-	size = 4
-
-	// Field (0) 'Message'
-	size += len(e.Message)
-
-	return
-}
-
-// HashTreeRoot ssz hashes the ErrorResponse object
-func (e *ErrorResponse) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(e)
-}
-
-// HashTreeRootWith ssz hashes the ErrorResponse object with a hasher
-func (e *ErrorResponse) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the SignedAggregateAndProof object with a hasher
+func (s *SignedAggregateAndProof) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Message'
-	if len(e.Message) != 0 {
+	if err = s.Message.HashTreeRootWith(hh); err != nil {
+		return
+	}
+
+	// Field (1) 'Signature'
+	if len(s.Signature) != 96 {
 		err = ssz.ErrBytesLength
 		return
 	}
-	hh.PutBytes(e.Message)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the ENRForkID object
-func (e *ENRForkID) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(e)
-}
-
-// MarshalSSZTo ssz marshals the ENRForkID object to a target array
-func (e *ENRForkID) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'CurrentForkDigest'
-	if len(e.CurrentForkDigest) != 4 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, e.CurrentForkDigest...)
-
-	// Field (1) 'NextForkVersion'
-	if len(e.NextForkVersion) != 4 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, e.NextForkVersion...)
-
-	// Field (2) 'NextForkEpoch'
-	dst = ssz.MarshalUint64(dst, e.NextForkEpoch)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the ENRForkID object
-func (e *ENRForkID) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 16 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'CurrentForkDigest'
-	e.CurrentForkDigest = append(e.CurrentForkDigest, buf[0:4]...)
-
-	// Field (1) 'NextForkVersion'
-	e.NextForkVersion = append(e.NextForkVersion, buf[4:8]...)
-
-	// Field (2) 'NextForkEpoch'
-	e.NextForkEpoch = ssz.UnmarshallUint64(buf[8:16])
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the ENRForkID object
-func (e *ENRForkID) SizeSSZ() (size int) {
-	size = 16
-	return
-}
-
-// HashTreeRoot ssz hashes the ENRForkID object
-func (e *ENRForkID) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(e)
-}
-
-// HashTreeRootWith ssz hashes the ENRForkID object with a hasher
-func (e *ENRForkID) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'CurrentForkDigest'
-	if len(e.CurrentForkDigest) != 4 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.CurrentForkDigest)
-
-	// Field (1) 'NextForkVersion'
-	if len(e.NextForkVersion) != 4 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.NextForkVersion)
-
-	// Field (2) 'NextForkEpoch'
-	hh.PutUint64(e.NextForkEpoch)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the MetaData object
-func (m *MetaData) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(m)
-}
-
-// MarshalSSZTo ssz marshals the MetaData object to a target array
-func (m *MetaData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'SeqNumber'
-	dst = ssz.MarshalUint64(dst, m.SeqNumber)
-
-	// Field (1) 'Attnets'
-	if len(m.Attnets) != 8 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, m.Attnets...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the MetaData object
-func (m *MetaData) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 16 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'SeqNumber'
-	m.SeqNumber = ssz.UnmarshallUint64(buf[0:8])
-
-	// Field (1) 'Attnets'
-	m.Attnets = append(m.Attnets, buf[8:16]...)
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the MetaData object
-func (m *MetaData) SizeSSZ() (size int) {
-	size = 16
-	return
-}
-
-// HashTreeRoot ssz hashes the MetaData object
-func (m *MetaData) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(m)
-}
-
-// HashTreeRootWith ssz hashes the MetaData object with a hasher
-func (m *MetaData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'SeqNumber'
-	hh.PutUint64(m.SeqNumber)
-
-	// Field (1) 'Attnets'
-	if len(m.Attnets) != 8 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(m.Attnets)
+	hh.PutBytes(s.Signature)
 
 	hh.Merkleize(indx)
 	return

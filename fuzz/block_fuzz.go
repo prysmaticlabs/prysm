@@ -3,6 +3,7 @@ package fuzz
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"io/ioutil"
 	"os"
 	"path"
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,6 +30,15 @@ const topic = p2p.BlockSubnetTopicFormat
 
 var db1 db.Database
 var ssc *cache.StateSummaryCache
+var dbPath = path.Join(os.TempDir(), "fuzz_beacondb", randomHex(6))
+
+func randomHex(n int) string {
+	bytes := make([]byte, n)
+	if _, err := rand.NewGenerator().Read(bytes); err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(bytes)
+}
 
 func init() {
 	featureconfig.Init(&featureconfig.Flags{SkipBLSVerify: true})
@@ -39,7 +50,7 @@ func init() {
 
 	var err error
 
-	db1, err = db.NewDB(path.Join(os.TempDir(), "fuzz_beacondb"), ssc)
+	db1, err = db.NewDB(dbPath, ssc)
 	if err != nil {
 		panic(err)
 	}
