@@ -46,7 +46,7 @@ func DefaultPrompt(promptText string, defaultValue string) (string, error) {
 	return response, nil
 }
 
-// PromptWithValidate prompts the user for any text and expects it to fulfill a validation function. If nothing is entered
+// DefaultAndValidatePrompt prompts the user for any text and expects it to fulfill a validation function. If nothing is entered
 // the default value is returned.
 func DefaultAndValidatePrompt(promptText string, defaultValue string, validateFunc func(string) error) (string, error) {
 	var responseValid bool
