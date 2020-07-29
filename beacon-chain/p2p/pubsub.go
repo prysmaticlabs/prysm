@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"encoding/base64"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -65,4 +66,11 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
 	h := hashutil.FastSum256(pmsg.Data)
 	return base64.URLEncoding.EncodeToString(h[:])
+}
+
+func setPubSubParameters() {
+	pubsub.GossipSubDlo = 5
+	pubsub.GossipSubHeartbeatInterval = 700 * time.Millisecond
+	pubsub.GossipSubHistoryLength = 6
+	pubsub.GossipSubHistoryGossip = 3
 }
