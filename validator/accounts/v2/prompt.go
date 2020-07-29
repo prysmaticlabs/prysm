@@ -3,6 +3,9 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/user"
+	"path"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -45,48 +48,44 @@ const (
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return filepath.Abs(directory)
-	}
-	dirPath, err := filepath.Abs(directory)
-	if err != nil {
-		return "", errors.Wrap(err, "could not determine absolute path for directory")
+		return filepath.Abs(expandPath(directory))
 	}
 	// Append and log the appropriate directory name depending on the flag used.
 	if flag.Name == flags.WalletDirFlag.Name {
-		ok, err := hasDir(dirPath)
+		ok, err := hasDir(directory)
 		if err != nil {
-			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", dirPath)
+			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 		}
 		if ok {
 			au := aurora.NewAurora(true)
-			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), dirPath)
-			return dirPath, nil
+			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), directory)
+			return directory, nil
 		}
 	} else if flag.Name == flags.WalletPasswordsDirFlag.Name {
-		ok, err := hasDir(dirPath)
+		ok, err := hasDir(directory)
 		if err != nil {
-			return "", errors.Wrapf(err, "could not check if passwords dir %s exists", dirPath)
+			return "", errors.Wrapf(err, "could not check if passwords dir %s exists", directory)
 		}
 		if ok {
 			au := aurora.NewAurora(true)
-			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), dirPath)
-			return dirPath, nil
+			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), directory)
+			return directory, nil
 		}
 	}
 
 	prompt := promptui.Prompt{
 		Label:    promptText,
 		Validate: validateDirectoryPath,
-		Default:  dirPath,
+		Default:  directory,
 	}
 	inputtedDir, err := prompt.Run()
 	if err != nil {
 		return "", fmt.Errorf("could not determine directory: %v", formatPromptError(err))
 	}
 	if inputtedDir == prompt.Default {
-		return dirPath, nil
+		return directory, nil
 	}
-	return filepath.Abs(inputtedDir)
+	return filepath.Abs(expandPath(inputtedDir))
 }
 
 func validateDirectoryPath(input string) error {
@@ -104,7 +103,7 @@ func inputPassword(
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := filepath.Abs(passwordFilePathInput)
+		passwordFilePath, err := filepath.Abs(expandPath(passwordFilePathInput))
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
@@ -156,7 +155,7 @@ func inputPassword(
 func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := filepath.Abs(passwordFilePathInput)
+		passwordFilePath, err := filepath.Abs(expandPath(passwordFilePathInput))
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
@@ -282,15 +281,15 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 			return nil, err
 		}
 	}
-	crtPath, err := filepath.Abs(strings.TrimRight(crt, "\r\n"))
+	crtPath, err := filepath.Abs(expandPath(strings.TrimRight(crt, "\r\n")))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	keyPath, err := filepath.Abs(strings.TrimRight(key, "\r\n"))
+	keyPath, err := filepath.Abs(expandPath(strings.TrimRight(key, "\r\n")))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	caPath, err := filepath.Abs(strings.TrimRight(ca, "\r\n"))
+	caPath, err := filepath.Abs(expandPath(strings.TrimRight(ca, "\r\n")))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
@@ -345,4 +344,28 @@ func isValidUnicode(input string) bool {
 		}
 	}
 	return true
+}
+
+// Expands a file path
+// 1. replace tilde with users home dir
+// 2. expands embedded environment variables
+// 3. cleans the path, e.g. /a/b/../c -> /a/c
+// Note, it has limitations, e.g. ~someuser/tmp will not be expanded
+func expandPath(p string) string {
+	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
+		if home := homeDir(); home != "" {
+			p = home + p[1:]
+		}
+	}
+	return path.Clean(os.ExpandEnv(p))
+}
+
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
 }
