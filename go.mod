@@ -81,13 +81,12 @@ require (
 	github.com/paulbellamy/ratecounter v0.2.0
 	github.com/pborman/uuid v1.2.0
 	github.com/peterh/liner v1.2.0 // indirect
-	github.com/phoreproject/bls v0.0.0-20200525203911-a88a5ae26844 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
 	github.com/prometheus/client_golang v1.6.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20200724235904-8a5e41ba473e
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20200729044127-8027cc96e2c0
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
@@ -102,10 +101,8 @@ require (
 	github.com/wealdtech/go-eth2-util v1.5.0
 	github.com/wealdtech/go-eth2-wallet v1.12.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0
-	github.com/wealdtech/go-eth2-wallet-hd/v2 v2.3.0
 	github.com/wealdtech/go-eth2-wallet-nd/v2 v2.3.0
 	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.16.1
-	github.com/wealdtech/go-eth2-wallet-types v1.10.0 // indirect
 	github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4
