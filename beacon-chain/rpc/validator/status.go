@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -159,11 +160,24 @@ func (vs *Server) validatorStatus(
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp, nonExistentIndex
 		}
-		_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+		deposit, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
 			return resp, nonExistentIndex
 		}
-
+		domain, err := helpers.ComputeDomain(
+			params.BeaconConfig().DomainDeposit,
+			nil, /*forkVersion*/
+			nil, /*genesisValidatorsRoot*/
+		)
+		if err != nil {
+			log.Warn("Could not compute domain")
+			return resp, nonExistentIndex
+		}
+		if err := depositutil.VerifyDepositSignature(deposit.Data, domain); err != nil {
+			resp.Status = ethpb.ValidatorStatus_INVALID
+			log.Warn("Invalid Eth1 deposit")
+			return resp, nonExistentIndex
+		}
 		// Mark a validator as DEPOSITED if their deposit is visible.
 		resp.Status = ethpb.ValidatorStatus_DEPOSITED
 

@@ -97,6 +97,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableAccountMetricsFlag,
 			flags.WalletDirFlag,
 			flags.WalletPasswordsDirFlag,
+			flags.WalletPasswordFileFlag,
 		},
 	},
 	{

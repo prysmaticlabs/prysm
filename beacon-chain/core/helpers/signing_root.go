@@ -75,6 +75,19 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 	return ssz.HashTreeRoot(container)
 }
 
+// ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
+func ComputeDomainVerifySigningRoot(state *state.BeaconState, index uint64, epoch uint64, obj interface{}, domain [4]byte, sig []byte) error {
+	v, err := state.ValidatorAtIndex(index)
+	if err != nil {
+		return err
+	}
+	d, err := Domain(state.Fork(), epoch, domain, state.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	return VerifySigningRoot(obj, v.PublicKey, sig, d)
+}
+
 // VerifySigningRoot verifies the signing root of an object given it's public key, signature and domain.
 func VerifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
