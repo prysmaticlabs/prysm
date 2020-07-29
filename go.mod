@@ -6,6 +6,7 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.0
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
+	github.com/aws/aws-sdk-go v1.33.15 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd v0.20.1-beta
@@ -22,7 +23,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
+	github.com/ferranbt/fastssz v0.0.0-20200728110133-0b6e349af87a
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -39,7 +40,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/herumi/bls-eth-go-binary v0.0.0-20200706085701-832d8c2c0f7d
+	github.com/herumi/bls-eth-go-binary v0.0.0-20200722032157-41fc56eba7b4
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-cid v0.0.6 // indirect
@@ -80,6 +81,7 @@ require (
 	github.com/paulbellamy/ratecounter v0.2.0
 	github.com/pborman/uuid v1.2.0
 	github.com/peterh/liner v1.2.0 // indirect
+	github.com/phoreproject/bls v0.0.0-20200525203911-a88a5ae26844 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
 	github.com/prometheus/client_golang v1.6.0
@@ -98,24 +100,24 @@ require (
 	github.com/wealdtech/eth2-signer-api v1.3.0
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.5.0
-	github.com/wealdtech/go-eth2-wallet v1.9.4
+	github.com/wealdtech/go-eth2-wallet v1.12.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0
-	github.com/wealdtech/go-eth2-wallet-nd v1.8.0
-	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.7.3
-	github.com/wealdtech/go-eth2-wallet-types/v2 v2.0.2
+	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.16.1
+	github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4
 	go.opencensus.io v0.22.3
 	go.uber.org/automaxprocs v1.3.0
-	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
+	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/net v0.0.0-20200528225125-3c3fba18258b // indirect
+	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
 	golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e
 	google.golang.org/genproto v0.0.0-20200528191852-705c0b31589b
 	google.golang.org/grpc v1.30.0
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.3
 	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v0.18.3

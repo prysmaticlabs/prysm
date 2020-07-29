@@ -396,3 +396,10 @@ go_repository(
     sum = "h1:nMinx+JaEm/zJz4cEyClQeAw5rsYSB5th3xv+5lV6Vg=",
     version = "v3.3.4",
 )
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet_distributed",
+    importpath = "github.com/wealdtech/go-eth2-wallet-distributed",
+    sum = "h1:OZjjuxcIYo+EhAfph7lYP1z+VeNs9ruOI32kqtYe1Jg=",
+    version = "v1.1.0",
+)
