@@ -8,12 +8,11 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"unicode"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
-	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
@@ -34,21 +33,18 @@ const (
 type passwordConfirm int
 
 const (
-	// Constants for passwords.
-	minPasswordLength = 8
-	// Min password score of 3 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
-	// library for strong-entropy password computation.
-	minPasswordScore = 3
-	// An enum to indicate the prompt that confirming the password is not needed.
+	// An enum to indicate to the prompt that confirming the password is not needed.
 	noConfirmPass passwordConfirm = iota
-	// An enum to indicate the prompt to confirm the password entered.
+	// An enum to indicate to the prompt to confirm the password entered.
 	confirmPass
 )
+
+var au = aurora.NewAurora(true)
 
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return filepath.Abs(expandPath(directory))
+		return expandPath(directory)
 	}
 	// Append and log the appropriate directory name depending on the flag used.
 	if flag.Name == flags.WalletDirFlag.Name {
@@ -57,7 +53,6 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 		}
 		if ok {
-			au := aurora.NewAurora(true)
 			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), directory)
 			return directory, nil
 		}
@@ -67,32 +62,19 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 			return "", errors.Wrapf(err, "could not check if passwords dir %s exists", directory)
 		}
 		if ok {
-			au := aurora.NewAurora(true)
 			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), directory)
 			return directory, nil
 		}
 	}
 
-	prompt := promptui.Prompt{
-		Label:    promptText,
-		Validate: validateDirectoryPath,
-		Default:  directory,
-	}
-	inputtedDir, err := prompt.Run()
+	inputtedDir, err := promptutil.DefaultPrompt(au.Bold(promptText).String(), directory)
 	if err != nil {
-		return "", fmt.Errorf("could not determine directory: %v", formatPromptError(err))
+		return "", err
 	}
-	if inputtedDir == prompt.Default {
+	if inputtedDir == directory {
 		return directory, nil
 	}
-	return filepath.Abs(expandPath(inputtedDir))
-}
-
-func validateDirectoryPath(input string) error {
-	if len(input) == 0 {
-		return errors.New("directory path must not be empty")
-	}
-	return nil
+	return expandPath(inputtedDir)
 }
 
 func inputPassword(
@@ -103,7 +85,7 @@ func inputPassword(
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := filepath.Abs(expandPath(passwordFilePathInput))
+		passwordFilePath, err := expandPath(passwordFilePathInput)
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
@@ -112,7 +94,7 @@ func inputPassword(
 			return "", errors.Wrap(err, "could not read password file")
 		}
 		enteredPassword := strings.TrimRight(string(data), "\r\n")
-		if err := validatePasswordInput(enteredPassword); err != nil {
+		if err := promptutil.ValidatePasswordInput(enteredPassword); err != nil {
 			return "", errors.Wrap(err, "password did not pass validation")
 		}
 		return enteredPassword, nil
@@ -121,41 +103,32 @@ func inputPassword(
 	var walletPassword string
 	var err error
 	for !hasValidPassword {
-		prompt := promptui.Prompt{
-			Label:    promptText,
-			Validate: validatePasswordInput,
-			Mask:     '*',
+		walletPassword, err = promptutil.PasswordPrompt(promptText, promptutil.ValidatePasswordInput)
+		if err != nil {
+			return "", fmt.Errorf("could not read account password: %v", err)
 		}
 
-		walletPassword, err = prompt.Run()
-		if err != nil {
-			return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
-		}
 		if confirmPassword == confirmPass {
-			prompt = promptui.Prompt{
-				Label: confirmPasswordPromptText,
-				Mask:  '*',
-			}
-			confirmPassword, err := prompt.Run()
+			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, promptutil.ValidatePasswordInput)
 			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", formatPromptError(err))
+				return "", fmt.Errorf("could not read password confirmation: %v", err)
 			}
-			if walletPassword != confirmPassword {
+			if walletPassword != passwordConfirmation {
 				log.Error("Passwords do not match")
 				continue
 			}
 			hasValidPassword = true
 		} else {
-			return strings.TrimRight(walletPassword, "\r\n"), nil
+			return walletPassword, nil
 		}
 	}
-	return strings.TrimRight(walletPassword, "\r\n"), nil
+	return walletPassword, nil
 }
 
 func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := filepath.Abs(expandPath(passwordFilePathInput))
+		passwordFilePath, err := expandPath(passwordFilePathInput)
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
@@ -166,64 +139,11 @@ func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 		return strings.TrimRight(string(data), "\r\n"), nil
 	}
 
-	prompt := promptui.Prompt{
-		Label: promptText,
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("password cannot be empty")
-			}
-			if !isValidUnicode(input) {
-				return errors.New("not valid unicode")
-			}
-			return nil
-		},
-		Mask: '*',
-	}
-
-	walletPassword, err := prompt.Run()
+	walletPassword, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
 	if err != nil {
-		return "", fmt.Errorf("could not read account password: %v", formatPromptError(err))
+		return "", fmt.Errorf("could not read account password: %v", err)
 	}
-	return strings.TrimRight(walletPassword, "\r\n"), nil
-}
-
-// Validate a strong password input for new accounts,
-// including a min length, at least 1 number and at least
-// 1 special character.
-func validatePasswordInput(input string) error {
-	var (
-		hasMinLen  = false
-		hasLetter  = false
-		hasNumber  = false
-		hasSpecial = false
-	)
-	if len(input) >= minPasswordLength {
-		hasMinLen = true
-	}
-	for _, char := range input {
-		switch {
-		case !(unicode.IsLetter(char) || unicode.IsNumber(char) || unicode.IsPunct(char) || unicode.IsSymbol(char)):
-			return errors.New("password must only contain alphanumeric characters, punctuation, or symbols")
-		case unicode.IsLetter(char):
-			hasLetter = true
-		case unicode.IsNumber(char):
-			hasNumber = true
-		case unicode.IsPunct(char) || unicode.IsSymbol(char):
-			hasSpecial = true
-		}
-	}
-	if !(hasMinLen && hasLetter && hasNumber && hasSpecial) {
-		return errors.New(
-			"password must have more than 8 characters, at least 1 special character, and 1 number",
-		)
-	}
-	strength := strongPasswords.PasswordStrength(input, nil)
-	if strength.Score < minPasswordScore {
-		return errors.New(
-			"password is too easy to guess, try a stronger password",
-		)
-	}
-	return nil
+	return walletPassword, nil
 }
 
 func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
@@ -234,62 +154,38 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	log.Info("Input desired configuration")
 	var err error
 	if addr == "" {
-		prompt := promptui.Prompt{
-			Label: "Remote gRPC address (such as host.example.com:4000)",
-			Validate: func(input string) error {
-				if input == "" {
-					return errors.New("remote host address cannot be empty")
-				}
-				if !isValidUnicode(input) {
-					return errors.New("not valid unicode")
-				}
-				return nil
-			},
-		}
-		addr, err = prompt.Run()
+		addr, err = promptutil.ValidatePrompt("Remote gRPC address (such as host.example.com:4000)", promptutil.NotEmpty)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if crt == "" {
-		prompt := promptui.Prompt{
-			Label:    "Path to TLS crt (such as /path/to/client.crt)",
-			Validate: validateCertPath,
-		}
-		crt, err = prompt.Run()
+		crt, err = promptutil.ValidatePrompt("Path to TLS crt (such as /path/to/client.crt)", validateCertPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if key == "" {
-		prompt := promptui.Prompt{
-			Label:    "Path to TLS key (such as /path/to/client.key)",
-			Validate: validateCertPath,
-		}
-		key, err = prompt.Run()
+		key, err = promptutil.ValidatePrompt("Path to TLS key (such as /path/to/client.key)", validateCertPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if ca == "" {
-		prompt := promptui.Prompt{
-			Label:    "Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
-			Validate: validateCertPath,
-		}
-		ca, err = prompt.Run()
+		ca, err = promptutil.ValidatePrompt("Path to certificate authority (CA) crt (such as /path/to/ca.crt)", validateCertPath)
 		if err != nil {
 			return nil, err
 		}
 	}
-	crtPath, err := filepath.Abs(expandPath(strings.TrimRight(crt, "\r\n")))
+	crtPath, err := expandPath(strings.TrimRight(crt, "\r\n"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	keyPath, err := filepath.Abs(expandPath(strings.TrimRight(key, "\r\n")))
+	keyPath, err := expandPath(strings.TrimRight(key, "\r\n"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	caPath, err := filepath.Abs(expandPath(strings.TrimRight(ca, "\r\n")))
+	caPath, err := expandPath(strings.TrimRight(ca, "\r\n"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
@@ -299,7 +195,7 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 			ClientKeyPath:  keyPath,
 			CACertPath:     caPath,
 		},
-		RemoteAddr: strings.TrimRight(addr, "\r\n"),
+		RemoteAddr: addr,
 	}
 	fmt.Printf("%s\n", newCfg)
 	return newCfg, nil
@@ -309,7 +205,7 @@ func validateCertPath(input string) error {
 	if input == "" {
 		return errors.New("crt path cannot be empty")
 	}
-	if !isValidUnicode(input) {
+	if !promptutil.IsValidUnicode(input) {
 		return errors.New("not valid unicode")
 	}
 	if !fileExists(input) {
@@ -331,33 +227,18 @@ func formatPromptError(err error) error {
 	}
 }
 
-// Checks if an input string is a valid unicode string comprised of only
-// letters, numbers, punctuation, or symbols.
-func isValidUnicode(input string) bool {
-	for _, char := range input {
-		if !(unicode.IsLetter(char) ||
-			unicode.IsNumber(char) ||
-			unicode.IsPunct(char) ||
-			unicode.IsSymbol(char)) {
-			log.Info(char)
-			return false
-		}
-	}
-	return true
-}
-
 // Expands a file path
 // 1. replace tilde with users home dir
 // 2. expands embedded environment variables
 // 3. cleans the path, e.g. /a/b/../c -> /a/c
 // Note, it has limitations, e.g. ~someuser/tmp will not be expanded
-func expandPath(p string) string {
+func expandPath(p string) (string, error) {
 	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
 		if home := homeDir(); home != "" {
 			p = home + p[1:]
 		}
 	}
-	return path.Clean(os.ExpandEnv(p))
+	return filepath.Abs(path.Clean(os.ExpandEnv(p)))
 }
 
 func homeDir() string {

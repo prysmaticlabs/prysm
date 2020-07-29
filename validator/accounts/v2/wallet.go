@@ -517,7 +517,7 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 // Returns true if a file is not a directory and exists
 // at the specified path.
 func fileExists(filename string) bool {
-	filePath, err := filepath.Abs(expandPath(filename))
+	filePath, err := expandPath(filename)
 	if err != nil {
 		return false
 	}
@@ -530,7 +530,7 @@ func fileExists(filename string) bool {
 
 // Checks if a directory indeed exists at the specified path.
 func hasDir(dirPath string) (bool, error) {
-	fullPath, err := filepath.Abs(expandPath(dirPath))
+	fullPath, err := expandPath(dirPath)
 	if err != nil {
 		return false, err
 	}
