@@ -37,13 +37,13 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 
 	var keystorePath string
 	var processIDs []int
-	var pId int
-	keystorePath, pId = components.StartEth1Node(t)
-	processIDs = append(processIDs, pId)
+	var pID int
+	keystorePath, pID = components.StartEth1Node(t)
+	processIDs = append(processIDs, pID)
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	go components.SendAndMineDeposits(t, keystorePath, validatorNum, 0)
-	pId = components.StartBootnode(t)
-	processIDs = append(processIDs, pId)
+	pID = components.StartBootnode(t)
+	processIDs = append(processIDs, pID)
 
 	go func() {
 		bProcessIDs := components.StartBeaconNodes(t, config)
