@@ -494,7 +494,6 @@ func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames [
 			progressbar.OptionFullWidth(),
 			progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
 			progressbar.OptionEnableColorCodes(true),
-			progressbar.OptionShowBytes(true),
 			progressbar.OptionSetTheme(progressbar.Theme{
 				Saucer:        "[green]=[reset]",
 				SaucerHead:    "[green]>[reset]",
