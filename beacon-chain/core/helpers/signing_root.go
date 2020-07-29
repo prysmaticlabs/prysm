@@ -36,11 +36,10 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 //        domain=domain,
 //    ))
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
-	if v, ok := object.(fssz.HashRoot); ok {
-		return v.HashTreeRoot()
-	}
-
 	return signingData(func() ([32]byte, error) {
+		if v, ok := object.(fssz.HashRoot); ok {
+			return v.HashTreeRoot()
+		}
 		switch object.(type) {
 		case *ethpb.BeaconBlock:
 			return stateutil.BlockRoot(object.(*ethpb.BeaconBlock))
