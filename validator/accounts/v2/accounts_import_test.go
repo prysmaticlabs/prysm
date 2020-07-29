@@ -82,7 +82,7 @@ func TestImport_Noninteractive(t *testing.T) {
 func createKeystore(t *testing.T, path string) {
 	validatingKey := bls.RandKey()
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
