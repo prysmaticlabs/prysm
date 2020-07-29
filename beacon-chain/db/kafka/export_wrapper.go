@@ -6,12 +6,14 @@ import (
 	"bytes"
 	"context"
 
+	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
@@ -54,7 +56,13 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 		return err
 	}
 
-	key, err := msg.HashTreeRoot()
+	var key [32]byte
+	var err error
+	if v, ok := msg.(fssz.HashRoot); ok {
+		key, err = v.HashTreeRoot()
+	} else {
+		key, err = ssz.HashTreeRoot(msg)
+	}
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
