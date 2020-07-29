@@ -18,19 +18,16 @@ import (
 )
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, config *types.E2EConfig) []int {
-	var processIDs []int
+func StartBeaconNodes(t *testing.T, config *types.E2EConfig) {
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		go func(index int) {
-			pID := StartNewBeaconNode(t, config, index)
-			processIDs = append(processIDs, pID)
+			StartNewBeaconNode(t, config, index)
 		}(i)
 	}
-	return processIDs
 }
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int) int {
+func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int) {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
@@ -72,12 +69,10 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int) int {
 	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
-
-	return cmd.Process.Pid
 }
 
 // StartBootnode starts a bootnode and returns its ENR and process ID.
-func StartBootnode(t *testing.T) int {
+func StartBootnode(t *testing.T) {
 	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
 	if !found {
 		t.Log(binaryPath)
@@ -112,8 +107,6 @@ func StartBootnode(t *testing.T) int {
 	if err != nil {
 		t.Fatalf("could not get enr for bootnode: %v", err)
 	}
-
-	return cmd.Process.Pid
 }
 
 func getENRFromLogFile(name string) (string, error) {

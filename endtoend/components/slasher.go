@@ -15,11 +15,9 @@ import (
 
 // StartSlashers starts slasher clients for use within E2E, connected to all beacon nodes.
 // It returns the process IDs of the slashers.
-func StartSlashers(t *testing.T) []int {
-	var processIDs []int
+func StartSlashers(t *testing.T) {
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		pID := startSlasher(t, i)
-		processIDs = append(processIDs, pID)
+		startSlasher(t, i)
 	}
 
 	stdOutFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, 0)))
@@ -29,11 +27,9 @@ func StartSlashers(t *testing.T) []int {
 	if err = helpers.WaitForTextInFile(stdOutFile, "Beacon node is fully synced, starting slashing detection"); err != nil {
 		t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
 	}
-
-	return processIDs
 }
 
-func startSlasher(t *testing.T, i int) int {
+func startSlasher(t *testing.T, i int) {
 	binaryPath, found := bazel.FindBinary("slasher", "slasher")
 	if !found {
 		t.Log(binaryPath)
@@ -60,5 +56,4 @@ func startSlasher(t *testing.T, i int) int {
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start slasher client: %v", err)
 	}
-	return cmd.Process.Pid
 }

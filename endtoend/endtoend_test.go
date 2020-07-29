@@ -35,26 +35,17 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
-	var keystorePath string
-	//var processIDs []int
-	//var pID int
-	keystorePath, _ = components.StartEth1Node(t)
+	var keystorePath = components.StartEth1Node(t)
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	go components.SendAndMineDeposits(t, keystorePath, validatorNum, 0)
-	_ = components.StartBootnode(t)
+	components.StartBootnode(t)
+	components.StartBeaconNodes(t, config)
+	components.StartValidatorClients(t, config)
 
-	go func() {
-		_ = components.StartBeaconNodes(t, config)
-		//processIDs = append(processIDs, bProcessIDs...)
-		_ = components.StartValidatorClients(t, config, keystorePath)
-		//processIDs = append(processIDs, valProcessIDs...)
-	}()
 	defer helpers.LogOutput(t, config)
-	//defer helpers.KillProcesses(t, processIDs)
 
 	if config.TestSlasher {
-		_ = components.StartSlashers(t)
-		//defer helpers.KillProcesses(t, slasherPIDs)
+		components.StartSlashers(t)
 	}
 
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
@@ -137,7 +128,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	index := e2e.TestParams.BeaconNodeCount
-	_ = components.StartNewBeaconNode(t, config, index)
+	components.StartNewBeaconNode(t, config, index)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
@@ -154,7 +145,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
-	//defer helpers.KillProcesses(t, []int{processID})
+
 	t.Run("sync completed", func(t *testing.T) {
 		if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
 			t.Errorf("Failed to sync: %v", err)
