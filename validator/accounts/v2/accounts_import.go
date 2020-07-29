@@ -91,13 +91,10 @@ func ImportAccount(cliCtx *cli.Context) error {
 
 	au := aurora.NewAurora(true)
 	fmt.Printf("Importing accounts: %s\n", au.BrightGreen(strings.Join(accountsImported, ", ")).Bold())
-	for i, accountName := range accountsImported {
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName, pubKeysImported[i]); err != nil {
-			return errors.Wrap(err, "could not verify password for keystore")
-		}
+	if err := wallet.enterPasswordForAllAccounts(cliCtx, accountsImported, pubKeysImported); err != nil {
+		return errors.Wrap(err, "could not verify password for keystore")
 	}
 
-	fmt.Println("Importing accounts, this may take a while...")
 	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")

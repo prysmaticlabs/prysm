@@ -456,6 +456,77 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 	return nil
 }
 
+func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames []string, pubKeys [][]byte) error {
+	au := aurora.NewAurora(true)
+	var password string
+	var err error
+	ctx := context.Background()
+	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return err
+		}
+		password = string(data)
+		for i := 0; i < len(accountNames); i++ {
+			err = w.checkPasswordForAccount(accountNames[i], password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				return fmt.Errorf("invalid password for account with public key %#x", pubKeys[i])
+			}
+			if err != nil {
+				return err
+			}
+			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
+				return errors.Wrap(err, "could not write password to disk")
+			}
+		}
+	} else {
+		password, err = inputWeakPassword(
+			cliCtx,
+			flags.AccountPasswordFileFlag,
+			"Enter the password for your imported accounts",
+		)
+		fmt.Println("Importing accounts, this may take a while...")
+		for i := 0; i < len(accountNames); i++ {
+			//attemptingPassword := true
+			//// Loop asking for the password until the user enters it correctly.
+			//for attemptingPassword {
+			err = w.checkPasswordForAccount(accountNames[i], password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				//// Ask the user for the password to their account.
+				//password, err = inputWeakPassword(
+				//	cliCtx,
+				//	flags.AccountPasswordFileFlag,
+				//	fmt.Sprintf(passwordForAccountPromptText, bytesutil.Trunc(pubKeys[i])),
+				//)
+				//if err != nil {
+				//	return errors.Wrap(err, "could not input password")
+				//}
+				//err = w.checkPasswordForAccount(accountNames[i], password)
+				//if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				//	fmt.Println(au.Red("Incorrect password entered, please try again"))
+				//	continue
+				//}
+				//if err != nil {
+				//	return err
+				//}
+				//attemptingPassword = false
+				fmt.Println(au.Red("Incorrect password entered, please try again"))
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			ctx := context.Background()
+			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
+				return errors.Wrap(err, "could not write password to disk")
+			}
+			fmt.Printf("Finished importing %#x\n", au.BrightMagenta(bytesutil.Trunc(pubKeys[i])))
+		}
+	}
+	return nil
+}
+
 func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
 	encoded, err := w.ReadFileAtPath(context.Background(), accountName, direct.KeystoreFileName)
 	if err != nil {
