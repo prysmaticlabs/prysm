@@ -15,7 +15,7 @@ const (
 	// DefaultBlockProviderReturnedBlocksWeight is a default weight of a returned/requested ratio in an overall score.
 	DefaultBlockProviderReturnedBlocksWeight = 0.2
 	// DefaultBlockProviderEmptyReturnedBatchPenalty is a default penalty for non-responsive peers.
-	DefaultBlockProviderEmptyReturnedBatchPenalty = 0.0 // tested w/ -0.02
+	DefaultBlockProviderEmptyReturnedBatchPenalty = 0.0
 	// DefaultBlockProviderProcessedBlocksWeight is a default weight of a processed/requested ratio in an overall score.
 	DefaultBlockProviderProcessedBlocksWeight = 0.0
 	// DefaultBlockProviderEmptyProcessedBatchPenalty is a default penalty for non-responsive peers.
@@ -39,8 +39,8 @@ type BlockProviderScorer struct {
 // BlockProviderScorerConfig holds configuration parameters for block providers scoring service.
 type BlockProviderScorerConfig struct {
 	// StartScore defines initial score from which peer starts. Set to positive to give peers an
-	// opportunity to be selected from block fetching (allows new peers to participate, when there
-	// are already scored peers).
+	// opportunity to be selected for block fetching (allows new peers to start participating,
+	// when there are already scored peers).
 	StartScore float64
 	// ReturnedBlocksWeight defines weight of a returned/requested ratio in overall an score.
 	ReturnedBlocksWeight float64
@@ -132,7 +132,7 @@ func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 		// Boost peers that have never been selected.
 		return s.MaxScore()
 	}
-	return math.Round(score*10000) / 10000
+	return math.Round(score*scoreRoundingFactor) / scoreRoundingFactor
 }
 
 // Params exposes scorer's parameters.
