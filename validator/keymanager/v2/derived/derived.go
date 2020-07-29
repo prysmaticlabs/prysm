@@ -184,7 +184,6 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 		return nil, errors.Wrap(err, "could not confirm mnemonic acknowledgement")
 	}
 	walletSeed := bip39.NewSeed(phrase, "")
-	fmt.Printf("New wallet seed: %#x", walletSeed)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
@@ -211,7 +210,6 @@ func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string)
 	}
 	walletSeed := bip39.NewSeed(mnemonic, "")
 	encryptor := keystorev4.New()
-	fmt.Printf("Seed: %#x\n", walletSeed)
 	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
@@ -274,9 +272,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
 	}
-	fmt.Printf("Seed: %#x\n", dr.seed)
-	fmt.Printf("Withdrawal key: %#x\n", withdrawalKey.Marshal())
-	fmt.Printf("Withdrawal key path: %s\n", withdrawalKeyPath)
 
 	// Create encrypted keystores for both the withdrawal and validating keys.
 	encodedWithdrawalKeystore, err := dr.generateKeystoreFile(
