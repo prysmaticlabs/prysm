@@ -2,9 +2,10 @@ package spectest
 
 import (
 	"encoding/hex"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"path"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
