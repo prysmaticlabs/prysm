@@ -270,7 +270,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	signedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	signedBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, signedBlock))
 	r, err := stateutil.BlockRoot(signedBlock.Block)
 	require.NoError(t, err)
@@ -664,7 +664,7 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gBlk := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))

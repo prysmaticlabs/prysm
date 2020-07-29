@@ -102,7 +102,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	}
 
 	headState := testutil.NewBeaconState()
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	require.NoError(t, st.SetSlot(0))
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetBalances(balances))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	ctx := context.Background()
 	setupValidators(t, db, 3)
 	st := testutil.NewBeaconState()
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 	setupValidators(t, db, 100)
 	headState, err := db.HeadState(context.Background())
 	require.NoError(t, err)
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -314,7 +314,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	setupValidators(t, db, count)
 	headState, err := db.HeadState(context.Background())
 	require.NoError(t, err)
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -385,7 +385,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 
 	headState, err := db.HeadState(context.Background())
 	require.NoError(t, err)
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -524,7 +524,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -895,7 +895,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(helpers.StartSlot(30)))
 	require.NoError(t, st.SetValidators(validators))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -961,7 +961,7 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	require.NoError(t, st.SetSlot(headSlot))
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetBalances(balances))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -1123,7 +1123,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		})
 		require.NoError(t, err)
 	}
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 
 	gRoot, err := stateutil.BlockRoot(b.Block)

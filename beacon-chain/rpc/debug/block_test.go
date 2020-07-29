@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -15,9 +15,9 @@ import (
 func TestServer_GetBlock(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
-		Slot: 100,
-	}}
+
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 100
 	require.NoError(t, db.SaveBlock(ctx, b))
 	blockRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)

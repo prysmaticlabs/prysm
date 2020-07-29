@@ -79,8 +79,10 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.DelaySend = true
 
-	blockA := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 111}}
-	blockB := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 40}}
+	blockA := testutil.NewBeaconBlock()
+	blockA.Block.Slot = 111
+	blockB := testutil.NewBeaconBlock()
+	blockB.Block.Slot = 40
 	// Set up a head state with data we expect.
 	blockARoot, err := stateutil.BlockRoot(blockA.Block)
 	require.NoError(t, err)

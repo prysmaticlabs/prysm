@@ -176,7 +176,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	validators := uint64(256)
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -260,7 +260,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	validators := uint64(256)
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -327,7 +327,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	validators := uint64(256)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -424,7 +424,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	validators := uint64(256)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -544,7 +544,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	validators := uint64(256)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	root, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()

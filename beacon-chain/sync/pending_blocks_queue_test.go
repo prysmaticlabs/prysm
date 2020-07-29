@@ -16,6 +16,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -42,7 +43,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	err := r.initCaches()
 	require.NoError(t, err)
 
-	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
 	require.NoError(t, err)
@@ -116,7 +117,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
-	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
 	require.NoError(t, err)
@@ -190,7 +191,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p1.PeerID(), &pb.Status{})
 
-	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
 	require.NoError(t, err)

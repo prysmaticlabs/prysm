@@ -25,7 +25,7 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 
 	service := New(db, cache.NewStateSummaryCache())
 
-	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gBlk := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
@@ -47,7 +47,7 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 
 	service := New(db, cache.NewStateSummaryCache())
 
-	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gBlk := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
@@ -303,7 +303,7 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
-	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gBlk := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	require.NoError(t, err)
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, gBlk))
@@ -361,7 +361,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
-	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gBlk := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	require.NoError(t, err)
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, gBlk))
@@ -410,7 +410,8 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 127
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b1))
 
 	_, err := s.lastSavedState(ctx, s.finalizedInfo.slot+1)

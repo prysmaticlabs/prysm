@@ -249,7 +249,8 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 		beaconDB: db,
 		stateGen: stategen.New(db, sc),
 	}
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 1
 	r, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	newState := testutil.NewBeaconState()
@@ -289,7 +290,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	s := &Service{
 		beaconDB: db,
 	}
-	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	block := testutil.NewBeaconBlock()
 	require.NoError(b, s.beaconDB.SaveBlock(ctx, block))
 	r, err := stateutil.BlockRoot(block.Block)
 	require.NoError(b, err)

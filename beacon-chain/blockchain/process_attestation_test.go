@@ -37,12 +37,14 @@ func TestStore_OnAttestation(t *testing.T) {
 	_, err = blockTree1(db, []byte{'g'})
 	require.NoError(t, err)
 
-	BlkWithOutState := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
+	BlkWithOutState := testutil.NewBeaconBlock()
+	BlkWithOutState.Block.Slot = 0
 	require.NoError(t, db.SaveBlock(ctx, BlkWithOutState))
 	BlkWithOutStateRoot, err := stateutil.BlockRoot(BlkWithOutState.Block)
 	require.NoError(t, err)
 
-	BlkWithStateBadAtt := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	BlkWithStateBadAtt := testutil.NewBeaconBlock()
+	BlkWithStateBadAtt.Block.Slot = 1
 	require.NoError(t, db.SaveBlock(ctx, BlkWithStateBadAtt))
 	BlkWithStateBadAttRoot, err := stateutil.BlockRoot(BlkWithStateBadAtt.Block)
 	require.NoError(t, err)
@@ -51,7 +53,8 @@ func TestStore_OnAttestation(t *testing.T) {
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
-	BlkWithValidState := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
+	BlkWithValidState := testutil.NewBeaconBlock()
+	BlkWithValidState.Block.Slot = 2
 	require.NoError(t, db.SaveBlock(ctx, BlkWithValidState))
 
 	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
@@ -328,7 +331,8 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 2
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	r, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -345,7 +349,8 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 2
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	r, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -362,7 +367,8 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b32 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 32}}
+	b32 := testutil.NewBeaconBlock()
+	b32.Block.Slot = 32
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
 	r32, err := stateutil.BlockRoot(b32.Block)
 	require.NoError(t, err)
@@ -383,7 +389,8 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b32 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 32}}
+	b32 := testutil.NewBeaconBlock()
+	b32.Block.Slot = 32
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
 	r32, err := stateutil.BlockRoot(b32.Block)
 	require.NoError(t, err)

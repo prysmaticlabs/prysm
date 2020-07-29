@@ -249,7 +249,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		Slot: 5,
 	})
 	require.NoError(t, err)
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
+	blk := testutil.NewBeaconBlock()
+	blk.Slot = 0
 	require.NoError(t, db.SaveBlock(context.Background(), blk))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
