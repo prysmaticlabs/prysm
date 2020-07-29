@@ -44,9 +44,9 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	_ = components.StartBootnode(t)
 
 	go func() {
-		_ := components.StartBeaconNodes(t, config)
+		_ = components.StartBeaconNodes(t, config)
 		//processIDs = append(processIDs, bProcessIDs...)
-		_ := components.StartValidatorClients(t, config, keystorePath)
+		_ = components.StartValidatorClients(t, config, keystorePath)
 		//processIDs = append(processIDs, valProcessIDs...)
 	}()
 	defer helpers.LogOutput(t, config)
