@@ -69,7 +69,7 @@ func msgIDFunction(pmsg *pubsub_pb.Message) string {
 }
 
 func setPubSubParameters() {
-	pubsub.GossipSubDlo = 3
+	pubsub.GossipSubDlo = 5
 	pubsub.GossipSubHeartbeatInterval = 700 * time.Millisecond
 	pubsub.GossipSubHistoryLength = 6
 	pubsub.GossipSubHistoryGossip = 3
