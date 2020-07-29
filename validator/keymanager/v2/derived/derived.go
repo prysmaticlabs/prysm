@@ -116,7 +116,6 @@ func NewKeymanager(
 	if err := json.Unmarshal(enc, seedConfig); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
-	log.Info(seedConfig)
 	decryptor := keystorev4.New()
 	seed, err := decryptor.Decrypt(seedConfig.Crypto, password)
 	if err != nil {
