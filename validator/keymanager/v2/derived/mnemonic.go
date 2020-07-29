@@ -2,11 +2,12 @@ package derived
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/manifoldco/promptui"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/tyler-smith/go-bip39"
 )
+
+const confirmationText = "Confirm you have written down the recovery words somewhere safe (offline) [y|Y]"
 
 // SeedPhraseFactory defines a struct which
 // can generate new seed phrases in human-readable
@@ -38,29 +39,21 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 		"Write down the sentence below, as it is your only " +
 			"means of recovering your wallet",
 	)
-	fmt.Printf(`
-=================Wallet Seed Recovery Phrase====================
+	fmt.Printf(
+		`=================Wallet Seed Recovery Phrase====================
 
 %s
 
-===================================================================
-	`, phrase)
+===================================================================`,
+		phrase)
+	fmt.Println("")
 	if m.skipMnemonicConfirm {
 		return nil
 	}
 	// Confirm the user has written down the mnemonic phrase offline.
-	prompt := promptui.Prompt{
-		Label:     "Confirm you have written down the recovery words somewhere safe (offline)",
-		IsConfirm: true,
-	}
-	expected := "y"
-	var result string
-	var err error
-	for strings.ToLower(result) != expected {
-		result, err = prompt.Run()
-		if err != nil {
-			log.Errorf("Could not confirm acknowledgement of prompt, please enter y")
-		}
+	_, err := promptutil.ValidatePrompt(confirmationText, promptutil.ValidateConfirmation)
+	if err != nil {
+		log.Errorf("Could not confirm acknowledgement of prompt, please enter y")
 	}
 	return nil
 }
