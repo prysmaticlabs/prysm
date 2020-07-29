@@ -173,6 +173,8 @@ var devModeFlags = []cli.Flag{
 	forceMaxCoverAttestationAggregation,
 	newBeaconStateLocks,
 	batchBlockVerify,
+	enableFinalizedDepositsCache,
+	enableEth1DataMajorityVote,
 }
 
 // Deprecated flags list.
