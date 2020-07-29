@@ -28,14 +28,15 @@ func init() {
 }
 
 type testWalletConfig struct {
-	walletDir        string
-	passwordsDir     string
-	exportDir        string
-	keysDir          string
-	accountsToExport string
-	passwordFile     string
-	numAccounts      int64
-	keymanagerKind   v2keymanager.Kind
+	walletDir           string
+	passwordsDir        string
+	exportDir           string
+	keysDir             string
+	accountsToExport    string
+	walletPasswordFile  string
+	accountPasswordFile string
+	numAccounts         int64
+	keymanagerKind      v2keymanager.Kind
 }
 
 func setupWalletCtx(
@@ -50,7 +51,8 @@ func setupWalletCtx(
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.BackupDirFlag.Name, cfg.exportDir, "")
 	set.String(flags.AccountsFlag.Name, cfg.accountsToExport, "")
-	set.String(flags.PasswordFileFlag.Name, cfg.passwordFile, "")
+	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
+	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
@@ -59,7 +61,8 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.exportDir))
 	assert.NoError(tb, set.Set(flags.AccountsFlag.Name, cfg.accountsToExport))
-	assert.NoError(tb, set.Set(flags.PasswordFileFlag.Name, cfg.passwordFile))
+	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
+	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
 	assert.NoError(tb, set.Set(flags.SkipMnemonicConfirmFlag.Name, "true"))
 	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
 	return cli.NewContext(&app, set, nil)
@@ -92,8 +95,8 @@ func TestCreateAndReadWallet(t *testing.T) {
 		keymanagerKind: v2keymanager.Direct,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
-	require.NoError(t, wallet.SaveWallet())
 	require.NoError(t, err)
+	require.NoError(t, createDirectKeymanagerWallet(cliCtx, wallet))
 	// We should be able to now read the wallet as well.
 	_, err = OpenWallet(cliCtx)
 	require.NoError(t, err)

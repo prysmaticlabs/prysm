@@ -12,6 +12,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	// WalletDefaultDirName for accounts-v2.
+	WalletDefaultDirName = "prysm-wallet-v2"
+	// PasswordsDefaultDirName where account-v2 passwords are stored.
+	PasswordsDefaultDirName = "prysm-wallet-v2-passwords"
+)
+
 var (
 	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
 	DisableAccountMetricsFlag = &cli.BoolFlag{
@@ -124,19 +131,24 @@ var (
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
-		Value: DefaultValidatorDir(),
+		Value: filepath.Join(DefaultValidatorDir(), WalletDefaultDirName),
 	}
 	// WalletPasswordsDirFlag defines the path for a passwords directory for
 	// Prysm accounts-v2.
 	WalletPasswordsDirFlag = &cli.StringFlag{
 		Name:  "passwords-dir",
 		Usage: "Path to a directory on-disk where account passwords are stored",
-		Value: DefaultValidatorDir(),
+		Value: filepath.Join(DefaultValidatorDir(), PasswordsDefaultDirName),
 	}
-	// PasswordFileFlag is used to enter a file to get a password for new account creation, non-interactively.
-	PasswordFileFlag = &cli.StringFlag{
-		Name:  "password-file",
-		Usage: "Path to a plaintext password.txt file",
+	// AccountPasswordFileFlag is path to a file containing a password for a new validator account.
+	AccountPasswordFileFlag = &cli.StringFlag{
+		Name:  "account-password-file",
+		Usage: "Path to a plain-text, .txt file containing a password for a new validator account",
+	}
+	// WalletPasswordFileFlag is the path to a file containing your wallet password.
+	WalletPasswordFileFlag = &cli.StringFlag{
+		Name:  "wallet-password-file",
+		Usage: "Path to a plain-text, .txt file containing your wallet password",
 	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{
