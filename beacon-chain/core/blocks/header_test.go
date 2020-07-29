@@ -156,16 +156,10 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatalf("Failed to get domain form state: %v", err)
-	}
+
 	priv := bls.RandKey()
-	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
-	if err != nil {
-		t.Error(err)
-	}
-	blockSig := priv.Sign(root[:])
+	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
+	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -175,7 +169,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 			},
 			ParentRoot: lbhsr[:],
 		},
-		Signature: blockSig.Marshal(),
+		Signature: blockSig,
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
@@ -209,16 +203,9 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatalf("Failed to get domain form state: %v", err)
-	}
 	priv := bls.RandKey()
-	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
-	if err != nil {
-		t.Error(err)
-	}
-	blockSig := priv.Sign(root[:])
+	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
+	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	pID, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
@@ -233,7 +220,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 			},
 			ParentRoot: []byte{'A'},
 		},
-		Signature: blockSig.Marshal(),
+		Signature: blockSig,
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
@@ -271,16 +258,9 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatalf("Failed to get domain form state: %v", err)
-	}
 	priv := bls.RandKey()
-	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
-	if err != nil {
-		t.Error(err)
-	}
-	blockSig := priv.Sign(root[:])
+	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
+	require.NoError(t, err)
 
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	pID, err := helpers.BeaconProposerIndex(state)
@@ -296,7 +276,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 			},
 			ParentRoot: parentRoot[:],
 		},
-		Signature: blockSig.Marshal(),
+		Signature: blockSig,
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)

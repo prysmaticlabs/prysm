@@ -141,13 +141,8 @@ func TestProposeExit_NoPanic(t *testing.T) {
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")
-
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
+	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
-	sigRoot, err := helpers.ComputeSigningRoot(req.Exit, domain)
-	require.NoError(t, err, "Could not compute signing root")
-	req.Signature = keys[0].Sign(sigRoot[:]).Marshal()
-
 	_, err = server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
 }
