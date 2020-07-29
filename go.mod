@@ -91,7 +91,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
-	github.com/supranational/blst v0.1.2-0.20200710021028-6962adb9ab51
+	github.com/supranational/blst v0.1.2-alpha.1.0.20200729131655-328cfc04cd1e
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/eth2-signer-api v1.3.0
