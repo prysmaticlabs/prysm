@@ -84,7 +84,7 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -103,7 +103,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -113,7 +113,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -137,7 +137,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -147,7 +147,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -175,7 +175,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -185,7 +185,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -213,7 +213,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	m.validatorClient.EXPECT().GetBlock(
@@ -227,7 +227,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -262,7 +262,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	m.validatorClient.EXPECT().GetBlock(
@@ -276,7 +276,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -306,7 +306,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -316,7 +316,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -335,7 +335,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -345,7 +345,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	var sentBlock *ethpb.SignedBeaconBlock
 

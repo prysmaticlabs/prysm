@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/go-bitfield"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -41,7 +42,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 		gomock.Any(), // ctx
@@ -57,7 +58,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
 		gomock.Any(), // ctx
@@ -89,11 +90,11 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		&ethpb.DomainRequest{Epoch: 0, Domain: params.BeaconConfig().DomainAggregateAndProof[:]},
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	agg := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 0,
-		Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+		Aggregate:       &ethpb.Attestation{AggregationBits: bitfield.NewBitlist(1), Data: &ethpb.AttestationData{}},
 		SelectionProof:  nil,
 	}
 	sig, err := validator.aggregateAndProofSig(context.Background(), validatorPubKey, agg)
