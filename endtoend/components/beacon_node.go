@@ -108,7 +108,6 @@ func StartBootnode(t *testing.T) int {
 	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
 		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
 	}
-	fmt.Println("Bootnode ready")
 
 	e2e.TestParams.BootNodeENR, err = getENRFromLogFile(stdOutFile.Name())
 	if err != nil {

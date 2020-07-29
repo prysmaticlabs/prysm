@@ -29,7 +29,6 @@ func StartSlashers(t *testing.T) []int {
 	if err = helpers.WaitForTextInFile(stdOutFile, "Beacon node is fully synced, starting slashing detection"); err != nil {
 		t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
 	}
-	fmt.Println("slasher ready")
 
 	return processIDs
 }
