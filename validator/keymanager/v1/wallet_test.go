@@ -1,6 +1,7 @@
 package v1_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,8 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	nd "github.com/wealdtech/go-eth2-wallet-nd"
+	nd "github.com/wealdtech/go-eth2-wallet-nd/v2"
 	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
+	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 func SetupWallet(t *testing.T) string {
@@ -21,13 +23,18 @@ func SetupWallet(t *testing.T) string {
 	encryptor := keystorev4.New()
 
 	// Create wallets with keys.
-	w1, err := nd.CreateWallet("Wallet 1", store, encryptor)
+	ctx := context.Background()
+	w1, err := nd.CreateWallet(ctx, "Wallet 1", store, encryptor)
+	unlocker, ok := w1.(e2wtypes.WalletLocker)
+	require.Equal(t, true, ok)
+	require.NoError(t, unlocker.Unlock(ctx, nil))
+	creator, ok := w1.(e2wtypes.WalletAccountCreator)
+	require.Equal(t, true, ok)
 	require.NoError(t, err, "Failed to create wallet")
-	err = w1.Unlock(nil)
 	require.NoError(t, err, "Failed to unlock wallet")
-	_, err = w1.CreateAccount("Account 1", []byte("foo"))
+	_, err = creator.CreateAccount(ctx, "Account 1", []byte("foo"))
 	require.NoError(t, err, "Failed to create account 1")
-	_, err = w1.CreateAccount("Account 2", []byte("bar"))
+	_, err = creator.CreateAccount(ctx, "Account 2", []byte("bar"))
 	require.NoError(t, err, "Failed to create account 2")
 
 	return path

@@ -52,7 +52,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+	rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator signing key")
 	validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
 	require.NoError(t, err, "Could not instantiate bls secret key from bytes")
