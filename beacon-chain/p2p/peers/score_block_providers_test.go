@@ -31,7 +31,7 @@ func TestPeerScorer_BlockProvider_Score(t *testing.T) {
 		return math.Round((scorer.Params().StartScore+score)*10000) / 10000
 	}
 
-	assert.Equal(t, scorer.Params().StartScore, scorer.Score("peer1"), "Unexpected score for unregistered provider")
+	assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score for unregistered provider")
 	// Register peer, but do not yet request any blocks (peer should be boosted - to allow first time selection).
 	scorer.IncrementRequestedBlocks("peer1", 0)
 	assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")

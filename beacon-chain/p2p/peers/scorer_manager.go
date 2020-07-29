@@ -8,9 +8,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-// scoreRoundingFactor defines how many digits to keep in decimal part.
-// This parameter is used in math.Round(score*scoreRoundingFactor) / scoreRoundingFactor.
-const scoreRoundingFactor = 10000
+// ScoreRoundingFactor defines how many digits to keep in decimal part.
+// This parameter is used in math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor.
+const ScoreRoundingFactor = 10000
 
 // PeerScorerManager keeps track of peer scorers that are used to calculate overall peer score.
 type PeerScorerManager struct {
@@ -62,7 +62,7 @@ func (m *PeerScorerManager) Score(pid peer.ID) float64 {
 	}
 	score += m.scorers.badResponsesScorer.score(pid)
 	score += m.scorers.blockProviderScorer.score(pid)
-	return math.Round(score*scoreRoundingFactor) / scoreRoundingFactor
+	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
 // loop handles background tasks.

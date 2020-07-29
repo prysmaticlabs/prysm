@@ -110,10 +110,7 @@ func (s *BlockProviderScorer) Score(pid peer.ID) float64 {
 func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 	score := s.Params().StartScore
 	peerData, ok := s.store.peers[pid]
-	if !ok {
-		return score
-	}
-	if peerData.requestedBlocks > 0 {
+	if ok && peerData.requestedBlocks > 0 {
 		// Score returned/requested ratio.
 		returnedBlocksScore := float64(peerData.returnedBlocks) / float64(peerData.requestedBlocks)
 		returnedBlocksScore = returnedBlocksScore * s.config.ReturnedBlocksWeight
@@ -137,7 +134,7 @@ func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 		// Boost peers that have never been selected.
 		return s.MaxScore()
 	}
-	return math.Round(score*scoreRoundingFactor) / scoreRoundingFactor
+	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
 // Params exposes scorer's parameters.
@@ -277,5 +274,5 @@ func (s *BlockProviderScorer) BlockProviderScorePretty(pid peer.ID) string {
 // MaxScore exposes maximum score attainable by peers.
 func (s *BlockProviderScorer) MaxScore() float64 {
 	score := s.Params().StartScore + s.config.ReturnedBlocksWeight + s.config.ProcessedBlocksWeight
-	return math.Round(score*scoreRoundingFactor) / scoreRoundingFactor
+	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
