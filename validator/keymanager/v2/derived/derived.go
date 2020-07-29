@@ -9,12 +9,16 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"github.com/tyler-smith/go-bip39"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -24,10 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/sirupsen/logrus"
-	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
@@ -117,6 +117,7 @@ func NewKeymanager(
 	if err := json.Unmarshal(enc, seedConfig); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
+	log.Info(seedConfig)
 	decryptor := keystorev4.New()
 	seed, err := decryptor.Decrypt(seedConfig.Crypto, []byte(password))
 	if err != nil {
@@ -169,24 +170,22 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 // InitializeWalletSeedFile creates a new, encrypted seed using a password input
 // and persists its encrypted file metadata to disk under the wallet path.
 func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonicConfirm bool) (*SeedConfig, error) {
-	walletSeed := make([]byte, 32)
-	n, err := rand.NewGenerator().Read(walletSeed)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wallet seed")
-	}
-	if n != len(walletSeed) {
-		return nil, errors.New("could not randomly create seed")
+	mnemonicRandomness := make([]byte, 32)
+	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
+		return nil, errors.Wrap(err, "could not initialize mnemonic source of randomness")
 	}
 	m := &EnglishMnemonicGenerator{
 		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
-	phrase, err := m.Generate(walletSeed)
+	phrase, err := m.Generate(mnemonicRandomness)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate wallet seed")
 	}
 	if err := m.ConfirmAcknowledgement(phrase); err != nil {
 		return nil, errors.Wrap(err, "could not confirm mnemonic acknowledgement")
 	}
+	walletSeed := bip39.NewSeed(phrase, "")
+	fmt.Printf("New wallet seed: %#x", walletSeed)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
 	if err != nil {
@@ -208,15 +207,12 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 // SeedFileFromMnemonic uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
 func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string) (*SeedConfig, error) {
-	walletSeed, err := bip39.EntropyFromMnemonic(mnemonic)
-	if err != nil && strings.Contains(err.Error(), "not found in reverse map") {
-		return nil, errors.New("could not convert mnemonic to wallet seed: invalid seed word entered")
-	} else if errors.Is(err, bip39.ErrInvalidMnemonic) {
-		return nil, errors.Wrap(bip39.ErrInvalidMnemonic, "could not convert mnemonic to wallet seed")
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not convert mnemonic to wallet seed")
+	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
+		return nil, bip39.ErrInvalidMnemonic
 	}
+	walletSeed := bip39.NewSeed(mnemonic, "")
 	encryptor := keystorev4.New()
+	fmt.Printf("Seed: %#x\n", walletSeed)
 	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
@@ -279,6 +275,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
 	}
+	fmt.Printf("Seed: %#x\n", dr.seed)
+	fmt.Printf("Withdrawal key: %#x\n", withdrawalKey.Marshal())
+	fmt.Printf("Withdrawal key path: %s\n", withdrawalKeyPath)
 
 	// Create encrypted keystores for both the withdrawal and validating keys.
 	encodedWithdrawalKeystore, err := dr.generateKeystoreFile(
