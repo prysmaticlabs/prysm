@@ -36,12 +36,12 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 	if validatorNum%beaconNodeNum != 0 {
 		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
-	processIDs := make([]int, beaconNodeNum)
+	var processIDs []int
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for i := 0; i < beaconNodeNum; i++ {
 		go func(index int) {
 			pID := StartNewValidatorClient(t, config, validatorsPerNode, index)
-			processIDs[i] = pID
+			processIDs = append(processIDs, pID)
 		}(i)
 	}
 
