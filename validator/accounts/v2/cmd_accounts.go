@@ -20,8 +20,8 @@ specified input, capable of creating a direct, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
-				flags.PasswordFileFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
 				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.MedallaTestnet,
@@ -38,8 +38,7 @@ this command outputs a deposit data string which is required to become a validat
 			Description: "Lists all validator accounts in a user's wallet directory",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
-				flags.PasswordFileFlag,
+				flags.WalletPasswordFileFlag,
 				flags.ShowDepositDataFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.MedallaTestnet,
@@ -56,7 +55,6 @@ this command outputs a deposit data string which is required to become a validat
 			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
 				flags.BackupDirFlag,
 				flags.AccountsFlag,
 				featureconfig.AltonaTestnet,
@@ -76,7 +74,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
 				flags.KeysDirFlag,
-				flags.PasswordFileFlag,
+				flags.WalletPasswordFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.MedallaTestnet,
 			},

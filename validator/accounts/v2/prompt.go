@@ -3,7 +3,6 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -17,16 +16,15 @@ import (
 )
 
 const (
-	importDirPromptText          = "Enter the file location of the exported wallet zip to import"
 	importKeysDirPromptText      = "Enter the directory where your keystores to import are located"
-	exportDirPromptText          = "Enter a file location to write the exported wallet to"
+	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
 	walletDirPromptText          = "Enter a wallet directory"
 	passwordsDirPromptText       = "Directory where passwords will be stored"
 	newWalletPasswordPromptText  = "New wallet password"
 	confirmPasswordPromptText    = "Confirm password"
 	walletPasswordPromptText     = "Wallet password"
 	newAccountPasswordPromptText = "New account password"
-	passwordForAccountPromptText = "Enter password for account %s"
+	passwordForAccountPromptText = "Enter password for account with public key %#x"
 )
 
 type passwordConfirm int
@@ -44,7 +42,7 @@ const (
 )
 
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
-	directory := appendDirName(cliCtx.String(flag.Name), flag.Name)
+	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
 		return directory, nil
 	}
@@ -84,17 +82,7 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	if inputtedDir == prompt.Default {
 		return directory, nil
 	}
-	return appendDirName(inputtedDir, flag.Name), nil
-}
-
-func appendDirName(inputtedDir string, flagName string) string {
-	switch flagName {
-	case flags.WalletDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, WalletDefaultDirName)
-	case flags.WalletPasswordsDirFlag.Name:
-		inputtedDir = filepath.Join(inputtedDir, PasswordsDefaultDirName)
-	}
-	return inputtedDir
+	return inputtedDir, nil
 }
 
 func validateDirectoryPath(input string) error {
@@ -104,9 +92,14 @@ func validateDirectoryPath(input string) error {
 	return nil
 }
 
-func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passwordConfirm) (string, error) {
-	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+func inputPassword(
+	cliCtx *cli.Context,
+	passwordFileFlag *cli.StringFlag,
+	promptText string,
+	confirmPassword passwordConfirm,
+) (string, error) {
+	if cliCtx.IsSet(passwordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
@@ -152,9 +145,9 @@ func inputPassword(cliCtx *cli.Context, promptText string, confirmPassword passw
 	return strings.TrimRight(walletPassword, "\r\n"), nil
 }
 
-func inputWeakPassword(cliCtx *cli.Context, promptText string) (string, error) {
-	if cliCtx.IsSet(flags.PasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.PasswordFileFlag.Name)
+func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
+	if cliCtx.IsSet(passwordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
@@ -227,71 +220,63 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
 	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
-
-	if addr != "" && crt != "" && key != "" && ca != "" {
-		if !(isValidUnicode(addr) && isValidUnicode(crt) && isValidUnicode(key) && isValidUnicode(ca)) {
-			return nil, errors.New("flag inputs contain non-unicode characters")
-		}
-		newCfg := &remote.Config{
-			RemoteCertificate: &remote.CertificateConfig{
-				ClientCertPath: strings.TrimRight(crt, "\r\n"),
-				ClientKeyPath:  strings.TrimRight(key, "\r\n"),
-				CACertPath:     strings.TrimRight(ca, "\r\n"),
+	log.Info("Input desired configuration")
+	var err error
+	if addr == "" {
+		prompt := promptui.Prompt{
+			Label: "Remote gRPC address (such as host.example.com:4000)",
+			Validate: func(input string) error {
+				if input == "" {
+					return errors.New("remote host address cannot be empty")
+				}
+				if !isValidUnicode(input) {
+					return errors.New("not valid unicode")
+				}
+				return nil
 			},
-			RemoteAddr: strings.TrimRight(addr, "\r\n"),
 		}
-		log.Infof("New configuration")
-		fmt.Printf("%s\n", newCfg)
-		return newCfg, nil
+		addr, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
-	log.Infof("Input desired configuration")
-	prompt := promptui.Prompt{
-		Label: "Remote gRPC address (such as host.example.com:4000)",
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("remote host address cannot be empty")
-			}
-			if !isValidUnicode(input) {
-				return errors.New("not valid unicode")
-			}
-			return nil
-		},
+	if crt == "" {
+		prompt := promptui.Prompt{
+			Label:    "Path to TLS crt (such as /path/to/client.crt)",
+			Validate: validateCertPath,
+		}
+		crt, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
-	remoteAddr, err := prompt.Run()
-	if err != nil {
-		return nil, err
+	if key == "" {
+		prompt := promptui.Prompt{
+			Label:    "Path to TLS key (such as /path/to/client.key)",
+			Validate: validateCertPath,
+		}
+		key, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
-	prompt = promptui.Prompt{
-		Label:    "Path to TLS crt (such as /path/to/client.crt)",
-		Validate: validateCertPath,
-	}
-	clientCrtPath, err := prompt.Run()
-	if err != nil {
-		return nil, err
-	}
-	prompt = promptui.Prompt{
-		Label:    "Path to TLS key (such as /path/to/client.key)",
-		Validate: validateCertPath,
-	}
-	clientKeyPath, err := prompt.Run()
-	if err != nil {
-		return nil, err
-	}
-	prompt = promptui.Prompt{
-		Label:    "(Optional) Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
-		Validate: validateCACertPath,
-	}
-	caCrtPath, err := prompt.Run()
-	if err != nil {
-		return nil, err
+	if ca == "" {
+		prompt := promptui.Prompt{
+			Label:    "Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
+			Validate: validateCertPath,
+		}
+		ca, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
 	newCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: strings.TrimRight(clientCrtPath, "\r\n"),
-			ClientKeyPath:  strings.TrimRight(clientKeyPath, "\r\n"),
-			CACertPath:     strings.TrimRight(caCrtPath, "\r\n"),
+			ClientCertPath: strings.TrimRight(crt, "\r\n"),
+			ClientKeyPath:  strings.TrimRight(key, "\r\n"),
+			CACertPath:     strings.TrimRight(ca, "\r\n"),
 		},
-		RemoteAddr: strings.TrimRight(remoteAddr, "\r\n"),
+		RemoteAddr: strings.TrimRight(addr, "\r\n"),
 	}
 	fmt.Printf("%s\n", newCfg)
 	return newCfg, nil
@@ -306,16 +291,6 @@ func validateCertPath(input string) error {
 	}
 	if !fileExists(input) {
 		return fmt.Errorf("no crt found at path: %s", input)
-	}
-	return nil
-}
-
-func validateCACertPath(input string) error {
-	if input != "" && !fileExists(input) {
-		return fmt.Errorf("no crt found at path: %s", input)
-	}
-	if !isValidUnicode(input) {
-		return errors.New("not valid unicode")
 	}
 	return nil
 }

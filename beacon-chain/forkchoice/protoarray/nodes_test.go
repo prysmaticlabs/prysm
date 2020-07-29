@@ -374,10 +374,10 @@ func TestStore_HasParent(t *testing.T) {
 		want bool
 	}{
 		{r: [32]byte{'a'}, want: false},
-		{m: map[[32]byte]uint64{[32]byte{'a'}: 0}, r: [32]byte{'a'}, want: false},
-		{m: map[[32]byte]uint64{[32]byte{'a'}: 0}, r: [32]byte{'a'},
+		{m: map[[32]byte]uint64{{'a'}: 0}, r: [32]byte{'a'}, want: false},
+		{m: map[[32]byte]uint64{{'a'}: 0}, r: [32]byte{'a'},
 			n: []*Node{{Parent: NonExistentNode}}, want: false},
-		{m: map[[32]byte]uint64{[32]byte{'a'}: 0},
+		{m: map[[32]byte]uint64{{'a'}: 0},
 			n: []*Node{{Parent: 0}}, r: [32]byte{'a'},
 			want: true},
 	}
