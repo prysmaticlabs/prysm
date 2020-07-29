@@ -3,6 +3,7 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -44,45 +45,48 @@ const (
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return directory, nil
+		return filepath.Abs(directory)
 	}
-
+	dirPath, err := filepath.Abs(directory)
+	if err != nil {
+		return "", errors.Wrap(err, "could not determine absolute path for directory")
+	}
 	// Append and log the appropriate directory name depending on the flag used.
 	if flag.Name == flags.WalletDirFlag.Name {
-		ok, err := hasDir(directory)
+		ok, err := hasDir(dirPath)
 		if err != nil {
-			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
+			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", dirPath)
 		}
 		if ok {
 			au := aurora.NewAurora(true)
-			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), directory)
-			return directory, nil
+			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), dirPath)
+			return dirPath, nil
 		}
 	} else if flag.Name == flags.WalletPasswordsDirFlag.Name {
-		ok, err := hasDir(directory)
+		ok, err := hasDir(dirPath)
 		if err != nil {
-			return "", errors.Wrapf(err, "could not check if passwords dir %s exists", directory)
+			return "", errors.Wrapf(err, "could not check if passwords dir %s exists", dirPath)
 		}
 		if ok {
 			au := aurora.NewAurora(true)
-			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), directory)
-			return directory, nil
+			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), dirPath)
+			return dirPath, nil
 		}
 	}
 
 	prompt := promptui.Prompt{
 		Label:    promptText,
 		Validate: validateDirectoryPath,
-		Default:  directory,
+		Default:  dirPath,
 	}
 	inputtedDir, err := prompt.Run()
 	if err != nil {
 		return "", fmt.Errorf("could not determine directory: %v", formatPromptError(err))
 	}
 	if inputtedDir == prompt.Default {
-		return directory, nil
+		return dirPath, nil
 	}
-	return inputtedDir, nil
+	return filepath.Abs(inputtedDir)
 }
 
 func validateDirectoryPath(input string) error {
@@ -99,7 +103,11 @@ func inputPassword(
 	confirmPassword passwordConfirm,
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePath, err := filepath.Abs(passwordFilePathInput)
+		if err != nil {
+			return "", errors.Wrap(err, "could not determine absolute path of password file")
+		}
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
@@ -147,7 +155,11 @@ func inputPassword(
 
 func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePath, err := filepath.Abs(passwordFilePathInput)
+		if err != nil {
+			return "", errors.Wrap(err, "could not determine absolute path of password file")
+		}
 		data, err := ioutil.ReadFile(passwordFilePath)
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
@@ -270,11 +282,23 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 			return nil, err
 		}
 	}
+	crtPath, err := filepath.Abs(strings.TrimRight(crt, "\r\n"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	}
+	keyPath, err := filepath.Abs(strings.TrimRight(key, "\r\n"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	}
+	caPath, err := filepath.Abs(strings.TrimRight(ca, "\r\n"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	}
 	newCfg := &remote.Config{
 		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: strings.TrimRight(crt, "\r\n"),
-			ClientKeyPath:  strings.TrimRight(key, "\r\n"),
-			CACertPath:     strings.TrimRight(ca, "\r\n"),
+			ClientCertPath: crtPath,
+			ClientKeyPath:  keyPath,
+			CACertPath:     caPath,
 		},
 		RemoteAddr: strings.TrimRight(addr, "\r\n"),
 	}
