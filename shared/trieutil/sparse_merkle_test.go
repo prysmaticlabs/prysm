@@ -150,7 +150,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 		{3},
 		{4},
 	}
-	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}

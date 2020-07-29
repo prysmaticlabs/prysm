@@ -10,6 +10,8 @@ import (
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used
@@ -183,15 +185,14 @@ func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
 // VerifyMerkleBranch verifies a Merkle branch against a root of a trie.
 func VerifyMerkleBranch(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	node := bytesutil.ToBytes32(item)
-	currentIndex := merkleIndex
-	for i := 0; i < len(proof); i++ {
-		if currentIndex%2 != 0 {
+	for i := 0; i < int(params.BeaconConfig().DepositContractTreeDepth); i++ {
+		if (uint64(merkleIndex) / mathutil.PowerOf2(uint64(i)) % 2) != 0 {
 			node = hashutil.Hash(append(proof[i], node[:]...))
 		} else {
 			node = hashutil.Hash(append(node[:], proof[i]...))
 		}
-		currentIndex = currentIndex / 2
 	}
+	node = hashutil.Hash(append(node[:], proof[int(params.BeaconConfig().DepositContractTreeDepth)]...))
 	return bytes.Equal(root, node[:])
 }
 
