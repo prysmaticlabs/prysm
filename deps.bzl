@@ -2820,6 +2820,7 @@ def prysm_deps():
         importpath = "google.golang.org/grpc",
         sum = "h1:M5a8xTlYTxwMn5ZFkwhRabsygDY5G8TYLyQDBxJNAxE=",
         version = "v1.30.0",
+        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "org_golang_x_crypto",
@@ -2918,12 +2919,6 @@ def prysm_deps():
         importpath = "k8s.io/api",
         sum = "h1:2AJaUQdgUZLoDZHrun21PW2Nx9+ll6cUzvn3IKhSIn0=",
         version = "v0.18.3",
-    )
-    go_repository(
-        name = "com_github_shyiko_kubesec",
-        importpath = "github.com/shyiko/kubesec",
-        sum = "h1:au/8ClCUc9HTpuGePltbhd98DZcsqZEyG9DoFILieR4=",
-        version = "v0.0.0-20190816030733-7ce23ac7239c",
     )
     go_repository(
         name = "in_gopkg_confluentinc_confluent_kafka_go_v1",

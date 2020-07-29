@@ -5,12 +5,6 @@ load("@io_bazel_rules_docker//cc:image.bzl", CC_DEFAULT_BASE = "DEFAULT_BASE")
 load("@io_bazel_rules_docker//go:image.bzl", GO_DEFAULT_BASE = "DEFAULT_BASE")
 load("//tools:build_settings.bzl", "base_image")
 
-alias(
-    name = "kubesec",
-    actual = "@com_github_shyiko_kubesec//:kubesec",
-    visibility = ["//visibility:public"],
-)
-
 sh_binary(
     name = "fuzzit_wrapper",
     srcs = ["fuzzit_wrapper.sh"],
