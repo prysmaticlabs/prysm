@@ -57,16 +57,10 @@ func TestRandaoReveal(t *testing.T) {
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := helpers.ComputeSigningRoot(epoch, domain)
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(root[:]).Marshal()
+	epochSignature, err := helpers.ComputeDomainAndSign(beaconState, epoch, epoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	if !bytes.Equal(randaoReveal[:], epochSignature[:]) {
 		t.Errorf("Expected randao reveals to be equal, received %#x != %#x", randaoReveal[:], epochSignature[:])
