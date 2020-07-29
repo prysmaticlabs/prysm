@@ -56,5 +56,6 @@ go_test(
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_nd_v2//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_store_filesystem//:go_default_library",
+        "@com_github_wealdtech_go_eth2_wallet_types_v2//:go_default_library",
     ],
 )
