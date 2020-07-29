@@ -156,7 +156,7 @@ var (
 	}
 	initSyncVerbose = &cli.BoolFlag{
 		Name:  "init-sync-verbose",
-		Usage: "Enable logging every processed block during initial syncing. ",
+		Usage: "Enable logging every processed block during initial syncing.",
 	}
 	enableBlst = &cli.BoolFlag{
 		Name:  "blst",
@@ -165,6 +165,10 @@ var (
 	enableFinalizedDepositsCache = &cli.BoolFlag{
 		Name:  "enable-finalized-deposits-cache",
 		Usage: "Enables utilization of cached finalized deposits",
+	}
+	enableEth1DataMajorityVote = &cli.BoolFlag{
+		Name:  "enable-eth1-data-majority-vote",
+		Usage: "When enabled, voting on eth1 data will use the Voting With The Majority algorithm.",
 	}
 )
 
@@ -625,6 +629,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	initSyncVerbose,
 	enableBlst,
 	enableFinalizedDepositsCache,
+	enableEth1DataMajorityVote,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -635,4 +640,5 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-finalized-deposits-cache",
+	"--enable-eth1-data-majority-vote",
 }

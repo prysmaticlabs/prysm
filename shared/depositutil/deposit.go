@@ -11,8 +11,9 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -56,7 +57,7 @@ func DepositInput(
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
+	root, err := ssz.HashTreeRoot(&p2ppb.SigningData{ObjectRoot: sr[:], Domain: domain})
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -80,6 +81,39 @@ func DepositInput(
 func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
+}
+
+// VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
+func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
+	if featureconfig.Get().SkipBLSVerify {
+		return nil
+	}
+	ddCopy := *dd
+	publicKey, err := bls.PublicKeyFromBytes(dd.PublicKey)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to public key")
+	}
+	sig, err := bls.SignatureFromBytes(dd.Signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
+	ddCopy.Signature = nil
+	root, err := ssz.SigningRoot(ddCopy)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root")
+	}
+	signingData := &p2ppb.SigningData{
+		ObjectRoot: root[:],
+		Domain:     domain,
+	}
+	ctrRoot, err := ssz.HashTreeRoot(signingData)
+	if err != nil {
+		return errors.Wrap(err, "could not get container root")
+	}
+	if !sig.Verify(publicKey, ctrRoot[:]) {
+		return helpers.ErrSigFailedToVerify
+	}
+	return nil
 }
 
 // GenerateDepositTransaction uses the provided validating key and withdrawal key to

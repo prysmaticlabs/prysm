@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"encoding/base64"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -11,6 +12,9 @@ import (
 
 // JoinTopic will join PubSub topic, if not already joined.
 func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
+	s.joinedTopicsLock.Lock()
+	defer s.joinedTopicsLock.Unlock()
+
 	if _, ok := s.joinedTopics[topic]; !ok {
 		topicHandle, err := s.pubsub.Join(topic, opts...)
 		if err != nil {
@@ -25,6 +29,9 @@ func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topi
 // LeaveTopic closes topic and removes corresponding handler from list of joined topics.
 // This method will return error if there are outstanding event handlers or subscriptions.
 func (s *Service) LeaveTopic(topic string) error {
+	s.joinedTopicsLock.Lock()
+	defer s.joinedTopicsLock.Unlock()
+
 	if t, ok := s.joinedTopics[topic]; ok {
 		if err := t.Close(); err != nil {
 			return err
@@ -59,4 +66,11 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
 	h := hashutil.FastSum256(pmsg.Data)
 	return base64.URLEncoding.EncodeToString(h[:])
+}
+
+func setPubSubParameters() {
+	pubsub.GossipSubDlo = 5
+	pubsub.GossipSubHeartbeatInterval = 700 * time.Millisecond
+	pubsub.GossipSubHistoryLength = 6
+	pubsub.GossipSubHistoryGossip = 3
 }

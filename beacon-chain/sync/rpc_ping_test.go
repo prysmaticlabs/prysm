@@ -60,7 +60,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	seqNumber := uint64(1)
+	seqNumber := uint64(2)
 
 	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
@@ -133,4 +133,59 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	if len(conns) == 0 {
 		t.Error("Peer is disconnected despite receiving a valid ping")
 	}
+}
+
+func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	p1.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'A', 'B'},
+	}
+
+	p2.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'C', 'D'},
+	}
+
+	// Set up a head state in the database with data we expect.
+	d, _ := db.SetupDB(t)
+	r := &Service{
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
+	}
+
+	badMetadata := &pb.MetaData{
+		SeqNumber: 3,
+		Attnets:   []byte{'E', 'F'},
+	}
+
+	p1.Peers().Add(new(enr.Record), p2.BHost.ID(), p2.BHost.Addrs()[0], network.DirUnknown)
+	p1.Peers().SetMetadata(p2.BHost.ID(), badMetadata)
+
+	// Setup streams
+	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		expectFailure(t, responseCodeInvalidRequest, seqError, stream)
+
+	})
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
+	require.NoError(t, err)
+
+	assert.ErrorContains(t, seqError, r.pingHandler(context.Background(), &p2.LocalMetadata.SeqNumber, stream1))
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	res, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.BHost.ID())
+	assert.Equal(t, int(1), res, "Peer wasn't penalised for providing a bad sequence number")
 }

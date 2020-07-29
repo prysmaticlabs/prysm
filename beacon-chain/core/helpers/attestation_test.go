@@ -14,12 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestAttestation_SlotSignature(t *testing.T) {
 	priv := bls.RandKey()
 	pub := priv.PublicKey()
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators: []*ethpb.Validator{{PublicKey: pub.Marshal()}},
 		Fork: &pb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -36,19 +38,8 @@ func TestAttestation_SlotSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state),
-		params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	msg, err := helpers.ComputeSigningRoot(slot, domain)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !sig.Verify(pub, msg[:]) {
-		t.Error("Could not verify slot signature")
-	}
+	require.NoError(t, helpers.ComputeDomainVerifySigningRoot(state, 0, helpers.CurrentEpoch(state), slot,
+		params.BeaconConfig().DomainBeaconAttester, sig.Marshal()))
 }
 
 func TestAttestation_IsAggregator(t *testing.T) {

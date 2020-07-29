@@ -210,8 +210,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_benbjohnson_clock",
         importpath = "github.com/benbjohnson/clock",
-        sum = "h1:lVM1R/o5khtrr7t3qAr+sS6uagZOP+7iprc7gS3V9CE=",
-        version = "v1.0.1",
+        sum = "h1:Z0CN0Yb4ig9sGPXkvAQcGJfnrrMQ5QYLCMPRi9iD7YE=",
+        version = "v1.0.2",
     )
     go_repository(
         name = "com_github_bradfitz_go_smtpd",
@@ -2208,8 +2208,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_eventbus",
         importpath = "github.com/libp2p/go-eventbus",
-        sum = "h1:mlawomSAjjkk97QnYiEmHsLu7E136+2oCWSHRUvMfzQ=",
-        version = "v0.1.0",
+        sum = "h1:VanAdErQnpTioN2TowqNcOijf6YwhuODe4pPKSDpxGc=",
+        version = "v0.2.1",
     )
     go_repository(
         name = "com_github_libp2p_go_flow_metrics",
@@ -2247,15 +2247,15 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_connmgr",
         importpath = "github.com/libp2p/go-libp2p-connmgr",
-        sum = "h1:v7skKI9n+0obPpzMIO6aIlOSdQOmhxTf40cbpzqaGMQ=",
-        version = "v0.2.3",
+        sum = "h1:TMS0vc0TCBomtQJyWr7fYxcVYYhx+q/2gF++G5Jkl/w=",
+        version = "v0.2.4",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_core",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-core",
-        sum = "h1:IxFH4PmtLlLdPf4fF/i129SnK/C+/v8WEX644MxhC48=",
-        version = "v0.5.6",
+        sum = "h1:QK3xRwFxqd0Xd9bSZL+8yZ8ncZZbl6Zngd/+Y+A6sgQ=",
+        version = "v0.5.7",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_crypto",
@@ -2328,8 +2328,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_pubsub",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-pubsub",
-        sum = "h1:7Hyv2d8BK/x1HGRJTZ8X++VQEP+WqDTSwpUSZGTVLYA=",
-        version = "v0.3.1",
+        sum = "h1:k3cJm5JW5mjaWZkobS50sJLJWaB2mBi0HW4eRlE8mSo=",
+        version = "v0.3.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_record",
@@ -2602,8 +2602,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:0zB+DtS1NdwgYtto4JcvV3OX3m1wmM7ocjLvveNaMgA=",
-        version = "v0.0.0-20200617012222-f52a0eff2886",
+        sum = "h1:aRmdlw7lbzJwuykpA/kdCrwhXf6/xaxS3s/UpHVlBiE=",
+        version = "v0.0.0-20200724235904-8a5e41ba473e",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",

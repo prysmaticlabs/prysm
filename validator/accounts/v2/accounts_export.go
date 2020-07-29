@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -27,9 +28,10 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse output directory")
 	}
-
 	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "nothing to export, no wallet found")
+	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
@@ -80,21 +82,49 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 		}
 		return enteredAccounts, nil
 	}
-
-	prompt := promptui.SelectWithAdd{
-		Label: "Select accounts to backup",
-		Items: append(accounts, allAccountsText),
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}",
+		Active:   "\U0001F336 {{ .Name | cyan }}",
+		Inactive: "  {{ .Name | cyan }}",
+		Selected: "\U0001F336 {{ .Name | red | cyan }}",
+		Details: `
+--------- Account ----------
+{{ "Name:" | faint }}	{{ .Name }}`,
 	}
 
-	_, result, err := prompt.Run()
-	if err != nil {
-		return nil, err
+	var result string
+	var err error
+	exit := "Exit Account Selection"
+	results := []string{}
+	au := aurora.NewAurora(true)
+	// Alphabetical Sort of accounts.
+	sort.Strings(accounts)
+
+	for result != exit {
+		prompt := promptui.Select{
+			Label:        "Select accounts to backup",
+			HideSelected: true,
+			Items:        append([]string{exit, allAccountsText}, accounts...),
+			Templates:    templates,
+		}
+
+		_, result, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
+		if result == exit {
+			fmt.Printf("%s\n", au.BrightRed("Exiting Selection").Bold())
+			return results, nil
+		}
+		if result == allAccountsText {
+			fmt.Printf("%s\n", au.BrightRed("[Selected all accounts]").Bold())
+			return accounts, nil
+		}
+		results = append(results, result)
+		fmt.Printf("%s %s\n", au.BrightRed("[Selected Account Name]").Bold(), result)
 	}
 
-	if result == allAccountsText {
-		return accounts, nil
-	}
-	return []string{result}, nil
+	return results, nil
 }
 
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
@@ -102,6 +132,9 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 	archivePath := filepath.Join(targetPath, archiveFilename)
 	if err := os.MkdirAll(targetPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return errors.Wrap(err, "could not create target folder")
+	}
+	if fileExists(archivePath) {
+		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
 	zipfile, err := os.Create(archivePath)
 	if err != nil {

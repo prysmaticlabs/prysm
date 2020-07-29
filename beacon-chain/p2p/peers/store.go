@@ -36,7 +36,7 @@ type peerData struct {
 	enr                   *enr.Record
 	metaData              *pb.MetaData
 	chainStateLastUpdated time.Time
-	badResponsesCount     int
+	badResponses          int
 }
 
 // newPeerDataStore creates peer store.

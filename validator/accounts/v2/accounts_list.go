@@ -24,8 +24,10 @@ func ListAccounts(cliCtx *cli.Context) error {
 	// Read the wallet from the specified path.
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
-		return errors.Wrapf(err, "could not read wallet at specified path %s", wallet.AccountsDir())
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
+	} else if err != nil {
+		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
@@ -93,20 +95,18 @@ func listDirectKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		fmt.Printf("%s\n", au.BrightGreen(accountNames[i]).Bold())
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), pubKeys[i])
 
 		// Retrieve the account creation timestamp.
-		createdAtBytes, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.TimestampFileName)
+		keystoreFileName, err := wallet.FileNameAtPath(ctx, accountNames[i], direct.KeystoreFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", direct.TimestampFileName)
+			return errors.Wrapf(err, "could not get keystore file name for account: %s", accountNames[i])
 		}
-		unixTimestampStr, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
+		unixTimestamp, err := AccountTimestamp(keystoreFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
+			return errors.Wrap(err, "could not get timestamp from keystore file name")
 		}
-		unixTimestamp := time.Unix(unixTimestampStr, 0)
-		fmt.Printf("%s %s\n", au.BrightCyan("[created at]").Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s | %s | Created %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if !showDepositData {
 			continue
 		}
@@ -184,7 +184,7 @@ func listDerivedKeymanagerAccounts(
 			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
 		}
 		unixTimestamp := time.Unix(unixTimestampInt, 0)
-		fmt.Printf("%s | %s\n", au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s | %s | Created %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
 		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
 

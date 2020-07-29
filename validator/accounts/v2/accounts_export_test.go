@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -17,7 +16,8 @@ import (
 )
 
 func TestZipAndUnzip(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	t.Skip("skipping until exporting is implemented")
+	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	exportDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
@@ -36,10 +36,12 @@ func TestZipAndUnzip(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
+	keymanagerCfg := direct.DefaultConfig()
+	keymanagerCfg.AccountPasswordsDirectory = passwordsDir
 	keymanager, err := direct.NewKeymanager(
 		ctx,
 		wallet,
-		direct.DefaultConfig(),
+		keymanagerCfg,
 	)
 	require.NoError(t, err)
 	_, err = keymanager.CreateAccount(ctx, password)
@@ -57,20 +59,10 @@ func TestZipAndUnzip(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(exportDir, archiveFilename)); os.IsNotExist(err) {
 		t.Fatal("Expected file to exist")
 	}
-
-	importedAccounts, err := unzipArchiveToTarget(exportDir, importDir)
-	require.NoError(t, err)
-
-	allAccountsStr := strings.Join(accounts, " ")
-	for _, importedAccount := range importedAccounts {
-		if !strings.Contains(allAccountsStr, importedAccount) {
-			t.Fatalf("Expected %s to be in %s", importedAccount, allAccountsStr)
-		}
-	}
 }
 
 func TestExport_Noninteractive(t *testing.T) {
-	walletDir, passwordsDir := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	exportDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "export")
@@ -90,6 +82,7 @@ func TestExport_Noninteractive(t *testing.T) {
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()
+	keymanagerCfg.AccountPasswordsDirectory = passwordsDir
 	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))

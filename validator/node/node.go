@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"path"
 	"strings"
 	"sync"
 	"syscall"
@@ -79,21 +78,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
-	keyManagerV1, err := selectV1Keymanager(cliCtx)
-	if err != nil {
-		return nil, err
-	}
 
+	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager
 	if featureconfig.Get().EnableAccountsV2 {
-		walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-		if walletDir == flags.DefaultValidatorDir() {
-			walletDir = path.Join(walletDir, accountsv2.WalletDefaultDirName)
-		}
-		passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
-		if passwordsDir == flags.DefaultValidatorDir() {
-			passwordsDir = path.Join(passwordsDir, accountsv2.PasswordsDefaultDirName)
-		}
 		// Read the wallet from the specified path.
 		wallet, err := accountsv2.OpenWallet(cliCtx)
 		if err != nil {
@@ -104,6 +92,11 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		)
 		if err != nil {
 			log.Fatalf("Could not read existing keymanager for wallet: %v", err)
+		}
+	} else {
+		keyManagerV1, err = selectV1Keymanager(cliCtx)
+		if err != nil {
+			return nil, err
 		}
 	}
 
