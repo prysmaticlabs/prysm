@@ -1,6 +1,8 @@
 package promptutil
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -17,15 +19,17 @@ func ValidatePrompt(promptText string, validateFunc func(string) error) (string,
 	var response string
 	for !responseValid {
 		fmt.Printf("%s:\n", au.Bold(promptText))
-		_, err := fmt.Scanln(&response)
-		if err != nil && !strings.Contains(err.Error(), "unexpected newline") {
-			return "", err
-		}
-		response = strings.TrimRight(response, "\r\n")
-		if err := validateFunc(response); err != nil {
-			fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
+		scanner := bufio.NewScanner(os.Stdin)
+		if ok := scanner.Scan(); ok {
+			item := scanner.Text()
+			response = strings.TrimRight(item, "\r\n")
+			if err := validateFunc(response); err != nil {
+				fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
+			} else {
+				responseValid = true
+			}
 		} else {
-			responseValid = true
+			return "", errors.New("could not scan text input")
 		}
 	}
 	return response, nil
@@ -35,15 +39,16 @@ func ValidatePrompt(promptText string, validateFunc func(string) error) (string,
 func DefaultPrompt(promptText string, defaultValue string) (string, error) {
 	var response string
 	fmt.Printf("%s %s:\n", promptText, fmt.Sprintf("(%s: %s)", au.BrightGreen("default"), defaultValue))
-	_, err := fmt.Scanln(&response)
-	if err != nil && !strings.Contains(err.Error(), "unexpected newline") {
-		return "", err
+	scanner := bufio.NewScanner(os.Stdin)
+	if ok := scanner.Scan(); ok {
+		item := scanner.Text()
+		response = strings.TrimRight(item, "\r\n")
+		if response == "" {
+			return defaultValue, nil
+		}
+		return response, nil
 	}
-	response = strings.TrimRight(response, "\r\n")
-	if response == "" {
-		return defaultValue, nil
-	}
-	return response, nil
+	return "", errors.New("could not scan text input")
 }
 
 // DefaultAndValidatePrompt prompts the user for any text and expects it to fulfill a validation function. If nothing is entered
@@ -53,16 +58,17 @@ func DefaultAndValidatePrompt(promptText string, defaultValue string, validateFu
 	var response string
 	for !responseValid {
 		fmt.Printf("%s %s:\n", promptText, fmt.Sprintf("(%s: %s)", au.BrightGreen("default"), defaultValue))
-		_, err := fmt.Scanln(&response)
-		if err != nil && !strings.Contains(err.Error(), "unexpected newline") {
-			return "", err
-		}
-		response = strings.TrimRight(response, "\r\n")
-		if response == "" {
-			return defaultValue, nil
-		}
-		if err := validateFunc(response); err != nil {
-			fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
+		scanner := bufio.NewScanner(os.Stdin)
+		if ok := scanner.Scan(); ok {
+			item := scanner.Text()
+			response = strings.TrimRight(item, "\r\n")
+			if err := validateFunc(response); err != nil {
+				fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
+			} else {
+				responseValid = true
+			}
+		} else {
+			return "", errors.New("could not scan text input")
 		}
 	}
 	return response, nil
