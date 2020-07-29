@@ -16,7 +16,7 @@ func ValidatePrompt(promptText string, validateFunc func(string) error) (string,
 	var responseValid bool
 	var response string
 	for !responseValid {
-		fmt.Printf("%s %s:\n", promptText)
+		fmt.Printf("%s:\n", au.Bold(promptText))
 		_, err := fmt.Scanln(&response)
 		if err != nil && !strings.Contains(err.Error(), "unexpected newline") {
 			return "", err
@@ -24,6 +24,8 @@ func ValidatePrompt(promptText string, validateFunc func(string) error) (string,
 		response = strings.TrimRight(response, "\r\n")
 		if err := validateFunc(response); err != nil {
 			fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
+		} else {
+			responseValid = true
 		}
 	}
 	return response, nil

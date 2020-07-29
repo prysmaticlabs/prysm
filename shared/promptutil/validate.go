@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 	"unicode"
+
+	strongPasswords "github.com/nbutton23/zxcvbn-go"
 )
 
 const (

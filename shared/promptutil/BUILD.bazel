@@ -9,8 +9,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/promptutil",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_golang_gddo//log:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
+        "@com_github_nbutton23_zxcvbn_go//:go_default_library",
         "@org_golang_x_crypto//ssh/terminal:go_default_library",
     ],
 )
