@@ -63,6 +63,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return pubsub.ValidationIgnore
@@ -121,12 +127,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
 	if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
 		return pubsub.ValidationReject
-	}
-
-	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
 	}
 
 	// Attestation's signature is a valid BLS signature and belongs to correct public key..

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -363,4 +364,53 @@ func TestStore_ViableForHead(t *testing.T) {
 		}
 		assert.Equal(t, tc.want, s.viableForHead(tc.n))
 	}
+}
+
+func TestStore_HasParent(t *testing.T) {
+	tests := []struct {
+		m    map[[32]byte]uint64
+		n    []*Node
+		r    [32]byte
+		want bool
+	}{
+		{r: [32]byte{'a'}, want: false},
+		{m: map[[32]byte]uint64{{'a'}: 0}, r: [32]byte{'a'}, want: false},
+		{m: map[[32]byte]uint64{{'a'}: 0}, r: [32]byte{'a'},
+			n: []*Node{{Parent: NonExistentNode}}, want: false},
+		{m: map[[32]byte]uint64{{'a'}: 0},
+			n: []*Node{{Parent: 0}}, r: [32]byte{'a'},
+			want: true},
+	}
+	for _, tc := range tests {
+		f := &ForkChoice{store: &Store{
+			NodeIndices: tc.m,
+			Nodes:       tc.n,
+		}}
+		assert.Equal(t, tc.want, f.HasParent(tc.r))
+	}
+}
+
+func TestStore_AncestorRoot(t *testing.T) {
+	ctx := context.Background()
+	f := &ForkChoice{store: &Store{}}
+	f.store.NodeIndices = map[[32]byte]uint64{}
+	_, err := f.AncestorRoot(ctx, [32]byte{'a'}, 0)
+	assert.ErrorContains(t, "node does not exist", err)
+	f.store.NodeIndices[[32]byte{'a'}] = 0
+	_, err = f.AncestorRoot(ctx, [32]byte{'a'}, 0)
+	assert.ErrorContains(t, "node index out of range", err)
+	f.store.NodeIndices[[32]byte{'b'}] = 1
+	f.store.NodeIndices[[32]byte{'c'}] = 2
+	f.store.Nodes = []*Node{
+		{Slot: 1, Root: [32]byte{'a'}, Parent: NonExistentNode},
+		{Slot: 2, Root: [32]byte{'b'}, Parent: 0},
+		{Slot: 3, Root: [32]byte{'c'}, Parent: 1},
+	}
+
+	r, err := f.AncestorRoot(ctx, [32]byte{'c'}, 1)
+	require.NoError(t, err)
+	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'a'})
+	r, err = f.AncestorRoot(ctx, [32]byte{'c'}, 2)
+	require.NoError(t, err)
+	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'b'})
 }

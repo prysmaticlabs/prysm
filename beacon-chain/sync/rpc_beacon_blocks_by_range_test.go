@@ -269,7 +269,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		saveBlocks(req)
 
 		hook.Reset()
-		for i := 0; i < p2.Peers().Scorer().BadResponsesThreshold(); i++ {
+		for i := 0; i < p2.Peers().Scorers().BadResponsesScorer().Params().Threshold; i++ {
 			err := sendRequest(p1, p2, r, req, false)
 			assert.ErrorContains(t, rateLimitedError, err)
 		}
@@ -308,7 +308,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 
 		// One more request should result in overflow.
 		hook.Reset()
-		for i := 0; i < p2.Peers().Scorer().BadResponsesThreshold(); i++ {
+		for i := 0; i < p2.Peers().Scorers().BadResponsesScorer().Params().Threshold; i++ {
 			err := sendRequest(p1, p2, r, req, false)
 			assert.ErrorContains(t, rateLimitedError, err)
 		}
