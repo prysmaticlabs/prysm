@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-
 	"github.com/tyler-smith/go-bip39"
 )
 
