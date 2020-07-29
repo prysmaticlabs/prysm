@@ -30,6 +30,8 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// Don't test sync or slashers unless long-running e2e is running.
+	testExtra := ok
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -37,9 +39,9 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 		},
 		ValidatorFlags: []string{},
 		EpochsToRun:    uint64(epochsToRun),
-		TestSync:       true,
+		TestSync:       testExtra,
 		TestDeposits:   true,
-		TestSlasher:    true,
+		TestSlasher:    testExtra,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,

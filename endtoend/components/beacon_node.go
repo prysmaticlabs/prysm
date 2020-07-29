@@ -72,6 +72,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int) int {
 	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
+	fmt.Printf("beacon node %d ready\n", index)
 
 	return cmd.Process.Pid
 }
@@ -107,6 +108,7 @@ func StartBootnode(t *testing.T) int {
 	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
 		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
 	}
+	fmt.Println("Bootnode ready")
 
 	e2e.TestParams.BootNodeENR, err = getENRFromLogFile(stdOutFile.Name())
 	if err != nil {

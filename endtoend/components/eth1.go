@@ -72,6 +72,7 @@ func StartEth1Node(t *testing.T) (string, int) {
 	if err = helpers.WaitForTextInFile(file, "Commit new mining work"); err != nil {
 		t.Fatalf("mining log not found, this means the eth1 chain had issues starting: %v", err)
 	}
+	fmt.Println("eth1 ready")
 
 	// Connect to the started geth dev chain.
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
