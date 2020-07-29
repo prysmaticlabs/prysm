@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
