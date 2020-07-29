@@ -258,7 +258,7 @@ func (s *BlockProviderScorer) Sorted(pids []peer.ID) []peer.ID {
 		scores[pid] = s.score(pid)
 		peers[i] = pid
 	}
-	sort.SliceStable(peers, func(i, j int) bool {
+	sort.Slice(peers, func(i, j int) bool {
 		return scores[peers[i]] > scores[peers[j]]
 	})
 	return peers
