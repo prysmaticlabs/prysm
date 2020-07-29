@@ -276,5 +276,6 @@ func (s *BlockProviderScorer) BlockProviderScorePretty(pid peer.ID) string {
 
 // MaxScore exposes maximum score attainable by peers.
 func (s *BlockProviderScorer) MaxScore() float64 {
-	return s.Params().StartScore + s.config.ReturnedBlocksWeight + s.config.ProcessedBlocksWeight
+	score := s.Params().StartScore + s.config.ReturnedBlocksWeight + s.config.ProcessedBlocksWeight
+	return math.Round(score*scoreRoundingFactor) / scoreRoundingFactor
 }

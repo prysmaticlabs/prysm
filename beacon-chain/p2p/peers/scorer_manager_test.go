@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-func TestPeerScorer_NewPeerScorerManager(t *testing.T) {
+func TestPeerScorer_PeerScorerManager_Init(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -21,11 +21,23 @@ func TestPeerScorer_NewPeerScorerManager(t *testing.T) {
 			PeerLimit:    30,
 			ScorerParams: &peers.PeerScorerConfig{},
 		})
-		// Bad responses stats.
-		params := peerStatuses.Scorers().BadResponsesScorer().Params()
-		assert.Equal(t, peers.DefaultBadResponsesThreshold, params.Threshold, "Unexpected threshold value")
-		assert.Equal(t, peers.DefaultBadResponsesWeight, params.Weight, "Unexpected weight value")
-		assert.Equal(t, peers.DefaultBadResponsesDecayInterval, params.DecayInterval, "Unexpected decay interval value")
+
+		t.Run("bad responses scorer", func(t *testing.T) {
+			params := peerStatuses.Scorers().BadResponsesScorer().Params()
+			assert.Equal(t, peers.DefaultBadResponsesThreshold, params.Threshold, "Unexpected threshold value")
+			assert.Equal(t, peers.DefaultBadResponsesWeight, params.Weight, "Unexpected weight value")
+			assert.Equal(t, peers.DefaultBadResponsesDecayInterval, params.DecayInterval, "Unexpected decay interval value")
+		})
+
+		t.Run("block providers scorer", func(t *testing.T) {
+			params := peerStatuses.Scorers().BlockProviderScorer().Params()
+			assert.Equal(t, peers.DefaultBlockProviderReturnedBlocksWeight, params.ReturnedBlocksWeight)
+			assert.Equal(t, peers.DefaultSlowReturnedBlocksPenalty, params.SlowReturnedBlocksPenalty)
+			assert.Equal(t, peers.DefaultBlockProviderProcessedBlocksWeight, params.ProcessedBlocksWeight)
+			assert.Equal(t, peers.DefaultSlowProcessedBlocksPenalty, params.SlowProcessedBlocksPenalty)
+			assert.Equal(t, peers.DefaultBlockProviderDecayInterval, params.DecayInterval)
+			assert.Equal(t, peers.DefaultBlockProviderDecay, params.Decay)
+		})
 	})
 
 	t.Run("explicit config", func(t *testing.T) {
@@ -37,13 +49,35 @@ func TestPeerScorer_NewPeerScorerManager(t *testing.T) {
 					Weight:        -1,
 					DecayInterval: 1 * time.Minute,
 				},
+				BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+					StartScore:                 0.2,
+					ReturnedBlocksWeight:       0.5,
+					SlowReturnedBlocksPenalty:  -0.2,
+					ProcessedBlocksWeight:      0.6,
+					SlowProcessedBlocksPenalty: -0.3,
+					DecayInterval:              1 * time.Minute,
+					Decay:                      0.8,
+				},
 			},
 		})
-		// Bad responses stats.
-		params := peerStatuses.Scorers().BadResponsesScorer().Params()
-		assert.Equal(t, 2, params.Threshold, "Unexpected threshold value")
-		assert.Equal(t, -1.0, params.Weight, "Unexpected weight value")
-		assert.Equal(t, 1*time.Minute, params.DecayInterval, "Unexpected decay interval value")
+
+		t.Run("bad responses scorer", func(t *testing.T) {
+			params := peerStatuses.Scorers().BadResponsesScorer().Params()
+			assert.Equal(t, 2, params.Threshold, "Unexpected threshold value")
+			assert.Equal(t, -1.0, params.Weight, "Unexpected weight value")
+			assert.Equal(t, 1*time.Minute, params.DecayInterval, "Unexpected decay interval value")
+		})
+
+		t.Run("block provider scorer", func(t *testing.T) {
+			params := peerStatuses.Scorers().BlockProviderScorer().Params()
+			assert.Equal(t, 0.2, params.StartScore)
+			assert.Equal(t, 0.5, params.ReturnedBlocksWeight)
+			assert.Equal(t, -0.2, params.SlowReturnedBlocksPenalty)
+			assert.Equal(t, 0.6, params.ProcessedBlocksWeight)
+			assert.Equal(t, -0.3, params.SlowProcessedBlocksPenalty)
+			assert.Equal(t, 1*time.Minute, params.DecayInterval)
+			assert.Equal(t, 0.8, params.Decay)
+		})
 	})
 }
 
@@ -80,7 +114,8 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 		pids := []peer.ID{"peer1", "peer2", "peer3"}
 		for _, pid := range pids {
 			peerStatuses.Add(nil, pid, nil, network.DirUnknown)
-			assert.Equal(t, 0.0, s.Score(pid), "Unexpected score")
+			// Not yet used peer gets boosted score.
+			assert.Equal(t, s.BlockProviderScorer().MaxScore(), s.Score(pid), "Unexpected score for not yet used peer")
 		}
 		return s, pids
 	}
