@@ -255,13 +255,20 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 		return nil, ctx.Err()
 	}
 
-	signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(root))
+	r := bytesutil.ToBytes32(root)
+	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
+	// This is most optimal outcome.
+	if s.forkChoiceStore.HasParent(r) {
+		return s.forkChoiceStore.AncestorRoot(ctx, r, slot)
+	}
+
+	signed, err := s.beaconDB.Block(ctx, r)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
 
-	if s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
-		signed = s.getInitSyncBlock(bytesutil.ToBytes32(root))
+	if s.hasInitSyncBlock(r) {
+		signed = s.getInitSyncBlock(r)
 	}
 
 	if signed == nil || signed.Block == nil {

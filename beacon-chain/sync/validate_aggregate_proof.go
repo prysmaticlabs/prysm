@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -46,6 +45,10 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if !ok {
 		return pubsub.ValidationReject
 	}
+	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.chain.GenesisTime()); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
 
 	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
 		return pubsub.ValidationReject
@@ -53,6 +56,12 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	// Verify this is the first aggregate received from the aggregator with index and slot.
 	if s.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
 		return pubsub.ValidationIgnore
+	}
+	// Check that the block being voted on isn't invalid.
+	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
+		return pubsub.ValidationReject
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
@@ -85,10 +94,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
-	if err := helpers.ValidateAttestationTime(attSlot, s.chain.GenesisTime()); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
 
 	bs, err := s.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
@@ -207,25 +212,9 @@ func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *eth
 		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
-	domain, err := helpers.Domain(bs.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainSelectionProof, bs.GenesisValidatorRoot())
-	if err != nil {
+	if err := helpers.ComputeDomainVerifySigningRoot(bs, validatorIndex,
+		helpers.SlotToEpoch(data.Slot), data.Slot, params.BeaconConfig().DomainSelectionProof, proof); err != nil {
 		return err
-	}
-	slotMsg, err := helpers.ComputeSigningRoot(data.Slot, domain)
-	if err != nil {
-		return err
-	}
-	pubkeyState := bs.PubkeyAtIndex(validatorIndex)
-	pubKey, err := bls.PublicKeyFromBytes(pubkeyState[:])
-	if err != nil {
-		return err
-	}
-	slotSig, err := bls.SignatureFromBytes(proof)
-	if err != nil {
-		return err
-	}
-	if !slotSig.Verify(pubKey, slotMsg[:]) {
-		return errors.New("could not validate slot signature")
 	}
 
 	return nil
@@ -233,17 +222,7 @@ func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *eth
 
 // This verifies aggregator signature over the signed aggregate and proof object.
 func validateAggregatorSignature(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) error {
-	aggregator, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
-	if err != nil {
-		return err
-	}
-
-	currentEpoch := helpers.SlotToEpoch(a.Message.Aggregate.Data.Slot)
-	domain, err := helpers.Domain(s.Fork(), currentEpoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
-	if err != nil {
-		return err
-	}
-
-	return helpers.VerifySigningRoot(a.Message, aggregator.PublicKey, a.Signature, domain)
+	return helpers.ComputeDomainVerifySigningRoot(s, a.Message.AggregatorIndex,
+		helpers.SlotToEpoch(a.Message.Aggregate.Data.Slot), a.Message, params.BeaconConfig().DomainAggregateAndProof, a.Signature)
 
 }

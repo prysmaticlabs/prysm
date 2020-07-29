@@ -14,7 +14,7 @@ import (
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, _, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
@@ -58,9 +58,10 @@ func TestEditWalletConfiguration(t *testing.T) {
 	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
 	cliCtx = cli.NewContext(&app, set, nil)
 
-	assert.NoError(t, EditWalletConfiguration(cliCtx))
+	err = EditWalletConfiguration(cliCtx)
+	require.NoError(t, err)
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cfg, err := remote.UnmarshalConfigFile(encoded)
 	assert.NoError(t, err)
