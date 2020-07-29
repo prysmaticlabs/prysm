@@ -34,17 +34,19 @@ func TestImport_Noninteractive(t *testing.T) {
 	})
 
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keysDir:        keysDir,
-		keymanagerKind: v2keymanager.Direct,
-		passwordFile:   passwordFilePath,
+		walletDir:           walletDir,
+		passwordsDir:        passwordsDir,
+		keysDir:             keysDir,
+		keymanagerKind:      v2keymanager.Direct,
+		walletPasswordFile:  passwordFilePath,
+		accountPasswordFile: passwordFilePath,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()
+	keymanagerCfg.AccountPasswordsDirectory = passwordsDir
 	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))

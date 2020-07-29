@@ -83,7 +83,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeyManagerOpts,
 			flags.KeystorePathFlag,
 			flags.PasswordFlag,
-			flags.PasswordFileFlag,
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
@@ -98,6 +97,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableAccountMetricsFlag,
 			flags.WalletDirFlag,
 			flags.WalletPasswordsDirFlag,
+			flags.WalletPasswordFileFlag,
 		},
 	},
 	{
