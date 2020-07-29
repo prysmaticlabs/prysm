@@ -31,9 +31,8 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	for i := 0; i < len(blockRoots); i++ {
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
-		// Return error until #6408 is resolved.
 		if err == io.EOF {
-			return err
+			break
 		}
 		// Exit if peer sends more than max request blocks.
 		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
