@@ -111,8 +111,7 @@ type BeaconChainConfig struct {
 	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
 }
 
-// Using medalla as the default configuration for now.
-var beaconConfig = MedallaConfig()
+var beaconConfig = MainnetConfig()
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {

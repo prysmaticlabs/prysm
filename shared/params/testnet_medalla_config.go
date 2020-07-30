@@ -21,3 +21,9 @@ func MedallaConfig() *BeaconChainConfig {
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x01}
 	return cfg
 }
+
+// UseMedallaConfig sets the main beacon chain
+// config for medalla.
+func UseMedallaConfig() {
+	beaconConfig = MedallaConfig()
+}

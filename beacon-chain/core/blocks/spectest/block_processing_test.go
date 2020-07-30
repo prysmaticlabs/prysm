@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -33,12 +32,6 @@ func runBlockProcessingTest(t *testing.T, config string) {
 	}
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "sanity/blocks/pyspec_tests")
-
-	// Since default genesis fork version is 0,0,0,1 (Medalla testnet). This ensures the genesis fork version
-	// aligns with mainnet to pass spec tests.
-	c := params.MainnetConfig()
-	c.GenesisForkVersion = []byte{0, 0, 0, 0}
-	params.OverrideBeaconConfig(c)
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
