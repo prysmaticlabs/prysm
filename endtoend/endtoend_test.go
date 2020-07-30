@@ -45,8 +45,10 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 
 	defer helpers.LogOutput(t, config)
 	defer func() {
-		if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, 0); err != nil {
-			t.Error(err)
+		for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+			if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, i); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 
