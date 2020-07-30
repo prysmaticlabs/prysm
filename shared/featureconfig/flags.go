@@ -498,7 +498,8 @@ var (
 	deprecatedMedallaTestnet = &cli.BoolFlag{
 		Name:   "medalla",
 		Usage:  deprecatedUsage,
-		Hidden: true}
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
