@@ -68,7 +68,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.
 		cmdConfig := cmd.Get()
 		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
-		cmd.OverrideConfig(cmdConfig)
+		cmd.Init(cmdConfig)
 	}
 
 	featureconfig.ConfigureSlasher(cliCtx)
