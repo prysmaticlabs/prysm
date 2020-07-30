@@ -22,10 +22,10 @@ import (
 const maxMemStatsBytes = 100000000 // 1 MB.
 
 // MetricsCheck performs a check on metrics to make sure caches are functioning, and
-// overall health is good. Not checking the first epoch so the sample size isn't too small.
+// overall health is good. Not checking the first 2 epochs so the sample size isn't too small.
 var MetricsCheck = types.Evaluator{
 	Name:       "metrics_check_epoch_%d",
-	Policy:     afterNthEpoch(0),
+	Policy:     afterNthEpoch(1),
 	Evaluation: metricsTest,
 }
 

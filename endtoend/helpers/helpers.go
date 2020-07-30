@@ -4,13 +4,12 @@ package helpers
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -151,14 +150,24 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 // WriteHeapFile writes a heap file to the test path.
 func WriteHeapFile(testDir string, index int) error {
 	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
-	filePath := filepath.Join(testDir, "eth2-beacon-node-0", fmt.Sprintf(heapFileName, index))
-	cmd := exec.Command("curl", url, fmt.Sprintf("-o %s", filePath))
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s: %s", err.Error(), stderr.String())
+	filePath := filepath.Join(testDir, fmt.Sprintf(heapFileName, index))
+	if err := os.MkdirAll(filepath.Join(testDir), os.ModePerm); err != nil {
+		return err
+	}
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	if _, err := file.Write(body); err != nil {
+		return err
 	}
 	return nil
 }

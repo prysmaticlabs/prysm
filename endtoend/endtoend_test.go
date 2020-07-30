@@ -33,8 +33,8 @@ func init() {
 func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
-	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
-	t.Logf("Test Path: %s\n\n", e2e.TestParams.TestPath)
+	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
+	t.Logf("Test Path: %s\n", e2e.TestParams.TestPath)
 
 	var keystorePath = components.StartEth1Node(t)
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
