@@ -287,9 +287,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	blockSig := keys[incomingBlock.Header.ProposerIndex].Sign(root[:])
-	marshalledSig := blockSig.Marshal()
-	incomingBlock.Signature = marshalledSig
+	incomingBlock.Signature = keys[incomingBlock.Header.ProposerIndex].Sign(root[:]).Marshal()
 
 	savedBlockEpoch := helpers.SlotToEpoch(savedBlock.Header.Slot)
 	domain, err = helpers.Domain(fork, savedBlockEpoch, params.BeaconConfig().DomainBeaconProposer, wantedGenesis.GenesisValidatorsRoot)
@@ -304,9 +302,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	blockSig = keys[savedBlock.Header.ProposerIndex].Sign(root[:])
-	marshalledSig = blockSig.Marshal()
-	savedBlock.Signature = marshalledSig
+	savedBlock.Signature = keys[savedBlock.Header.ProposerIndex].Sign(root[:]).Marshal()
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
 	bs, err := beaconclient.NewBeaconClientService(ctx, bcCfg)
 	ds := detection.NewDetectionService(ctx, cfg)
