@@ -36,12 +36,11 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	var blkRoots [][32]byte
 	// Populate the database with blocks that would match the request.
 	for i := 1; i < 11; i++ {
-		blk := &ethpb.BeaconBlock{
-			Slot: uint64(i),
-		}
+		blk := testutil.NewBeaconBlock()
+		blk.Block.Slot = uint64(i)
 		root, err := blk.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: blk}))
+		require.NoError(t, d.SaveBlock(context.Background(), blk))
 		blkRoots = append(blkRoots, root)
 	}
 
@@ -56,7 +55,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		for i := range blkRoots {
 			expectSuccess(t, r, stream)
-			res := &ethpb.SignedBeaconBlock{}
+			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, &res))
 			if res.Block.Slot != uint64(i+1) {
 				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)

@@ -37,7 +37,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 
 	// Populate the database with blocks that would match the request.
 	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
-		require.NoError(t, d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: i}}))
+		blk := testutil.NewBeaconBlock()
+		blk.Block.Slot = i
+		require.NoError(t, d.SaveBlock(context.Background(), blk))
 	}
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
@@ -51,7 +53,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
-			res := &ethpb.SignedBeaconBlock{}
+			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 			if (res.Block.Slot-req.StartSlot)%req.Step != 0 {
 				t.Errorf("Received unexpected block slot %d", res.Block.Slot)
