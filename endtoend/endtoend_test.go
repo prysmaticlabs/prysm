@@ -37,8 +37,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Test Path: %s\n", e2e.TestParams.TestPath)
 
 	var keystorePath = components.StartEth1Node(t)
-	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	go components.SendAndMineDeposits(t, keystorePath, validatorNum, 0)
+	genesisValCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	go components.SendAndMineDeposits(t, keystorePath, genesisValCount, 0)
 	components.StartBootnode(t)
 	components.StartBeaconNodes(t, config)
 	components.StartValidatorClients(t, config)
@@ -52,30 +52,30 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		}
 	}()
 
+	// Sleep depending on the count of validators, as generating the genesis state could take some time.
+	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	t.Run("chain started", func(t *testing.T) {
 		if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
 			t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
 		}
 	})
 
-	if config.TestSlasher {
-		components.StartSlashers(t)
-	}
-
 	// Failing early in case chain doesn't start.
 	if t.Failed() {
 		return
 	}
 
+	if config.TestSlasher {
+		components.StartSlashers(t)
+	}
 	if config.TestDeposits {
-		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
-		components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
-		components.SendAndMineDeposits(t, keystorePath, valCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
+		depositCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
+		components.StartNewValidatorClient(t, config, depositCount, e2e.TestParams.BeaconNodeCount)
+		components.SendAndMineDeposits(t, keystorePath, depositCount, genesisValCount /*offset*/)
 	}
 
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)
