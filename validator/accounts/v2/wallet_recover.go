@@ -73,7 +73,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 			}
 		}
 		log.WithField("wallet-path", wallet.AccountsDir()).Infof(
-			"Successfully recovered HD wallet with %d accounts. Please use accounts-v2 list to view details for your accounts.",
+			"Successfully recovered HD wallet with %d accounts. Please use accounts-v2 list to view details for your accounts",
 			numAccounts,
 		)
 		return nil

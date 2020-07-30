@@ -47,9 +47,6 @@ const (
 	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
-	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
-	// for a validator account.
-	DepositTransactionFileName = "deposit_transaction.rlp"
 	// DepositDataFileName for the raw, ssz-encoded deposit data object.
 	DepositDataFileName = "deposit_data.ssz"
 	// EncryptedSeedFileName for persisting a wallet's seed when using a derived keymanager.
@@ -308,19 +305,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	if err != nil {
 		return "", err
 	}
-	tx, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	_, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
-	}
-
-	if logAccountInfo {
-		// Log the deposit transaction data to the user.
-		depositutil.LogDepositTransaction(log, tx)
-	}
-
-	// We write the raw deposit transaction as an .rlp encoded file.
-	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositTransactionFileName, tx.Data()); err != nil {
-		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, DepositTransactionFileName)
 	}
 
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
@@ -330,6 +317,16 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	}
 	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositDataFileName, encodedDepositData); err != nil {
 		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, encodedDepositData)
+	}
+
+	if logAccountInfo {
+		// Log the deposit transaction data to the user.
+		fmt.Printf(`
+========================SSZ Deposit Data===============================
+
+%#x
+
+===================================================================`, encodedDepositData)
 	}
 
 	// Finally, write the account creation timestamps as a files.
