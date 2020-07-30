@@ -59,7 +59,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		accountName, err := keymanager.CreateAccount(ctx, "hello world")
 		require.NoError(t, err)
-		depositData, err := wallet.ReadFileAtPath(ctx, accountName, direct.DepositTransactionFileName)
+		depositData, err := wallet.ReadFileAtPath(ctx, accountName, direct.DepositDataFileName)
 		require.NoError(t, err)
 		depositDataForAccounts[i] = depositData
 		keystoreFileName, err := wallet.FileNameAtPath(ctx, accountName, direct.KeystoreFileName)
@@ -161,7 +161,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		_, err := keymanager.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
-		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositTransactionFileName)
+		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositDataFileName)
 		require.NoError(t, err)
 		depositDataForAccounts[i] = depositData
 		unixTimestamp, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.TimestampFileName)

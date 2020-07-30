@@ -29,6 +29,7 @@ func CreateAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
+	log.Info("Creating a new account...")
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return errors.New("cannot create a new account for a remote keymanager")

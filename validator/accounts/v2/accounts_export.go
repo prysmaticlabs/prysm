@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -24,45 +23,8 @@ const archiveFilename = "backup.zip"
 
 // ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
-	outputDir, err := inputDirectory(cliCtx, exportDirPromptText, flags.BackupDirFlag)
-	if err != nil {
-		return errors.Wrap(err, "could not parse output directory")
-	}
-	wallet, err := OpenWallet(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "nothing to export, no wallet found")
-	} else if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
-	}
-	km, ok := keymanager.(*direct.Keymanager)
-	if !ok {
-		return errors.New("can only export accounts for a non-HD wallet")
-	}
-	allAccounts, err := km.ValidatingAccountNames()
-	if err != nil {
-		return errors.Wrap(err, "could not get account names")
-	}
-	accounts, err := selectAccounts(cliCtx, allAccounts)
-	if err != nil {
-		return errors.Wrap(err, "could not select accounts")
-	}
-	if len(accounts) == 0 {
-		return errors.New("no accounts to export")
-	}
-
-	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
-		return errors.Wrap(err, "could not export accounts")
-	}
-
-	if err := logAccountsExported(wallet, km, accounts); err != nil {
-		return errors.Wrap(err, "could not log out exported accounts")
-	}
-
-	return nil
+	// TODO(#6777): Re-enable export command.
+	return errors.New("this feature is unimplemented")
 }
 
 func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
