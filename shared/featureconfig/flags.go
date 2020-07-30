@@ -141,10 +141,6 @@ var (
 		Name:  "attestation-aggregation-force-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
 	}
-	enableAccountsV2 = &cli.BoolFlag{
-		Name:  "enable-accounts-v2",
-		Usage: "Enables usage of v2 for Prysm validator accounts",
-	}
 	batchBlockVerify = &cli.BoolFlag{
 		Name:  "batch-block-verify",
 		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
@@ -160,6 +156,10 @@ var (
 	enableEth1DataMajorityVote = &cli.BoolFlag{
 		Name:  "enable-eth1-data-majority-vote",
 		Usage: "When enabled, voting on eth1 data will use the Voting With The Majority algorithm.",
+	}
+	disableAccountsV2 = &cli.BoolFlag{
+		Name:  "disable-accounts-v2",
+		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
 )
 
@@ -500,6 +500,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableAccountsV2 = &cli.BoolFlag{
+		Name:   "enable-accounts-v2",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -568,6 +573,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
 	deprecatedMedallaTestnet,
+	deprecatedEnableAccountsV2,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -577,7 +583,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
-	enableAccountsV2,
+	disableAccountsV2,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -589,6 +595,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-local-protection",
+	"--disable-accounts-v2",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
