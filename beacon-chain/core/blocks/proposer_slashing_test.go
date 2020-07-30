@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
@@ -146,10 +147,6 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	proposerIdx := uint64(1)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
@@ -157,11 +154,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			StateRoot:     []byte("A"),
 		},
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(header1.Header, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
-	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()[:]
+	var err error
+	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -170,11 +165,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			StateRoot:     []byte("B"),
 		},
 	}
-	signingRoot, err = helpers.ComputeSigningRoot(header2.Header, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
-	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()[:]
+	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	slashings := []*ethpb.ProposerSlashing{
 		{
