@@ -85,7 +85,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not verify password for keystore")
 	}
 	fmt.Printf(
-		"Successfully imported %s accounts, view all of them by running accounts-v2 list",
+		"Successfully imported %s accounts, view all of them by running accounts-v2 list\n",
 		au.BrightMagenta(strconv.Itoa(len(pubKeysImported))),
 	)
 	return nil
