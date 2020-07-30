@@ -2,13 +2,11 @@ package derived
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"path"
-	"strconv"
 	"sync"
 
 	"github.com/google/uuid"
@@ -20,9 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
@@ -32,11 +28,6 @@ import (
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
 
 const (
-	// TimestampFileName stores a timestamp for account creation as a
-	// file for a direct keymanager account.
-	TimestampFileName = "created_at.txt"
-	// KeystoreFilePattern exposes the expected filename for the keystore file for an account.
-	KeystoreFilePattern = "keystore.json"
 	// EIPVersion used by this derived keymanager implementation.
 	EIPVersion = "EIP-2334"
 	// WithdrawalKeyDerivationPathTemplate defining the hierarchical path for withdrawal
@@ -47,8 +38,6 @@ const (
 	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
-	// DepositDataFileName for the raw, ssz-encoded deposit data object.
-	DepositDataFileName = "deposit_data.ssz"
 	// EncryptedSeedFileName for persisting a wallet's seed when using a derived keymanager.
 	EncryptedSeedFileName = "seed.encrypted.json"
 )
@@ -269,32 +258,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 		return "", errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
 	}
 
-	// Create encrypted keystores for both the withdrawal and validating keys.
-	encodedWithdrawalKeystore, err := dr.generateKeystoreFile(
-		withdrawalKey.Marshal(),
-		withdrawalKey.PublicKey().Marshal(),
-		dr.walletPassword,
-	)
-	if err != nil {
-		return "", errors.Wrap(err, "could not generate keystore file for withdrawal account")
-	}
-	encodedValidatingKeystore, err := dr.generateKeystoreFile(
-		validatingKey.Marshal(),
-		validatingKey.PublicKey().Marshal(),
-		dr.walletPassword,
-	)
-	if err != nil {
-		return "", errors.Wrap(err, "could not generate keystore file for validating account")
-	}
-
-	// Write both keystores to disk at their respective derived paths.
-	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, KeystoreFilePattern, encodedWithdrawalKeystore); err != nil {
-		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
-	}
-	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern, encodedValidatingKeystore); err != nil {
-		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
-	}
-
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
 	blsValidatingKey, err := bls.SecretKeyFromBytes(validatingKey.Marshal())
@@ -315,10 +278,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	if err != nil {
 		return "", errors.Wrap(err, "could not marshal deposit data")
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositDataFileName, encodedDepositData); err != nil {
-		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, encodedDepositData)
-	}
-
 	if logAccountInfo {
 		// Log the deposit transaction data to the user.
 		fmt.Printf(`
@@ -330,15 +289,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	}
 
 	// Finally, write the account creation timestamps as a files.
-	createdAt := roughtime.Now().Unix()
-	createdAtStr := strconv.FormatInt(createdAt, 10)
-	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, TimestampFileName, []byte(createdAtStr)); err != nil {
-		return "", errors.Wrapf(err, "could not write timestamp file for account %d", dr.seedCfg.NextAccount)
-	}
-	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, TimestampFileName, []byte(createdAtStr)); err != nil {
-		return "", errors.Wrapf(err, "could not write timestamp file for account %d", dr.seedCfg.NextAccount)
-	}
-
 	newAccountNumber := dr.seedCfg.NextAccount
 	if logAccountInfo {
 		log.WithFields(logrus.Fields{
@@ -392,19 +342,11 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern)
+		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to create validating key for account %d", i)
 		}
-		keystoreFile := &v2keymanager.Keystore{}
-		if err := json.Unmarshal(validatingKeystore, keystoreFile); err != nil {
-			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", validatingKeyPath)
-		}
-		pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode pubkey bytes: %#x", keystoreFile.Pubkey)
-		}
-		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
+		publicKeys = append(publicKeys, bytesutil.ToBytes48(validatingKey.PublicKey().Marshal()))
 	}
 	return publicKeys, nil
 }
@@ -414,21 +356,43 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 	publicKeys := make([][48]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKeystore, err := dr.wallet.ReadFileAtPath(ctx, withdrawalKeyPath, KeystoreFilePattern)
+		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to create validating key for account %d", i)
 		}
-		keystoreFile := &v2keymanager.Keystore{}
-		if err := json.Unmarshal(withdrawalKeystore, keystoreFile); err != nil {
-			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", withdrawalKeyPath)
-		}
-		pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode pubkey bytes: %#x", keystoreFile.Pubkey)
-		}
-		publicKeys = append(publicKeys, bytesutil.ToBytes48(pubKeyBytes))
+		publicKeys = append(publicKeys, bytesutil.ToBytes48(withdrawalKey.PublicKey().Marshal()))
 	}
 	return publicKeys, nil
+}
+
+// DepositDataForAccount with a given index returns and ssz-encoded deposit data object.
+func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error) {
+	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, accountIndex)
+	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, accountIndex)
+	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", accountIndex)
+	}
+	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create validating key for account %d", accountIndex)
+	}
+
+	// Upon confirmation of the withdrawal key, proceed to display
+	// and write associated deposit data to disk.
+	blsValidatingKey, err := bls.SecretKeyFromBytes(validatingKey.Marshal())
+	if err != nil {
+		return nil, err
+	}
+	blsWithdrawalKey, err := bls.SecretKeyFromBytes(withdrawalKey.Marshal())
+	if err != nil {
+		return nil, err
+	}
+	_, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate deposit transaction data")
+	}
+	return ssz.Marshal(depositData)
 }
 
 func (dr *Keymanager) initializeSecretKeysCache() error {
@@ -454,24 +418,4 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
 	}
 	return nil
-}
-
-func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
-	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(privateKey, password)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
-	}
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate new, random UUID for keystore")
-	}
-	keystoreFile := &v2keymanager.Keystore{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Pubkey:  fmt.Sprintf("%x", publicKey),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
-	}
-	return json.MarshalIndent(keystoreFile, "", "\t")
 }
