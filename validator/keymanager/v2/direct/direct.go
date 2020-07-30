@@ -303,7 +303,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	if len(accountNames) == 0 {
 		return nil
 	}
-	log.Infof("Decrypting validator accounts...")
+	log.Info("Decrypting validator accounts...")
 	// We initialize a nice progress bar to offer the user feedback
 	// during this slow operation.
 	bar := initializeProgressBar(len(accountNames))
@@ -314,7 +314,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 		for range progressChan {
 			itemsReceived++
 			if err := bar.Add(1); err != nil {
-				log.Debug("Could not increase progress bar")
+				log.WithError(err).Debug("Could not increase progress bar")
 			}
 			if itemsReceived == len(accountNames) {
 				return
