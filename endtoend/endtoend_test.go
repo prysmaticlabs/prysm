@@ -35,6 +35,9 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
+	// Use default Medalla testnet config.
+	params.UseMedallaConfig()
+
 	keystorePath, eth1PID := components.StartEth1Node(t)
 	bootnodeENR, bootnodePID := components.StartBootnode(t)
 	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
