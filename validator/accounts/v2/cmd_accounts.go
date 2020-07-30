@@ -50,24 +50,23 @@ this command outputs a deposit data string which is required to become a validat
 				return nil
 			},
 		},
-		// TODO(#6777): Re-enable export command.
-		//{
-		//	Name:        "export",
-		//	Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
-		//	Flags: []cli.Flag{
-		//		flags.WalletDirFlag,
-		//		flags.BackupDirFlag,
-		//		flags.AccountsFlag,
-		//		featureconfig.AltonaTestnet,
-		//		featureconfig.MedallaTestnet,
-		//	},
-		//	Action: func(cliCtx *cli.Context) error {
-		//		if err := ExportAccount(cliCtx); err != nil {
-		//			log.Fatalf("Could not export accounts: %v", err)
-		//		}
-		//		return nil
-		//	},
-		//},
+		{
+			Name:        "export",
+			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.BackupDirFlag,
+				flags.AccountsFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.MedallaTestnet,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := ExportAccount(cliCtx); err != nil {
+					log.Fatalf("Could not export accounts: %v", err)
+				}
+				return nil
+			},
+		},
 		{
 			Name:        "import",
 			Description: `imports the accounts from a given zip file to the provided wallet path. This zip can be created using the export command`,
