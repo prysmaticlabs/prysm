@@ -9,6 +9,7 @@ import (
 	"github.com/bazelbuild/buildtools/file"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 )
 
@@ -31,6 +32,9 @@ type UnencryptedKeys struct {
 }
 
 func main() {
+	// Using Medalla as the default configuration.
+	params.UseMedallaConfig()
+
 	flag.Parse()
 
 	fmt.Printf("Starting client to fetch private key for pod %s\n", *podName)
