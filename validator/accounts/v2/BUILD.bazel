@@ -50,7 +50,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "accounts_create_test.go",
-        "accounts_export_test.go",
         "accounts_import_test.go",
         "accounts_list_test.go",
         "consts_test.go",
