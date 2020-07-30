@@ -87,7 +87,9 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	require.NoError(t, err)
 	attRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
 	require.NoError(t, err)
-	att.Signature = sKeys[16].Sign(attRoot[:]).Marshal()
+	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
+	require.NoError(t, err)
+	att.Signature = sKeys[committee[0]].Sign(attRoot[:]).Marshal()
 
 	p.ReceivePubSub("/eth2/%x/beacon_attestation_0", att)
 
