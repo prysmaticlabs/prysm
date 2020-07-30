@@ -127,7 +127,7 @@ func NewService(cfg *Config) (*Service, error) {
 		log.WithError(err).Error("Failed to create address filter")
 		return nil, err
 	}
-	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true)
+	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
 
 	opts := s.buildOptions(ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
