@@ -59,12 +59,14 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		accountName, err := keymanager.CreateAccount(ctx, "hello world")
 		require.NoError(t, err)
-		depositData, err := wallet.ReadFileAtPath(ctx, accountName, direct.DepositTransactionFileName)
+		depositData, err := wallet.ReadFileAtPath(ctx, accountName, direct.DepositDataFileName)
 		require.NoError(t, err)
 		depositDataForAccounts[i] = depositData
-		unixTimestamp, err := wallet.ReadFileAtPath(ctx, accountName, direct.TimestampFileName)
+		keystoreFileName, err := wallet.FileNameAtPath(ctx, accountName, direct.KeystoreFileName)
 		require.NoError(t, err)
-		accountCreationTimestamps[i] = unixTimestamp
+		timestampStart := strings.LastIndex(keystoreFileName, "-") + 1
+		timestampEnd := strings.LastIndex(keystoreFileName, ".")
+		accountCreationTimestamps[i] = []byte(keystoreFileName[timestampStart:timestampEnd])
 	}
 	rescueStdout := os.Stdout
 	r, w, err := os.Pipe()
@@ -125,10 +127,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Derived,
-		passwordFile:   passwordFilePath,
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     v2keymanager.Derived,
+		walletPasswordFile: passwordFilePath,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
 	require.NoError(t, err)
@@ -159,7 +161,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		_, err := keymanager.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
-		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositTransactionFileName)
+		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositDataFileName)
 		require.NoError(t, err)
 		depositDataForAccounts[i] = depositData
 		unixTimestamp, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.TimestampFileName)

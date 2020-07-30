@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -37,8 +38,13 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
-	encodedKeystore, ok := wallet.Files[accountName][KeystoreFileName]
-	require.Equal(t, true, ok, "Expected to have stored %s in wallet", KeystoreFileName)
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[accountName] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	require.NotNil(t, encodedKeystore, "could not find keystore file")
 	keystoreFile := &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
@@ -46,7 +52,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+	rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator signing key")
 	validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
 	require.NoError(t, err, "Could not instantiate bls secret key from bytes")
@@ -54,8 +60,8 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	// Decode the deposit_data.ssz file and confirm
 	// the public key matches the public key from the
 	// account's decrypted keystore.
-	encodedDepositData, ok := wallet.Files[accountName][depositDataFileName]
-	require.Equal(t, true, ok, "Expected to have stored %s in wallet", depositDataFileName)
+	encodedDepositData, ok := wallet.Files[accountName][DepositDataFileName]
+	require.Equal(t, true, ok, "Expected to have stored %s in wallet", DepositDataFileName)
 	depositData := &ethpb.Deposit_Data{}
 	require.NoError(t, ssz.Unmarshal(encodedDepositData, depositData))
 

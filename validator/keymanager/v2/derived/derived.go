@@ -35,8 +35,8 @@ const (
 	// TimestampFileName stores a timestamp for account creation as a
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
-	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore.json"
+	// KeystoreFilePattern exposes the expected filename for the keystore file for an account.
+	KeystoreFilePattern = "keystore.json"
 	// EIPVersion used by this derived keymanager implementation.
 	EIPVersion = "EIP-2334"
 	// WithdrawalKeyDerivationPathTemplate defining the hierarchical path for withdrawal
@@ -47,9 +47,6 @@ const (
 	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
-	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
-	// for a validator account.
-	DepositTransactionFileName = "deposit_transaction.rlp"
 	// DepositDataFileName for the raw, ssz-encoded deposit data object.
 	DepositDataFileName = "deposit_data.ssz"
 	// EncryptedSeedFileName for persisting a wallet's seed when using a derived keymanager.
@@ -117,7 +114,7 @@ func NewKeymanager(
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, []byte(password))
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
@@ -168,26 +165,23 @@ func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
 // InitializeWalletSeedFile creates a new, encrypted seed using a password input
 // and persists its encrypted file metadata to disk under the wallet path.
 func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonicConfirm bool) (*SeedConfig, error) {
-	walletSeed := make([]byte, 32)
-	n, err := rand.NewGenerator().Read(walletSeed)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wallet seed")
-	}
-	if n != len(walletSeed) {
-		return nil, errors.New("could not randomly create seed")
+	mnemonicRandomness := make([]byte, 32)
+	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
+		return nil, errors.Wrap(err, "could not initialize mnemonic source of randomness")
 	}
 	m := &EnglishMnemonicGenerator{
 		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
-	phrase, err := m.Generate(walletSeed)
+	phrase, err := m.Generate(mnemonicRandomness)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate wallet seed")
 	}
 	if err := m.ConfirmAcknowledgement(phrase); err != nil {
 		return nil, errors.Wrap(err, "could not confirm mnemonic acknowledgement")
 	}
+	walletSeed := bip39.NewSeed(phrase, "")
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
 	}
@@ -207,12 +201,12 @@ func InitializeWalletSeedFile(ctx context.Context, password string, skipMnemonic
 // SeedFileFromMnemonic uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
 func SeedFileFromMnemonic(ctx context.Context, mnemonic string, password string) (*SeedConfig, error) {
-	walletSeed, err := bip39.EntropyFromMnemonic(mnemonic)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert mnemonic to wallet seed")
+	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
+		return nil, bip39.ErrInvalidMnemonic
 	}
+	walletSeed := bip39.NewSeed(mnemonic, "")
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt seed phrase into keystore")
 	}
@@ -294,10 +288,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	}
 
 	// Write both keystores to disk at their respective derived paths.
-	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, KeystoreFileName, encodedWithdrawalKeystore); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, KeystoreFilePattern, encodedWithdrawalKeystore); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, KeystoreFileName, encodedValidatingKeystore); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern, encodedValidatingKeystore); err != nil {
 		return "", errors.Wrapf(err, "could not write keystore file for account %d", dr.seedCfg.NextAccount)
 	}
 
@@ -311,19 +305,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	if err != nil {
 		return "", err
 	}
-	tx, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	_, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
-	}
-
-	if logAccountInfo {
-		// Log the deposit transaction data to the user.
-		depositutil.LogDepositTransaction(log, tx)
-	}
-
-	// We write the raw deposit transaction as an .rlp encoded file.
-	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositTransactionFileName, tx.Data()); err != nil {
-		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, DepositTransactionFileName)
 	}
 
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
@@ -333,6 +317,16 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	}
 	if err := dr.wallet.WriteFileAtPath(ctx, withdrawalKeyPath, DepositDataFileName, encodedDepositData); err != nil {
 		return "", errors.Wrapf(err, "could not write for account %s: %s", withdrawalKeyPath, encodedDepositData)
+	}
+
+	if logAccountInfo {
+		// Log the deposit transaction data to the user.
+		fmt.Printf(`
+========================SSZ Deposit Data===============================
+
+%#x
+
+===================================================================`, encodedDepositData)
 	}
 
 	// Finally, write the account creation timestamps as a files.
@@ -398,7 +392,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
+		validatingKeystore, err := dr.wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern)
 		if err != nil {
 			return nil, err
 		}
@@ -420,7 +414,7 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 	publicKeys := make([][48]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKeystore, err := dr.wallet.ReadFileAtPath(ctx, withdrawalKeyPath, KeystoreFileName)
+		withdrawalKeystore, err := dr.wallet.ReadFileAtPath(ctx, withdrawalKeyPath, KeystoreFilePattern)
 		if err != nil {
 			return nil, err
 		}
@@ -464,7 +458,7 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 
 func (dr *Keymanager) generateKeystoreFile(privateKey []byte, publicKey []byte, password string) ([]byte, error) {
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(privateKey, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(privateKey, password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
 	}

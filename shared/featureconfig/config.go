@@ -33,8 +33,7 @@ type Flags struct {
 	// State locks
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
-	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
-	MedallaTestnet bool // MedallaTestnet defines the flag through which we can enable the node to run on the medalla testnet.
+	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -59,6 +58,7 @@ type Flags struct {
 	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
 	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
 	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
+	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -110,6 +110,9 @@ func InitWithReset(c *Flags) func() {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
@@ -120,12 +123,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running Node on Medalla Testnet")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -244,12 +241,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling finalized deposits cache")
 		cfg.EnableFinalizedDepositsCache = true
 	}
+	if ctx.Bool(enableEth1DataMajorityVote.Name) {
+		log.Warn("Enabling eth1data majority vote")
+		cfg.EnableEth1DataMajorityVote = true
+	}
 	Init(cfg)
 }
 
 // ConfigureSlasher sets the global config based
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(disableLookbackFlag.Name) {
@@ -262,6 +266,9 @@ func ConfigureSlasher(ctx *cli.Context) {
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(AltonaTestnet.Name) {
@@ -269,12 +276,6 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running Validator on Medalla Testnet")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
 	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true

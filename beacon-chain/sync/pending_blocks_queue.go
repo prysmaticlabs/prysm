@@ -117,10 +117,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
-					traceutil.AnnotateError(span, err)
-					log.Errorf("Could not send recent block request: %v", err)
-				}
+				traceutil.AnnotateError(span, err)
+				log.Errorf("Could not send recent block request: %v", err)
 			}
 			span.End()
 			continue

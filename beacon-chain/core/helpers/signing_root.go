@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -59,6 +60,19 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 		Domain:     domain,
 	}
 	return ssz.HashTreeRoot(container)
+}
+
+// ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
+func ComputeDomainVerifySigningRoot(state *state.BeaconState, index uint64, epoch uint64, obj interface{}, domain [4]byte, sig []byte) error {
+	v, err := state.ValidatorAtIndex(index)
+	if err != nil {
+		return err
+	}
+	d, err := Domain(state.Fork(), epoch, domain, state.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	return VerifySigningRoot(obj, v.PublicKey, sig, d)
 }
 
 // VerifySigningRoot verifies the signing root of an object given it's public key, signature and domain.

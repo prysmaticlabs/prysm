@@ -25,13 +25,16 @@ import (
 )
 
 func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
-	walletSeed := make([]byte, 32)
-	n, err := rand.NewGenerator().Read(walletSeed)
+	mnemonicEntropy := make([]byte, 32)
+	n, err := rand.NewGenerator().Read(mnemonicEntropy)
 	require.NoError(t, err)
-	require.Equal(t, n, len(walletSeed))
+	require.Equal(t, n, len(mnemonicEntropy))
+	mnemonic, err := bip39.NewMnemonic(mnemonicEntropy)
+	require.NoError(t, err)
+	walletSeed := bip39.NewSeed(mnemonic, "")
 	encryptor := keystorev4.New()
 	password := "Passwz0rdz2020%"
-	cryptoFields, err := encryptor.Encrypt(walletSeed, []byte(password))
+	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	require.NoError(t, err)
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
@@ -43,32 +46,13 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 		Name:        encryptor.Name(),
 	}
 
-	phrase, err := bip39.NewMnemonic(walletSeed)
-	require.NoError(t, err)
-	recoveredSeed, err := bip39.EntropyFromMnemonic(phrase)
-	require.NoError(t, err)
-
-	// Ensure the recovered seed matches the old wallet seed.
-	assert.DeepEqual(t, walletSeed, recoveredSeed)
-
-	cryptoFields, err = encryptor.Encrypt(recoveredSeed, []byte(password))
-	require.NoError(t, err)
-	newCfg := &SeedConfig{
-		Crypto:      cryptoFields,
-		ID:          cfg.ID,
-		NextAccount: 0,
-		Version:     encryptor.Version(),
-		Name:        encryptor.Name(),
-	}
-
 	// Ensure we can decrypt the newly recovered config.
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(newCfg.Crypto, []byte(password))
+	seed, err := decryptor.Decrypt(cfg.Crypto, password)
 	assert.NoError(t, err)
 
 	// Ensure the decrypted seed matches the old wallet seed and the new wallet seed.
 	assert.DeepEqual(t, walletSeed, seed)
-	assert.DeepEqual(t, recoveredSeed, seed)
 }
 
 func TestDerivedKeymanager_CreateAccount(t *testing.T) {
@@ -96,8 +80,8 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	validatingAccount0 := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, 0)
-	encodedKeystore, ok := wallet.Files[validatingAccount0][KeystoreFileName]
-	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFileName))
+	encodedKeystore, ok := wallet.Files[validatingAccount0][KeystoreFilePattern]
+	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFilePattern))
 	keystoreFile := &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
@@ -105,7 +89,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	rawValidatingKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+	rawValidatingKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator signing key")
 
 	validatingKey, err := bls.SecretKeyFromBytes(rawValidatingKey)
@@ -114,15 +98,15 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	withdrawalAccount0 := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, 0)
-	encodedKeystore, ok = wallet.Files[withdrawalAccount0][KeystoreFileName]
-	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFileName))
+	encodedKeystore, ok = wallet.Files[withdrawalAccount0][KeystoreFilePattern]
+	require.Equal(t, ok, true, fmt.Sprintf("Expected to have stored %s in wallet", KeystoreFilePattern))
 	keystoreFile = &v2keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
-	rawWithdrawalKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
+	rawWithdrawalKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator withdrawal key")
 
 	withdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalKey)
@@ -172,7 +156,7 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		accountName, err = dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		enc, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFileName)
+		enc, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, KeystoreFilePattern)
 		require.NoError(t, err)
 		keystore := &v2keymanager.Keystore{}
 		require.NoError(t, json.Unmarshal(enc, keystore))
