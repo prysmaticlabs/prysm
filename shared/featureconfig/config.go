@@ -295,9 +295,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	} else {
 		log.Warn("Validator slashing protection not enabled!")
 	}
-	if ctx.Bool(enableAccountsV2.Name) {
-		log.Warn("Enabling v2 of Prysm validator accounts")
-		cfg.EnableAccountsV2 = true
+	cfg.EnableAccountsV2 = true
+	if ctx.Bool(disableAccountsV2.Name) {
+		log.Warn("Disabling v2 of Prysm validator accounts")
+		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
