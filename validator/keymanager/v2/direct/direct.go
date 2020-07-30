@@ -311,7 +311,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 		for range progressChan {
 			itemsReceived++
 			if err := bar.Add(1); err != nil {
-				log.Debug("Could not increase progress bar")
+				log.WithError(err).Debug("Could not increase progress bar")
 			}
 			if itemsReceived == len(accountNames) {
 				return
