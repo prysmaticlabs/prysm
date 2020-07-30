@@ -24,9 +24,37 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	ad1 := &ethpb.AttestationData{
+		Slot:            0,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: make([]byte, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+
+	ad2 := &ethpb.AttestationData{
+		Slot:            1,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: make([]byte, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+
 	atts := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1000, 0b1}},
-		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1000, 0b1}},
+		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, 96)},
+		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, 96)},
 	}
 	if err := s.pool.SaveUnaggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
@@ -35,8 +63,8 @@ func TestPruneExpired_Ticker(t *testing.T) {
 		t.Fatalf("Unexpected number of attestations: %d", s.pool.UnaggregatedAttestationCount())
 	}
 	atts = []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1101, 0b1}},
-		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101, 0b1}},
+		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, 96)},
+		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, 96)},
 	}
 	if err := s.pool.SaveAggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
@@ -85,10 +113,38 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1101}}
-	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b1111}}
-	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
-	att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1110}}
+	ad1 := &ethpb.AttestationData{
+		Slot:            0,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: make([]byte, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+
+	ad2 := &ethpb.AttestationData{
+		Slot:            0,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: make([]byte, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+
+	att1 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101}}
+	att2 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1111}}
+	att3 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101}}
+	att4 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1110}}
 	atts := []*ethpb.Attestation{att1, att2, att3, att4}
 	if err := s.pool.SaveAggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
