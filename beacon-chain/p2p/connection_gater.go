@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"net"
+	"runtime"
 
 	"github.com/libp2p/go-libp2p-core/control"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -11,6 +12,12 @@ import (
 	manet "github.com/multiformats/go-multiaddr-net"
 	"github.com/sirupsen/logrus"
 )
+
+// limit for rate limiter when processing new inbound dials.
+const ipLimit = 4
+
+// burst limit for inbound dials.
+const ipBurst = 8
 
 // InterceptPeerDial tests whether we're permitted to Dial the specified peer.
 func (s *Service) InterceptPeerDial(p peer.ID) (allow bool) {
@@ -25,6 +32,15 @@ func (s *Service) InterceptAddrDial(_ peer.ID, m multiaddr.Multiaddr) (allow boo
 
 // InterceptAccept tests whether an incipient inbound connection is allowed.
 func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
+	if !s.validateDial(n.RemoteMultiaddr()) {
+		// Allow other go-routines to run in the event
+		// we receive a large amount of junk connections.
+		runtime.Gosched()
+		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
+			"reason": "exceeded dial limit"}).Trace("Not accepting inbound dial from ip address")
+		return false
+	}
+
 	if s.isPeerAtLimit() {
 		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
 			"reason": "at peer limit"}).Trace("Not accepting inbound dial")
@@ -42,6 +58,19 @@ func (s *Service) InterceptSecured(_ network.Direction, _ peer.ID, n network.Con
 // InterceptUpgraded tests whether a fully capable connection is allowed.
 func (s *Service) InterceptUpgraded(n network.Conn) (allow bool, reason control.DisconnectReason) {
 	return true, 0
+}
+
+func (s *Service) validateDial(addr multiaddr.Multiaddr) bool {
+	ip, err := manet.ToIP(addr)
+	if err != nil {
+		return false
+	}
+	remaining := s.ipLimiter.Remaining(ip.String())
+	if remaining <= 0 {
+		return false
+	}
+	s.ipLimiter.Add(ip.String(), 1)
+	return true
 }
 
 // configureFilter looks at the provided allow lists and
