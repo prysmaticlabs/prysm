@@ -237,7 +237,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode.Set(forkEntry)
 
-	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 1}, genesisValidatorsRoot)
+	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
 	require.NoError(t, err)
 
 	resp, err := retrieveForkEntry(localNode.Node().Record())
