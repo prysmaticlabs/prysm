@@ -10,6 +10,7 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	// OnyxTestnet flag for the Prysmatic Labs single-client testnet configuration.
 	OnyxTestnet = &cli.BoolFlag{
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
