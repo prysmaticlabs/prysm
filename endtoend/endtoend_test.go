@@ -96,9 +96,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, 1); err != nil {
-		t.Error(err)
-	}
 
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	epochSecondsHalf := time.Duration(int64(epochSeconds*1000)/2) * time.Millisecond
