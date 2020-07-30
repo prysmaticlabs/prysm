@@ -61,6 +61,7 @@ go_library(
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_ipfs_go_ipfs_addr//:go_default_library",
+        "@com_github_kevinms_leakybucket_go//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
         "@com_github_libp2p_go_libp2p//config:go_default_library",
         "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
