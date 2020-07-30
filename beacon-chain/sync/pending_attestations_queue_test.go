@@ -134,23 +134,17 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	selectionDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
-	require.NoError(t, err)
-	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
-	require.NoError(t, err)
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]
-	sig := privKeys[aggregatorIndex].Sign(slotRoot[:])
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[aggregatorIndex])
+	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  sig.Marshal(),
+		SelectionProof:  sig,
 		Aggregate:       att,
 		AggregatorIndex: aggregatorIndex,
 	}
-	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	aggreSig, err := helpers.ComputeDomainAndSign(beaconState, 0, aggregateAndProof, params.BeaconConfig().DomainAggregateAndProof, privKeys[aggregatorIndex])
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(aggregateAndProof, attesterDomain)
-	assert.NoError(t, err)
-	aggreSig := privKeys[aggregatorIndex].Sign(signingRoot[:]).Marshal()
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
