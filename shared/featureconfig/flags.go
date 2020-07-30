@@ -10,6 +10,10 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	OnyxTestnet = &cli.BoolFlag{
+		Name:  "onyx",
+		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
+	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
@@ -577,6 +581,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
+	OnyxTestnet,
 	enableAccountsV2,
 }...)
 
@@ -619,6 +624,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	AltonaTestnet,
+	OnyxTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
