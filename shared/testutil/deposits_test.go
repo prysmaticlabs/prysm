@@ -35,12 +35,17 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt0, deposits[0].Data.WithdrawalCredentials)
 	}
 
-	expectedDepositDataRootAt0 := []byte{0x3c, 0x8a, 0xb9, 0xf0, 0xfc, 0x9e, 0x5b, 0x2e, 0x29, 0xee, 0xf5, 0xb6, 0xa3, 0xf9, 0x06, 0x14, 0x54, 0x52, 0xf0, 0x37, 0xed, 0xdd, 0x4b, 0x20, 0x74, 0xc6, 0x66, 0xba, 0xa7, 0x29, 0x51, 0x75}
-	if !bytes.Equal(depositDataRoots[0][:], expectedDepositDataRootAt0) {
-		t.Fatalf("incorrect deposit data root, wanted %x but received %x", expectedDepositDataRootAt0, depositDataRoots[0])
+	dRootAt0 := []byte("4bbc31cfec9602242576e8570b3c72cd09f55e0d5ea4d64fd08fb6ca5cb69f17")
+	dRootAt0B := make([]byte, hex.DecodedLen(len(dRootAt0)))
+	_, err = hex.Decode(dRootAt0B, dRootAt0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(depositDataRoots[0][:], dRootAt0B) {
+		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt0B, depositDataRoots[0])
 	}
 
-	sigAt0 := []byte("9348b36c0a48a0b7543b17b1da3c65ca6997ddc3284a7044c363d5cb81e82c0148ec861f5ae3ea0cfc136fa836bbb5360aee9f92b9c2597ceff1d759741edc8f90481b27fce59e1c7ff3c81792e9ba0ef7d67c6a8ac264eaef255b369ce433a4")
+	sigAt0 := []byte("953b44ee497f9fc9abbc1340212597c264b77f3dea441921d65b2542d64195171ba0598fad34905f03c0c1b6d5540faa10bb2c26084fc5eacbafba119d9a81721f56821cae7044a2ff374e9a128f68dee68d3b48406ea60306148498ffe007c7")
 	sigAt0B := make([]byte, hex.DecodedLen(len(sigAt0)))
 	_, err = hex.Decode(sigAt0B, sigAt0)
 	if err != nil {
@@ -73,8 +78,8 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	if !bytes.Equal(deposits[0].Data.WithdrawalCredentials, expectedWithdrawalCredentialsAt0) {
 		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt0, deposits[0].Data.WithdrawalCredentials)
 	}
-	if !bytes.Equal(depositDataRoots[0][:], expectedDepositDataRootAt0) {
-		t.Fatalf("incorrect deposit data root, wanted %x but received %x", expectedDepositDataRootAt0, depositDataRoots[0])
+	if !bytes.Equal(depositDataRoots[0][:], dRootAt0B) {
+		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt0B, depositDataRoots[0])
 	}
 	if !bytes.Equal(deposits[0].Data.Signature, sigAt0B) {
 		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt0B, deposits[0].Data.Signature)
@@ -87,7 +92,7 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	if !bytes.Equal(deposits[1023].Data.WithdrawalCredentials, expectedWithdrawalCredentialsAt1023) {
 		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt1023, deposits[1023].Data.WithdrawalCredentials)
 	}
-	dRootAt1023 := []byte("259330f2a7b8db40a622f95a50492ab9bf9dac788fb9dbf6b39ddec3a555adfc")
+	dRootAt1023 := []byte("564c1afed12430965ae8ff6f519a6cb15118c438328024d16c02ffe3d4652893")
 	dRootAt1023B := make([]byte, hex.DecodedLen(len(dRootAt1023)))
 	_, err = hex.Decode(dRootAt1023B, dRootAt1023)
 	if err != nil {
@@ -96,7 +101,7 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	if !bytes.Equal(depositDataRoots[1023][:], dRootAt1023B) {
 		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt1023B, depositDataRoots[1023])
 	}
-	sigAt1023 := []byte("a0333abe2c75aa2e672cbb7f191a7936dd08b81dfa3e2f0b1478445c8897169bdea5a507ebf0dcf947eeddc6b23c2e4905e2c4e43fcbc6fac360c662d74e2c3af79390a79e43ef6a7731a6c2ea0999accde35bf1dc0b132487d701ca8459c63e")
+	sigAt1023 := []byte("8482cc981976291d19c1d7d298f5e6781ac691151833b89a29ef4d08850f56b972b860ebf7995ada3213b575213c331316c213a8535cf88bff0e98846204b0db186ff84c55903f1c359470be7c1110c94d5aafeef07f4886ed69cb13cb3aadbc")
 	sigAt1023B := make([]byte, hex.DecodedLen(len(sigAt1023)))
 	_, err = hex.Decode(sigAt1023B, sigAt1023)
 	if err != nil {
