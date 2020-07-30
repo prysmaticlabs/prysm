@@ -60,8 +60,8 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	// Decode the deposit_data.ssz file and confirm
 	// the public key matches the public key from the
 	// account's decrypted keystore.
-	encodedDepositData, ok := wallet.Files[accountName][depositDataFileName]
-	require.Equal(t, true, ok, "Expected to have stored %s in wallet", depositDataFileName)
+	encodedDepositData, ok := wallet.Files[accountName][DepositDataFileName]
+	require.Equal(t, true, ok, "Expected to have stored %s in wallet", DepositDataFileName)
 	depositData := &ethpb.Deposit_Data{}
 	require.NoError(t, ssz.Unmarshal(encodedDepositData, depositData))
 
