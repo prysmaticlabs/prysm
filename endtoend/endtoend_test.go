@@ -52,12 +52,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		}
 	}()
 
-	if config.TestSlasher {
-		components.StartSlashers(t)
-	}
-
-	// Sleep depending on the count of validators, as generating the genesis state could take some time.
-	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	if err != nil {
 		t.Fatal(err)
@@ -68,6 +62,10 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 			t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
 		}
 	})
+
+	if config.TestSlasher {
+		go components.StartSlashers(t)
+	}
 
 	// Failing early in case chain doesn't start.
 	if t.Failed() {

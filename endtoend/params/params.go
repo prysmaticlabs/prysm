@@ -46,10 +46,10 @@ var SlasherLogFileName = "slasher-%d.log"
 var ValidatorLogFileName = "vals-%d.log"
 
 // LongRunningBeaconCount is a global constant for the count of beacon nodes of long running E2E.
-var LongRunningBeaconCount = 4
+var LongRunningBeaconCount = 2
 
 // StandardBeaconCount is a global constant for the count of beacon nodes of standard E2E tests.
-var StandardBeaconCount = 4
+var StandardBeaconCount = 2
 
 // Init initializes the E2E config, properly handling test sharding.
 func Init(beaconNodeCount int) error {
