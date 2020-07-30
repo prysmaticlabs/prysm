@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
@@ -31,6 +32,10 @@ func TestNode_Builds(t *testing.T) {
 	set.String("password", "1234", "validator account password")
 	set.String("verbosity", "debug", "log verbosity")
 	context := cli.NewContext(&app, set, nil)
+
+	// This is a test specifically for account v1.
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableAccountsV2: false})
+	defer resetCfg()
 
 	require.NoError(t, v1.NewValidatorAccount(dir, "1234"), "Could not create validator account")
 	_, err := NewValidatorClient(context)
