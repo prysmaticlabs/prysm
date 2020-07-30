@@ -24,7 +24,7 @@ func StartSlashers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = helpers.WaitForTextInFile(stdOutFile, "Beacon node is fully synced, starting slashing detection"); err != nil {
+	if err = helpers.WaitForTextInFile(stdOutFile, "Waiting for beacon node to be fully synced..."); err != nil {
 		t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
 	}
 }
