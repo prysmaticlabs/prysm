@@ -21,6 +21,15 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	if err != nil {
 		log.Fatalf("Failed to p2p listen: %v", err)
 	}
+	if cfg.LocalIP != "" {
+		if net.ParseIP(cfg.LocalIP) == nil {
+			log.Fatalf("Invalid local ip provided: %s", cfg.LocalIP)
+		}
+		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
+		if err != nil {
+			log.Fatalf("Failed to p2p listen: %v", err)
+		}
+	}
 	options := []libp2p.Option{
 		privKeyOption(priKey),
 		libp2p.ListenAddrs(listen),
@@ -61,17 +70,6 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 			}
 			return addrs
 		}))
-	}
-	if cfg.LocalIP != "" {
-		if net.ParseIP(cfg.LocalIP) == nil {
-			log.Errorf("Invalid local ip provided: %s", cfg.LocalIP)
-			return options
-		}
-		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
-		if err != nil {
-			log.Fatalf("Failed to p2p listen: %v", err)
-		}
-		options = append(options, libp2p.ListenAddrs(listen))
 	}
 	return options
 }
