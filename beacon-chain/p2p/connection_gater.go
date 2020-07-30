@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"net"
+	"runtime"
 
 	"github.com/libp2p/go-libp2p-core/control"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -32,6 +33,9 @@ func (s *Service) InterceptAddrDial(_ peer.ID, m multiaddr.Multiaddr) (allow boo
 // InterceptAccept tests whether an incipient inbound connection is allowed.
 func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 	if !s.validateDial(n.RemoteMultiaddr()) {
+		// Allow other go-routines to run in the event
+		// we receive a large amount of junk connections.
+		runtime.Gosched()
 		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
 			"reason": "exceeded dial limit"}).Trace("Not accepting inbound dial from ip address")
 		return false
