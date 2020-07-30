@@ -35,8 +35,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
-	// Use default Medalla testnet config.
-	params.UseMedallaConfig()
 	var keystorePath = components.StartEth1Node(t)
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	go components.SendAndMineDeposits(t, keystorePath, validatorNum, 0)
