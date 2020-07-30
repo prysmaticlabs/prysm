@@ -111,8 +111,8 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.OverrideBeaconConfig(c)
 	}
 
-	cmd.ConfigureBeaconChain(cliCtx)
 	featureconfig.ConfigureBeaconChain(cliCtx)
+	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
 
 	// Setting chain network specific flags.
