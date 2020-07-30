@@ -76,8 +76,8 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
+	cmd.ConfigureValidator(cliCtx)
 
 	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager

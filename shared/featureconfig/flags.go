@@ -10,11 +10,6 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
-	// MedallaTestnet flag for the multiclient eth2 testnet configuration.
-	MedallaTestnet = &cli.BoolFlag{
-		Name:  "medalla",
-		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
-	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
@@ -500,6 +495,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedMedallaTestnet = &cli.BoolFlag{
+		Name:   "medalla",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -567,6 +567,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
+	deprecatedMedallaTestnet,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -576,7 +577,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
-	MedallaTestnet,
 	enableAccountsV2,
 }...)
 
@@ -619,7 +619,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	AltonaTestnet,
-	MedallaTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
@@ -634,5 +633,5 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-finalized-deposits-cache",
-	"--enable-eth1-data-majority-vote",
+	// "--enable-eth1-data-majority-vote", // TODO(6786): This flag fails long running e2e tests.
 }

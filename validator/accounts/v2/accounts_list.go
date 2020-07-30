@@ -110,17 +110,17 @@ func listDirectKeymanagerAccounts(
 		if !showDepositData {
 			continue
 		}
-		enc, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.DepositTransactionFileName)
+		enc, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.DepositDataFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
+			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositDataFileName)
 		}
 		fmt.Printf(
 			"%s %s\n",
-			"(deposit tx file)",
-			filepath.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
+			"(deposit_data.ssz file)",
+			filepath.Join(wallet.AccountsDir(), accountNames[i], direct.DepositDataFileName),
 		)
 		fmt.Printf(`
-======================Deposit Transaction Data=====================
+======================SSZ Deposit Data=====================
 
 %#x
 
@@ -195,17 +195,17 @@ func listDerivedKeymanagerAccounts(
 		if !showDepositData {
 			continue
 		}
-		enc, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.DepositTransactionFileName)
+		enc, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.DepositDataFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
+			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositDataFileName)
 		}
 		fmt.Printf(
 			"%s %s\n",
 			"(deposit tx file)",
-			filepath.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
+			filepath.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositDataFileName),
 		)
 		fmt.Printf(`
-======================Deposit Transaction Data=====================
+======================SSZ Deposit Data=====================
 
 %#x
 

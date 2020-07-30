@@ -356,15 +356,16 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[22])
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig,
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
-	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[22])
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
@@ -442,15 +443,16 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[22])
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig,
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
-	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[22])
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
@@ -551,15 +553,17 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[22])
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
+
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig,
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
-	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[22])
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))

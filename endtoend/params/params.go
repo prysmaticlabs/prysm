@@ -22,6 +22,7 @@ type Params struct {
 	Eth1RPCPort           int
 	ContractAddress       common.Address
 	BootNodePort          int
+	BootNodeENR           string
 	BeaconNodeRPCPort     int
 	BeaconNodeMetricsPort int
 	ValidatorMetricsPort  int
