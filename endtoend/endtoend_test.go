@@ -68,8 +68,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 
 	if config.TestDeposits {
 		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
-		valPid := components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
-		defer helpers.KillProcesses(t, []int{valPid})
+		components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
 		components.SendAndMineDeposits(t, keystorePath, valCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
 	}
 
