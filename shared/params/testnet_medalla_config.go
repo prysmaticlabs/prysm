@@ -16,7 +16,7 @@ func UseMedallaNetworkConfig() {
 // MedallaConfig defines the config for the
 // medalla testnet.
 func MedallaConfig() *BeaconChainConfig {
-	cfg := mainnetBeaconConfig
+	cfg := MainnetConfig().Copy()
 	cfg.MinGenesisTime = 1596546000
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x01}
 	return cfg
