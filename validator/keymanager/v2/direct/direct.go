@@ -188,11 +188,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	// Log the deposit transaction data to the user.
 	depositutil.LogDepositTransaction(log, tx)
 
-	// We write the raw deposit transaction as an .rlp encoded file.
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, DepositTransactionFileName, tx.Data()); err != nil {
-		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, DepositTransactionFileName)
-	}
-
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
 	encodedDepositData, err := ssz.Marshal(depositData)
 	if err != nil {
