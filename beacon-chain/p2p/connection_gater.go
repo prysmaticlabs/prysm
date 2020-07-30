@@ -32,6 +32,8 @@ func (s *Service) InterceptAddrDial(_ peer.ID, m multiaddr.Multiaddr) (allow boo
 // InterceptAccept tests whether an incipient inbound connection is allowed.
 func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 	if !s.validateDial(n.RemoteMultiaddr()) {
+		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
+			"reason": "exceeded dial limit"}).Trace("Not accepting inbound dial from ip address")
 		return false
 	}
 
