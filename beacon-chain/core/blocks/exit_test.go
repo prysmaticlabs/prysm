@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
@@ -155,16 +156,9 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	if err := state.UpdateValidatorAtIndex(0, val); err != nil {
 		t.Fatal(err)
 	}
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	signingRoot, err := helpers.ComputeSigningRoot(exits[0].Exit, domain)
-	if err != nil {
-		t.Error(err)
-	}
-	sig := priv.Sign(signingRoot[:])
-	exits[0].Signature = sig.Marshal()
+	exits[0].Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	require.NoError(t, err)
+
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
