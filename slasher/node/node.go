@@ -71,8 +71,8 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		cmd.OverrideConfig(cmdConfig)
 	}
 
-	cmd.ConfigureSlasher(cliCtx)
 	featureconfig.ConfigureSlasher(cliCtx)
+	cmd.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 
 	ctx, cancel := context.WithCancel(context.Background())
