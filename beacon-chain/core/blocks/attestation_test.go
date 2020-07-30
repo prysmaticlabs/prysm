@@ -269,17 +269,12 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
-	if err != nil {
-		t.Error(err)
-	}
 	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -302,11 +297,6 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -337,13 +327,12 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
-	if err != nil {
-		t.Error(err)
-	}
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, att1.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
 		sigs[i] = sig
 	}
 	att1.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -365,13 +354,12 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err = helpers.ComputeSigningRoot(data, domain)
-	if err != nil {
-		t.Error(err)
-	}
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, att2.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
 		sigs[i] = sig
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -384,10 +372,6 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
 	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
 	data := &ethpb.AttestationData{
@@ -419,13 +403,12 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err := helpers.ComputeSigningRoot(data, domain)
-	if err != nil {
-		t.Error(err)
-	}
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
 		sigs[i] = sig
 	}
 	att1.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -446,13 +429,12 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err = helpers.ComputeSigningRoot(data, domain)
-	if err != nil {
-		t.Error(err)
-	}
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, att2.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
 		sigs[i] = sig
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -684,17 +666,12 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		domain, err := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
-		if err != nil {
-			t.Fatal(err)
-		}
-		root, err := helpers.ComputeSigningRoot(tt.attestation.Data, domain)
-		if err != nil {
-			t.Error(err)
-		}
 		var sig []bls.Signature
 		for _, idx := range tt.attestation.AttestingIndices {
-			validatorSig := keys[idx].Sign(root[:])
+			sb, err := helpers.ComputeDomainAndSign(state, tt.attestation.Data.Target.Epoch, tt.attestation.Data, params.BeaconConfig().DomainBeaconAttester, keys[idx])
+			require.NoError(t, err)
+			validatorSig, err := bls.SignatureFromBytes(sb)
+			require.NoError(t, err)
 			sig = append(sig, validatorSig)
 		}
 		aggSig := bls.AggregateSignatures(sig)
