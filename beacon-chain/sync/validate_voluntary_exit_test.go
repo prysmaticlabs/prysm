@@ -48,14 +48,10 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 	require.NoError(t, err)
 	err = state.SetSlot(state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, err)
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
-	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(exit.Exit, domain)
-	require.NoError(t, err)
-	priv := bls.RandKey()
 
-	sig := priv.Sign(signingRoot[:])
-	exit.Signature = sig.Marshal()
+	priv := bls.RandKey()
+	exit.Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	require.NoError(t, err)
 
 	val, err := state.ValidatorAtIndex(0)
 	require.NoError(t, err)
