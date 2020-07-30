@@ -29,7 +29,15 @@ func TestBlockRoot(t *testing.T) {
 }
 
 func TestBlockBodyRoot_NilIsSameAsEmpty(t *testing.T) {
-	a, err := (&ethpb.BeaconBlockBody{}).HashTreeRoot()
+	a, err := (&ethpb.BeaconBlockBody{
+		RandaoReveal: make([]byte, 96),
+		Graffiti: make([]byte, 32),
+		Eth1Data: &ethpb.Eth1Data{
+			BlockHash: make([]byte, 32),
+			DepositCount: 0,
+			DepositRoot: make([]byte, 32),
+		},
+	}).HashTreeRoot()
 	require.NoError(t, err)
 	b, err := stateutil.BlockBodyRoot(nil)
 	require.NoError(t, err)
