@@ -13,6 +13,7 @@ import (
 	"time"
 
 	petname "github.com/dustinkirkland/golang-petname"
+	"github.com/k0kubun/go-ansi"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -80,7 +82,13 @@ func NewWallet(
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
 	if walletExists {
-		return nil, ErrWalletExists
+		isEmptyWallet, err := isEmptyDir(walletDir)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if wallet has files")
+		}
+		if !isEmptyWallet {
+			return nil, ErrWalletExists
+		}
 	}
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
 	w := &Wallet{
@@ -105,9 +113,6 @@ func NewWallet(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get password directory")
 		}
-		if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
-			return nil, errors.Wrap(err, "could not create passwords directory")
-		}
 		w.passwordsDir = passwordsDir
 	}
 	return w, nil
@@ -126,7 +131,15 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
-	if !ok {
+	if ok {
+		isEmptyWallet, err := isEmptyDir(walletDir)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if wallet has files")
+		}
+		if isEmptyWallet {
+			return nil, ErrNoWalletFound
+		}
+	} else {
 		return nil, ErrNoWalletFound
 	}
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
@@ -464,6 +477,110 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 	return nil
 }
 
+func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames []string, pubKeys [][]byte) error {
+	au := aurora.NewAurora(true)
+	var password string
+	var err error
+	ctx := context.Background()
+	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return err
+		}
+		password = string(data)
+		for i := 0; i < len(accountNames); i++ {
+			err = w.checkPasswordForAccount(accountNames[i], password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				return fmt.Errorf("invalid password for account with public key %#x", pubKeys[i])
+			}
+			if err != nil {
+				return err
+			}
+			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
+				return errors.Wrap(err, "could not write password to disk")
+			}
+		}
+	} else {
+		password, err = inputWeakPassword(
+			cliCtx,
+			flags.AccountPasswordFileFlag,
+			"Enter the password for your imported accounts",
+		)
+		fmt.Println("Importing accounts, this may take a while...")
+		bar := progressbar.NewOptions(
+			len(accountNames),
+			progressbar.OptionFullWidth(),
+			progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+			progressbar.OptionEnableColorCodes(true),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "[green]=[reset]",
+				SaucerHead:    "[green]>[reset]",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}),
+		)
+		ctx := context.Background()
+		for i := 0; i < len(accountNames); i++ {
+			// We check if the individual account unlocks with the global password.
+			err = w.checkPasswordForAccount(accountNames[i], password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				// If the password fails for an individual account, we ask the user to input
+				// that individual account's password until it succeeds.
+				individualPassword, err := w.askUntilPasswordConfirms(cliCtx, accountNames[i], pubKeys[i])
+				if err != nil {
+					return err
+				}
+				if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, individualPassword); err != nil {
+					return errors.Wrap(err, "could not write password to disk")
+				}
+				if err := bar.Add(1); err != nil {
+					return errors.Wrap(err, "could not add to progress bar")
+				}
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Finished importing %#x\n", au.BrightMagenta(bytesutil.Trunc(pubKeys[i])))
+			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
+				return errors.Wrap(err, "could not write password to disk")
+			}
+			if err := bar.Add(1); err != nil {
+				return errors.Wrap(err, "could not add to progress bar")
+			}
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) askUntilPasswordConfirms(cliCtx *cli.Context, accountName string, pubKey []byte) (string, error) {
+	// Loop asking for the password until the user enters it correctly.
+	var password string
+	var err error
+	for {
+		password, err = inputWeakPassword(
+			cliCtx,
+			flags.AccountPasswordFileFlag,
+			fmt.Sprintf(passwordForAccountPromptText, bytesutil.Trunc(pubKey)),
+		)
+		if err != nil {
+			return "", errors.Wrap(err, "could not input password")
+		}
+		err = w.checkPasswordForAccount(accountName, password)
+		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+			fmt.Println(au.Red("Incorrect password entered, please try again"))
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		break
+	}
+	return password, nil
+}
+
 func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
 	encoded, err := w.ReadFileAtPath(context.Background(), accountName, direct.KeystoreFileName)
 	if err != nil {
@@ -474,7 +591,7 @@ func (w *Wallet) checkPasswordForAccount(accountName string, password string) er
 		return errors.Wrap(err, "could not decode json")
 	}
 	decryptor := keystorev4.New()
-	_, err = decryptor.Decrypt(keystoreJSON.Crypto, []byte(password))
+	_, err = decryptor.Decrypt(keystoreJSON.Crypto, password)
 	if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
@@ -518,19 +635,16 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 	}
-	var wallet *Wallet
-	if !ok {
-		wallet, err = creationFunc(cliCtx)
+	if ok {
+		isEmptyWallet, err := isEmptyDir(directory)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Could not create wallet")
+			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
-	} else {
-		wallet, err = OpenWallet(cliCtx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not open wallet")
+		if !isEmptyWallet {
+			return OpenWallet(cliCtx)
 		}
 	}
-	return wallet, nil
+	return creationFunc(cliCtx)
 }
 
 // Returns true if a file is not a directory and exists
@@ -558,4 +672,21 @@ func hasDir(dirPath string) (bool, error) {
 		return false, nil
 	}
 	return info.IsDir(), err
+}
+
+func isEmptyDir(name string) (bool, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Debugf("Could not close directory: %s", name)
+		}
+	}()
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err // Either not empty or error, suits both cases
 }
