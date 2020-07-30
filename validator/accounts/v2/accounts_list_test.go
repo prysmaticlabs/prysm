@@ -156,17 +156,12 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
-	accountCreationTimestamps := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		_, err := keymanager.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
-		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
-		depositData, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.DepositDataFileName)
+		enc, err := keymanager.DepositDataForAccount(uint64(i))
 		require.NoError(t, err)
-		depositDataForAccounts[i] = depositData
-		unixTimestamp, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, direct.TimestampFileName)
-		require.NoError(t, err)
-		accountCreationTimestamps[i] = unixTimestamp
+		depositDataForAccounts[i] = enc
 	}
 
 	rescueStdout := os.Stdout
@@ -186,11 +181,6 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	stringOutput := string(out)
 	if !strings.Contains(stringOutput, wallet.KeymanagerKind().String()) {
 		t.Error("Did not find Keymanager kind in output")
-	}
-
-	// Assert the wallet accounts path is in stdout.
-	if !strings.Contains(stringOutput, wallet.accountsPath) {
-		t.Errorf("Did not find accounts path %s in output", wallet.accountsPath)
 	}
 
 	accountNames, err := keymanager.ValidatingAccountNames(ctx)
@@ -216,12 +206,6 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		if !strings.Contains(stringOutput, fmt.Sprintf("%#x", depositData)) {
 			t.Errorf("Did not find deposit data %#x in output", depositData)
 		}
-
-		// Assert the account creation time is displayed
-		unixTimestampStr, err := strconv.ParseInt(string(accountCreationTimestamps[i]), 10, 64)
-		require.NoError(t, err)
-		unixTimestamp := time.Unix(unixTimestampStr, 0)
-		assert.Equal(t, strings.Contains(stringOutput, humanize.Time(unixTimestamp)), true)
 	}
 }
 
