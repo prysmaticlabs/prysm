@@ -64,7 +64,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	})
 
 	if config.TestSlasher {
-		go components.StartSlashers(t)
+		components.StartSlashers(t)
 	}
 
 	// Failing early in case chain doesn't start.
