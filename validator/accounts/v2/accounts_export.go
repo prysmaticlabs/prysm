@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,57 +23,8 @@ const archiveFilename = "backup.zip"
 
 // ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
-	outputDir, err := inputExportDir(cliCtx)
-	if err != nil {
-		return errors.Wrap(err, "could not parse output directory")
-	}
-
-	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-
-	allAccounts, err := wallet.AccountNames()
-	if err != nil {
-		return errors.Wrap(err, "could not get account names")
-	}
-	accounts, err := selectAccounts(cliCtx, allAccounts)
-	if err != nil {
-		return errors.Wrap(err, "could not select accounts")
-	}
-	if len(accounts) == 0 {
-		return errors.New("no accounts to export")
-	}
-
-	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
-		return errors.Wrap(err, "could not export accounts")
-	}
-
-	if err := logAccountsExported(wallet, accounts); err != nil {
-		return errors.Wrap(err, "could not log out exported accounts")
-	}
-
-	return nil
-}
-
-func inputExportDir(cliCtx *cli.Context) (string, error) {
-	outputDir := cliCtx.String(flags.BackupPathFlag.Name)
-	if cliCtx.IsSet(flags.BackupPathFlag.Name) {
-		return outputDir, nil
-	}
-	if outputDir == flags.DefaultValidatorDir() {
-		outputDir = path.Join(outputDir)
-	}
-	prompt := promptui.Prompt{
-		Label:    "Enter a file location to write the exported wallet to",
-		Validate: validateDirectoryPath,
-		Default:  outputDir,
-	}
-	outputPath, err := prompt.Run()
-	if err != nil {
-		return "", fmt.Errorf("could not determine output directory: %v", formatPromptError(err))
-	}
-	return outputPath, nil
+	// TODO(#6777): Re-enable export command.
+	return errors.New("this feature is unimplemented")
 }
 
 func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
@@ -92,28 +44,59 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 		}
 		return enteredAccounts, nil
 	}
-
-	prompt := promptui.SelectWithAdd{
-		Label: "Select accounts to backup",
-		Items: append(accounts, allAccountsText),
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}",
+		Active:   "\U0001F336 {{ .Name | cyan }}",
+		Inactive: "  {{ .Name | cyan }}",
+		Selected: "\U0001F336 {{ .Name | red | cyan }}",
+		Details: `
+--------- Account ----------
+{{ "Name:" | faint }}	{{ .Name }}`,
 	}
 
-	_, result, err := prompt.Run()
-	if err != nil {
-		return nil, err
+	var result string
+	var err error
+	exit := "Exit Account Selection"
+	results := []string{}
+	au := aurora.NewAurora(true)
+	// Alphabetical Sort of accounts.
+	sort.Strings(accounts)
+
+	for result != exit {
+		prompt := promptui.Select{
+			Label:        "Select accounts to backup",
+			HideSelected: true,
+			Items:        append([]string{exit, allAccountsText}, accounts...),
+			Templates:    templates,
+		}
+
+		_, result, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
+		if result == exit {
+			fmt.Printf("%s\n", au.BrightRed("Exiting Selection").Bold())
+			return results, nil
+		}
+		if result == allAccountsText {
+			fmt.Printf("%s\n", au.BrightRed("[Selected all accounts]").Bold())
+			return accounts, nil
+		}
+		results = append(results, result)
+		fmt.Printf("%s %s\n", au.BrightRed("[Selected Account Name]").Bold(), result)
 	}
 
-	if result == allAccountsText {
-		return accounts, nil
-	}
-	return []string{result}, nil
+	return results, nil
 }
 
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
-	sourcePath := w.accountsPath
+	sourcePath := filepath.Dir(w.accountsPath)
 	archivePath := filepath.Join(targetPath, archiveFilename)
 	if err := os.MkdirAll(targetPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return errors.Wrap(err, "could not create target folder")
+	}
+	if fileExists(archivePath) {
+		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
 	zipfile, err := os.Create(archivePath)
 	if err != nil {
@@ -134,7 +117,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 
 	err = filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return errors.Wrap(err, "could not walk")
+			return errors.Wrapf(err, "could not walk %s", sourcePath)
 		}
 
 		var isAccount bool
@@ -196,7 +179,7 @@ func copyFileFromZip(archive *zip.Writer, sourcePath string, info os.FileInfo, p
 	return err
 }
 
-func logAccountsExported(wallet *Wallet, accountNames []string) error {
+func logAccountsExported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
 	au := aurora.NewAurora(true)
 
 	numAccounts := au.BrightYellow(len(accountNames))
@@ -210,7 +193,7 @@ func logAccountsExported(wallet *Wallet, accountNames []string) error {
 		fmt.Println("")
 		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
 
-		publicKey, err := wallet.publicKeyForAccount(accountName)
+		publicKey, err := keymanager.PublicKeyForAccount(accountName)
 		if err != nil {
 			return errors.Wrap(err, "could not get public key")
 		}

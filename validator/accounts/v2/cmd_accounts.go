@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -13,18 +14,19 @@ var AccountCommands = &cli.Command{
 	Subcommands: []*cli.Command{
 		// AccountCommands for accounts-v2 for Prysm validators.
 		{
-			Name: "new",
-			Description: `creates a new validator account for eth2. If no account exists at the wallet path, creates a new wallet for a user based on
+			Name: "create",
+			Description: `creates a new validator account for eth2. If no wallet exists at the given wallet path, creates a new wallet for a user based on
 specified input, capable of creating a direct, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
-				flags.PasswordFileFlag,
-				flags.SkipMnemonicConfirmFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				flags.NumAccountsFlag,
+				featureconfig.AltonaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := NewAccount(cliCtx); err != nil {
+				if err := CreateAccount(cliCtx); err != nil {
 					log.Fatalf("Could not create new account: %v", err)
 				}
 				return nil
@@ -35,8 +37,9 @@ this command outputs a deposit data string which is required to become a validat
 			Description: "Lists all validator accounts in a user's wallet directory",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
+				flags.WalletPasswordFileFlag,
 				flags.ShowDepositDataFlag,
+				featureconfig.AltonaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ListAccounts(cliCtx); err != nil {
@@ -50,9 +53,9 @@ this command outputs a deposit data string which is required to become a validat
 			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
+				flags.BackupDirFlag,
 				flags.AccountsFlag,
+				featureconfig.AltonaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ExportAccount(cliCtx); err != nil {
@@ -67,8 +70,9 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
-				flags.PasswordFileFlag,
+				flags.KeysDirFlag,
+				flags.WalletPasswordFileFlag,
+				featureconfig.AltonaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := ImportAccount(cliCtx); err != nil {

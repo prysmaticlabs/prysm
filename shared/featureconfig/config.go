@@ -58,6 +58,7 @@ type Flags struct {
 	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
 	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
 	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
+	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -109,12 +110,15 @@ func InitWithReset(c *Flags) func() {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Node on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
@@ -237,12 +241,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling finalized deposits cache")
 		cfg.EnableFinalizedDepositsCache = true
 	}
+	if ctx.Bool(enableEth1DataMajorityVote.Name) {
+		log.Warn("Enabling eth1data majority vote")
+		cfg.EnableEth1DataMajorityVote = true
+	}
 	Init(cfg)
 }
 
 // ConfigureSlasher sets the global config based
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(disableLookbackFlag.Name) {
@@ -255,9 +266,12 @@ func ConfigureSlasher(ctx *cli.Context) {
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Validator on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()

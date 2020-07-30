@@ -39,6 +39,7 @@ const seenAttSize = 10000
 const seenExitSize = 100
 const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
+const badBlockSize = 1000
 
 const syncMetricsInterval = 10 * time.Second
 
@@ -103,6 +104,8 @@ type Service struct {
 	seenProposerSlashingCache *lru.Cache
 	seenAttesterSlashingLock  sync.RWMutex
 	seenAttesterSlashingCache *lru.Cache
+	badBlockCache             *lru.Cache
+	badBlockLock              sync.RWMutex
 	stateSummaryCache         *cache.StateSummaryCache
 	stateGen                  *stategen.State
 }
@@ -209,11 +212,16 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
+	badBlockCache, err := lru.New(badBlockSize)
+	if err != nil {
+		return err
+	}
 	s.seenBlockCache = blkCache
 	s.seenAttestationCache = attCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = attesterSlashingCache
 	s.seenProposerSlashingCache = proposerSlashingCache
+	s.badBlockCache = badBlockCache
 
 	return nil
 }

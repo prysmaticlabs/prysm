@@ -126,8 +126,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
-	ctx := context.TODO()
-	beaconState, err := s.beaconDB.HeadState(ctx)
+	beaconState, err := s.beaconDB.HeadState(s.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -135,13 +134,13 @@ func (s *Service) Start() {
 	// For running initial sync with state cache, in an event of restart, we use
 	// last finalized check point as start point to sync instead of head
 	// state. This is because we no longer save state every slot during sync.
-	cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	cp, err := s.beaconDB.FinalizedCheckpoint(s.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch finalized cp: %v", err)
 	}
 
 	if beaconState == nil {
-		beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
+		beaconState, err = s.stateGen.StateByRoot(s.ctx, bytesutil.ToBytes32(cp.Root))
 		if err != nil {
 			log.Fatalf("Could not fetch beacon state by root: %v", err)
 		}
@@ -155,29 +154,29 @@ func (s *Service) Start() {
 		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.opsService.SetGenesisTime(beaconState.GenesisTime())
-		if err := s.initializeChainInfo(ctx); err != nil {
+		if err := s.initializeChainInfo(s.ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
 
 		// We start a counter to genesis, if needed.
-		gState, err := s.beaconDB.GenesisState(ctx)
+		gState, err := s.beaconDB.GenesisState(s.ctx)
 		if err != nil {
 			log.Fatalf("Could not retrieve genesis state: %v", err)
 		}
-		go slotutil.CountdownToGenesis(ctx, s.genesisTime, uint64(gState.NumValidators()))
+		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()))
 
-		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(ctx)
+		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(s.ctx)
 		if err != nil {
 			log.Fatalf("Could not get justified checkpoint: %v", err)
 		}
-		finalizedCheckpoint, err := s.beaconDB.FinalizedCheckpoint(ctx)
+		finalizedCheckpoint, err := s.beaconDB.FinalizedCheckpoint(s.ctx)
 		if err != nil {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
 		}
 
 		// Resume fork choice.
 		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		if err := s.cacheJustifiedStateBalances(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
 		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
@@ -214,7 +213,7 @@ func (s *Service) Start() {
 							return
 						}
 						log.WithField("starttime", data.StartTime).Debug("Received chain start event")
-						s.processChainStartTime(ctx, data.StartTime)
+						s.processChainStartTime(s.ctx, data.StartTime)
 						return
 					}
 				case <-s.ctx.Done():
@@ -296,6 +295,10 @@ func (s *Service) initializeBeaconChain(
 // Stop the blockchain service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
+
+	if s.stateGen != nil && s.head != nil && s.head.state != nil {
+		return s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root)
+	}
 	return nil
 }
 

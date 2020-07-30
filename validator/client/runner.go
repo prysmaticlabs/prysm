@@ -22,6 +22,7 @@ type Validator interface {
 	WaitForSync(ctx context.Context) error
 	WaitForSynced(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
@@ -49,6 +50,11 @@ type Validator interface {
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
 	defer v.Done()
+	if featureconfig.Get().SlasherProtection {
+		if err := v.SlasherReady(ctx); err != nil {
+			log.Fatalf("Slasher is not ready: %v", err)
+		}
+	}
 	if featureconfig.Get().WaitForSynced {
 		if err := v.WaitForSynced(ctx); err != nil {
 			log.Fatalf("Could not determine if chain started and beacon node is synced: %v", err)

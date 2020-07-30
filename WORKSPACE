@@ -157,7 +157,7 @@ go_rules_dependencies()
 
 go_register_toolchains(nogo = "@//:nogo")
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
@@ -215,8 +215,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "678c50336ce39bef19b2a0dc69e20a7bda37a673ae07dc0577386e9876e0a525",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/general.tar.gz",
+    sha256 = "9e09ada15c5f494388ecdb3ab49f4554d9ed53ce904cd21c42c350e6d7b2f323",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.2/general.tar.gz",
 )
 
 http_archive(
@@ -231,8 +231,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "d0ce95a3ca0d30df24f96a1b5cfad1f7e6fcc07ad84ca221d92480add051af3e",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/minimal.tar.gz",
+    sha256 = "5fc930e200af7682a176d6025db56cec79807112bb860dca2e1e91fb160312de",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.2/minimal.tar.gz",
 )
 
 http_archive(
@@ -247,8 +247,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "1dfa1ae6822912508dbf6d1fe7608169372daa3ad1e53a3ed0867cb2d6e0ccb0",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/mainnet.tar.gz",
+    sha256 = "fbab14605a0178ef4c8f7efea0de275a22b815a8d3245099f0f5525f7a33faf8",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.2/mainnet.tar.gz",
 )
 
 http_archive(
@@ -354,24 +354,3 @@ load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 geth_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
-
-go_repository(
-    name = "com_github_nbutton23_zxcvbn_go",
-    importpath = "github.com/nbutton23/zxcvbn-go",
-    sum = "h1:AREM5mwr4u1ORQBMvzfzBgpsctsbQikCVpvC+tX285E=",
-    version = "v0.0.0-20180912185939-ae427f1e4c1d",
-)
-
-go_repository(
-    name = "com_github_brianium_mnemonic",
-    importpath = "github.com/brianium/mnemonic",
-    sum = "h1:futFTqrUAf1IanFLU+jK4D1NpgE/+gCbnCG7Fl0rHs0=",
-    version = "v0.0.0-20180124190051-72af92c51f88",
-)
-
-go_repository(
-    name = "com_github_logrusorgru_aurora",
-    importpath = "github.com/logrusorgru/aurora",
-    sum = "h1:tOpm7WcpBTn4fjmVfgpQq0EfczGlG91VSDkswnjF5A8=",
-    version = "v2.0.3+incompatible",
-)

@@ -64,8 +64,31 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			span.End()
 			continue
 		}
-		s.pendingQueueLock.RUnlock()
 		inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
+		s.pendingQueueLock.RUnlock()
+
+		blkRoot, err := stateutil.BlockRoot(b.Block)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			span.End()
+			return err
+		}
+		parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block.ParentRoot))
+		blockIsBad := s.hasBadBlock(blkRoot)
+		// Check if parent is a bad block.
+		if parentIsBad || blockIsBad {
+			// Set block as bad if its parent block is bad too.
+			if parentIsBad {
+				s.setBadBlock(blkRoot)
+			}
+			// Remove block from queue.
+			s.pendingQueueLock.Lock()
+			delete(s.slotToPendingBlocks, slot)
+			delete(s.seenPendingBlocks, blkRoot)
+			s.pendingQueueLock.Unlock()
+			span.End()
+			continue
+		}
 
 		inDB := s.db.HasBlock(ctx, bytesutil.ToBytes32(b.Block.ParentRoot))
 		hasPeer := len(pids) != 0
@@ -94,10 +117,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
-					traceutil.AnnotateError(span, err)
-					log.Errorf("Could not send recent block request: %v", err)
-				}
+				traceutil.AnnotateError(span, err)
+				log.Errorf("Could not send recent block request: %v", err)
 			}
 			span.End()
 			continue
@@ -108,15 +129,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			continue
 		}
 
-		blkRoot, err := stateutil.BlockRoot(b.Block)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			span.End()
-			return err
-		}
-
 		if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 			log.Errorf("Could not process block from slot %d: %v", b.Block.Slot, err)
+			s.setBadBlock(blkRoot)
 			traceutil.AnnotateError(span, err)
 		}
 

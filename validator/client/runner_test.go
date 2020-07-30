@@ -48,6 +48,17 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	assert.Equal(t, true, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 }
 
+func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
+	v := &fakeValidator{}
+	cfg := &featureconfig.Flags{
+		SlasherProtection: true,
+	}
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
+	run(cancelledContext(), v)
+	assert.Equal(t, true, v.SlasherReadyCalled, "Expected SlasherReady() to be called")
+}
+
 func TestUpdateDuties_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())

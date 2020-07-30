@@ -51,6 +51,9 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
+	// To invalidate cache for parent root because pre state will get mutated.
+	defer s.hotStateCache.Delete(blockRoot)
+
 	if s.hotStateCache.Has(blockRoot) {
 		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
 	}
@@ -87,9 +90,6 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 	}
 
-	// To invalidate cache for parent root because pre state will get mutated.
-	s.hotStateCache.Delete(blockRoot)
-
 	return startState, nil
 }
 
@@ -112,7 +112,7 @@ func (s *State) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconStat
 // StateSummaryExists returns true if the corresponding state summary of the input block root either
 // exists in the DB or in the cache.
 func (s *State) StateSummaryExists(ctx context.Context, blockRoot [32]byte) bool {
-	return s.beaconDB.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
+	return s.stateSummaryCache.Has(blockRoot) || s.beaconDB.HasStateSummary(ctx, blockRoot)
 }
 
 // This returns the state summary object of a given block root, it first checks the cache
@@ -120,6 +120,9 @@ func (s *State) StateSummaryExists(ctx context.Context, blockRoot [32]byte) bool
 func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	var summary *pb.StateSummary
 	var err error
+	if s.stateSummaryCache == nil {
+		return nil, errors.New("nil stateSummaryCache")
+	}
 	if s.stateSummaryCache.Has(blockRoot) {
 		summary = s.stateSummaryCache.Get(blockRoot)
 	} else {

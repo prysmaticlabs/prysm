@@ -25,7 +25,6 @@ import (
 )
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
-	t.Skip("Temporarily disabled, fixed in v0.12 branch.")
 
 	p := p2ptest.NewTestP2P(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableDynamicCommitteeSubnets: true})
@@ -64,6 +63,8 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
+	err = r.initCaches()
+	require.NoError(t, err)
 	p.Digest, err = r.forkDigest()
 	require.NoError(t, err)
 	r.registerSubscribers()
@@ -86,7 +87,9 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	require.NoError(t, err)
 	attRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
 	require.NoError(t, err)
-	att.Signature = sKeys[16].Sign(attRoot[:]).Marshal()
+	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
+	require.NoError(t, err)
+	att.Signature = sKeys[committee[0]].Sign(attRoot[:]).Marshal()
 
 	p.ReceivePubSub("/eth2/%x/beacon_attestation_0", att)
 
