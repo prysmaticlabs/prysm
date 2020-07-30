@@ -300,6 +300,9 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(accountNames) == 0 {
+		return nil
+	}
 	log.Infof("Decrypting validator accounts...")
 	// We initialize a nice progress bar to offer the user feedback
 	// during this slow operation.
