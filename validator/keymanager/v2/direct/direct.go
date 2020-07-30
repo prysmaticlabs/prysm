@@ -32,9 +32,6 @@ import (
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
-	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
-	// for a validator account.
-	DepositTransactionFileName = "deposit_transaction.rlp"
 	// TimestampFileName stores a timestamp for account creation as a
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
@@ -43,8 +40,9 @@ const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
-	PasswordFileSuffix  = ".pass"
-	depositDataFileName = "deposit_data.ssz"
+	PasswordFileSuffix = ".pass"
+	// DepositDataFileName for the ssz-encoded deposit.
+	DepositDataFileName = "deposit_data.ssz"
 	eipVersion          = "EIP-2335"
 )
 
@@ -180,22 +178,27 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
+	_, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
-
-	// Log the deposit transaction data to the user.
-	depositutil.LogDepositTransaction(log, tx)
 
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
 	encodedDepositData, err := ssz.Marshal(depositData)
 	if err != nil {
 		return "", errors.Wrap(err, "could not marshal deposit data")
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, DepositDataFileName, encodedDepositData); err != nil {
 		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
+
+	// Log the deposit transaction data to the user.
+	fmt.Printf(`
+========================SSZ Deposit Data===============================
+
+%#x
+
+===================================================================`, encodedDepositData)
 
 	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := roughtime.Now().Unix()
