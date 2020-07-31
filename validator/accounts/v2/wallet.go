@@ -585,6 +585,15 @@ func (w *Wallet) checkPasswordForAccount(accountName string, password string) er
 
 // WritePasswordToDisk --
 func (w *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
+	ok, err := hasDir(w.passwordsDir)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if err := os.MkdirAll(w.passwordsDir, DirectoryPermissions); err != nil {
+			return err
+		}
+	}
 	passwordPath := filepath.Join(w.passwordsDir, passwordFileName)
 	if err := ioutil.WriteFile(passwordPath, []byte(password), os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not write %s", passwordPath)

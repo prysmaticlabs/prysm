@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -47,6 +48,8 @@ const (
 	// DepositDataFileName for the ssz-encoded deposit.
 	DepositDataFileName = "deposit_data.ssz"
 	eipVersion          = "EIP-2335"
+	errFileNotFound     = "no such file"
+	errPasswordNotMatch = "invalid checksum"
 )
 
 // Config for a direct keymanager.
@@ -321,34 +324,50 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 			}
 		}
 	}()
+
+	keystoreFiles := make([]*v2keymanager.Keystore, len(accountNames))
+	passwords := make([]string, len(accountNames))
+	for i := 0; i < len(accountNames); i++ {
+		name := accountNames[i]
+		encoded, err := dr.wallet.ReadFileAtPath(ctx, name, KeystoreFileName)
+		if err != nil {
+			return errors.Wrapf(err, "could not read keystore file for account %s", name)
+		}
+		keystoreFile := &v2keymanager.Keystore{}
+		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
+			return errors.Wrapf(err, "could not decode keystore file for account %s", name)
+		}
+		password, err := dr.wallet.ReadPasswordFromDisk(ctx, name+PasswordFileSuffix)
+		// If the password is suddenly not found for an account, prompt the user for it.
+		if err != nil && strings.Contains(err.Error(), errFileNotFound) {
+			password, err = dr.promptForAccountPassword(ctx, name, keystoreFile.Pubkey)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return errors.Wrapf(err, "could not read password for account %s", name)
+		}
+		keystoreFiles[i] = keystoreFile
+		passwords[i] = password
+	}
+	decryptor := keystorev4.New()
 	dr.lock.Lock()
 	defer dr.lock.Unlock()
-	_, err = mputil.Scatter(len(accountNames), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
-		for i := 0; i < len(accountNames[offset:offset+entries]); i++ {
-			name := accountNames[i]
-			password, err := dr.wallet.ReadPasswordFromDisk(ctx, name+PasswordFileSuffix)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not read password for account %s", name)
-			}
-			encoded, err := dr.wallet.ReadFileAtPath(ctx, name, KeystoreFileName)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
-			}
-			keystoreFile := &v2keymanager.Keystore{}
-			if err := json.Unmarshal(encoded, keystoreFile); err != nil {
-				return nil, errors.Wrapf(err, "could not decode keystore file for account %s", name)
-			}
+	_, err = mputil.Scatter(len(keystoreFiles), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		accountNameChunks := accountNames[offset : offset+entries]
+		passwordChunks := passwords[offset : offset+entries]
+		keystoreFileChunks := keystoreFiles[offset : offset+entries]
+		for i := 0; i < len(keystoreFileChunks[offset:offset+entries]); i++ {
 			// We extract the validator signing private key from the keystore
 			// by utilizing the password and initialize a new BLS secret key from
 			// its raw bytes.
-			decryptor := keystorev4.New()
-			rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+			rawSigningKey, err := decryptor.Decrypt(keystoreFileChunks[i].Crypto, passwordChunks[i])
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decrypt signing key for account %s", name)
+				return nil, errors.Wrapf(err, "could not decrypt signing key for account %s", accountNameChunks[i])
 			}
 			validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not determine signing key for account %s", name)
+				return nil, errors.Wrapf(err, "could not determine signing key for account %s", accountNameChunks[i])
 			}
 			// Update a simple cache of public key -> secret key utilized
 			// for fast signing access in the direct keymanager.
@@ -358,6 +377,28 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 		return nil, nil
 	})
 	return err
+}
+
+func (dr *Keymanager) promptForAccountPassword(ctx context.Context, accountName string, publicKey string) (string, error) {
+	promptText := fmt.Sprintf("Enter password for account with public key %s", publicKey)
+	password, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
+	if err != nil {
+		return "", fmt.Errorf("could not read account password: %v", err)
+	}
+	err = dr.checkPasswordForAccount(accountName, password)
+	invalidChecksum := err != nil && strings.Contains(err.Error(), errPasswordNotMatch)
+	for invalidChecksum {
+		password, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
+		if err != nil {
+			return "", fmt.Errorf("could not read account password: %v", err)
+		}
+		err = dr.checkPasswordForAccount(accountName, password)
+		invalidChecksum = err != nil && strings.Contains(err.Error(), errPasswordNotMatch)
+	}
+	if err := dr.wallet.WritePasswordToDisk(ctx, accountName+PasswordFileSuffix, password); err != nil {
+		return "", errors.Wrap(err, "could not write password to disk")
+	}
+	return password, nil
 }
 
 func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password string) ([]byte, error) {

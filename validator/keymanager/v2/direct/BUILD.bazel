@@ -19,6 +19,7 @@ go_library(
         "//shared/depositutil:go_default_library",
         "//shared/mputil:go_default_library",
         "//shared/petnames:go_default_library",
+        "//shared/promptutil:go_default_library",
         "//shared/roughtime:go_default_library",
         "//validator/accounts/v2/iface:go_default_library",
         "//validator/flags:go_default_library",
