@@ -249,6 +249,11 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return vs.randomETH1DataVote(ctx)
 	}
 
+	currentDepositCount, _ := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, currentPeriodBlockNumber)
+	if currentDepositCount == 0 {
+		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
+	}
+
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
@@ -300,12 +305,16 @@ func (vs *Server) inRangeVotes(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
+	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
 
 	var inRangeVotes []eth1DataSingleVote
 	for _, eth1Data := range headState.Eth1DataVotes() {
 		ok, height, err := vs.BlockFetcher.BlockExists(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
 		if err != nil {
 			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
+		}
+		if eth1Data.DepositCount <= currentETH1Data.DepositCount {
+			continue
 		}
 		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
