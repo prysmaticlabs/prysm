@@ -177,6 +177,16 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		w.passwordsDir = directCfg.AccountPasswordsDirectory
 		au := aurora.NewAurora(true)
 		log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
+
+		// If the user provided a flag and for the password directory, and that value does not match
+		// the wallet's configuration then log a warning to the user.
+		// See https://github.com/prysmaticlabs/prysm/issues/6794.
+		if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) && cliCtx.String(flags.WalletPasswordsDirFlag.Name) != w.passwordsDir {
+			log.Warnf("The provided value for --%s does not match the wallet configuration. " +
+				"Please edit your wallet password directory using wallet-v2 edit-config!",
+				flags.WalletPasswordsDirFlag.Name,
+			)
+		}
 	}
 	log.Info("Successfully opened wallet")
 	return w, nil
