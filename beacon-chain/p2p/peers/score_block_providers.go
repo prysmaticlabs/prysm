@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	// DefaultBlockProviderProcessedBatchWeight is a default weight of a processed batch of blocks.
+	// DefaultBlockProviderProcessedBatchWeight is a default reward weight of a processed batch of blocks.
 	DefaultBlockProviderProcessedBatchWeight = 0.05
-	// DefaultBlockProviderDecayInterval defines how often to call a decaying routine.
+	// DefaultBlockProviderDecayInterval defines how often the decaying routine is called.
 	DefaultBlockProviderDecayInterval = 1 * time.Minute
 )
 
@@ -32,7 +32,7 @@ type BlockProviderScorer struct {
 type BlockProviderScorerConfig struct {
 	// ProcessedBatchWeight defines a reward for a single processed batch of blocks.
 	ProcessedBatchWeight float64
-	// DecayInterval defines how often requested/returned/processed stats should be decayed.
+	// DecayInterval defines how often stats should be decayed.
 	DecayInterval time.Duration
 	// Decay specifies number of blocks subtracted from stats on each decay step.
 	Decay uint64
@@ -62,7 +62,7 @@ func newBlockProviderScorer(
 	return scorer
 }
 
-// Score calculates and returns total score based on returned and processed blocks.
+// Score calculates and returns block provider score.
 func (s *BlockProviderScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
@@ -122,8 +122,8 @@ func (s *BlockProviderScorer) processedBlocks(pid peer.ID) uint64 {
 }
 
 // Decay updates block provider counters by decaying them.
-// This urges peers to keep up the performance to get a high score (and allows new peers to contest previously high
-// scoring ones).
+// This urges peers to keep up the performance to continue getting a high score (and allows
+// new peers to contest previously high scoring ones).
 func (s *BlockProviderScorer) Decay() {
 	s.store.Lock()
 	defer s.store.Unlock()
