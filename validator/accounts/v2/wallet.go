@@ -583,7 +583,9 @@ func (w *Wallet) checkPasswordForAccount(accountName string, password string) er
 	return nil
 }
 
-// WritePasswordToDisk --
+// WritePasswordToDisk checks if the user does not have a passwords directory at the wallet's
+// specified passwordsDir and writes it if that is the case. Then, the function writes the file
+// to the passwordsDir.
 func (w *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
 	ok, err := hasDir(w.passwordsDir)
 	if err != nil {
