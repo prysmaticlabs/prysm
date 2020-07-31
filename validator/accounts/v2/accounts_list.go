@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // ListAccounts displays all available validator accounts in a Prysm wallet.
@@ -93,36 +93,11 @@ func listDirectKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-
-		// Retrieve the account creation timestamp.
-		keystoreFileName, err := wallet.FileNameAtPath(ctx, accountNames[i], direct.KeystoreFileName)
-		if err != nil {
-			return errors.Wrapf(err, "could not get keystore file name for account: %s", accountNames[i])
-		}
-		unixTimestamp, err := AccountTimestamp(keystoreFileName)
-		if err != nil {
-			return errors.Wrap(err, "could not get timestamp from keystore file name")
-		}
-		fmt.Printf("%s | %s | Created %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if !showDepositData {
 			continue
 		}
-		enc, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.DepositDataFileName)
-		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositDataFileName)
-		}
-		fmt.Printf(
-			"%s %s\n",
-			"(deposit_data.ssz file)",
-			filepath.Join(wallet.AccountsDir(), accountNames[i], direct.DepositDataFileName),
-		)
-		fmt.Printf(`
-======================SSZ Deposit Data=====================
-
-%#x
-
-===================================================================`, enc)
 		fmt.Println("")
 	}
 	fmt.Println("")

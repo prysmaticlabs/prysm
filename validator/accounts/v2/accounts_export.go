@@ -12,10 +12,10 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/urfave/cli/v2"
 )
 
 const allAccountsText = "All accounts"
@@ -177,30 +177,4 @@ func copyFileFromZip(archive *zip.Writer, sourcePath string, info os.FileInfo, p
 	}()
 	_, err = io.Copy(writer, file)
 	return err
-}
-
-func logAccountsExported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
-	au := aurora.NewAurora(true)
-
-	numAccounts := au.BrightYellow(len(accountNames))
-	fmt.Println("")
-	if len(accountNames) == 1 {
-		fmt.Printf("Exported %d validator account\n", numAccounts)
-	} else {
-		fmt.Printf("Exported %d validator accounts\n", numAccounts)
-	}
-	for _, accountName := range accountNames {
-		fmt.Println("")
-		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
-
-		publicKey, err := keymanager.PublicKeyForAccount(accountName)
-		if err != nil {
-			return errors.Wrap(err, "could not get public key")
-		}
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), publicKey)
-
-		dirPath := au.BrightCyan("(wallet dir)")
-		fmt.Printf("%s %s\n", dirPath, filepath.Join(wallet.AccountsDir(), accountName))
-	}
-	return nil
 }
