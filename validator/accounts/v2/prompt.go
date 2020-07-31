@@ -138,7 +138,6 @@ func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 		}
 		return strings.TrimRight(string(data), "\r\n"), nil
 	}
-
 	walletPassword, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
 	if err != nil {
 		return "", fmt.Errorf("could not read account password: %v", err)

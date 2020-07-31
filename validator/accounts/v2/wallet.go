@@ -96,7 +96,7 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 		walletDir:      walletDir,
 	}
-	if keymanagerKind == v2keymanager.Derived {
+	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
 		walletPassword, err := inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,
@@ -203,6 +203,11 @@ func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 // AccountsDir for the wallet.
 func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
+}
+
+// Password for the wallet.
+func (w *Wallet) Password() string {
+	return w.walletPassword
 }
 
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
