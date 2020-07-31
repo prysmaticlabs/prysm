@@ -17,6 +17,10 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/schollz/progressbar/v3"
+	"github.com/sirupsen/logrus"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -28,17 +32,11 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/schollz/progressbar/v3"
-	"github.com/sirupsen/logrus"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
-	// TimestampFileName stores a timestamp for account creation as a
-	// file for a direct keymanager account.
-	TimestampFileName = "created_at.txt"
 	// KeystoreFileName exposes the expected filename for the keystore file for an account.
 	KeystoreFileName = "keystore-*.json"
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
@@ -351,9 +349,9 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 		passwords[i] = password
 	}
 	decryptor := keystorev4.New()
-	dr.lock.Lock()
-	defer dr.lock.Unlock()
-	_, err = mputil.Scatter(len(keystoreFiles), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+	_, err = mputil.Scatter(len(keystoreFiles), func(offset int, entries int, lock *sync.RWMutex) (interface{}, error) {
+		lock.Lock()
+		defer lock.Unlock()
 		accountNameChunks := accountNames[offset : offset+entries]
 		passwordChunks := passwords[offset : offset+entries]
 		keystoreFileChunks := keystoreFiles[offset : offset+entries]
