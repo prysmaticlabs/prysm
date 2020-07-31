@@ -421,7 +421,7 @@ func initializeProgressBar(numItems int) *progressbar.ProgressBar {
 			BarStart:      "[",
 			BarEnd:        "]",
 		}),
-		progressbar.OptionOnCompletion(func() {fmt.Println()}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
 		progressbar.OptionSetDescription("Loading validator accounts"),
 	)
 }

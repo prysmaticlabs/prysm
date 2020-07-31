@@ -505,7 +505,7 @@ func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames [
 				BarStart:      "[",
 				BarEnd:        "]",
 			}),
-			progressbar.OptionOnCompletion(func() {fmt.Println()}),
+			progressbar.OptionOnCompletion(func() { fmt.Println() }),
 			progressbar.OptionSetDescription("Importing accounts"),
 		)
 		ctx := context.Background()
