@@ -155,13 +155,8 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			ParentRoot:    bRoot[:],
 		},
 	}
-
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	require.NoError(t, err)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
-	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
 	require.NoError(t, err)
@@ -232,13 +227,8 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			ParentRoot:    bRoot[:],
 		},
 	}
-
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	require.NoError(t, err)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
-	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
 	require.NoError(t, err)
@@ -445,13 +435,8 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			ParentRoot:    bRoot[:],
 		},
 	}
-
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	require.NoError(t, err)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
-	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
 	require.NoError(t, err)
@@ -584,13 +569,8 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			ParentRoot:    bRoot[:],
 		},
 	}
-
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	require.NoError(t, err)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
-	msg.Signature = blockSig[:]
 
 	c, err := lru.New(10)
 	require.NoError(t, err)
@@ -659,16 +639,11 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			ParentRoot:    bRoot[:],
 		},
 	}
+	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
-	require.NoError(t, err)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	// Mutate Signature
-	copy(blockSig[:4], []byte{1, 2, 3, 4})
-	msg.Signature = blockSig
-
+	copy(msg.Signature[:4], []byte{1, 2, 3, 4})
 	currBlockRoot, err := stateutil.BlockRoot(msg.Block)
 	require.NoError(t, err)
 
