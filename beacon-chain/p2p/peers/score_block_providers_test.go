@@ -130,3 +130,94 @@ func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
 		})
 	}
 }
+
+func TestPeerScorer_BlockProvider_MaxScore(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	batchSize := uint64(flags.Get().BlockBatchLimit)
+
+	tests := []struct {
+		name   string
+		update func(s *peers.BlockProviderScorer)
+		want   float64
+	}{
+		{
+			// Minimal max.score is a reward for a single batch.
+			name:   "no peers",
+			update: nil,
+			want:   0.2,
+		},
+		{
+			name: "partial batch",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize/4)
+			},
+			want: 0.2,
+		},
+		{
+			name: "single batch",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize)
+			},
+			want: 0.2,
+		},
+		{
+			name: "3/2 of a batch",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*3/2)
+			},
+			want: 0.2,
+		},
+		{
+			name: "multiple batches",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*5)
+			},
+			want: 0.2 * 5,
+		},
+		{
+			name: "multiple peers",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*5)
+				s.IncrementProcessedBlocks("peer1", batchSize)
+				s.IncrementProcessedBlocks("peer2", batchSize*10)
+				s.IncrementProcessedBlocks("peer1", batchSize/4)
+			},
+			want: 0.2 * 10,
+		},
+		{
+			// Even after stats is decayed, max. attained blocks count must remain
+			// (as a ballpark of overall performance of peers during life-cycle of service).
+			name: "decaying",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*5)
+				s.IncrementProcessedBlocks("peer1", batchSize)
+				s.IncrementProcessedBlocks("peer2", batchSize*10)
+				s.IncrementProcessedBlocks("peer1", batchSize/4)
+				for i := 0; i < 10; i++ {
+					s.Decay()
+				}
+				assert.Equal(t, uint64(0), s.ProcessedBlocks("peer1"))
+				assert.Equal(t, uint64(0), s.ProcessedBlocks("peer2"))
+			},
+			want: 0.2 * 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+				ScorerParams: &peers.PeerScorerConfig{
+					BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+						ProcessedBatchWeight: 0.2,
+					},
+				},
+			})
+			scorer := peerStatuses.Scorers().BlockProviderScorer()
+			if tt.update != nil {
+				tt.update(scorer)
+			}
+			assert.Equal(t, tt.want, scorer.MaxScore())
+		})
+	}
+}

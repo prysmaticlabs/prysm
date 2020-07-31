@@ -30,6 +30,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// roundScore returns score rounded in accordance with the score manager's rounding factor.
 func roundScore(score float64) float64 {
 	return math.Round(score*peers.ScoreRoundingFactor) / peers.ScoreRoundingFactor
 }
