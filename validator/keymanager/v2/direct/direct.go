@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -86,6 +84,14 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keym
 		cfg:       cfg,
 		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
+	// If the user has previously created a direct keymanaged wallet, we perform
+	// a "silent migration" into this more effective format of storing a single keystore
+	// file containing all accounts.
+	// TODO(Raul): Remove after enough users have used the default only.
+	if err := k.migrateToSingleKeystore(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not migrate to single keystore format")
+	}
+
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via password unlock.
@@ -147,12 +153,8 @@ func (c *Config) String() string {
 // ValidatingAccountNames for a direct keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 	names := make([]string, len(dr.accountsStore.PublicKeys))
-	var err error
 	for i, pubKey := range dr.accountsStore.PublicKeys {
-		names[i], err = dr.generateAccountName(pubKey)
-		if err != nil {
-			return nil, err
-		}
+		names[i] = petnames.DeterministicName(pubKey, "-")
 	}
 	return names, nil
 }
@@ -165,10 +167,7 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// Create a petname for an account from its public key and write its password to disk.
 	validatingKey := bls.RandKey()
-	accountName, err := dr.generateAccountName(validatingKey.PublicKey().Marshal())
-	if err != nil {
-		return "", errors.Wrap(err, "could not generate unique account name")
-	}
+	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
 	dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, validatingKey.Marshal())
 	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, validatingKey.PublicKey().Marshal())
 	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
@@ -267,6 +266,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
+// ImportKeystores into the direct keymanager from an external source.
 func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keymanager.Keystore) error {
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(keystores))
@@ -445,22 +445,6 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	return err
 }
 
-func (dr *Keymanager) generateAccountName(pubKey []byte) (string, error) {
-	var accountExists bool
-	var accountName string
-	for !accountExists {
-		accountName = petnames.DeterministicName(pubKey, "-")
-		exists, err := hasDir(filepath.Join(dr.wallet.AccountsDir(), accountName))
-		if err != nil {
-			return "", errors.Wrapf(err, "could not check if account exists in dir: %s", dr.wallet.AccountsDir())
-		}
-		if !exists {
-			break
-		}
-	}
-	return accountName, nil
-}
-
 func (dr *Keymanager) askUntilPasswordConfirms(
 	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore, pubKey string,
 ) ([]byte, error) {
@@ -485,13 +469,4 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 		break
 	}
 	return secretKey, nil
-}
-
-// Checks if a directory indeed exists at the specified path.
-func hasDir(dirPath string) (bool, error) {
-	info, err := os.Stat(dirPath)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return info.IsDir(), err
 }

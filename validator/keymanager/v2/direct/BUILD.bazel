@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "direct.go",
         "doc.go",
+        "migrate.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct",
     visibility = [
@@ -17,7 +18,6 @@ go_library(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
-        "//shared/mputil:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
         "//shared/roughtime:go_default_library",
