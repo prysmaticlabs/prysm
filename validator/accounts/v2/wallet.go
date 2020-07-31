@@ -179,7 +179,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		// the wallet's configuration then log a warning to the user.
 		// See https://github.com/prysmaticlabs/prysm/issues/6794.
 		if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) && cliCtx.String(flags.WalletPasswordsDirFlag.Name) != w.passwordsDir {
-			log.Warnf("The provided value for --%s does not match the wallet configuration. " +
+			log.Warnf("The provided value for --%s does not match the wallet configuration. "+
 				"Please edit your wallet password directory using wallet-v2 edit-config.",
 				flags.WalletPasswordsDirFlag.Name,
 			)
