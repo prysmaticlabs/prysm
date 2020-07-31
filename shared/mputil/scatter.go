@@ -52,15 +52,19 @@ func Scatter(inputLen int, sFunc func(int, int, *sync.RWMutex) (interface{}, err
 		}(offset, entries)
 	}
 
-	// Collect results from workers
+	// Collect results from workers.
 	results := make([]*WorkerResults, workers)
+	var err error
 	for i := 0; i < workers; i++ {
 		select {
 		case result := <-resultCh:
 			results[i] = result
-		case err := <-errorCh:
-			return nil, err
+		case receivedErr := <-errorCh:
+			err = receivedErr
 		}
+	}
+	if err != nil {
+		return nil, err
 	}
 	return results, nil
 }

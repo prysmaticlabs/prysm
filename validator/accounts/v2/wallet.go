@@ -224,7 +224,7 @@ func (w *Wallet) InitializeKeymanager(
 		}
 		keymanager, err = direct.NewKeymanager(ctx, w, cfg)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize direct keymanager")
+			return nil, err
 		}
 	case v2keymanager.Derived:
 		cfg, err := derived.UnmarshalConfigFile(configFile)
@@ -233,7 +233,7 @@ func (w *Wallet) InitializeKeymanager(
 		}
 		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, w.walletPassword)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize derived keymanager")
+			return nil, err
 		}
 	case v2keymanager.Remote:
 		cfg, err := remote.UnmarshalConfigFile(configFile)
@@ -242,7 +242,7 @@ func (w *Wallet) InitializeKeymanager(
 		}
 		keymanager, err = remote.NewKeymanager(ctx, 100000000, cfg)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize remote keymanager")
+			return nil, err
 		}
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)

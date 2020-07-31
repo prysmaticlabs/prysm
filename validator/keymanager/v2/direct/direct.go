@@ -83,7 +83,7 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keym
 	// used to retrieve secrets keys for the accounts via password unlock.
 	// This cache is needed to process Sign requests using a public key.
 	if err := k.initializeSecretKeysCache(ctx); err != nil {
-		return nil, errors.Wrap(err, "could not initialize keys cache")
+		return nil, err
 	}
 	return k, nil
 }

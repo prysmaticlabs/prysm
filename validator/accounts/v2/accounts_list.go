@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
@@ -28,6 +29,9 @@ func ListAccounts(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	if err != nil && strings.Contains(err.Error(), "could not read password") {
+		return errors.Wrap(err, "could not unlock accounts")
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
