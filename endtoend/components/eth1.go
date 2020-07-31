@@ -29,7 +29,7 @@ const timeGapPerTX = 100 * time.Millisecond
 const timeGapPerMiningTX = 250 * time.Millisecond
 
 // StartEth1Node starts an eth1 local dev chain and deploys a deposit contract.
-func StartEth1Node(t *testing.T) string {
+func StartEth1Node(t *testing.T) (string, int) {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {
 		t.Fatal("go-ethereum binary not found")
@@ -128,7 +128,7 @@ func StartEth1Node(t *testing.T) string {
 		t.Fatalf("Unable to advance chain: %v", err)
 	}
 
-	return keystorePath
+	return keystorePath, cmd.Process.Pid
 }
 
 func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uint64) error {
