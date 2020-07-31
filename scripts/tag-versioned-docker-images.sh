@@ -19,10 +19,10 @@ DOCKER_IMAGES=(
 
 # Check that the current commit has an associated git tag.
 TAG=$(git describe --tags HEAD)
-TAG_COMMIT=$(git rev-list -n 1 $TAG)
+TAG_COMMIT=$(git rev-list -n 1 "$TAG")
 CURRENT_COMMIT=$(git rev-parse HEAD)
 
-if [[ "$TAG_COMMIT" -ne "$CURRENT_COMMIT" ]]
+if [ "$TAG_COMMIT" != "$CURRENT_COMMIT" ]
 then
   echo "Current commit does not have an associated tag."
   exit 1
@@ -44,7 +44,7 @@ do
     esac
 done
 
-if [ "$TAG_AS_STABLE" -eq "1" ]
+if [ "$TAG_AS_STABLE" = "1" ]
 then
   TAG="stable"
 fi
@@ -56,11 +56,11 @@ do
   SRC="$image:$HEAD"
   DST="$image:$TAG"
   echo "Pulling $SRC"
-  docker pull $SRC
+  docker pull "$SRC"
   echo "Tagging $SRC as $DST"
-  docker tag $SRC $DST
+  docker tag "$SRC" "$DST"
   echo "Pushing $DST"
-  docker push $DST
+  docker push "$DST"
 done
 
 exit 0
