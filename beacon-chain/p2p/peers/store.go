@@ -37,8 +37,6 @@ type peerData struct {
 	metaData              *pb.MetaData
 	chainStateLastUpdated time.Time
 	badResponses          int
-	requestedBlocks       uint64
-	returnedBlocks        uint64
 	processedBlocks       uint64
 }
 
