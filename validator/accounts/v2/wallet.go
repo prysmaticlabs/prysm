@@ -44,6 +44,9 @@ var (
 	ErrWalletExists = errors.New("you already have a wallet at the specified path. You can " +
 		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
 	)
+	// ErrNoKeymanagerKindFound is an error returned when there is no existing wallet found in the directory.
+	ErrNoKeymanagerKindFound = errors.New("no existing keymanager wallet found")
+
 	keymanagerKindSelections = map[v2keymanager.Kind]string{
 		v2keymanager.Derived: "HD Wallet (Recommended)",
 		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
@@ -77,16 +80,16 @@ func NewWallet(
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
-	walletExists, err := hasDir(walletDir)
+	walletDirExists, err := hasDir(walletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
-	if walletExists {
-		isEmptyWallet, err := isEmptyDir(walletDir)
+	if walletDirExists {
+		hasWallet, err := walletInDir(walletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
-		if !isEmptyWallet {
+		if hasWallet {
 			return nil, ErrWalletExists
 		}
 	}
@@ -127,16 +130,16 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok, err := hasDir(walletDir)
+	walletDirExists, err := hasDir(walletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
-	if ok {
-		isEmptyWallet, err := isEmptyDir(walletDir)
+	if walletDirExists {
+		hasWallet, err := walletInDir(walletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
-		if isEmptyWallet {
+		if hasWallet {
 			return nil, ErrNoWalletFound
 		}
 	} else {
@@ -608,10 +611,18 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 	if err != nil {
 		return 0, fmt.Errorf("could not read files in directory: %s", walletPath)
 	}
-	if len(list) != 1 {
-		return 0, fmt.Errorf("wanted 1 directory in wallet dir, received %d", len(list))
+	var keymanagerKind v2keymanager.Kind
+	for _, name := range list {
+		fmt.Println(name)
+		keymanagerKind, err = v2keymanager.ParseKind(name)
+		if err == nil {
+			break
+		}
 	}
-	return v2keymanager.ParseKind(list[0])
+	if keymanagerKind == 0 {
+		return 0, ErrNoKeymanagerKindFound
+	}
+	return keymanagerKind, nil
 }
 
 func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
@@ -621,11 +632,11 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 	}
 	if ok {
-		isEmptyWallet, err := isEmptyDir(directory)
+		hasWallet, err := walletInDir(directory)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
-		if !isEmptyWallet {
+		if hasWallet {
 			return OpenWallet(cliCtx)
 		}
 	}
@@ -659,7 +670,7 @@ func hasDir(dirPath string) (bool, error) {
 	return info.IsDir(), err
 }
 
-func isEmptyDir(name string) (bool, error) {
+func walletInDir(name string) (bool, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return false, err
@@ -669,9 +680,20 @@ func isEmptyDir(name string) (bool, error) {
 			log.Debugf("Could not close directory: %s", name)
 		}
 	}()
-	_, err = f.Readdirnames(1)
+	list, err := f.Readdirnames(0)
 	if err == io.EOF {
-		return true, nil
+		return false, nil
+	} else if err != nil {
+		return false, err
 	}
-	return false, err // Either not empty or error, suits both cases
+	// Check all folders in path, making sure none are a valid keymanager dir.
+	var keymanagerKind v2keymanager.Kind
+	for _, name := range list {
+		keymanagerKind, err = v2keymanager.ParseKind(name)
+		if err == nil {
+			break
+		}
+	}
+	// If a keymanager could be parsed, it means a wallet is present.
+	return keymanagerKind != 0, nil
 }

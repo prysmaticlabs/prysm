@@ -31,7 +31,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 			return nil, errors.Wrap(err, "could not create new wallet")
 		}
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet")
+			return nil, errors.Wrap(err, "could not create direct keyamanger wallet")
 		}
 		log.WithField("wallet-path", w.walletDir).Info(
 			"Successfully created new wallet",
