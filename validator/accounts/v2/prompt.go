@@ -27,7 +27,7 @@ const (
 	confirmPasswordPromptText    = "Confirm password"
 	walletPasswordPromptText     = "Wallet password"
 	newAccountPasswordPromptText = "New account password"
-	passwordForAccountPromptText = "Enter password for account with public key %s"
+	passwordForAccountPromptText = "Enter password for account with public key %#x"
 )
 
 type passwordConfirm int
