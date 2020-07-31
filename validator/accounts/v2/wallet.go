@@ -153,7 +153,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		keymanagerKind: keymanagerKind,
 	}
 	log.Infof("%s %s", au.BrightMagenta("(wallet directory)"), w.walletDir)
-	if keymanagerKind == v2keymanager.Derived {
+	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
 		walletPassword, err := inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,

@@ -17,11 +17,6 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/schollz/progressbar/v3"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -32,6 +27,10 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/schollz/progressbar/v3"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
@@ -44,10 +43,11 @@ const (
 	// PasswordFileSuffix for passwords persisted as text to disk.
 	PasswordFileSuffix = ".pass"
 	// DepositDataFileName for the ssz-encoded deposit.
-	DepositDataFileName      = "deposit_data.ssz"
-	accountsPath             = "accounts"
-	accountsKeystoreFileName = "all-accounts.keystore-%d.json"
-	eipVersion               = "EIP-2335"
+	DepositDataFileName            = "deposit_data.ssz"
+	accountsPath                   = "accounts"
+	accountsKeystoreFileName       = "all-accounts.keystore-*.json"
+	accountsKeystoreFileNameFormat = "all-accounts.keystore-%d.json"
+	eipVersion                     = "EIP-2335"
 )
 
 // Config for a direct keymanager.
@@ -214,7 +214,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 ===================================================================`, encodedDepositData)
 
 	// Write the encoded keystore to disk with the timestamp appended
-	fileName := fmt.Sprintf(accountsKeystoreFileName, roughtime.Now().Unix())
+	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
 		return "", err
@@ -322,15 +322,11 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		)
 		for i := 0; i < len(keystores); i++ {
 			// We check if the individual account unlocks with the global password.
-			privKey, err := decryptor.Decrypt(keystores[i].Crypto, password)
+			privKeyBytes, err := decryptor.Decrypt(keystores[i].Crypto, password)
 			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 				// If the password fails for an individual account, we ask the user to input
 				// that individual account's password until it succeeds.
-				privKey, err := dr.askUntilPasswordConfirms(decryptor, keystores[i], keystores[i].Pubkey)
-				if err != nil {
-					return err
-				}
-				privKeyBytes, err := hex.DecodeString(string(privKey))
+				privKeyBytes, err := dr.askUntilPasswordConfirms(decryptor, keystores[i], keystores[i].Pubkey)
 				if err != nil {
 					return err
 				}
@@ -348,16 +344,9 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 			if err != nil {
 				return errors.Wrap(err, "could not decrypt keystore")
 			}
-			privKeyBytes, err := hex.DecodeString(string(privKey))
-			if err != nil {
-				return err
-			}
 			pubKeyBytes, err := hex.DecodeString(keystores[i].Pubkey)
 			if err != nil {
 				return err
-			}
-			if err := bar.Add(1); err != nil {
-				return errors.Wrap(err, "could not add to progress bar")
 			}
 			privKeys[i] = privKeyBytes
 			pubKeys[i] = pubKeyBytes
@@ -365,7 +354,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 				return errors.Wrap(err, "could not add to progress bar")
 			}
 			fmt.Printf(
-				"Successfully imported account with public key %#x",
+				"Successfully imported account with public key %#x\n",
 				aurora.BrightMagenta(bytesutil.Trunc(pubKeyBytes)),
 			)
 		}
@@ -380,7 +369,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf(accountsKeystoreFileName, roughtime.Now().Unix())
+	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
 	return dr.wallet.WriteFileAtPath(ctx, accountsPath, fileName, encodedAccounts)
 }
 
@@ -415,15 +404,8 @@ func (dr *Keymanager) createAccountsKeystore(
 }
 
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
-	accountNames, err := dr.ValidatingAccountNames()
-	if err != nil {
-		return err
-	}
-	if len(accountNames) == 0 {
-		return nil
-	}
 	encoded, err := dr.wallet.ReadFileAtPath(ctx, accountsPath, accountsKeystoreFileName)
-	if err != nil && strings.Contains(err.Error(), "file not found") {
+	if err != nil && strings.Contains(err.Error(), "no files found") {
 		return nil
 	} else if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
