@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -65,6 +66,7 @@ type Service struct {
 	cfg                   *Config
 	peers                 *peers.Status
 	addrFilter            *filter.Filters
+	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
 	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
@@ -125,6 +127,8 @@ func NewService(cfg *Config) (*Service, error) {
 		log.WithError(err).Error("Failed to create address filter")
 		return nil, err
 	}
+	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
+
 	opts := s.buildOptions(ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
@@ -143,6 +147,8 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithStrictSignatureVerification(false),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
+	// Set the pubsub global parameters that we require.
+	setPubSubParameters()
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {

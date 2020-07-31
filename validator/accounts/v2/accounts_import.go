@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -52,64 +53,40 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet")
 	}
-	var accountsImported []string
-	var pubKeysImported [][]byte
-	if err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	accountsImported := make([]string, 0)
+	pubKeysImported := make([][]byte, 0)
+	files, err := ioutil.ReadDir(keysDir)
+	if err != nil {
+		return errors.Wrap(err, "could not read dir")
+	}
+	for i := 0; i < len(files); i++ {
+		if files[i].IsDir() {
+			continue
 		}
-		if info.IsDir() {
-			return nil
+		if !strings.HasPrefix(files[i].Name(), "keystore") {
+			continue
 		}
-
-		parentDir := filepath.Dir(path)
-		matches, err := filepath.Glob(filepath.Join(parentDir, direct.KeystoreFileName))
-		if err != nil {
-			return err
-		}
-
-		var keystoreFileFound bool
-		for _, match := range matches {
-			if match == path {
-				keystoreFileFound = true
-			}
-		}
-		if !keystoreFileFound {
-			return nil
-		}
-
-		accountName, pubKey, err := wallet.importKeystore(ctx, path)
+		accountName, pubKey, err := wallet.importKeystore(ctx, filepath.Join(keysDir, files[i].Name()))
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}
 		accountsImported = append(accountsImported, accountName)
 		pubKeysImported = append(pubKeysImported, pubKey)
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "could not walk files")
 	}
 
 	au := aurora.NewAurora(true)
-	fmt.Printf("Importing accounts: %s\n", au.BrightGreen(strings.Join(accountsImported, ", ")).Bold())
-	for i, accountName := range accountsImported {
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName, pubKeysImported[i]); err != nil {
-			return errors.Wrap(err, "could not verify password for keystore")
-		}
+	formattedPubkeys := make([]string, len(pubKeysImported))
+	for i, pk := range pubKeysImported {
+		formattedPubkeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk))
 	}
-
-	fmt.Println("Importing accounts, this may take a while...")
-	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+	fmt.Printf("Importing accounts: %s\n", au.BrightGreen(strings.Join(formattedPubkeys, ", ")))
+	if err := wallet.enterPasswordForAllAccounts(cliCtx, accountsImported, pubKeysImported); err != nil {
+		return errors.Wrap(err, "could not verify password for keystore")
 	}
-	km, ok := keymanager.(*direct.Keymanager)
-	if !ok {
-		return errors.New("can only export accounts for a non-HD wallet")
-	}
-	if err := logAccountsImported(ctx, wallet, km, accountsImported); err != nil {
-		return errors.Wrap(err, "could not log accounts imported")
-	}
-
+	fmt.Printf(
+		"Successfully imported %s accounts, view all of them by running accounts-v2 list\n",
+		au.BrightMagenta(strconv.Itoa(len(pubKeysImported))),
+	)
 	return nil
 }
 

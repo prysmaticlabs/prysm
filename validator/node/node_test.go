@@ -30,6 +30,7 @@ func TestNode_Builds(t *testing.T) {
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")
 	set.String("verbosity", "debug", "log verbosity")
+	set.Bool("disable-accounts-v2", true, "disabling accounts v2")
 	context := cli.NewContext(&app, set, nil)
 
 	require.NoError(t, v1.NewValidatorAccount(dir, "1234"), "Could not create validator account")

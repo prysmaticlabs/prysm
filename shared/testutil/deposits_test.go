@@ -2,13 +2,13 @@ package testutil
 
 import (
 	"bytes"
+	"encoding/hex"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 func TestSetupInitialDeposits_1024Entries(t *testing.T) {
-	t.Skip("To be resolved until 5119 gets in")
 	entries := 1
 	ResetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(uint64(entries))
@@ -35,15 +35,24 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt0, deposits[0].Data.WithdrawalCredentials)
 	}
 
-	expectedDepositDataRootAt0 := []byte{0xe4, 0x55, 0x29, 0x79, 0x1d, 0x1e, 0xbd, 0x81, 0x2a, 0x48, 0x42, 0xe3, 0x94, 0xc0, 0x38, 0xf3, 0x24, 0x2a, 0xe2, 0x3b, 0xae, 0xa4, 0xf8, 0x0b, 0x74, 0xf4, 0xbd, 0xdd, 0xbe, 0xbb, 0xd6, 0x22}
-	if !bytes.Equal(depositDataRoots[0][:], expectedDepositDataRootAt0) {
-		t.Fatalf("incorrect deposit data root, wanted %x but received %x", expectedDepositDataRootAt0, depositDataRoots[0])
+	dRootAt0 := []byte("4bbc31cfec9602242576e8570b3c72cd09f55e0d5ea4d64fd08fb6ca5cb69f17")
+	dRootAt0B := make([]byte, hex.DecodedLen(len(dRootAt0)))
+	_, err = hex.Decode(dRootAt0B, dRootAt0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(depositDataRoots[0][:], dRootAt0B) {
+		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt0B, depositDataRoots[0])
 	}
 
-	expectedSignatureAt0 := []byte{0xa7, 0xe5, 0x53, 0xde, 0x1b, 0x2a, 0x0c, 0x6f, 0x9f, 0xe1, 0x01, 0x44, 0x9d, 0x54, 0x55, 0x27, 0x55, 0xc6, 0x51, 0x01, 0xe2, 0x77, 0x0d, 0xfe, 0x10, 0xda, 0x1c, 0x34, 0x29, 0xc4, 0xc9, 0x94, 0x98, 0xd6, 0x69, 0x10, 0x09, 0x57, 0x91, 0x05, 0x89, 0xc0, 0x82, 0xdf, 0x53, 0x0f, 0x37, 0x49, 0x12, 0x1c, 0xc0, 0x70, 0x3b, 0x57,
-		0x0f, 0x61, 0x7d, 0x39, 0x89, 0x35, 0xef, 0x8f, 0x4e, 0xe0, 0x25, 0x8b, 0xac, 0x17, 0xa6, 0xb4, 0x43, 0xe9, 0xba, 0xdd, 0x12, 0x80, 0x5b, 0x50, 0xa6, 0xe2, 0xab, 0x93, 0x80, 0xaf, 0x79, 0xe1, 0x7e, 0x14, 0x75, 0x94, 0x7c, 0xe3, 0xf3, 0x52, 0x7e, 0xf8}
-	if !bytes.Equal(deposits[0].Data.Signature, expectedSignatureAt0) {
-		t.Fatalf("incorrect signature, wanted %x but received %x", expectedSignatureAt0, deposits[0].Data.Signature)
+	sigAt0 := []byte("953b44ee497f9fc9abbc1340212597c264b77f3dea441921d65b2542d64195171ba0598fad34905f03c0c1b6d5540faa10bb2c26084fc5eacbafba119d9a81721f56821cae7044a2ff374e9a128f68dee68d3b48406ea60306148498ffe007c7")
+	sigAt0B := make([]byte, hex.DecodedLen(len(sigAt0)))
+	_, err = hex.Decode(sigAt0B, sigAt0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(deposits[0].Data.Signature, sigAt0B) {
+		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt0B, deposits[0].Data.Signature)
 	}
 
 	entries = 1024
@@ -69,11 +78,11 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	if !bytes.Equal(deposits[0].Data.WithdrawalCredentials, expectedWithdrawalCredentialsAt0) {
 		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt0, deposits[0].Data.WithdrawalCredentials)
 	}
-	if !bytes.Equal(depositDataRoots[0][:], expectedDepositDataRootAt0) {
-		t.Fatalf("incorrect deposit data root, wanted %x but received %x", expectedDepositDataRootAt0, depositDataRoots[0])
+	if !bytes.Equal(depositDataRoots[0][:], dRootAt0B) {
+		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt0B, depositDataRoots[0])
 	}
-	if !bytes.Equal(deposits[0].Data.Signature, expectedSignatureAt0) {
-		t.Fatalf("incorrect signature, wanted %x but received %x", expectedSignatureAt0, deposits[0].Data.Signature)
+	if !bytes.Equal(deposits[0].Data.Signature, sigAt0B) {
+		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt0B, deposits[0].Data.Signature)
 	}
 	expectedPublicKeyAt1023 := []byte{0x81, 0x2b, 0x93, 0x5e, 0xc8, 0x4b, 0x0e, 0x9a, 0x83, 0x95, 0x55, 0xaf, 0x33, 0x60, 0xca, 0xfb, 0x83, 0x1b, 0xd6, 0x12, 0xcf, 0xa2, 0x2e, 0x25, 0xea, 0xb0, 0x3c, 0xf5, 0xfd, 0xb0, 0x2a, 0xf5, 0x2b, 0xa4, 0x01, 0x7a, 0xee, 0xa8, 0x8a, 0x2f, 0x62, 0x2c, 0x78, 0x6e, 0x7f, 0x47, 0x6f, 0x4b}
 	if !bytes.Equal(deposits[1023].Data.PublicKey, expectedPublicKeyAt1023) {
@@ -83,13 +92,23 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	if !bytes.Equal(deposits[1023].Data.WithdrawalCredentials, expectedWithdrawalCredentialsAt1023) {
 		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt1023, deposits[1023].Data.WithdrawalCredentials)
 	}
-	expectedDepositDataRootAt1023 := []byte{0xec, 0xd3, 0x60, 0x05, 0x49, 0xdc, 0x62, 0xb3, 0xe9, 0x55, 0xb3, 0x7e, 0x40, 0xab, 0x17, 0x9b, 0x5c, 0x62, 0x02, 0x99, 0xa9, 0x59, 0x5c, 0x99, 0xc8, 0xd3, 0xd5, 0xed, 0xc1, 0x51, 0xc8, 0x54}
-	if !bytes.Equal(depositDataRoots[1023][:], expectedDepositDataRootAt1023) {
-		t.Fatalf("incorrect deposit data root, wanted %x but received %x", expectedDepositDataRootAt1023, depositDataRoots[1023])
+	dRootAt1023 := []byte("564c1afed12430965ae8ff6f519a6cb15118c438328024d16c02ffe3d4652893")
+	dRootAt1023B := make([]byte, hex.DecodedLen(len(dRootAt1023)))
+	_, err = hex.Decode(dRootAt1023B, dRootAt1023)
+	if err != nil {
+		t.Fatal(err)
 	}
-	expectedSignatureAt1023 := []byte{0xac, 0xd2, 0xa6, 0x84, 0x07, 0x73, 0x23, 0x18, 0x8b, 0x77, 0x71, 0xd0, 0x0c, 0x98, 0x76, 0x1e, 0xc8, 0x88, 0xd0, 0x0e, 0x6c, 0xee, 0xe0, 0x55, 0xa4, 0x18, 0x98, 0x18, 0xb9, 0x02, 0x75, 0xee, 0xd3, 0xe6, 0xe1, 0x36, 0xed, 0x08, 0xfa, 0x19, 0x2f, 0x79, 0x12, 0x58, 0x11, 0x99, 0x50, 0x9a, 0x19, 0x78, 0x6b, 0x50, 0x14, 0xb2, 0x4b, 0x7f, 0xf5, 0xee, 0x3d, 0x96, 0xc8, 0xfc, 0x9e, 0x6b, 0x79, 0x63, 0x39, 0x2d, 0xb4, 0x74, 0xb0, 0xca, 0xb7, 0xd9, 0x21, 0x0d, 0x90, 0x79, 0x0c, 0xa7, 0x6b, 0xe9, 0x80, 0x3a, 0xe7, 0x54, 0x47, 0x38, 0xec, 0x5a, 0x71, 0xfc, 0x89, 0x03, 0x2e, 0xd1}
-	if !bytes.Equal(deposits[1023].Data.Signature, expectedSignatureAt1023) {
-		t.Fatalf("incorrect signature, wanted %x but received %x", expectedSignatureAt1023, deposits[1023].Data.Signature)
+	if !bytes.Equal(depositDataRoots[1023][:], dRootAt1023B) {
+		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt1023B, depositDataRoots[1023])
+	}
+	sigAt1023 := []byte("8482cc981976291d19c1d7d298f5e6781ac691151833b89a29ef4d08850f56b972b860ebf7995ada3213b575213c331316c213a8535cf88bff0e98846204b0db186ff84c55903f1c359470be7c1110c94d5aafeef07f4886ed69cb13cb3aadbc")
+	sigAt1023B := make([]byte, hex.DecodedLen(len(sigAt1023)))
+	_, err = hex.Decode(sigAt1023B, sigAt1023)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(deposits[1023].Data.Signature, sigAt1023B) {
+		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt1023B, deposits[1023].Data.Signature)
 	}
 }
 
