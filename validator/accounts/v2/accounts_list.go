@@ -110,7 +110,12 @@ func listDirectKeymanagerAccounts(
 		}
 		enc, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.DepositDataFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositDataFileName)
+			fmt.Printf(
+				"%s\n",
+				au.BrightRed("If you imported your account coming from the eth2 launchpad, you will find your "+
+					"deposit_data.json in the eth2.0-deposit-cli's validator_keys folder"),
+			)
+			continue
 		}
 		fmt.Printf(
 			"%s %s\n",

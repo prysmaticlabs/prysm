@@ -51,7 +51,8 @@ func IsValidUnicode(input string) bool {
 		if !(unicode.IsLetter(char) ||
 			unicode.IsNumber(char) ||
 			unicode.IsPunct(char) ||
-			unicode.IsSymbol(char)) {
+			unicode.IsSymbol(char) ||
+			unicode.IsSpace(char)) {
 			return false
 		}
 	}
@@ -73,7 +74,11 @@ func ValidatePasswordInput(input string) error {
 	}
 	for _, char := range input {
 		switch {
-		case !(unicode.IsLetter(char) || unicode.IsNumber(char) || unicode.IsPunct(char) || unicode.IsSymbol(char)):
+		case !(unicode.IsSpace(char) ||
+			unicode.IsLetter(char) ||
+			unicode.IsNumber(char) ||
+			unicode.IsPunct(char) ||
+			unicode.IsSymbol(char)):
 			return errors.New("password must only contain alphanumeric characters, punctuation, or symbols")
 		case unicode.IsLetter(char):
 			hasLetter = true
