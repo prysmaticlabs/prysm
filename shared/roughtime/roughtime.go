@@ -83,7 +83,7 @@ func recalibrateRoughtime() {
 		return
 	}
 
-	log.Infof("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
+	log.Debugf("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
 	offset = newOffset
 }
 
