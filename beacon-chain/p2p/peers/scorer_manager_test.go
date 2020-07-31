@@ -2,7 +2,6 @@ package peers_test
 
 import (
 	"context"
-	"math"
 	"testing"
 	"time"
 
@@ -82,10 +81,6 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 			scores[string(pid)] = s.Score(pid)
 		}
 		return scores
-	}
-
-	roundScore := func(score float64) float64 {
-		return math.Round(score*peers.ScoreRoundingFactor) / peers.ScoreRoundingFactor
 	}
 
 	pack := func(scorer *peers.PeerScorerManager, s1, s2, s3 float64) map[string]float64 {

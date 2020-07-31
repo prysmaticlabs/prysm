@@ -2,7 +2,6 @@ package peers_test
 
 import (
 	"context"
-	"math"
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -25,9 +24,6 @@ func TestPeerScorer_BlockProvider_Score(t *testing.T) {
 	})
 	scorer := peerStatuses.Scorers().BlockProviderScorer()
 	batchSize := uint64(flags.Get().BlockBatchLimit)
-	roundScore := func(score float64) float64 {
-		return math.Round(score*10000) / 10000
-	}
 
 	// Start with non-exitent provider.
 	assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for unregistered provider")
