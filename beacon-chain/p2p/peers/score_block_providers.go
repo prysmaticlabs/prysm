@@ -131,6 +131,8 @@ func (s *BlockProviderScorer) Decay() {
 	for _, peerData := range s.store.peers {
 		if peerData.processedBlocks > s.config.Decay {
 			peerData.processedBlocks -= s.config.Decay
+		} else {
+			peerData.processedBlocks = 0
 		}
 	}
 }
