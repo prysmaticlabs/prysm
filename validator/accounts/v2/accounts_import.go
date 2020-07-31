@@ -55,18 +55,33 @@ func ImportAccount(cliCtx *cli.Context) error {
 	}
 	accountsImported := make([]string, 0)
 	pubKeysImported := make([][]byte, 0)
-	files, err := ioutil.ReadDir(keysDir)
+	isDir, err := hasDir(keysDir)
 	if err != nil {
-		return errors.Wrap(err, "could not read dir")
+		return errors.Wrap(err, "could not determine if path is a directory")
 	}
-	for i := 0; i < len(files); i++ {
-		if files[i].IsDir() {
-			continue
+
+	// Consider that the keysDir might be a path to a specific file and handle accordingly.
+	if isDir {
+		files, err := ioutil.ReadDir(keysDir)
+		if err != nil {
+			return errors.Wrap(err, "could not read dir")
 		}
-		if !strings.HasPrefix(files[i].Name(), "keystore") {
-			continue
+		for i := 0; i < len(files); i++ {
+			if files[i].IsDir() {
+				continue
+			}
+			if !strings.HasPrefix(files[i].Name(), "keystore") {
+				continue
+			}
+			accountName, pubKey, err := wallet.importKeystore(ctx, filepath.Join(keysDir, files[i].Name()))
+			if err != nil {
+				return errors.Wrap(err, "could not import keystore")
+			}
+			accountsImported = append(accountsImported, accountName)
+			pubKeysImported = append(pubKeysImported, pubKey)
 		}
-		accountName, pubKey, err := wallet.importKeystore(ctx, filepath.Join(keysDir, files[i].Name()))
+	} else {
+		accountName, pubKey, err := wallet.importKeystore(ctx, keysDir)
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}
