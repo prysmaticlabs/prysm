@@ -647,5 +647,5 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-finalized-deposits-cache",
-	// "--enable-eth1-data-majority-vote", // TODO(6786): This flag fails long running e2e tests.
+	"--enable-eth1-data-majority-vote",
 }
