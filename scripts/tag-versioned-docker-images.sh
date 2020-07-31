@@ -49,7 +49,7 @@ then
   TAG="stable"
 fi
 
-HEAD=$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short=6 HEAD)
+HEAD=HEAD-$(git rev-parse --short=6 HEAD)
 
 for image in "${DOCKER_IMAGES[@]}"
 do
