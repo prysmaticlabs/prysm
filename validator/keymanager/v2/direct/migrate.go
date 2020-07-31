@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/schollz/progressbar/v3"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -25,6 +27,8 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 			return nil
 		}
 	}
+	fmt.Println("Now migrating accounts to a more efficient format, this is a one-time setup")
+	bar := initializeProgressBar(len(accountNames))
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(accountNames))
 	pubKeys := make([][]byte, len(accountNames))
@@ -56,6 +60,9 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 		}
 		privKeys[i] = privKeyBytes
 		pubKeys[i] = publicKeyBytes
+		if err := bar.Add(1); err != nil {
+			return err
+		}
 	}
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
@@ -67,4 +74,22 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 	}
 	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
 	return dr.wallet.WriteFileAtPath(ctx, accountsPath, fileName, encodedAccounts)
+}
+
+func initializeProgressBar(numItems int) *progressbar.ProgressBar {
+	return progressbar.NewOptions(
+		numItems,
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		progressbar.OptionSetDescription("Migrating accounts..."),
+	)
 }
