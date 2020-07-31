@@ -2,6 +2,7 @@ package peers_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -218,6 +219,119 @@ func TestPeerScorer_BlockProvider_MaxScore(t *testing.T) {
 				tt.update(scorer)
 			}
 			assert.Equal(t, tt.want, scorer.MaxScore())
+		})
+	}
+}
+
+func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	batchSize := uint64(flags.Get().BlockBatchLimit)
+	prettyFormat := "[%0.1f%%, raw: %v,  blocks: %d/%d]"
+
+	tests := []struct {
+		name   string
+		update func(s *peers.BlockProviderScorer)
+		want   string
+	}{
+		{
+			// Minimal max.score is a reward for a single batch.
+			name:   "no peers",
+			update: nil,
+			want:   fmt.Sprintf(prettyFormat, 0.0, 0, 0, batchSize),
+		},
+		{
+			name: "partial batch",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize/4)
+			},
+			want: fmt.Sprintf(prettyFormat, 0.0, 0, batchSize/4, batchSize),
+		},
+		{
+			name: "single batch",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize)
+				// There was some other peer who increased maximally attainable number of blocks.
+				s.IncrementProcessedBlocks("peer2", batchSize*5)
+			},
+			want: fmt.Sprintf(prettyFormat, 20.0, 0.05, batchSize, batchSize*5),
+		},
+		{
+			name: "single batch max score",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize)
+			},
+			want: fmt.Sprintf(prettyFormat, 100.0, 0.05, batchSize, batchSize),
+		},
+		{
+			name: "3/2 of a batch",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*3/2)
+				s.IncrementProcessedBlocks("peer2", batchSize*5)
+			},
+			want: fmt.Sprintf(prettyFormat, 20.0, 0.05, batchSize*3/2, batchSize*5),
+		},
+		{
+			name: "3/2 of a batch max score",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*3/2)
+			},
+			want: fmt.Sprintf(prettyFormat, 100.0, 0.05, batchSize*3/2, batchSize*3/2),
+		},
+		{
+			name: "multiple batches",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*5)
+				s.IncrementProcessedBlocks("peer2", batchSize*10)
+			},
+			want: fmt.Sprintf(prettyFormat, 50.0, 0.05*5, batchSize*5, batchSize*10),
+		},
+		{
+			name: "multiple batches max score",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*5)
+			},
+			want: fmt.Sprintf(prettyFormat, 100.0, 0.05*5, batchSize*5, batchSize*5),
+		},
+		{
+			name: "multiple peers",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*5)
+				s.IncrementProcessedBlocks("peer1", batchSize)
+				s.IncrementProcessedBlocks("peer2", batchSize*10)
+				s.IncrementProcessedBlocks("peer1", batchSize/4)
+			},
+			want: fmt.Sprintf(prettyFormat, 60.0, 0.05*6, batchSize*6+batchSize/4, batchSize*10),
+		},
+		{
+			name: "decaying",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*5)
+				s.IncrementProcessedBlocks("peer1", batchSize)
+				s.IncrementProcessedBlocks("peer2", batchSize*10)
+				s.IncrementProcessedBlocks("peer1", batchSize/4)
+				expected := fmt.Sprintf(prettyFormat, 60.0, 0.05*6, batchSize*6+batchSize/4, batchSize*10)
+				assert.Equal(t, expected, s.FormatScorePretty("peer1"))
+				s.Decay()
+			},
+			want: fmt.Sprintf(prettyFormat, 50.0, 0.05*5, batchSize*5+batchSize/4, batchSize*10),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+				ScorerParams: &peers.PeerScorerConfig{
+					BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+						ProcessedBatchWeight: 0.05,
+					},
+				},
+			})
+			scorer := peerStatuses.Scorers().BlockProviderScorer()
+			if tt.update != nil {
+				tt.update(scorer)
+			}
+			assert.Equal(t, tt.want, scorer.FormatScorePretty("peer1"))
 		})
 	}
 }

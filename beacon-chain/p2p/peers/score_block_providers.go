@@ -157,12 +157,13 @@ func (s *BlockProviderScorer) Sorted(pids []peer.ID) []peer.ID {
 	return peers
 }
 
-// BlockProviderScorePretty returns full scoring information about a given peer.
-func (s *BlockProviderScorer) BlockProviderScorePretty(pid peer.ID) string {
+// FormatScorePretty returns full scoring information in a human-readable format.
+func (s *BlockProviderScorer) FormatScorePretty(pid peer.ID) string {
 	s.store.RLock()
 	defer s.store.RUnlock()
 	score := s.score(pid)
-	return fmt.Sprintf("[%0.2f%%, raw: %v,  blocks: %d]", (score/s.MaxScore())*100, score, s.processedBlocks(pid))
+	return fmt.Sprintf("[%0.1f%%, raw: %v,  blocks: %d/%d]",
+		(score/s.MaxScore())*100, score, s.processedBlocks(pid), s.maxProcessedBlocks)
 }
 
 // MaxScore exposes maximum score attainable by peers.
