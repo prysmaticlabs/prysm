@@ -304,7 +304,6 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	if len(accountNames) == 0 {
 		return nil
 	}
-	log.Info("Decrypting validator accounts...")
 	// We initialize a nice progress bar to offer the user feedback
 	// during this slow operation.
 	bar := initializeProgressBar(len(accountNames))
@@ -461,6 +460,8 @@ func initializeProgressBar(numItems int) *progressbar.ProgressBar {
 			BarStart:      "[",
 			BarEnd:        "]",
 		}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		progressbar.OptionSetDescription("Loading validator accounts"),
 	)
 }
 
