@@ -26,22 +26,6 @@ const (
 	heapFileName        = "node_heap_%d.pb.gz"
 )
 
-// KillProcesses finds the passed in process IDs and kills the process.
-func KillProcesses(t *testing.T, pIDs []int) {
-	for _, id := range pIDs {
-		process, err := os.FindProcess(id)
-		if err != nil {
-			t.Fatalf("Could not find process %d: %v", id, err)
-		}
-		if err := process.Kill(); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := process.Wait(); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
 // DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
 // If not, it just creates the requested file.
 func DeleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {

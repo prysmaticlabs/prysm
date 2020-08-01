@@ -22,7 +22,6 @@ func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) {
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		StartNewBeaconNode(t, config, i, enr)
 	}
-	return
 }
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
@@ -70,8 +69,6 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
-
-	return
 }
 
 // StartBootnode starts a bootnode and returns its ENR and process ID.

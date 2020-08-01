@@ -36,7 +36,10 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
 	t.Logf("Test Path: %s\n", e2e.TestParams.TestPath)
 
+	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+
 	keystorePath := components.StartEth1Node(t)
+	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
 	bootnodeENR := components.StartBootnode(t)
 	components.StartBeaconNodes(t, config, bootnodeENR)
 	components.StartValidatorClients(t, config, keystorePath)
@@ -67,12 +70,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	if config.TestSlasher {
-		components.StartSlashers(t)
+		go components.StartSlashers(t)
 	}
 	if config.TestDeposits {
-		depositCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
-		components.StartNewValidatorClient(t, config, depositCount, e2e.TestParams.BeaconNodeCount)
-		components.SendAndMineDeposits(t, keystorePath, depositCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
+		go components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+		go components.SendAndMineDeposits(t, keystorePath, int(e2e.DepositCount), minGenesisActiveCount)
 	}
 
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)

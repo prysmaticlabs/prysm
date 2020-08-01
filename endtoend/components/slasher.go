@@ -22,7 +22,6 @@ func StartSlashers(t *testing.T) {
 		t.Fatal("Slasher binary not found")
 	}
 
-	var processIDs []int
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, i))
 		if err != nil {
@@ -44,7 +43,6 @@ func StartSlashers(t *testing.T) {
 		if err := cmd.Start(); err != nil {
 			t.Fatalf("Failed to start slasher client: %v", err)
 		}
-		processIDs = append(processIDs, cmd.Process.Pid)
 	}
 
 	stdOutFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, 0)))
