@@ -248,8 +248,11 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		log.WithError(err).Error("Failed to get block number for previous voting period")
 		return vs.randomETH1DataVote(ctx)
 	}
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
+	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
 
-	currentDepositCount, _ := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, currentPeriodBlockNumber)
+	currentDepositCount, _ := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastValidBlockNumber)
 	if currentDepositCount == 0 {
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
@@ -266,10 +269,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		}
 		return eth1Data, nil
 	}
-
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
-	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
 
 	inRangeVotes, err := vs.inRangeVotes(ctx, firstValidBlockNumber, lastValidBlockNumber)
 	if err != nil {
