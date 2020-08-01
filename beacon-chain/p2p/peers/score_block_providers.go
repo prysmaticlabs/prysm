@@ -23,9 +23,9 @@ type BlockProviderScorer struct {
 	ctx    context.Context
 	config *BlockProviderScorerConfig
 	store  *peerDataStore
-	// maxProcessedBlocks defines maximum number of processed blocks attained by some peer during
+	// highestProcessedBlocksCount defines maximum number of processed blocks attained by some peer during
 	// the lifetime of a service. This is used to gauge relative performance of other peers.
-	maxProcessedBlocks uint64
+	highestProcessedBlocksCount uint64
 }
 
 // BlockProviderScorerConfig holds configuration parameters for block providers scoring service.
@@ -45,10 +45,9 @@ func newBlockProviderScorer(
 		config = &BlockProviderScorerConfig{}
 	}
 	scorer := &BlockProviderScorer{
-		ctx:                ctx,
-		config:             config,
-		store:              store,
-		maxProcessedBlocks: uint64(flags.Get().BlockBatchLimit),
+		ctx:    ctx,
+		config: config,
+		store:  store,
 	}
 	if scorer.config.ProcessedBatchWeight == 0.0 {
 		scorer.config.ProcessedBatchWeight = DefaultBlockProviderProcessedBatchWeight
@@ -56,8 +55,10 @@ func newBlockProviderScorer(
 	if scorer.config.DecayInterval == 0 {
 		scorer.config.DecayInterval = DefaultBlockProviderDecayInterval
 	}
+	batchSize := uint64(flags.Get().BlockBatchLimit)
+	scorer.highestProcessedBlocksCount = batchSize
 	if scorer.config.Decay == 0 {
-		scorer.config.Decay = uint64(flags.Get().BlockBatchLimit)
+		scorer.config.Decay = batchSize
 	}
 	return scorer
 }
@@ -101,8 +102,8 @@ func (s *BlockProviderScorer) IncrementProcessedBlocks(pid peer.ID, cnt uint64) 
 		s.store.peers[pid] = &peerData{}
 	}
 	s.store.peers[pid].processedBlocks += cnt
-	if s.store.peers[pid].processedBlocks > s.maxProcessedBlocks {
-		s.maxProcessedBlocks = s.store.peers[pid].processedBlocks
+	if s.store.peers[pid].processedBlocks > s.highestProcessedBlocksCount {
+		s.highestProcessedBlocksCount = s.store.peers[pid].processedBlocks
 	}
 }
 
@@ -163,7 +164,7 @@ func (s *BlockProviderScorer) FormatScorePretty(pid peer.ID) string {
 	defer s.store.RUnlock()
 	score := s.score(pid)
 	return fmt.Sprintf("[%0.1f%%, raw: %v,  blocks: %d/%d]",
-		(score/s.MaxScore())*100, score, s.processedBlocks(pid), s.maxProcessedBlocks)
+		(score/s.MaxScore())*100, score, s.processedBlocks(pid), s.highestProcessedBlocksCount)
 }
 
 // MaxScore exposes maximum score attainable by peers.
@@ -171,7 +172,7 @@ func (s *BlockProviderScorer) MaxScore() float64 {
 	score := s.Params().ProcessedBatchWeight
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	if batchSize > 0 {
-		totalProcessedBatches := float64(s.maxProcessedBlocks / batchSize)
+		totalProcessedBatches := float64(s.highestProcessedBlocksCount / batchSize)
 		score = totalProcessedBatches * s.config.ProcessedBatchWeight
 	}
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
