@@ -87,7 +87,7 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keym
 	// If the user has previously created a direct keymanaged wallet, we perform
 	// a "silent migration" into this more effective format of storing a single keystore
 	// file containing all accounts.
-	// TODO(Raul): Remove after enough users have used the default only.
+	// TODO(#6800): Remove after enough users have used the default only.
 	if err := k.migrateToSingleKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not migrate to single keystore format")
 	}
