@@ -171,7 +171,7 @@ func (s *BlockProviderScorer) MaxScore() float64 {
 	score := s.Params().ProcessedBatchWeight
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	if batchSize > 0 {
-		totalProcessedBatches := float64(s.maxProcessedBlocks / uint64(flags.Get().BlockBatchLimit))
+		totalProcessedBatches := float64(s.maxProcessedBlocks / batchSize)
 		score = totalProcessedBatches * s.config.ProcessedBatchWeight
 	}
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
