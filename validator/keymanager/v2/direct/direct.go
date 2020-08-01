@@ -376,36 +376,6 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 	return dr.wallet.WriteFileAtPath(ctx, accountsPath, fileName, encodedAccounts)
 }
 
-func (dr *Keymanager) createAccountsKeystore(
-	ctx context.Context,
-	privateKeys [][]byte,
-	publicKeys [][]byte,
-) (*v2keymanager.Keystore, error) {
-	encryptor := keystorev4.New()
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, err
-	}
-	store := &AccountStore{
-		PrivateKeys: privateKeys,
-		PublicKeys:  publicKeys,
-	}
-	encodedStore, err := json.MarshalIndent(store, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not encrypt accounts")
-	}
-	return &v2keymanager.Keystore{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
-	}, nil
-}
-
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	encoded, err := dr.wallet.ReadFileAtPath(ctx, accountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
@@ -446,6 +416,36 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	}
 	dr.accountsStore = store
 	return err
+}
+
+func (dr *Keymanager) createAccountsKeystore(
+	ctx context.Context,
+	privateKeys [][]byte,
+	publicKeys [][]byte,
+) (*v2keymanager.Keystore, error) {
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	store := &AccountStore{
+		PrivateKeys: privateKeys,
+		PublicKeys:  publicKeys,
+	}
+	encodedStore, err := json.MarshalIndent(store, "", "\t")
+	if err != nil {
+		return nil, err
+	}
+	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encrypt accounts")
+	}
+	return &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}, nil
 }
 
 func (dr *Keymanager) askUntilPasswordConfirms(

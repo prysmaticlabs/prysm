@@ -16,6 +16,29 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+// Migrates the old format for validator direct-keymanaged accounts into a new, more
+// efficient format which stores only a single keystore all accounts, encrypted using
+// a high-entropy password. This allows for incredibly fast startup-time, requiring only
+// a single decryption operation to obtain all validator accounts. This migration process
+// is meant to happen only once, ensuring all future restarts of the validator client utilize
+// the fast, efficient format.
+//
+// Old format:
+//  wallet/
+//    direct/
+//      perfectly-intense-mosquito/
+//        keystore-2909299.json
+//      personally-conscious-echidna/
+//        keystore-20390922.json
+//  passwords/
+//    perfectly-intense-mosquito.pass
+//    personally-conscious-echidna.pass
+//
+// New format:
+//  wallet/
+//    direct/
+//      accounts/
+//        all-accounts.keystore-2983823.json
 func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 	accountNames, err := dr.wallet.ListDirs()
 	if err != nil {
