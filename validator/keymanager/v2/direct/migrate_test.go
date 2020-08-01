@@ -3,10 +3,13 @@ package direct
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -20,8 +23,9 @@ func TestDirectKeymanager_MigrateToSingleKeystoreFormat(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files:          make(map[string]map[string][]byte),
-		WalletPassword: password,
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   password,
 	}
 	dr := &Keymanager{
 		keysCache:     make(map[[48]byte]bls.SecretKey),
@@ -29,34 +33,71 @@ func TestDirectKeymanager_MigrateToSingleKeystoreFormat(t *testing.T) {
 		accountsStore: &AccountStore{},
 	}
 	ctx := context.Background()
-	accountName, err := dr.CreateAccount(ctx, password)
-	require.NoError(t, err)
 
-	// Ensure the keystore file was written to the wallet
-	// and ensure we can decrypt it using the EIP-2335 standard.
-	var encodedKeystore []byte
+	// Generate several old account keystore and save to the wallet path.
+	numAccounts := 5
+	wallet.Directories = make([]string, numAccounts)
+	wantedValidatingKeys := make([]bls.SecretKey, numAccounts)
+	for i := 0; i < numAccounts; i++ {
+		validatingKey := bls.RandKey()
+		accountName, keystore := generateOldAccountKeystore(t, dr, validatingKey, password)
+		wallet.Directories[i] = accountName
+		wantedValidatingKeys[i] = validatingKey
+		encodedKeystore, err := json.MarshalIndent(keystore, "", "\t")
+		require.NoError(t, err)
+		require.NoError(t, dr.wallet.WritePasswordToDisk(ctx, accountName+".pass", password))
+		require.NoError(t, dr.wallet.WriteFileAtPath(ctx, accountName, KeystoreFileName, encodedKeystore))
+	}
+
+	// Now, we run the migration strategy.
+	require.NoError(t, dr.migrateToSingleKeystore(ctx))
+
+	// We retrieve the new accounts keystore format containing all keys in a single file.
+	var encodedAccountsFile []byte
 	for k, v := range wallet.Files[accountsPath] {
 		if strings.Contains(k, "keystore") {
-			encodedKeystore = v
+			encodedAccountsFile = v
 		}
 	}
-	require.NotNil(t, encodedKeystore, "could not find keystore file")
-	keystoreFile := &v2keymanager.Keystore{}
-	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+	require.NotNil(t, encodedAccountsFile, "could not find keystore file")
+	accountsKeystore := &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedAccountsFile, accountsKeystore))
 
 	// We extract the accounts from the keystore.
 	decryptor := keystorev4.New()
-	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+	encodedAccounts, err := decryptor.Decrypt(accountsKeystore.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator accounts")
 	store := &AccountStore{}
 	require.NoError(t, json.Unmarshal(encodedAccounts, store))
 
-	require.Equal(t, 1, len(store.PublicKeys))
-	require.Equal(t, 1, len(store.PrivateKeys))
-	privKey, err := bls.SecretKeyFromBytes(store.PrivateKeys[0])
+	// We expect the migration strategy to have succeeded, with all accounts from earlier
+	// now being stored in a single keystore file.
+	require.Equal(t, numAccounts, len(store.PublicKeys))
+	require.Equal(t, numAccounts, len(store.PrivateKeys))
+	for i := 0; i < numAccounts; i++ {
+		privKey, err := bls.SecretKeyFromBytes(store.PrivateKeys[i])
+		require.NoError(t, err)
+		assert.DeepEqual(t, privKey.Marshal(), wantedValidatingKeys[i].Marshal())
+	}
+	testutil.AssertLogsContain(t, hook, "Now migrating accounts to a more efficient format")
+}
+
+func generateOldAccountKeystore(
+	t testing.TB, dr *Keymanager, validatingKey bls.SecretKey, password string,
+) (string, *v2keymanager.Keystore) {
+	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
+	// Generates a new EIP-2335 compliant keystore file
+	// from a BLS private key and marshals it as JSON.
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
-	pubKey := privKey.PublicKey().Marshal()
-	assert.DeepEqual(t, pubKey, store.PublicKeys[0])
-	testutil.AssertLogsContain(t, hook, accountName)
-	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	return accountName, &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 }

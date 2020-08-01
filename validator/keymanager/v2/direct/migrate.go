@@ -32,7 +32,7 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 		}
 	}
 	au := aurora.NewAurora(true)
-	fmt.Printf(
+	log.Infof(
 		"Now migrating accounts to a more efficient format, this is a %s setup\n",
 		au.BrightRed("one-time"),
 	)
