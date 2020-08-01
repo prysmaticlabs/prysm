@@ -28,8 +28,8 @@ var valExited bool
 var churnLimit = uint64(4)
 var depositValCount = e2e.DepositCount
 
+// Deposits should be processed in twice the length of the epochs per eth1 voting period.
 var depositsInBlockStart = uint64(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
-
 var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead + 1
 var depositEndEpoch = depositActivationStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
 
@@ -73,16 +73,6 @@ func isBetweenEpochs(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return fromEpoch < currentEpoch && currentEpoch < toEpoch
 	}
-}
-
-func isBetweenEpochsInclusive(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
-	return func(currentEpoch uint64) bool {
-		return fromEpoch <= currentEpoch && currentEpoch <= toEpoch
-	}
-}
-
-func init() {
-	params.UseE2EConfig()
 }
 
 func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
