@@ -50,6 +50,8 @@ var LongRunningBeaconCount = 2
 // StandardBeaconCount is a global constant for the count of beacon nodes of standard E2E tests.
 var StandardBeaconCount = 2
 
+var DepositCount = uint64(64)
+
 // Init initializes the E2E config, properly handling test sharding.
 func Init(beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
