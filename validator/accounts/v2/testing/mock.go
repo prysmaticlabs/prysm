@@ -38,6 +38,7 @@ func (m *Wallet) AccountsDir() string {
 	return m.InnerAccountsDir
 }
 
+// Password --
 func (m *Wallet) Password() string {
 	return m.WalletPassword
 }

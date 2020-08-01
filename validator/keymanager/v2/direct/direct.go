@@ -78,9 +78,10 @@ func DefaultConfig() *Config {
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:    wallet,
-		cfg:       cfg,
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		wallet:        wallet,
+		cfg:           cfg,
+		keysCache:     make(map[[48]byte]bls.SecretKey),
+		accountsStore: &AccountStore{},
 	}
 	// If the user has previously created a direct keymanaged wallet, we perform
 	// a "silent migration" into this more effective format of storing a single keystore
