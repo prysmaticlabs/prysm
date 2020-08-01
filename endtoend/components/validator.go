@@ -39,7 +39,7 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 	processIDs := make([]int, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for i := 0; i < beaconNodeNum; i++ {
-		pID := StartNewValidatorClient(t, config, validatorsPerNode, i)
+		pID := StartNewValidatorClient(t, config, validatorsPerNode, i, validatorsPerNode*i)
 		processIDs[i] = pID
 	}
 
@@ -49,7 +49,7 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 }
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
-func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum int, index int) int {
+func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum int, offset int, index int) int {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
@@ -69,7 +69,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--log-file=%s", file.Name()),
 		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
-		fmt.Sprintf("--interop-start-index=%d", validatorNum*index),
+		fmt.Sprintf("--interop-start-index=%d", offset),
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
 		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.

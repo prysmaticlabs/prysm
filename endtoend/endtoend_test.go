@@ -67,7 +67,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		defer helpers.KillProcesses(t, slasherPIDs)
 	}
 	if config.TestDeposits {
-		_ = components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount)
+		_ = components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
 		components.SendAndMineDeposits(t, keystorePath, int(e2e.DepositCount), int(params.BeaconConfig().MinGenesisActiveValidatorCount))
 	}
 
