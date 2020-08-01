@@ -18,16 +18,15 @@ import (
 )
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, config *types.E2EConfig) {
+func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) {
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		go func(index int) {
-			StartNewBeaconNode(t, config, index)
-		}(i)
+		StartNewBeaconNode(t, config, i, enr)
 	}
+	return
 }
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int) {
+func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
@@ -52,7 +51,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int) {
 		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+40),
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
-		fmt.Sprintf("--bootstrap-node=%s", e2e.TestParams.BootNodeENR),
+		fmt.Sprintf("--bootstrap-node=%s", enr),
 		fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50),
 		"--pprof",
 		"--verbosity=trace",
@@ -71,10 +70,12 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int) {
 	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
+
+	return
 }
 
 // StartBootnode starts a bootnode and returns its ENR and process ID.
-func StartBootnode(t *testing.T) {
+func StartBootnode(t *testing.T) string {
 	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
 	if !found {
 		t.Log(binaryPath)
@@ -105,10 +106,12 @@ func StartBootnode(t *testing.T) {
 		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
 	}
 
-	e2e.TestParams.BootNodeENR, err = getENRFromLogFile(stdOutFile.Name())
+	enr, err := getENRFromLogFile(stdOutFile.Name())
 	if err != nil {
 		t.Fatalf("could not get enr for bootnode: %v", err)
 	}
+
+	return enr
 }
 
 func getENRFromLogFile(name string) (string, error) {

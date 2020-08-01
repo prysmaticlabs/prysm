@@ -36,13 +36,10 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
 	t.Logf("Test Path: %s\n", e2e.TestParams.TestPath)
 
-	var keystorePath = components.StartEth1Node(t)
-	genesisValCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	go components.SendAndMineDeposits(t, keystorePath, genesisValCount, 0)
-	components.StartBootnode(t)
-	components.StartBeaconNodes(t, config)
-	components.StartValidatorClients(t, config)
-
+	keystorePath := components.StartEth1Node(t)
+	bootnodeENR := components.StartBootnode(t)
+	components.StartBeaconNodes(t, config, bootnodeENR)
+	components.StartValidatorClients(t, config, keystorePath)
 	defer helpers.LogOutput(t, config)
 	defer func() {
 		for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
@@ -75,7 +72,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if config.TestDeposits {
 		depositCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
 		components.StartNewValidatorClient(t, config, depositCount, e2e.TestParams.BeaconNodeCount)
-		components.SendAndMineDeposits(t, keystorePath, depositCount, genesisValCount /*offset*/)
+		components.SendAndMineDeposits(t, keystorePath, depositCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
 	}
 
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)
@@ -133,7 +130,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	index := e2e.TestParams.BeaconNodeCount
-	components.StartNewBeaconNode(t, config, index)
+	components.StartNewBeaconNode(t, config, index, bootnodeENR)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
@@ -150,7 +147,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
-
 	t.Run("sync completed", func(t *testing.T) {
 		if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
 			t.Errorf("Failed to sync: %v", err)

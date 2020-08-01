@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	importKeysDirPromptText      = "Enter the directory where your keystores to import are located"
+	importKeysDirPromptText      = "Enter the directory or filepath where your keystores to import are located"
 	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
 	walletDirPromptText          = "Enter a wallet directory"
 	passwordsDirPromptText       = "Directory where passwords will be stored"
@@ -27,7 +27,7 @@ const (
 	confirmPasswordPromptText    = "Confirm password"
 	walletPasswordPromptText     = "Wallet password"
 	newAccountPasswordPromptText = "New account password"
-	passwordForAccountPromptText = "Enter password for account with public key %s"
+	passwordForAccountPromptText = "Enter password for account with public key %#x"
 )
 
 type passwordConfirm int
