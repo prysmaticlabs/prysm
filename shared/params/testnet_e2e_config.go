@@ -20,7 +20,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.GenesisDelay = 20 // 20 seconds so E2E has enough time to process deposits and get started.
 
 	// Time parameters.
-	e2eConfig.SecondsPerSlot = 12
+	e2eConfig.SecondsPerSlot = 10
 	e2eConfig.SlotsPerEpoch = 6
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.Eth1FollowDistance = 4

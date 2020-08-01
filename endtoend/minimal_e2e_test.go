@@ -21,7 +21,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	}
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
-	epochsToRun := 15
+	epochsToRun := 10
 	var err error
 	epochStr, ok := os.LookupEnv("E2E_EPOCHS")
 	if ok {
