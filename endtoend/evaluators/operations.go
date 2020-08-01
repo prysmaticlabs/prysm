@@ -40,11 +40,11 @@ var ProcessesDepositsInBlocks = types.Evaluator{
 	Evaluation: processesDepositsInBlocks,
 }
 
-// ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
-var ProcessesDepositedValidators = types.Evaluator{
+// ActivatesDepositedValidators ensures the expected amount of validator deposits are activated into the state.
+var ActivatesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
 	Policy:     isBetweenEpochs(depositActivationStartEpoch, depositEndEpoch), //Choosing 8-21 because of the churn limit of 4 per epoch for 256 vals / 4 beacon nodes = 64 deposits. )
-	Evaluation: processesDepositedValidators,
+	Evaluation: activatesDepositedValidators,
 }
 
 // DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
@@ -115,7 +115,7 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func processesDepositedValidators(conns ...*grpc.ClientConn) error {
+func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 

@@ -50,11 +50,6 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
 func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum int, index int) int {
-	validatorsPerClient := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
-	// Only allow validatorsPerClient count for each validator client.
-	if validatorNum != validatorsPerClient {
-		return 0
-	}
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
