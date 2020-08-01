@@ -39,9 +39,7 @@ const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
-	PasswordFileSuffix = ".pass"
-	// DepositDataFileName for the ssz-encoded deposit.
-	DepositDataFileName            = "deposit_data.ssz"
+	PasswordFileSuffix             = ".pass"
 	accountsPath                   = "accounts"
 	accountsKeystoreFileName       = "all-accounts.keystore-*.json"
 	accountsKeystoreFileNameFormat = "all-accounts.keystore-%d.json"

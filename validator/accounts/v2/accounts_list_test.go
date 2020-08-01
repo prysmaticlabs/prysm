@@ -54,14 +54,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	depositDataForAccounts := make([][]byte, numAccounts)
 	accountCreationTimestamps := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		accountName, err := keymanager.CreateAccount(ctx, "hello world")
 		require.NoError(t, err)
-		depositData, err := wallet.ReadFileAtPath(ctx, accountName, direct.DepositDataFileName)
-		require.NoError(t, err)
-		depositDataForAccounts[i] = depositData
 		keystoreFileName, err := wallet.FileNameAtPath(ctx, accountName, direct.KeystoreFileName)
 		require.NoError(t, err)
 		timestampStart := strings.LastIndex(keystoreFileName, "-") + 1
@@ -104,16 +100,10 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 			t.Errorf("Did not find account %s in output", accountName)
 		}
 		key := pubKeys[i]
-		depositData := depositDataForAccounts[i]
 
 		// Assert every public key is printed to stdout.
 		if !strings.Contains(stringOutput, fmt.Sprintf("%#x", key)) {
 			t.Errorf("Did not find pubkey %#x in output", key)
-		}
-
-		// Assert the deposit data for the account is printed to stdout.
-		if !strings.Contains(stringOutput, fmt.Sprintf("%#x", depositData)) {
-			t.Errorf("Did not find deposit data %#x in output", depositData)
 		}
 
 		// Assert the account creation time is displayed
