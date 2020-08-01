@@ -281,14 +281,10 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		}
 		password := string(data)
 		for i := 0; i < len(keystores); i++ {
-			privKey, err := decryptor.Decrypt(keystores[i].Crypto, password)
+			privKeyBytes, err := decryptor.Decrypt(keystores[i].Crypto, password)
 			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 				return fmt.Errorf("invalid password for account with public key %s", keystores[i].Pubkey)
 			}
-			if err != nil {
-				return err
-			}
-			privKeyBytes, err := hex.DecodeString(string(privKey))
 			if err != nil {
 				return err
 			}

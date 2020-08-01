@@ -75,6 +75,7 @@ func listDirectKeymanagerAccounts(
 	}
 	au := aurora.NewAurora(true)
 	numAccounts := au.BrightYellow(len(accountNames))
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("non-HD wallet").Bold())
 	fmt.Println("")
 	if len(accountNames) == 1 {
 		fmt.Printf("Showing %d validator account\n", numAccounts)

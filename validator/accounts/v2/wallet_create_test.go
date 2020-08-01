@@ -21,11 +21,12 @@ import (
 
 func TestCreateOrOpenWallet(t *testing.T) {
 	hook := logTest.NewGlobal()
-	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: walletPasswordFile,
 	})
 	createDirectWallet := func(cliCtx *cli.Context) (*Wallet, error) {
 		w, err := NewWallet(cliCtx, v2keymanager.Direct)
@@ -53,11 +54,12 @@ func TestCreateOrOpenWallet(t *testing.T) {
 }
 
 func TestCreateWallet_Direct(t *testing.T) {
-	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: walletPasswordFile,
 	})
 
 	// We attempt to create the wallet.
