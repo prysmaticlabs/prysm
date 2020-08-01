@@ -18,6 +18,7 @@ type Wallet struct {
 	EncryptedSeedFile []byte
 	AccountPasswords  map[string]string
 	UnlockAccounts    bool
+	WalletPassword    string
 	lock              sync.RWMutex
 }
 
@@ -35,6 +36,10 @@ func (m *Wallet) AccountNames() ([]string, error) {
 // AccountsDir --
 func (m *Wallet) AccountsDir() string {
 	return m.InnerAccountsDir
+}
+
+func (m *Wallet) Password() string {
+	return m.WalletPassword
 }
 
 // ListDirs --
@@ -82,7 +87,7 @@ func (m *Wallet) ReadFileAtPath(ctx context.Context, pathName string, fileName s
 			return v, nil
 		}
 	}
-	return nil, errors.New("file not found")
+	return nil, errors.New("no files found")
 }
 
 // ReadEncryptedSeedFromDisk --

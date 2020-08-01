@@ -225,6 +225,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	log.WithFields(logrus.Fields{
 		"name": accountName,
 	}).Info("Successfully created new validator account")
+	dr.lock.Lock()
+	dr.keysCache[bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())] = validatingKey
+	dr.lock.Unlock()
 	return accountName, nil
 }
 

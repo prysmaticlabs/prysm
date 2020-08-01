@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -20,6 +21,9 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(accountNames) == 0 {
+		return nil
+	}
 	for _, name := range accountNames {
 		// If the user is already using the single keystore format,
 		// we have no need to migrate and we exit normally.
@@ -27,7 +31,11 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 			return nil
 		}
 	}
-	fmt.Println("Now migrating accounts to a more efficient format, this is a one-time setup")
+	au := aurora.NewAurora(true)
+	fmt.Printf(
+		"Now migrating accounts to a more efficient format, this is a %s setup\n",
+		au.BrightRed("one-time"),
+	)
 	bar := initializeProgressBar(len(accountNames))
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(accountNames))
