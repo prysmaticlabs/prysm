@@ -82,7 +82,7 @@ func NewWallet(
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
 	if walletExists {
-		isEmptyWallet, err := isEmptyDir(walletDir)
+		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -125,7 +125,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
 	if ok {
-		isEmptyWallet, err := isEmptyDir(walletDir)
+		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -639,7 +639,7 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 	}
 	if ok {
-		isEmptyWallet, err := isEmptyDir(directory)
+		isEmptyWallet, err := isEmptyWallet(directory)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -677,7 +677,9 @@ func hasDir(dirPath string) (bool, error) {
 	return info.IsDir(), err
 }
 
-func isEmptyDir(name string) (bool, error) {
+// isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.
+// Returns true if exists, false otherwise.
+func isEmptyWallet(name string) (bool, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return false, err
@@ -687,9 +689,18 @@ func isEmptyDir(name string) (bool, error) {
 			log.Debugf("Could not close directory: %s", name)
 		}
 	}()
-	_, err = f.Readdirnames(1)
+	names, err := f.Readdirnames(-1)
 	if err == io.EOF {
 		return true, nil
 	}
-	return false, err // Either not empty or error, suits both cases
+
+	for _, n := range names {
+		// Nil error means input name is `derived`, `remote` or `direct`, the wallet is not empty.
+		_, err := v2keymanager.ParseKind(n)
+		if err == nil {
+			return false, nil
+		}
+	}
+
+	return true, err
 }

@@ -510,6 +510,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedCustomGenesisDelay = &cli.BoolFlag{
+		Name:   "custom-genesis-delay",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -579,6 +584,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSkipRegenHistoricalStates,
 	deprecatedMedallaTestnet,
 	deprecatedEnableAccountsV2,
+	deprecatedCustomGenesisDelay,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
