@@ -171,7 +171,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, validatingKey.PublicKey().Marshal())
 	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
 	if err != nil {
-		return "", nil
+		return "", errors.Wrap(err, "could not create accounts keystore")
 	}
 
 	// Generate a withdrawal key and confirm user
