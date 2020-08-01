@@ -79,8 +79,7 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 			return errors.Wrapf(err, "could not decode keystore file for account %s", name)
 		}
 		// We extract the validator signing private key from the keystore
-		// by utilizing the password and initialize a new BLS secret key from
-		// its raw bytes.
+		// by utilizing the password.
 		privKeyBytes, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 		if err != nil {
 			return errors.Wrapf(err, "could not decrypt signing key for account %s", name)

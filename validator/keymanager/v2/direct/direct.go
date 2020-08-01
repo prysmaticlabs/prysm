@@ -373,7 +373,10 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "no files found") {
+		// If there are no keys to initialize at all, just exit.
+		return nil
+	} else if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
 	}
 	keystoreFile := &v2keymanager.Keystore{}

@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -14,8 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestDirectKeymanager_CreateAccount(t *testing.T) {
@@ -122,7 +123,34 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 		_, err := dr.CreateAccount(ctx, password)
 		require.NoError(t, err)
 	}
-	require.NoError(t, dr.initializeSecretKeysCache(ctx))
+
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	keystoreFile := &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+
+	// We extract the validator signing private key from the keystore
+	// by utilizing the password and initialize a new BLS secret key from
+	// its raw bytes.
+	decryptor := keystorev4.New()
+	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
+	require.NoError(t, err)
+	store := &AccountStore{}
+	require.NoError(t, json.Unmarshal(enc, store))
+	require.Equal(t, len(store.PublicKeys), len(store.PrivateKeys))
+	require.NotEqual(t, 0, len(store.PublicKeys))
+
+	for i := 0; i < len(store.PublicKeys); i++ {
+		privKey, err := bls.SecretKeyFromBytes(store.PrivateKeys[i])
+		require.NoError(t, err)
+		dr.keysCache[bytesutil.ToBytes48(store.PublicKeys[i])] = privKey
+	}
+	dr.accountsStore = store
+
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 
