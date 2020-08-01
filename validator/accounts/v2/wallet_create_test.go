@@ -79,7 +79,6 @@ func TestCreateWallet_Direct(t *testing.T) {
 
 	// We assert the created configuration was as desired.
 	wantedCfg := direct.DefaultConfig()
-	wantedCfg.AccountPasswordsDirectory = passwordsDir
 	assert.DeepEqual(t, wantedCfg, cfg)
 }
 
