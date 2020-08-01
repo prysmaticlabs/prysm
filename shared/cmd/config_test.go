@@ -21,8 +21,7 @@ func TestOverrideConfig(t *testing.T) {
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := &Flags{
-		CustomGenesisDelay: params.BeaconConfig().GenesisDelay,
-		MaxRPCPageSize:     params.BeaconConfig().DefaultPageSize,
+		MaxRPCPageSize: params.BeaconConfig().DefaultPageSize,
 	}
 	c := Get()
 	assert.DeepEqual(t, c, cfg)
