@@ -62,6 +62,7 @@ go_test(
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",
