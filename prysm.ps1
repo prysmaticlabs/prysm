@@ -1,4 +1,3 @@
-$PRYLABS_SIGNING_KEY = "0AE0051D647BA3C1A917AF4072E33E4DF1A5036E";
 $folderDist = "dist";
 $ProgressPreference = 'SilentlyContinue' # Disable Invoke-WebRequest progress bar, makes it silent and faster.
 
