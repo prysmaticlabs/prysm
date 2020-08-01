@@ -29,27 +29,23 @@ const depositGasLimit = 4000000
 
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.
-func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath string) []int {
+func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath string) {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconNodeNum := e2e.TestParams.BeaconNodeCount
 	if validatorNum%beaconNodeNum != 0 {
 		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
-	processIDs := make([]int, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for i := 0; i < beaconNodeNum; i++ {
-		pID := StartNewValidatorClient(t, config, validatorsPerNode, i, validatorsPerNode*i)
-		processIDs[i] = pID
+		go StartNewValidatorClient(t, config, validatorsPerNode, i, validatorsPerNode*i)
 	}
 
 	SendAndMineDeposits(t, keystorePath, validatorNum, 0)
-
-	return processIDs
 }
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
-func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum int, index int, offset int) int {
+func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum int, index int, offset int) {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
@@ -85,8 +81,6 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-
-	return cmd.Process.Pid
 }
 
 // SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
