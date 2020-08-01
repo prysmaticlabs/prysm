@@ -82,7 +82,7 @@ func NewWallet(
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
 	if walletExists {
-		isEmptyWallet, err := isEmptyDir(walletDir)
+		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -132,7 +132,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
 	if ok {
-		isEmptyWallet, err := isEmptyDir(walletDir)
+		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -175,6 +175,16 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 			return nil, err
 		}
 		w.passwordsDir = directCfg.AccountPasswordsDirectory
+		// If the user provided a flag and for the password directory, and that value does not match
+		// the wallet's configuration then log a warning to the user.
+		// See https://github.com/prysmaticlabs/prysm/issues/6794.
+		if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) && cliCtx.String(flags.WalletPasswordsDirFlag.Name) != w.passwordsDir {
+			log.Warnf("The provided value for --%s does not match the wallet configuration. "+
+				"Please edit your wallet password directory using wallet-v2 edit-config.",
+				flags.WalletPasswordsDirFlag.Name,
+			)
+			w.passwordsDir = cliCtx.String(flags.WalletPasswordsDirFlag.Name) // Override config value.
+		}
 		au := aurora.NewAurora(true)
 		log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
 	}
@@ -505,6 +515,8 @@ func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames [
 				BarStart:      "[",
 				BarEnd:        "]",
 			}),
+			progressbar.OptionOnCompletion(func() { fmt.Println() }),
+			progressbar.OptionSetDescription("Importing accounts"),
 		)
 		ctx := context.Background()
 		for i := 0; i < len(accountNames); i++ {
@@ -621,7 +633,7 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 	}
 	if ok {
-		isEmptyWallet, err := isEmptyDir(directory)
+		isEmptyWallet, err := isEmptyWallet(directory)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -659,7 +671,9 @@ func hasDir(dirPath string) (bool, error) {
 	return info.IsDir(), err
 }
 
-func isEmptyDir(name string) (bool, error) {
+// isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.
+// Returns true if exists, false otherwise.
+func isEmptyWallet(name string) (bool, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return false, err
@@ -669,9 +683,18 @@ func isEmptyDir(name string) (bool, error) {
 			log.Debugf("Could not close directory: %s", name)
 		}
 	}()
-	_, err = f.Readdirnames(1)
+	names, err := f.Readdirnames(-1)
 	if err == io.EOF {
 		return true, nil
 	}
-	return false, err // Either not empty or error, suits both cases
+
+	for _, n := range names {
+		// Nil error means input name is `derived`, `remote` or `direct`, the wallet is not empty.
+		_, err := v2keymanager.ParseKind(n)
+		if err == nil {
+			return false, nil
+		}
+	}
+
+	return true, err
 }
