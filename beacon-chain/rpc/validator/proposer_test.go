@@ -1289,9 +1289,9 @@ func TestEth1DataMajorityVote_ChooseHighestCount(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{
-			{BlockHash: []byte("first"), DepositCount: 2},
-			{BlockHash: []byte("first"), DepositCount: 2},
-			{BlockHash: []byte("second"), DepositCount: 2},
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("second"), DepositCount: 1},
 		},
 	})
 	require.NoError(t, err)
@@ -1350,9 +1350,9 @@ func TestEth1DataMajorityVote_HighestCountBeforeRange_ChooseHighestCountWithinRa
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{
-			{BlockHash: []byte("before_range"), DepositCount: 2},
-			{BlockHash: []byte("before_range"), DepositCount: 2},
-			{BlockHash: []byte("first"), DepositCount: 2},
+			{BlockHash: []byte("before_range"), DepositCount: 1},
+			{BlockHash: []byte("before_range"), DepositCount: 1},
+			{BlockHash: []byte("first"), DepositCount: 1},
 		},
 	})
 	require.NoError(t, err)
@@ -1410,9 +1410,9 @@ func TestEth1DataMajorityVote_HighestCountAfterRange_ChooseHighestCountWithinRan
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{
-			{BlockHash: []byte("first"), DepositCount: 2},
-			{BlockHash: []byte("after_range"), DepositCount: 2},
-			{BlockHash: []byte("after_range"), DepositCount: 2},
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("after_range"), DepositCount: 1},
+			{BlockHash: []byte("after_range"), DepositCount: 1},
 		},
 	})
 	require.NoError(t, err)
@@ -1470,9 +1470,9 @@ func TestEth1DataMajorityVote_HighestCountOnUnknownBlock_ChooseKnownBlockWithHig
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{
-			{BlockHash: []byte("unknown"), DepositCount: 2},
-			{BlockHash: []byte("unknown"), DepositCount: 2},
-			{BlockHash: []byte("first"), DepositCount: 2},
+			{BlockHash: []byte("unknown"), DepositCount: 1},
+			{BlockHash: []byte("unknown"), DepositCount: 1},
+			{BlockHash: []byte("first"), DepositCount: 1},
 		},
 	})
 	require.NoError(t, err)
@@ -1532,8 +1532,8 @@ func TestEth1DataMajorityVote_NoVotesInRange_ChooseDefault(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{
-			{BlockHash: []byte("before_range"), DepositCount: 2},
-			{BlockHash: []byte("after_range"), DepositCount: 2},
+			{BlockHash: []byte("before_range"), DepositCount: 1},
+			{BlockHash: []byte("after_range"), DepositCount: 1},
 		},
 	})
 	require.NoError(t, err)
@@ -1647,8 +1647,8 @@ func TestEth1DataMajorityVote_SameCount_ChooseMoreRecentBlock(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{
-			{BlockHash: []byte("first"), DepositCount: 2},
-			{BlockHash: []byte("second"), DepositCount: 2},
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("second"), DepositCount: 1},
 		},
 	})
 	require.NoError(t, err)
@@ -1674,7 +1674,7 @@ func TestEth1DataMajorityVote_SameCount_ChooseMoreRecentBlock(t *testing.T) {
 	}
 }
 
-func TestEth1DataMajorityVote_HighestCountOnBlockWithoutNewDeposits_ChooseBlockWithNewDeposits(t *testing.T) {
+func TestEth1DataMajorityVote_HighestCountOnBlockWithLessDeposits_ChooseAnotherBlock(t *testing.T) {
 	slot := uint64(64)
 
 	p := &mockPOW.POWChain{
@@ -1706,9 +1706,9 @@ func TestEth1DataMajorityVote_HighestCountOnBlockWithoutNewDeposits_ChooseBlockW
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{
-			{BlockHash: []byte("no_new_deposits"), DepositCount: 1},
-			{BlockHash: []byte("no_new_deposits"), DepositCount: 1},
-			{BlockHash: []byte("second"), DepositCount: 2},
+			{BlockHash: []byte("no_new_deposits"), DepositCount: 0},
+			{BlockHash: []byte("no_new_deposits"), DepositCount: 0},
+			{BlockHash: []byte("second"), DepositCount: 1},
 		},
 	})
 	require.NoError(t, err)

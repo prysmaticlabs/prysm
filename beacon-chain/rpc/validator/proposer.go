@@ -267,7 +267,11 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return eth1Data, nil
 	}
 
-	inRangeVotes, err := vs.inRangeVotes(ctx, currentPeriodBlockNumber, previousPeriodBlockNumber)
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
+	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+
+	inRangeVotes, err := vs.inRangeVotes(ctx, firstValidBlockNumber, lastValidBlockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -292,14 +296,9 @@ func (vs *Server) slotStartTime(slot uint64) uint64 {
 	return startTime
 }
 
-func (vs *Server) inRangeVotes(
-	ctx context.Context,
-	currentPeriodBlockNumber *big.Int,
-	previousPeriodBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
-
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	lastValidBlockNumber := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
-	firstValidBlockNumber := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+func (vs *Server) inRangeVotes(ctx context.Context,
+	firstValidBlockNumber *big.Int,
+	lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
 
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -313,7 +312,7 @@ func (vs *Server) inRangeVotes(
 		if err != nil {
 			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
 		}
-		if eth1Data.DepositCount <= currentETH1Data.DepositCount {
+		if eth1Data.DepositCount < currentETH1Data.DepositCount {
 			continue
 		}
 		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
