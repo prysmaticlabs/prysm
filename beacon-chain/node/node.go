@@ -91,11 +91,6 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
-	}
-
 	if cliCtx.IsSet(flags.HistoricalSlasherNode.Name) {
 		c := params.BeaconConfig()
 		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch
@@ -114,6 +109,11 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
+
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+		params.LoadChainConfigFile(chainConfigFileName)
+	}
 
 	// Setting chain network specific flags.
 	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
