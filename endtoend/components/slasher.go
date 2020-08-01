@@ -15,7 +15,6 @@ import (
 
 // StartSlashers starts slasher clients for use within E2E, connected to all beacon nodes.
 // It returns the process IDs of the slashers.
-
 func StartSlashers(t *testing.T) {
 	binaryPath, found := bazel.FindBinary("slasher", "slasher")
 	if !found {
