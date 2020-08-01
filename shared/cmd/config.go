@@ -8,10 +8,9 @@ import (
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Configuration related flags.
-	MinimalConfig      bool   // MinimalConfig as defined in the spec.
-	E2EConfig          bool   // E2EConfig made specifically for testing, do not use except in E2E.
-	CustomGenesisDelay uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
-	MaxRPCPageSize     int    //MaxRPCPageSize is used for a cap of page sizes in RPC requests.
+	MinimalConfig  bool // MinimalConfig as defined in the spec.
+	E2EConfig      bool // E2EConfig made specifically for testing, do not use except in E2E.
+	MaxRPCPageSize int  //MaxRPCPageSize is used for a cap of page sizes in RPC requests.
 }
 
 var sharedConfig *Flags
@@ -20,8 +19,7 @@ var sharedConfig *Flags
 func Get() *Flags {
 	if sharedConfig == nil {
 		return &Flags{
-			MaxRPCPageSize:     params.BeaconConfig().DefaultPageSize,
-			CustomGenesisDelay: params.BeaconConfig().GenesisDelay,
+			MaxRPCPageSize: params.BeaconConfig().DefaultPageSize,
 		}
 	}
 	return sharedConfig
@@ -45,10 +43,6 @@ func InitWithReset(c *Flags) func() {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := newConfig(ctx)
-	if ctx.IsSet(CustomGenesisDelayFlag.Name) {
-		cfg.CustomGenesisDelay = ctx.Uint64(CustomGenesisDelayFlag.Name)
-		log.Warnf("Starting ETH2 with genesis delay of %d seconds", cfg.CustomGenesisDelay)
-	}
 	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
 		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
 		log.Warnf("Starting beacon chain with max RPC page size of %d", cfg.MaxRPCPageSize)

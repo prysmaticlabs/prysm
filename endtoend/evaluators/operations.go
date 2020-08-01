@@ -26,15 +26,25 @@ var valExited bool
 
 // churnLimit is normally 4 unless the validator set is extremely large.
 var churnLimit = uint64(4)
-var depositValCount = params.E2ETestConfig().MinGenesisActiveValidatorCount / uint64(e2e.LongRunningBeaconCount)
-var depositStartEpoch = uint64(8)
-var depositEndEpoch = depositStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
+var depositValCount = e2e.DepositCount
 
-// ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
-var ProcessesDepositedValidators = types.Evaluator{
+// Deposits should be processed in twice the length of the epochs per eth1 voting period.
+var depositsInBlockStart = uint64(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
+var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead + 1
+var depositEndEpoch = depositActivationStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
+
+// ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
+var ProcessesDepositsInBlocks = types.Evaluator{
+	Name:       "processes_deposits_in_blocks_epoch_%d",
+	Policy:     onEpoch(depositsInBlockStart), // We expect all deposits to enter in one epoch.
+	Evaluation: processesDepositsInBlocks,
+}
+
+// ActivatesDepositedValidators ensures the expected amount of validator deposits are activated into the state.
+var ActivatesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     isBetweenEpochs(depositStartEpoch, depositEndEpoch), //Choosing 8-21 because of the churn limit of 4 per epoch for 256 vals / 4 beacon nodes = 64 deposits. )
-	Evaluation: processesDepositedValidators,
+	Policy:     isBetweenEpochs(depositActivationStartEpoch, depositEndEpoch), //Choosing 8-21 because of the churn limit of 4 per epoch for 256 vals / 4 beacon nodes = 64 deposits. )
+	Evaluation: activatesDepositedValidators,
 }
 
 // DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
@@ -47,14 +57,14 @@ var DepositedValidatorsAreActive = types.Evaluator{
 // ProposeVoluntaryExit sends a voluntary exit from randomly selected validator in the genesis set.
 var ProposeVoluntaryExit = types.Evaluator{
 	Name:       "propose_voluntary_exit_epoch_%d",
-	Policy:     onEpoch(5),
+	Policy:     onEpoch(7),
 	Evaluation: proposeVoluntaryExit,
 }
 
 // ValidatorHasExited checks the beacon state for the exited validator and ensures its marked as exited.
 var ValidatorHasExited = types.Evaluator{
 	Name:       "voluntary_has_exited_%d",
-	Policy:     onEpoch(6),
+	Policy:     onEpoch(8),
 	Evaluation: validatorIsExited,
 }
 
@@ -65,7 +75,37 @@ func isBetweenEpochs(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
 	}
 }
 
-func processesDepositedValidators(conns ...*grpc.ClientConn) error {
+func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	client := eth.NewBeaconChainClient(conn)
+
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get chain head")
+	}
+
+	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBlocks(context.Background(), req)
+	if err != nil {
+		return errors.Wrap(err, "failed to get blocks from beacon-chain")
+	}
+	var deposits uint64
+	for _, blk := range blks.BlockContainers {
+		fmt.Printf(
+			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
+			blk.Block.Block.Slot,
+			len(blk.Block.Block.Body.Deposits),
+			blk.Block.Block.Body.Eth1Data.BlockHash, blk.Block.Block.Body.Eth1Data.DepositCount,
+		)
+		deposits += uint64(len(blk.Block.Block.Body.Deposits))
+	}
+	if deposits != depositValCount {
+		return fmt.Errorf("expected %d deposits to be processed, received %d", depositValCount, deposits)
+	}
+	return nil
+}
+
+func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 
@@ -83,7 +123,7 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validators")
 	}
 
-	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount / uint64(e2e.TestParams.BeaconNodeCount)
+	expectedCount := depositValCount
 	receivedCount := uint64(len(validators.ValidatorList))
 	if expectedCount != receivedCount {
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
@@ -136,7 +176,7 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validators")
 	}
 
-	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount / uint64(e2e.TestParams.BeaconNodeCount)
+	expectedCount := depositValCount
 	receivedCount := uint64(len(validators.ValidatorList))
 	if expectedCount != receivedCount {
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
@@ -147,10 +187,13 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	inactiveCount := 0
+	inactiveCount, belowBalanceCount := 0, 0
 	for _, item := range validators.ValidatorList {
 		if !helpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
 			inactiveCount++
+		}
+		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
+			belowBalanceCount++
 		}
 	}
 
@@ -158,6 +201,13 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 		return fmt.Errorf(
 			"%d validators were not active, expected %d active validators from deposits",
 			inactiveCount,
+			params.BeaconConfig().MinGenesisActiveValidatorCount,
+		)
+	}
+	if belowBalanceCount > 0 {
+		return fmt.Errorf(
+			"%d validators did not have a proper balance, expected %d validators to have 32 ETH",
+			belowBalanceCount,
 			params.BeaconConfig().MinGenesisActiveValidatorCount,
 		)
 	}
