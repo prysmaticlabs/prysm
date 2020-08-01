@@ -33,8 +33,8 @@ type Flags struct {
 	// State locks
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
-	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
-	MedallaTestnet bool // MedallaTestnet defines the flag through which we can enable the node to run on the medalla testnet.
+	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
+	OnyxTestnet   bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -112,6 +112,9 @@ func InitWithReset(c *Flags) func() {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
@@ -123,11 +126,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	}
-	if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running Node on Medalla Testnet")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
+	if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running Node on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -260,6 +263,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // ConfigureSlasher sets the global config based
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(disableLookbackFlag.Name) {
@@ -272,6 +278,9 @@ func ConfigureSlasher(ctx *cli.Context) {
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(AltonaTestnet.Name) {
@@ -280,20 +289,21 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	}
-	if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running Validator on Medalla Testnet")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
+	if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running Node on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
 	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true
 	} else {
 		log.Warn("Validator slashing protection not enabled!")
 	}
-	if ctx.Bool(enableAccountsV2.Name) {
-		log.Warn("Enabling v2 of Prysm validator accounts")
-		cfg.EnableAccountsV2 = true
+	cfg.EnableAccountsV2 = true
+	if ctx.Bool(disableAccountsV2.Name) {
+		log.Warn("Disabling v2 of Prysm validator accounts")
+		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")

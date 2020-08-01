@@ -71,13 +71,13 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:     make(chan struct{}),
 	}
 
+	featureconfig.ConfigureValidator(cliCtx)
+	cmd.ConfigureValidator(cliCtx)
+
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
-
-	cmd.ConfigureValidator(cliCtx)
-	featureconfig.ConfigureValidator(cliCtx)
 
 	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager

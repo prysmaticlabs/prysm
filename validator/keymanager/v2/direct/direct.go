@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/k0kubun/go-ansi"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
@@ -20,11 +21,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -32,9 +35,6 @@ import (
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
-	// DepositTransactionFileName for the encoded, eth1 raw deposit tx data
-	// for a validator account.
-	DepositTransactionFileName = "deposit_transaction.rlp"
 	// TimestampFileName stores a timestamp for account creation as a
 	// file for a direct keymanager account.
 	TimestampFileName = "created_at.txt"
@@ -43,8 +43,9 @@ const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
-	PasswordFileSuffix  = ".pass"
-	depositDataFileName = "deposit_data.ssz"
+	PasswordFileSuffix = ".pass"
+	// DepositDataFileName for the ssz-encoded deposit.
+	DepositDataFileName = "deposit_data.ssz"
 	eipVersion          = "EIP-2335"
 )
 
@@ -180,17 +181,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
+	_, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
-	}
-
-	// Log the deposit transaction data to the user.
-	depositutil.LogDepositTransaction(log, tx)
-
-	// We write the raw deposit transaction as an .rlp encoded file.
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, DepositTransactionFileName, tx.Data()); err != nil {
-		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, DepositTransactionFileName)
 	}
 
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
@@ -198,9 +191,17 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	if err != nil {
 		return "", errors.Wrap(err, "could not marshal deposit data")
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, accountName, DepositDataFileName, encodedDepositData); err != nil {
 		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
+
+	// Log the deposit transaction data to the user.
+	fmt.Printf(`
+========================SSZ Deposit Data===============================
+
+%#x
+
+===================================================================`, encodedDepositData)
 
 	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := roughtime.Now().Unix()
@@ -299,43 +300,68 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	for _, name := range accountNames {
-		password, err := dr.wallet.ReadPasswordFromDisk(ctx, name+PasswordFileSuffix)
-		if err != nil {
-			return errors.Wrapf(err, "could not read password for account %s", name)
-		}
-		encoded, err := dr.wallet.ReadFileAtPath(ctx, name, KeystoreFileName)
-		if err != nil {
-			return errors.Wrapf(err, "could not read keystore file for account %s", name)
-		}
-		keystoreFile := &v2keymanager.Keystore{}
-		if err := json.Unmarshal(encoded, keystoreFile); err != nil {
-			return errors.Wrapf(err, "could not decode keystore json for account: %s", name)
-		}
-		// We extract the validator signing private key from the keystore
-		// by utilizing the password and initialize a new BLS secret key from
-		// its raw bytes.
-		decryptor := keystorev4.New()
-		rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
-		if err != nil {
-			return errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
-		}
-		validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
-		if err != nil {
-			return errors.Wrapf(err, "could not instantiate bls secret key from bytes for account: %s", name)
-		}
-
-		// Update a simple cache of public key -> secret key utilized
-		// for fast signing access in the direct keymanager.
-		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
+	if len(accountNames) == 0 {
+		return nil
 	}
-	return nil
+	// We initialize a nice progress bar to offer the user feedback
+	// during this slow operation.
+	bar := initializeProgressBar(len(accountNames))
+	progressChan := make(chan struct{}, len(accountNames))
+	go func() {
+		defer close(progressChan)
+		var itemsReceived int
+		for range progressChan {
+			itemsReceived++
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
+			if itemsReceived == len(accountNames) {
+				return
+			}
+		}
+	}()
+	dr.lock.Lock()
+	defer dr.lock.Unlock()
+	_, err = mputil.Scatter(len(accountNames), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		for i := 0; i < len(accountNames[offset:offset+entries]); i++ {
+			name := accountNames[i]
+			password, err := dr.wallet.ReadPasswordFromDisk(ctx, name+PasswordFileSuffix)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not read password for account %s", name)
+			}
+			encoded, err := dr.wallet.ReadFileAtPath(ctx, name, KeystoreFileName)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
+			}
+			keystoreFile := &v2keymanager.Keystore{}
+			if err := json.Unmarshal(encoded, keystoreFile); err != nil {
+				return nil, errors.Wrapf(err, "could not decode keystore file for account %s", name)
+			}
+			// We extract the validator signing private key from the keystore
+			// by utilizing the password and initialize a new BLS secret key from
+			// its raw bytes.
+			decryptor := keystorev4.New()
+			rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decrypt signing key for account %s", name)
+			}
+			validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not determine signing key for account %s", name)
+			}
+			// Update a simple cache of public key -> secret key utilized
+			// for fast signing access in the direct keymanager.
+			dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
+			progressChan <- struct{}{}
+		}
+		return nil, nil
+	})
+	return err
 }
 
 func (dr *Keymanager) generateKeystoreFile(validatingKey bls.SecretKey, password string) ([]byte, error) {
 	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt validating key into keystore")
 	}
@@ -375,11 +401,29 @@ func (dr *Keymanager) checkPasswordForAccount(accountName string, password strin
 		return errors.Wrap(err, "could not get keystore")
 	}
 	decryptor := keystorev4.New()
-	_, err = decryptor.Decrypt(accountKeystore.Crypto, []byte(password))
+	_, err = decryptor.Decrypt(accountKeystore.Crypto, password)
 	if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
 	return nil
+}
+
+func initializeProgressBar(numItems int) *progressbar.ProgressBar {
+	return progressbar.NewOptions(
+		numItems,
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		progressbar.OptionSetDescription("Loading validator accounts"),
+	)
 }
 
 // Checks if a directory indeed exists at the specified path.

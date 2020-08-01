@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strconv"
-	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/logrusorgru/aurora"
@@ -110,17 +108,22 @@ func listDirectKeymanagerAccounts(
 		if !showDepositData {
 			continue
 		}
-		enc, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.DepositTransactionFileName)
+		enc, err := wallet.ReadFileAtPath(ctx, accountNames[i], direct.DepositDataFileName)
 		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
+			fmt.Printf(
+				"%s\n",
+				au.BrightRed("If you imported your account coming from the eth2 launchpad, you will find your "+
+					"deposit_data.json in the eth2.0-deposit-cli's validator_keys folder"),
+			)
+			continue
 		}
 		fmt.Printf(
 			"%s %s\n",
-			"(deposit tx file)",
-			filepath.Join(wallet.AccountsDir(), accountNames[i], direct.DepositTransactionFileName),
+			"(deposit_data.ssz file)",
+			filepath.Join(wallet.AccountsDir(), accountNames[i], direct.DepositDataFileName),
 		)
 		fmt.Printf(`
-======================Deposit Transaction Data=====================
+======================SSZ Deposit Data=====================
 
 %#x
 
@@ -175,16 +178,7 @@ func listDerivedKeymanagerAccounts(
 		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
 
 		// Retrieve the withdrawal key account metadata.
-		createdAtBytes, err := wallet.ReadFileAtPath(ctx, validatingKeyPath, derived.TimestampFileName)
-		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", derived.TimestampFileName)
-		}
-		unixTimestampInt, err := strconv.ParseInt(string(createdAtBytes), 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "could not parse account created at timestamp: %s", createdAtBytes)
-		}
-		unixTimestamp := time.Unix(unixTimestampInt, 0)
-		fmt.Printf("%s | %s | Created %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold(), humanize.Time(unixTimestamp))
+		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
 		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
 
@@ -195,17 +189,12 @@ func listDerivedKeymanagerAccounts(
 		if !showDepositData {
 			continue
 		}
-		enc, err := wallet.ReadFileAtPath(ctx, withdrawalKeyPath, derived.DepositTransactionFileName)
+		enc, err := keymanager.DepositDataForAccount(i)
 		if err != nil {
-			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositTransactionFileName)
+			return errors.Wrapf(err, "could not read file for account: %s", direct.DepositDataFileName)
 		}
-		fmt.Printf(
-			"%s %s\n",
-			"(deposit tx file)",
-			filepath.Join(wallet.AccountsDir(), withdrawalKeyPath, derived.DepositTransactionFileName),
-		)
 		fmt.Printf(`
-======================Deposit Transaction Data=====================
+======================SSZ Deposit Data=====================
 
 %#x
 
