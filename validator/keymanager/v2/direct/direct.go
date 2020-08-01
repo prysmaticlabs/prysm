@@ -87,7 +87,6 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keym
 	// If the user has previously created a direct keymanaged wallet, we perform
 	// a "silent migration" into this more effective format of storing a single keystore
 	// file containing all accounts.
-	// TODO(#6800): Remove after enough users have used the default only.
 	if err := k.migrateToSingleKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not migrate to single keystore format")
 	}
@@ -374,9 +373,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
-	if err != nil && strings.Contains(err.Error(), "no files found") {
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
 	}
 	keystoreFile := &v2keymanager.Keystore{}
