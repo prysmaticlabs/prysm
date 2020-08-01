@@ -108,13 +108,6 @@ func NewWallet(
 		}
 		w.walletPassword = walletPassword
 	}
-	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get password directory")
-		}
-		w.passwordsDir = passwordsDir
-	}
 	return w, nil
 }
 
@@ -166,27 +159,35 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		keymanagerCfg, err := w.ReadKeymanagerConfigFromDisk(context.Background())
+		// If using the new keymanager format, we skip the entering of the wallet passwords dir.
+		hasNewFormat, err := hasDir(filepath.Join(walletDir, direct.AccountsPath))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not read wallet dir")
 		}
-		directCfg, err := direct.UnmarshalConfigFile(keymanagerCfg)
-		if err != nil {
-			return nil, err
+		if !hasNewFormat {
+			keymanagerCfg, err := w.ReadKeymanagerConfigFromDisk(context.Background())
+			if err != nil {
+				return nil, err
+			}
+			directCfg, err := direct.UnmarshalConfigFile(keymanagerCfg)
+			if err != nil {
+				return nil, err
+			}
+			w.passwordsDir = directCfg.AccountPasswordsDirectory
+			// If the user provided a flag and for the password directory, and that value does not match
+			// the wallet's configuration then log a warning to the user.
+			// See https://github.com/prysmaticlabs/prysm/issues/6794.
+			if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) &&
+				cliCtx.String(flags.WalletPasswordsDirFlag.Name) != w.passwordsDir {
+				log.Warnf("The provided value for --%s does not match the wallet configuration. "+
+					"Please edit your wallet password directory using wallet-v2 edit-config.",
+					flags.WalletPasswordsDirFlag.Name,
+				)
+				w.passwordsDir = cliCtx.String(flags.WalletPasswordsDirFlag.Name) // Override config value.
+			}
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
 		}
-		w.passwordsDir = directCfg.AccountPasswordsDirectory
-		// If the user provided a flag and for the password directory, and that value does not match
-		// the wallet's configuration then log a warning to the user.
-		// See https://github.com/prysmaticlabs/prysm/issues/6794.
-		if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) && cliCtx.String(flags.WalletPasswordsDirFlag.Name) != w.passwordsDir {
-			log.Warnf("The provided value for --%s does not match the wallet configuration. "+
-				"Please edit your wallet password directory using wallet-v2 edit-config.",
-				flags.WalletPasswordsDirFlag.Name,
-			)
-			w.passwordsDir = cliCtx.String(flags.WalletPasswordsDirFlag.Name) // Override config value.
-		}
-		au := aurora.NewAurora(true)
-		log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
 	}
 	log.Info("Successfully opened wallet")
 	return w, nil
@@ -197,7 +198,7 @@ func (w *Wallet) SaveWallet() error {
 	if err := os.MkdirAll(w.accountsPath, DirectoryPermissions); err != nil {
 		return errors.Wrap(err, "could not create wallet directory")
 	}
-	if w.keymanagerKind == v2keymanager.Direct {
+	if w.keymanagerKind == v2keymanager.Direct && w.passwordsDir != "" {
 		if err := os.MkdirAll(w.passwordsDir, DirectoryPermissions); err != nil {
 			return errors.Wrap(err, "could not create passwords directory")
 		}

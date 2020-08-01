@@ -39,8 +39,9 @@ const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
-	PasswordFileSuffix             = ".pass"
-	accountsPath                   = "accounts"
+	PasswordFileSuffix = ".pass"
+	// AccountsPath where all direct keymanager keystores are kept.
+	AccountsPath                   = "accounts"
 	accountsKeystoreFileName       = "all-accounts.keystore-*.json"
 	accountsKeystoreFileNameFormat = "all-accounts.keystore-%d.json"
 	eipVersion                     = "EIP-2335"
@@ -217,7 +218,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	if err != nil {
 		return "", err
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, accountsPath, fileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encoded); err != nil {
 		return "", errors.Wrap(err, "could not write keystore file for accounts")
 	}
 
@@ -368,11 +369,11 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		return err
 	}
 	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
-	return dr.wallet.WriteFileAtPath(ctx, accountsPath, fileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encodedAccounts)
 }
 
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(ctx, accountsPath, accountsKeystoreFileName)
+	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		return nil
 	} else if err != nil {

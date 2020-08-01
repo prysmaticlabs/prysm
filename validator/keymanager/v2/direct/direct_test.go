@@ -37,7 +37,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	var encodedKeystore []byte
-	for k, v := range wallet.Files[accountsPath] {
+	for k, v := range wallet.Files[AccountsPath] {
 		if strings.Contains(k, "keystore") {
 			encodedKeystore = v
 		}

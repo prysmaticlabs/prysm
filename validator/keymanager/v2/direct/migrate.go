@@ -50,7 +50,7 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 	for _, name := range accountNames {
 		// If the user is already using the single keystore format,
 		// we have no need to migrate and we exit normally.
-		if strings.Contains(name, accountsPath) {
+		if strings.Contains(name, AccountsPath) {
 			return nil
 		}
 	}
@@ -104,7 +104,7 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 		return err
 	}
 	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
-	return dr.wallet.WriteFileAtPath(ctx, accountsPath, fileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encodedAccounts)
 }
 
 func initializeProgressBar(numItems int) *progressbar.ProgressBar {

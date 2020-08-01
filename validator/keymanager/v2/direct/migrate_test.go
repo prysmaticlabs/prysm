@@ -54,7 +54,7 @@ func TestDirectKeymanager_MigrateToSingleKeystoreFormat(t *testing.T) {
 
 	// We retrieve the new accounts keystore format containing all keys in a single file.
 	var encodedAccountsFile []byte
-	for k, v := range wallet.Files[accountsPath] {
+	for k, v := range wallet.Files[AccountsPath] {
 		if strings.Contains(k, "keystore") {
 			encodedAccountsFile = v
 		}
