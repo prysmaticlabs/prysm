@@ -17,6 +17,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -102,6 +103,7 @@ func NewWallet(
 			flags.WalletPasswordFileFlag,
 			newWalletPasswordPromptText,
 			confirmPass,
+			promptutil.ValidatePasswordInput,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get password")
@@ -155,11 +157,18 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
 		var walletPassword string
 		if hasNewFormat {
+			validateExistingPass := func(input string) error {
+				if input == "" {
+					return errors.New("password input cannot be empty")
+				}
+				return nil
+			}
 			walletPassword, err = inputPassword(
 				cliCtx,
 				flags.WalletPasswordFileFlag,
 				walletPasswordPromptText,
 				noConfirmPass,
+				validateExistingPass,
 			)
 		} else {
 			fmt.Println("\nWe have revamped how imported accounts work, improving speed significantly for your " +
@@ -171,6 +180,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 				flags.WalletPasswordFileFlag,
 				newWalletPasswordPromptText,
 				confirmPass,
+				promptutil.ValidatePasswordInput,
 			)
 		}
 		if err != nil {
