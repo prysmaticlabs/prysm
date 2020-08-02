@@ -100,13 +100,20 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	if cliCtx.IsSet(flags.HistoricalSlasherNode.Name) {
+	if cliCtx.Bool(flags.HistoricalSlasherNode.Name) {
 		c := params.BeaconConfig()
-		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch
+		// Save a state every 4 epochs.
+		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 4
 		params.OverrideBeaconConfig(c)
 		cmdConfig := cmd.Get()
+		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
 		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
 		cmd.Init(cmdConfig)
+		log.Warnf(
+			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
+			c.SlotsPerArchivedPoint,
+			cmdConfig.MaxRPCPageSize,
+		)
 	}
 
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
