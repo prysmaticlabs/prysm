@@ -87,12 +87,11 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		privKeyBytes, err = dr.askUntilPasswordConfirms(enc, keystore, keystore.Pubkey)
+		privKeyBytes, err = dr.askUntilPasswordConfirms(enc, keystore)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not confirm password via prompt")
 		}
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, nil, errors.Wrap(err, "could not decrypt keystore")
 	}
 	pubKeyBytes, err := hex.DecodeString(keystore.Pubkey)

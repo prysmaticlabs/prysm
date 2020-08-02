@@ -195,10 +195,14 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 			)
 			w.passwordsDir = cliCtx.String(flags.WalletPasswordsDirFlag.Name) // Override config value.
 		}
+		passwordsPath, err := expandPath(w.passwordsDir)
+		if err != nil {
+			return nil, err
+		}
+		w.passwordsDir = passwordsPath
 		au := aurora.NewAurora(true)
 		log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
 	}
-	log.Info("Successfully opened wallet")
 	return w, nil
 }
 

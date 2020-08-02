@@ -281,9 +281,17 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	// its raw bytes.
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
-	if err != nil {
-		return errors.Wrap(err, "could not decrypt signing key for accounts")
+	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+		// If the password fails for an individual account, we ask the user to input
+		// that individual account's password until it succeeds.
+		enc, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
+		if err != nil {
+			return errors.Wrap(err, "could not confirm password via prompt")
+		}
+	} else if err != nil {
+		return errors.Wrap(err, "could not decrypt keystore")
 	}
+
 	store := &AccountStore{}
 	if err := json.Unmarshal(enc, store); err != nil {
 		return err
@@ -338,14 +346,14 @@ func (dr *Keymanager) createAccountsKeystore(
 }
 
 func (dr *Keymanager) askUntilPasswordConfirms(
-	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore, pubKey string,
+	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore,
 ) ([]byte, error) {
 	au := aurora.NewAurora(true)
 	// Loop asking for the password until the user enters it correctly.
 	var secretKey []byte
 	for {
 		password, err := promptutil.PasswordPrompt(
-			fmt.Sprintf("Enter the password for pubkey %s", pubKey), promptutil.NotEmpty,
+			"Wrong password entered, try again", promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not read account password: %v", err)
