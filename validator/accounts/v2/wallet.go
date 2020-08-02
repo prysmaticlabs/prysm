@@ -162,6 +162,10 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 				noConfirmPass,
 			)
 		} else {
+			fmt.Println("\nWe have revamped how imported accounts work, improving speed significantly for your " +
+				"validators as well as reducing memory and CPU requirements. This unifies all your existing accounts " +
+				"into a single format protected by a strong password. You'll need to set a new password for this " +
+				"updated wallet format")
 			walletPassword, err = inputPassword(
 				cliCtx,
 				flags.WalletPasswordFileFlag,
