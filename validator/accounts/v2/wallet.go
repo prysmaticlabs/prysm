@@ -146,10 +146,11 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		keymanagerKind: keymanagerKind,
 	}
 	// Check if the wallet is using the new, fast keystore format.
-	hasNewFormat, err := hasDir(filepath.Join(walletDir, direct.AccountsPath))
+	hasNewFormat, err := hasDir(filepath.Join(walletPath, direct.AccountsPath))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read wallet dir")
 	}
+	log.Infof("Has new format: %v", hasNewFormat)
 	log.Infof("%s %s", au.BrightMagenta("(wallet directory)"), w.walletDir)
 	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
 		var walletPassword string
