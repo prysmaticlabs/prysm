@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +23,7 @@ import (
 const (
 	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
 	filePollingInterval = 500 * time.Millisecond
+	heapFileName        = "node_heap_%d.pb.gz"
 )
 
 // DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
@@ -126,4 +129,29 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 		}
 		t.Log(err)
 	}
+}
+
+// WriteHeapFile writes a heap file to the test path.
+func WriteHeapFile(testDir string, index int) error {
+	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	filePath := filepath.Join(testDir, fmt.Sprintf(heapFileName, index))
+	if err := os.MkdirAll(filepath.Join(testDir), os.ModePerm); err != nil {
+		return err
+	}
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	if _, err := file.Write(body); err != nil {
+		return err
+	}
+	return nil
 }
