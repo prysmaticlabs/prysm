@@ -137,6 +137,6 @@ var (
 	// HistoricalSlasherNode is a set of beacon node flags required for performing historical detection with a slasher.
 	HistoricalSlasherNode = &cli.BoolFlag{
 		Name:  "historical-slasher-node",
-		Usage: "Enables required flags for serving historical data to a slasher client",
+		Usage: "Enables required flags for serving historical data to a slasher client. Results in additional storage usage",
 	}
 )
