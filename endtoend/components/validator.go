@@ -40,8 +40,6 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 	for i := 0; i < beaconNodeNum; i++ {
 		go StartNewValidatorClient(t, config, validatorsPerNode, i, validatorsPerNode*i)
 	}
-
-	SendAndMineDeposits(t, keystorePath, validatorNum, 0)
 }
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
