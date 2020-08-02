@@ -52,7 +52,6 @@ var appFlags = []cli.Flag{
 	flags.HistoricalSlasherNode,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
-	cmd.CustomGenesisDelayFlag,
 	cmd.RPCMaxPageSizeFlag,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
