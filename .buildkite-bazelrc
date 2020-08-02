@@ -2,15 +2,15 @@
 # across machines, developers, and workspaces.
 # 
 # This config is loaded from https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/latest.bazelrc
-build:remote-cache --remote_timeout=3600
-build:remote-cache --spawn_strategy=standalone
-build:remote-cache --strategy=Javac=standalone
-build:remote-cache --strategy=Closure=standalone
-build:remote-cache --strategy=Genrule=standalone
+#build:remote-cache --remote_timeout=3600
+#build:remote-cache --spawn_strategy=standalone
+#build:remote-cache --strategy=Javac=standalone
+#build:remote-cache --strategy=Closure=standalone
+#build:remote-cache --strategy=Genrule=standalone
 
 # Prysm specific remote-cache properties.
 #build:remote-cache --disk_cache=
-build:remote-cache --remote_download_minimal
+#build:remote-cache --remote_download_minimal
 
 # Import workspace options.
 import %workspace%/.bazelrc
@@ -39,6 +39,8 @@ test --config=kafka_enabled
 
 build --bes_backend=grpcs://builds.prylabs.net:1985
 build --bes_results_url=https://builds.prylabs.net/invocation/
+build --remote_cache=grpcs://builds.prylabs.net:1985
+build --noremote_upload_local_results
 
 # Disable flaky test detection for fuzzing.
 test:fuzz --flaky_test_attempts=1
