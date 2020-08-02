@@ -1,3 +1,6 @@
+# TODO: remove. DEBUG
+build -s
+
 # The following flags enable the remote cache so action results can be shared
 # across machines, developers, and workspaces.
 # 
