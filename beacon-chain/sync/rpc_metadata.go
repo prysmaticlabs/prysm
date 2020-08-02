@@ -5,11 +5,11 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -43,14 +43,13 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	if err != nil {
 		return nil, err
 	}
-	// we close the stream outside of `send` because
-	// metadata requests send no payload, so closing the
-	// stream early leads it to a reset.
-	defer func() {
-		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to reset stream for protocol %s", stream.Protocol())
-		}
-	}()
+	// Spec: The requesting side must close the stream for writes immediately after sending.
+	if err := stream.Close(); err != nil {
+		return nil, err
+	}
+	if err := stream.SetDeadline(roughtime.Now().Add(helpers.EOFTimeout)); err != nil {
+		return nil, err
+	}
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
 		return nil, err
