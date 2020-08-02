@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"

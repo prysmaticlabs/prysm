@@ -26,7 +26,6 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(keystores))
 	pubKeys := make([][]byte, len(keystores))
-	fmt.Println("Importing accounts, this may take a while...")
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	var password string
 	var err error
@@ -36,7 +35,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		if err != nil {
 			return err
 		}
-		password := string(data)
+		password = string(data)
 	} else {
 		password, err = promptutil.PasswordPrompt(
 			"Enter the password for your imported accounts", promptutil.NotEmpty,
@@ -45,6 +44,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 			return fmt.Errorf("could not read account password: %v", err)
 		}
 	}
+	fmt.Println("Importing accounts, this may take a while...")
 	for i := 0; i < len(keystores); i++ {
 		privKeyBytes, pubKeyBytes, err := dr.attemptDecryptKeystore(decryptor, keystores[i], password)
 		if err != nil {
@@ -91,7 +91,6 @@ func (dr *Keymanager) attemptDecryptKeystore(
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not confirm password via prompt")
 		}
-		return privKeyBytes, pubKeyBytes, nil
 	}
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not decrypt keystore")
@@ -103,7 +102,7 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	return privKeyBytes, pubKeyBytes, nil
 }
 
-func initializeProgressbar(numItems int, msg string) *progressbar.ProgressBar {
+func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
 	return progressbar.NewOptions(
 		numItems,
 		progressbar.OptionFullWidth(),
