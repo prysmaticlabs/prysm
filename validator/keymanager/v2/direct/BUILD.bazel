@@ -41,6 +41,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "direct_test.go",
+        "import_test.go",
         "migrate_test.go",
     ],
     embed = [":go_default_library"],
@@ -53,9 +54,11 @@ go_test(
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//validator/accounts/v2/testing:go_default_library",
+        "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+        "@com_github_urfave_cli_v2//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
     ],
 )

@@ -152,6 +152,7 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
+	require.Equal(t, len(publicKeys), len(store.PublicKeys))
 
 	// We prepare naive data to sign.
 	data := []byte("hello world")
