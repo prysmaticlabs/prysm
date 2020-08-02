@@ -30,7 +30,9 @@ var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
 var depositsInBlockStart = uint64(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
-var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead + 1
+
+// deposits included + finalization + MaxSeedLookahead for activation.
+var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead
 var depositEndEpoch = depositActivationStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
 
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
@@ -43,7 +45,7 @@ var ProcessesDepositsInBlocks = types.Evaluator{
 // ActivatesDepositedValidators ensures the expected amount of validator deposits are activated into the state.
 var ActivatesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     isBetweenEpochs(depositActivationStartEpoch, depositEndEpoch), //Choosing 8-21 because of the churn limit of 4 per epoch for 256 vals / 4 beacon nodes = 64 deposits. )
+	Policy:     isBetweenEpochs(depositActivationStartEpoch, depositEndEpoch),
 	Evaluation: activatesDepositedValidators,
 }
 

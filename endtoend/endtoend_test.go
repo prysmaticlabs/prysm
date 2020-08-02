@@ -33,13 +33,23 @@ func init() {
 func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
-	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
+	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
+
+	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	keystorePath := components.StartEth1Node(t)
+	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
 	bootnodeENR := components.StartBootnode(t)
 	components.StartBeaconNodes(t, config, bootnodeENR)
 	components.StartValidatorClients(t, config, keystorePath)
 	defer helpers.LogOutput(t, config)
+	defer func() {
+		for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+			if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, i); err != nil {
+				t.Error(err)
+			}
+		}
+	}()
 
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
 	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
@@ -47,7 +57,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	t.Run("chain started", func(t *testing.T) {
 		if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
 			t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
@@ -60,11 +69,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	if config.TestSlasher {
-		components.StartSlashers(t)
+		go components.StartSlashers(t)
 	}
 	if config.TestDeposits {
-		components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
-		components.SendAndMineDeposits(t, keystorePath, int(e2e.DepositCount), int(params.BeaconConfig().MinGenesisActiveValidatorCount))
+		go components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+		go components.SendAndMineDeposits(t, keystorePath, int(e2e.DepositCount), minGenesisActiveCount)
 	}
 
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)
