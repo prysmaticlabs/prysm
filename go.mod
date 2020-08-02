@@ -17,7 +17,6 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.3
-	github.com/dustin/go-humanize v1.0.0
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.5 // indirect
