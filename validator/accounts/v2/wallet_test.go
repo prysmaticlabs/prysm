@@ -88,21 +88,6 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	return walletDir, passwordsDir, passwordFilePath
 }
 
-func TestCreateAndReadWallet(t *testing.T) {
-	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
-	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
-	require.NoError(t, err)
-	require.NoError(t, createDirectKeymanagerWallet(cliCtx, wallet))
-	// We should be able to now read the wallet as well.
-	_, err = OpenWallet(cliCtx)
-	require.NoError(t, err)
-}
-
 func TestAccountTimestamp(t *testing.T) {
 	tests := []struct {
 		name     string
