@@ -2,7 +2,6 @@ package direct
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,8 +10,6 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/k0kubun/go-ansi"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -25,9 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -266,109 +261,6 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("no signing key found in keys cache")
 	}
 	return secretKey.Sign(req.SigningRoot), nil
-}
-
-// ImportKeystores into the direct keymanager from an external source.
-func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keymanager.Keystore) error {
-	decryptor := keystorev4.New()
-	privKeys := make([][]byte, len(keystores))
-	pubKeys := make([][]byte, len(keystores))
-	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return err
-		}
-		password := string(data)
-		for i := 0; i < len(keystores); i++ {
-			privKeyBytes, err := decryptor.Decrypt(keystores[i].Crypto, password)
-			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				return fmt.Errorf("invalid password for account with public key %s", keystores[i].Pubkey)
-			}
-			if err != nil {
-				return err
-			}
-			pubKeyBytes, err := hex.DecodeString(string(keystores[i].Pubkey))
-			if err != nil {
-				return err
-			}
-			privKeys[i] = privKeyBytes
-			pubKeys[i] = pubKeyBytes
-		}
-	} else {
-		password, err := promptutil.PasswordPrompt(
-			"Enter the password for your imported accounts", promptutil.NotEmpty,
-		)
-		if err != nil {
-			return fmt.Errorf("could not read account password: %v", err)
-		}
-		fmt.Println("Importing accounts, this may take a while...")
-		bar := progressbar.NewOptions(
-			len(keystores),
-			progressbar.OptionFullWidth(),
-			progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
-			progressbar.OptionEnableColorCodes(true),
-			progressbar.OptionSetTheme(progressbar.Theme{
-				Saucer:        "[green]=[reset]",
-				SaucerHead:    "[green]>[reset]",
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			}),
-			progressbar.OptionOnCompletion(func() { fmt.Println() }),
-			progressbar.OptionSetDescription("Importing accounts"),
-		)
-		for i := 0; i < len(keystores); i++ {
-			// We check if the individual account unlocks with the global password.
-			privKeyBytes, err := decryptor.Decrypt(keystores[i].Crypto, password)
-			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				// If the password fails for an individual account, we ask the user to input
-				// that individual account's password until it succeeds.
-				privKeyBytes, err := dr.askUntilPasswordConfirms(decryptor, keystores[i], keystores[i].Pubkey)
-				if err != nil {
-					return err
-				}
-				pubKeyBytes, err := hex.DecodeString(keystores[i].Pubkey)
-				if err != nil {
-					return err
-				}
-				if err := bar.Add(1); err != nil {
-					return errors.Wrap(err, "could not add to progress bar")
-				}
-				privKeys[i] = privKeyBytes
-				pubKeys[i] = pubKeyBytes
-				continue
-			}
-			if err != nil {
-				return errors.Wrap(err, "could not decrypt keystore")
-			}
-			pubKeyBytes, err := hex.DecodeString(keystores[i].Pubkey)
-			if err != nil {
-				return err
-			}
-			privKeys[i] = privKeyBytes
-			pubKeys[i] = pubKeyBytes
-			if err := bar.Add(1); err != nil {
-				return errors.Wrap(err, "could not add to progress bar")
-			}
-			fmt.Printf(
-				"Successfully imported account with public key %#x\n",
-				aurora.BrightMagenta(bytesutil.Trunc(pubKeyBytes)),
-			)
-		}
-	}
-	// Write the accounts to disk into a single keystore.
-	ctx := context.Background()
-	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
-	if err != nil {
-		return err
-	}
-	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
-	if err != nil {
-		return err
-	}
-	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encodedAccounts)
 }
 
 func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
