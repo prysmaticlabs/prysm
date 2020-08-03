@@ -34,7 +34,7 @@ import (
 //  wallet/
 //    direct/
 //      accounts/
-//        all-accounts.keystore-2983823.json
+//        all-accounts.keystore.json
 func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 	accountNames, err := dr.wallet.ListDirs()
 	if err != nil {

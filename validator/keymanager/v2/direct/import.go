@@ -9,13 +9,11 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/schollz/progressbar/v3"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -57,10 +55,6 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		if err := bar.Add(1); err != nil {
 			return errors.Wrap(err, "could not add to progress bar")
 		}
-		fmt.Printf(
-			"Successfully imported account with public key %#x\n",
-			aurora.BrightMagenta(bytesutil.Trunc(pubKeyBytes)),
-		)
 	}
 	// Write the accounts to disk into a single keystore.
 	ctx := context.Background()

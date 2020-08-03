@@ -295,6 +295,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
+	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -322,12 +323,14 @@ func (dr *Keymanager) createAccountsKeystore(
 		for i := 0; i < len(privateKeys); i++ {
 			sk := privateKeys[i]
 			pk := publicKeys[i]
-			if _, ok := existingPrivKeys[string(sk)]; !ok {
-				dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, sk)
+			_, privKeyExists := existingPrivKeys[string(sk)]
+			_, pubKeyExists := existingPubKeys[string(pk)]
+			if privKeyExists || pubKeyExists {
+				fmt.Printf("Pubkey %#x has already been imported\n", au.BrightRed(bytesutil.Trunc(pk)))
+				continue
 			}
-			if _, ok := existingPubKeys[string(pk)]; !ok {
-				dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
-			}
+			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
+			dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, sk)
 		}
 	}
 	encodedStore, err := json.MarshalIndent(dr.accountsStore, "", "\t")
