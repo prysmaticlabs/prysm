@@ -5,6 +5,8 @@ package depositutil
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -88,7 +90,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 	if featureconfig.Get().SkipBLSVerify {
 		return nil
 	}
-	ddCopy := *dd
+	ddCopy := state.CopyDepositData(dd)
 	publicKey, err := bls.PublicKeyFromBytes(dd.PublicKey)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
