@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -36,8 +35,8 @@ const (
 	PasswordFileSuffix = ".pass"
 	// AccountsPath where all direct keymanager keystores are kept.
 	AccountsPath                   = "accounts"
-	accountsKeystoreFileName       = "all-accounts.keystore-*.json"
-	accountsKeystoreFileNameFormat = "all-accounts.keystore-%d.json"
+	accountsKeystoreFileName       = "all-accounts.keystore.json"
+	accountsKeystoreFileNameFormat = "all-accounts.keystore.json"
 	eipVersion                     = "EIP-2335"
 )
 
@@ -185,12 +184,11 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	fmt.Println(" ")
 
 	// Write the encoded keystore to disk with the timestamp appended
-	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
 		return "", err
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
 		return "", errors.Wrap(err, "could not write keystore file for accounts")
 	}
 
@@ -302,11 +300,37 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, err
 	}
-	store := &AccountStore{
-		PrivateKeys: privateKeys,
-		PublicKeys:  publicKeys,
+	if len(privateKeys) != len(publicKeys) {
+		return nil, fmt.Errorf(
+			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
+		)
 	}
-	encodedStore, err := json.MarshalIndent(store, "", "\t")
+	if dr.accountsStore == nil {
+		dr.accountsStore = &AccountStore{
+			PrivateKeys: privateKeys,
+			PublicKeys:  publicKeys,
+		}
+	} else {
+		existingPubKeys := make(map[string]bool)
+		existingPrivKeys := make(map[string]bool)
+		for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
+			existingPrivKeys[string(dr.accountsStore.PrivateKeys[i])] = true
+			existingPubKeys[string(dr.accountsStore.PublicKeys[i])] = true
+		}
+		// We append to the accounts store keys only
+		// if the private/secret key do not already exist, to prevent duplicates.
+		for i := 0; i < len(privateKeys); i++ {
+			sk := privateKeys[i]
+			pk := publicKeys[i]
+			if _, ok := existingPrivKeys[string(sk)]; !ok {
+				dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, sk)
+			}
+			if _, ok := existingPubKeys[string(pk)]; !ok {
+				dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
+			}
+		}
+	}
+	encodedStore, err := json.MarshalIndent(dr.accountsStore, "", "\t")
 	if err != nil {
 		return nil, err
 	}

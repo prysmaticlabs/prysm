@@ -11,14 +11,14 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/schollz/progressbar/v3"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
 // ImportKeystores into the direct keymanager from an external source.
@@ -72,8 +72,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
 }
 
 // Retrieves the private key and public key from an EIP-2335 keystore file
