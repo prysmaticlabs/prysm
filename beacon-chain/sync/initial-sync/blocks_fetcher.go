@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	scorers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -266,7 +266,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
-	blocks := []*eth.SignedBeaconBlock{}
+	var blocks []*eth.SignedBeaconBlock
 	var err error
 	peers, err = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	if err != nil {
@@ -421,29 +421,29 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 
 // filterPeers returns transformed list of peers,
 // weight ordered or randomized, constrained if necessary.
-func (f *blocksFetcher) filterPeers(ctx context.Context, peerIDs []peer.ID, ratio float64) ([]peer.ID, error) {
+func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, ratio float64) ([]peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.filterPeers")
 	defer span.End()
 
-	if len(peerIDs) == 0 {
-		return peerIDs, nil
+	if len(peers) == 0 {
+		return peers, nil
 	}
 	scorer := f.p2p.Peers().Scorers().BlockProviderScorer()
 
 	// Sort peers by their score (in descending order), non-responsive peers will be constantly
 	// pushed down the list and trimmed when percentage is selected.
-	peerIDs = scorer.Sorted(peerIDs)
+	peers = scorer.Sorted(peers)
 
-	limit := uint64(math.Round(float64(len(peerIDs)) * ratio))
+	limit := uint64(math.Round(float64(len(peers)) * ratio))
 	limit = mathutil.Max(limit, uint64(flags.Get().MinimumSyncPeers))
-	limit = mathutil.Min(limit, uint64(len(peerIDs)))
-	peerIDs = peerIDs[:limit]
+	limit = mathutil.Min(limit, uint64(len(peers)))
+	peers = peers[:limit]
 
 	// Order peers by score and remaining capacity, effectively turning in-order
 	// round robin peer processing into a weighted one (peers with higher scores and higher
 	// remaining capacity are preferred). The effect of capacity on overall score is controlled
 	// via peerFilterCapacityWeight param.
-	sort.SliceStable(peerIDs, func(i, j int) bool {
+	sort.SliceStable(peers, func(i, j int) bool {
 		aggScore := func(peerID peer.ID) float64 {
 			blockProviderScore := scorer.Score(peerID)
 			l := f.getPeerLock(peerID)
@@ -459,13 +459,13 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peerIDs []peer.ID, rati
 			}
 			capScore := remaining / capacity
 			overallScore := blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
-			overallScore = math.Round(overallScore*peers.ScoreRoundingFactor) / peers.ScoreRoundingFactor
+			overallScore = math.Round(overallScore*scorers.ScoreRoundingFactor) / scorers.ScoreRoundingFactor
 			return overallScore
 		}
-		return aggScore(peerIDs[i]) > aggScore(peerIDs[j])
+		return aggScore(peers[i]) > aggScore(peers[j])
 	})
 
-	return peerIDs, nil
+	return peers, nil
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
