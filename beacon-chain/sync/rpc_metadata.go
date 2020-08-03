@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
@@ -43,9 +42,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	if err != nil {
 		return nil, err
 	}
-	if err := stream.SetDeadline(time.Now().Add(helpers.EOFTimeout)); err != nil {
-		return nil, err
-	}
+	SetStreamReadDeadline(stream, helpers.EOFTimeout)
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
 		return nil, err
