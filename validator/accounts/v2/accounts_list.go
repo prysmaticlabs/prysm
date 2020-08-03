@@ -115,10 +115,6 @@ func listDerivedKeymanagerAccounts(
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
-	fmt.Println(
-		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
-			"by running `validator accounts-v2 list --show-deposit-data"),
-	)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.Config().DerivedPathStructure).Bold())
 	ctx := context.Background()
@@ -169,7 +165,7 @@ func listDerivedKeymanagerAccounts(
 			return errors.Wrapf(err, "could not deposit data for account: %s", accountNames[i])
 		}
 		fmt.Printf(`
-======================SSZ Deposit Data=====================
+======================Eth1 Deposit Transaction Data=====================
 
 %#x
 

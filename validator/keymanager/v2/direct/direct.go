@@ -15,6 +15,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -182,6 +183,20 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 ===================================================================
 	`, withdrawalKey.Marshal())
 	fmt.Println(" ")
+
+	// Upon confirmation of the withdrawal key, proceed to display
+	// and write associated deposit data to disk.
+	tx, _, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
+	if err != nil {
+		return "", errors.Wrap(err, "could not generate deposit transaction data")
+	}
+
+	// Log the deposit transaction data to the user.
+	fmt.Printf(`
+======================Eth1 Deposit Transaction Data================
+%#x
+===================================================================`, tx.Data())
+	fmt.Println("")
 
 	// Write the encoded keystore to disk with the timestamp appended
 	encoded, err := json.MarshalIndent(newStore, "", "\t")

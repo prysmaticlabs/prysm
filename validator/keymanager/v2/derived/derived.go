@@ -365,7 +365,7 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 	return publicKeys, nil
 }
 
-// DepositDataForAccount with a given index returns and ssz-encoded deposit data object.
+// DepositDataForAccount with a given index returns the RLP encoded eth1 deposit transaction data.
 func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, accountIndex)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, accountIndex)
@@ -388,11 +388,11 @@ func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	_, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	tx, _, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate deposit transaction data")
 	}
-	return ssz.Marshal(depositData)
+	return tx.Data(), nil
 }
 
 func (dr *Keymanager) initializeSecretKeysCache() error {
