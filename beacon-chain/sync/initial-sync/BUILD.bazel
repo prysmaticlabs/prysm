@@ -23,6 +23,7 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/p2p:go_default_library",
+        "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
