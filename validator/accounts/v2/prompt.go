@@ -22,7 +22,7 @@ const (
 	importKeysDirPromptText      = "Enter the directory or filepath where your keystores to import are located"
 	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
 	walletDirPromptText          = "Enter a wallet directory"
-	passwordsDirPromptText       = "Directory where passwords will be stored"
+	passwordsDirPromptText       = "Directory where your account passwords are"
 	newWalletPasswordPromptText  = "New wallet password"
 	confirmPasswordPromptText    = "Confirm password"
 	walletPasswordPromptText     = "Wallet password"

@@ -18,6 +18,7 @@ go_library(
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/depositutil:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
         "//validator/accounts/v2/iface:go_default_library",
