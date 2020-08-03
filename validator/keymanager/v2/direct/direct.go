@@ -12,11 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -159,7 +157,7 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 // stores the generated keystore.json file in the wallet and additionally
 // generates withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	// Create a petname for an account from its public key and write its password to disk.
 	validatingKey := bls.RandKey()
 	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
@@ -185,27 +183,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 ===================================================================
 	`, withdrawalKey.Marshal())
 	fmt.Println(" ")
-
-	// Upon confirmation of the withdrawal key, proceed to display
-	// and write associated deposit data to disk.
-	_, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
-	if err != nil {
-		return "", errors.Wrap(err, "could not generate deposit transaction data")
-	}
-
-	// We write the ssz-encoded deposit data to disk as a .ssz file.
-	encodedDepositData, err := ssz.Marshal(depositData)
-	if err != nil {
-		return "", errors.Wrap(err, "could not marshal deposit data")
-	}
-
-	// Log the deposit transaction data to the user.
-	fmt.Printf(`
-========================SSZ Deposit Data===============================
-
-%#x
-
-===================================================================`, encodedDepositData)
 
 	// Write the encoded keystore to disk with the timestamp appended
 	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
