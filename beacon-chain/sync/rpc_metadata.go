@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
@@ -9,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -43,11 +43,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	if err != nil {
 		return nil, err
 	}
-	// Spec: The requesting side must close the stream for writes immediately after sending.
-	if err := stream.Close(); err != nil {
-		return nil, err
-	}
-	if err := stream.SetDeadline(roughtime.Now().Add(helpers.EOFTimeout)); err != nil {
+	if err := stream.SetDeadline(time.Now().Add(helpers.EOFTimeout)); err != nil {
 		return nil, err
 	}
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())

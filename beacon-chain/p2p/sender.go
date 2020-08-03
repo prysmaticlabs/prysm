@@ -30,21 +30,19 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
+	defer func() {
+		// Close stream for writing.
+		if err := stream.Close(); err != nil {
+			traceutil.AnnotateError(span, err)
+		}
+	}()
 	// do not encode anything if we are sending a metadata request
 	if baseTopic == RPCMetaDataTopic {
 		return stream, nil
 	}
-
 	if _, err := s.Encoding().EncodeWithMaxLength(stream, message); err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
-
-	// Close stream for writing.
-	if err := stream.Close(); err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, err
-	}
-
 	return stream, nil
 }
