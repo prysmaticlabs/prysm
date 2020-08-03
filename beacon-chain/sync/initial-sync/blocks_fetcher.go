@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -280,9 +281,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Step:      1,
 	}
 	for i := 0; i < len(peers); i++ {
-		f.p2p.Peers().Scorer().IncrementRequestedBlocks(peers[i], count)
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
-			f.p2p.Peers().Scorer().IncrementReturnedBlocks(peers[i], uint64(len(blocks)))
 			return blocks, err
 		}
 	}
@@ -309,7 +308,7 @@ func (f *blocksFetcher) requestBlocks(
 		"count":    req.Count,
 		"step":     req.Step,
 		"capacity": f.rateLimiter.Remaining(pid.String()),
-		"score":    f.p2p.Peers().Scorer().BlockProviderScorePretty(pid),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
@@ -422,49 +421,51 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 
 // filterPeers returns transformed list of peers,
 // weight ordered or randomized, constrained if necessary.
-func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+func (f *blocksFetcher) filterPeers(ctx context.Context, peerIDs []peer.ID, ratio float64) ([]peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.filterPeers")
 	defer span.End()
 
-	if len(peers) == 0 {
-		return peers, nil
+	if len(peerIDs) == 0 {
+		return peerIDs, nil
 	}
+	scorer := f.p2p.Peers().Scorers().BlockProviderScorer()
 
 	// Sort peers by their score (in descending order), non-responsive peers will be constantly
 	// pushed down the list and trimmed when percentage is selected.
-	peers = f.p2p.Peers().Scorer().SortBlockProviders(peers)
+	peerIDs = scorer.Sorted(peerIDs)
 
-	// Select sub-sample from peers (honoring min-max invariants).
-	limit := uint64(math.Round(float64(len(peers)) * peersPercentage))
+	limit := uint64(math.Round(float64(len(peerIDs)) * ratio))
 	limit = mathutil.Max(limit, uint64(flags.Get().MinimumSyncPeers))
-	limit = mathutil.Min(limit, uint64(len(peers)))
-	peers = peers[:limit]
+	limit = mathutil.Min(limit, uint64(len(peerIDs)))
+	peerIDs = peerIDs[:limit]
 
 	// Order peers by score and remaining capacity, effectively turning in-order
 	// round robin peer processing into a weighted one (peers with higher scores and higher
 	// remaining capacity are preferred). The effect of capacity on overall score is controlled
-	// via peerFilterCapacityWeight constant.
-	sort.SliceStable(peers, func(i, j int) bool {
-		aggScore := func(pid peer.ID) float64 {
-			blockProviderScore := f.p2p.Peers().Scorer().ScoreBlockProvider(pid)
-			l := f.getPeerLock(pid)
+	// via peerFilterCapacityWeight param.
+	sort.SliceStable(peerIDs, func(i, j int) bool {
+		aggScore := func(peerID peer.ID) float64 {
+			blockProviderScore := scorer.Score(peerID)
+			l := f.getPeerLock(peerID)
 			if l == nil {
 				return blockProviderScore
 			}
 			l.Lock()
 			defer l.Unlock()
-			remaining, capacity := float64(f.rateLimiter.Remaining(pid.String())), float64(f.rateLimiter.Capacity())
+			remaining, capacity := float64(f.rateLimiter.Remaining(peerID.String())), float64(f.rateLimiter.Capacity())
 			if remaining < float64(f.blocksPerSecond) {
 				// When no capacity for a good peer left, allow less performant peer to take a chance.
-				return f.p2p.Peers().Scorer().BlockProviderStartScore() * -1.0
+				return 0.0
 			}
 			capScore := remaining / capacity
-			return blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
+			overallScore := blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
+			overallScore = math.Round(overallScore*peers.ScoreRoundingFactor) / peers.ScoreRoundingFactor
+			return overallScore
 		}
-		return aggScore(peers[i]) > aggScore(peers[j])
+		return aggScore(peerIDs[i]) > aggScore(peerIDs[j])
 	})
 
-	return peers, nil
+	return peerIDs, nil
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
