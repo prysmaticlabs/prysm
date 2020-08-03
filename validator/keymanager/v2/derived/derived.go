@@ -11,7 +11,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"github.com/tyler-smith/go-bip39"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -19,10 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	"github.com/sirupsen/logrus"
-	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
@@ -268,25 +268,19 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	if err != nil {
 		return "", err
 	}
-	_, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	// Upon confirmation of the withdrawal key, proceed to display
+	// and write associated deposit data to disk.
+	tx, _, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
-	// We write the ssz-encoded deposit data to disk as a .ssz file.
-	encodedDepositData, err := ssz.Marshal(depositData)
-	if err != nil {
-		return "", errors.Wrap(err, "could not marshal deposit data")
-	}
-	if logAccountInfo {
-		// Log the deposit transaction data to the user.
-		fmt.Printf(`
-========================SSZ Deposit Data===============================
-
+	// Log the deposit transaction data to the user.
+	fmt.Printf(`
+======================Eth1 Deposit Transaction Data================
 %#x
-
-===================================================================`, encodedDepositData)
-	}
+===================================================================`, tx.Data())
+	fmt.Println("")
 
 	// Finally, write the account creation timestamps as a files.
 	newAccountNumber := dr.seedCfg.NextAccount
