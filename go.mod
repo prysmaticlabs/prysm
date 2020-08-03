@@ -21,7 +21,7 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.5 // indirect
 	github.com/emicklei/dot v0.11.0
-	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
+	github.com/ethereum/go-ethereum v1.9.18
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
@@ -44,7 +44,7 @@ require (
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-ipfs-addr v0.0.1
-	github.com/ipfs/go-log v1.0.4
+	github.com/ipfs/go-log/v2/v2 v2.1.1
 	github.com/ipfs/go-log/v2 v2.1.1
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
 	github.com/json-iterator/go v1.1.9
@@ -68,7 +68,7 @@ require (
 	github.com/libp2p/go-mplex v0.1.3 // indirect
 	github.com/libp2p/go-reuseport-transport v0.0.4 // indirect
 	github.com/libp2p/go-yamux v1.3.8 // indirect
-	github.com/logrusorgru/aurora v2.0.3+incompatible
+	github.com/logrusorgru/aurora/v3 v3.0.0
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.0
 	github.com/minio/sha256-simd v0.1.1
@@ -121,7 +121,7 @@ require (
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.3
 	k8s.io/apimachinery v0.18.3
-	k8s.io/client-go v0.18.3
+	k8s.io/client-go/v12/v12 v12.0.0
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
