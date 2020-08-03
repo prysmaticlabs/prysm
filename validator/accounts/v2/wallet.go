@@ -153,7 +153,26 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.Wrap(err, "could not read wallet dir")
 	}
 	log.Infof("%s %s", au.BrightMagenta("(wallet directory)"), w.walletDir)
-	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
+	if keymanagerKind == v2keymanager.Derived {
+		validateExistingPass := func(input string) error {
+			if input == "" {
+				return errors.New("password input cannot be empty")
+			}
+			return nil
+		}
+		walletPassword, err := inputPassword(
+			cliCtx,
+			flags.WalletPasswordFileFlag,
+			walletPasswordPromptText,
+			noConfirmPass,
+			validateExistingPass,
+		)
+		if err != nil {
+			return nil, err
+		}
+		w.walletPassword = walletPassword
+	}
+	if keymanagerKind == v2keymanager.Direct {
 		var walletPassword string
 		if hasNewFormat {
 			validateExistingPass := func(input string) error {
