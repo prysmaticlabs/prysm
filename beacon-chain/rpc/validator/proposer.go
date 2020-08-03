@@ -215,7 +215,9 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 //  - Determine the timestamp for the start slot for the previous eth1 voting period.
 //  - Determine the most recent eth1 block before each timestamp.
 //  - Subtract the current period's eth1block.number by ETH1_FOLLOW_DISTANCE to determine the voting upper bound.
+// 		Include the block at the upper bound.
 //  - Subtract the previous period's eth1block.number by ETH1_FOLLOW_DISTANCE to determine the voting lower bound.
+// 		Exclude the block at the lower bound.
 //  - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
 //  - If no blocks are left after filtering, use the current period's most recent eth1 block for proposal.
 //  - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
@@ -314,6 +316,8 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {
 			continue
 		}
+		// previousPeriodInitialBlock.Cmp(height) == -1 filters out all blocks AT or BEFORE previousPeriodInitialBlock
+		// currentPeriodInitialBlock.Cmp(height) > -1 filters out all blocks AFTER currentPeriodInitialBlock
 		if ok && previousPeriodInitialBlock.Cmp(height) == -1 && currentPeriodInitialBlock.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
