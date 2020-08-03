@@ -270,7 +270,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return eth1Data, nil
 	}
 
-	inRangeVotes, err := vs.inRangeVotes(ctx, previousPeriodInitialBlock, currentPeriodInitialBlock)
+	inRangeVotes, err := vs.inRangeVotes(ctx, currentPeriodInitialBlock, previousPeriodInitialBlock)
 	if err != nil {
 		return nil, err
 	}
