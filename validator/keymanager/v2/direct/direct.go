@@ -284,7 +284,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		enc, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
+		enc, _, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
@@ -347,16 +347,18 @@ func (dr *Keymanager) createAccountsKeystore(
 
 func (dr *Keymanager) askUntilPasswordConfirms(
 	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore,
-) ([]byte, error) {
+) ([]byte, string, error) {
 	au := aurora.NewAurora(true)
 	// Loop asking for the password until the user enters it correctly.
 	var secretKey []byte
+	var password string
+	var err error
 	for {
-		password, err := promptutil.PasswordPrompt(
+		password, err = promptutil.PasswordPrompt(
 			"Wrong password entered, try again", promptutil.NotEmpty,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not read account password: %v", err)
+			return nil, "", fmt.Errorf("could not read account password: %v", err)
 		}
 		secretKey, err = decryptor.Decrypt(keystore.Crypto, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
@@ -364,9 +366,9 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		break
 	}
-	return secretKey, nil
+	return secretKey, password, nil
 }
