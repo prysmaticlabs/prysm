@@ -53,7 +53,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 
 	numAccounts := 5
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx, "hello world")
+		_, err := keymanager.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 	rescueStdout := os.Stdout

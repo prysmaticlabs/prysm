@@ -31,7 +31,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 		accountsStore: &AccountStore{},
 	}
 	ctx := context.Background()
-	accountName, err := dr.CreateAccount(ctx, password)
+	accountName, err := dr.CreateAccount(ctx)
 	require.NoError(t, err)
 
 	// Ensure the keystore file was written to the wallet
@@ -119,7 +119,7 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 	ctx := context.Background()
 	numAccounts := 10
 	for i := 0; i < numAccounts; i++ {
-		_, err := dr.CreateAccount(ctx, password)
+		_, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 
