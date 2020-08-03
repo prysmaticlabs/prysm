@@ -152,7 +152,6 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read wallet dir")
 	}
-	log.Infof("Has new format: %v", hasNewFormat)
 	log.Infof("%s %s", au.BrightMagenta("(wallet directory)"), w.walletDir)
 	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
 		var walletPassword string

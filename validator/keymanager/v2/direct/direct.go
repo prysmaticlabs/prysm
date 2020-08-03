@@ -12,14 +12,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -38,8 +35,8 @@ const (
 	PasswordFileSuffix = ".pass"
 	// AccountsPath where all direct keymanager keystores are kept.
 	AccountsPath                   = "accounts"
-	accountsKeystoreFileName       = "all-accounts.keystore-*.json"
-	accountsKeystoreFileNameFormat = "all-accounts.keystore-%d.json"
+	accountsKeystoreFileName       = "all-accounts.keystore.json"
+	accountsKeystoreFileNameFormat = "all-accounts.keystore.json"
 	eipVersion                     = "EIP-2335"
 )
 
@@ -159,7 +156,7 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 // stores the generated keystore.json file in the wallet and additionally
 // generates withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	// Create a petname for an account from its public key and write its password to disk.
 	validatingKey := bls.RandKey()
 	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
@@ -186,34 +183,12 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (strin
 	`, withdrawalKey.Marshal())
 	fmt.Println(" ")
 
-	// Upon confirmation of the withdrawal key, proceed to display
-	// and write associated deposit data to disk.
-	_, depositData, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
-	if err != nil {
-		return "", errors.Wrap(err, "could not generate deposit transaction data")
-	}
-
-	// We write the ssz-encoded deposit data to disk as a .ssz file.
-	encodedDepositData, err := ssz.Marshal(depositData)
-	if err != nil {
-		return "", errors.Wrap(err, "could not marshal deposit data")
-	}
-
-	// Log the deposit transaction data to the user.
-	fmt.Printf(`
-========================SSZ Deposit Data===============================
-
-%#x
-
-===================================================================`, encodedDepositData)
-
 	// Write the encoded keystore to disk with the timestamp appended
-	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
 		return "", err
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
 		return "", errors.Wrap(err, "could not write keystore file for accounts")
 	}
 
@@ -320,16 +295,45 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
+	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
-	store := &AccountStore{
-		PrivateKeys: privateKeys,
-		PublicKeys:  publicKeys,
+	if len(privateKeys) != len(publicKeys) {
+		return nil, fmt.Errorf(
+			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
+		)
 	}
-	encodedStore, err := json.MarshalIndent(store, "", "\t")
+	if dr.accountsStore == nil {
+		dr.accountsStore = &AccountStore{
+			PrivateKeys: privateKeys,
+			PublicKeys:  publicKeys,
+		}
+	} else {
+		existingPubKeys := make(map[string]bool)
+		existingPrivKeys := make(map[string]bool)
+		for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
+			existingPrivKeys[string(dr.accountsStore.PrivateKeys[i])] = true
+			existingPubKeys[string(dr.accountsStore.PublicKeys[i])] = true
+		}
+		// We append to the accounts store keys only
+		// if the private/secret key do not already exist, to prevent duplicates.
+		for i := 0; i < len(privateKeys); i++ {
+			sk := privateKeys[i]
+			pk := publicKeys[i]
+			_, privKeyExists := existingPrivKeys[string(sk)]
+			_, pubKeyExists := existingPubKeys[string(pk)]
+			if privKeyExists || pubKeyExists {
+				fmt.Printf("Pubkey %#x has already been imported\n", au.BrightRed(bytesutil.Trunc(pk)))
+				continue
+			}
+			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
+			dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, sk)
+		}
+	}
+	encodedStore, err := json.MarshalIndent(dr.accountsStore, "", "\t")
 	if err != nil {
 		return nil, err
 	}

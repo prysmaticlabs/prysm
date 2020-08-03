@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -36,7 +34,7 @@ import (
 //  wallet/
 //    direct/
 //      accounts/
-//        all-accounts.keystore-2983823.json
+//        all-accounts.keystore.json
 func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 	accountNames, err := dr.wallet.ListDirs()
 	if err != nil {
@@ -100,6 +98,5 @@ func (dr *Keymanager) migrateToSingleKeystore(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
 }

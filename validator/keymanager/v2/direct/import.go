@@ -9,11 +9,8 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/schollz/progressbar/v3"
@@ -57,10 +54,6 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		if err := bar.Add(1); err != nil {
 			return errors.Wrap(err, "could not add to progress bar")
 		}
-		fmt.Printf(
-			"Successfully imported account with public key %#x\n",
-			aurora.BrightMagenta(bytesutil.Trunc(pubKeyBytes)),
-		)
 	}
 	// Write the accounts to disk into a single keystore.
 	ctx := context.Background()
@@ -72,8 +65,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
 }
 
 // Retrieves the private key and public key from an EIP-2335 keystore file

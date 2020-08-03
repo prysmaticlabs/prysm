@@ -21,6 +21,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
+				flags.WalletPasswordsDirFlag,
 				flags.AccountPasswordFileFlag,
 				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
@@ -39,6 +40,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
+				flags.WalletPasswordsDirFlag,
 				flags.ShowDepositDataFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,

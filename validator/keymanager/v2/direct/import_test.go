@@ -1,6 +1,7 @@
 package direct
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"flag"
@@ -50,6 +51,61 @@ func createRandomKeystore(t testing.TB, password string) *v2keymanager.Keystore 
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}
+}
+
+func TestDirectKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
+	numKeys := 50
+	pubKeys := make([][]byte, numKeys)
+	privKeys := make([][]byte, numKeys)
+	for i := 0; i < numKeys; i++ {
+		priv := bls.RandKey()
+		privKeys[i] = priv.Marshal()
+		pubKeys[i] = priv.PublicKey().Marshal()
+	}
+	wallet := &mock.Wallet{
+		WalletPassword: "Passw0rdz$%@49",
+	}
+	dr := &Keymanager{
+		wallet: wallet,
+	}
+	ctx := context.Background()
+	_, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	require.NoError(t, err)
+
+	// We expect the 50 keys in the account store to match.
+	require.NotNil(t, dr.accountsStore)
+	require.Equal(t, len(dr.accountsStore.PublicKeys), len(dr.accountsStore.PrivateKeys))
+	require.Equal(t, len(dr.accountsStore.PublicKeys), numKeys)
+	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
+		assert.DeepEqual(t, dr.accountsStore.PrivateKeys[i], privKeys[i])
+		assert.DeepEqual(t, dr.accountsStore.PublicKeys[i], pubKeys[i])
+	}
+
+	// Re-run the create accounts keystore function with the same pubkeys.
+	_, err = dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	require.NoError(t, err)
+
+	// We expect nothing to change.
+	require.NotNil(t, dr.accountsStore)
+	require.Equal(t, len(dr.accountsStore.PublicKeys), len(dr.accountsStore.PrivateKeys))
+	require.Equal(t, len(dr.accountsStore.PublicKeys), numKeys)
+	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
+		assert.DeepEqual(t, dr.accountsStore.PrivateKeys[i], privKeys[i])
+		assert.DeepEqual(t, dr.accountsStore.PublicKeys[i], pubKeys[i])
+	}
+
+	// Now, we run the function again but with a new priv and pubkey and this
+	// time, we do expect a change.
+	privKey := bls.RandKey()
+	privKeys = append(privKeys, privKey.Marshal())
+	pubKeys = append(pubKeys, privKey.PublicKey().Marshal())
+
+	_, err = dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	require.NoError(t, err)
+	require.Equal(t, len(dr.accountsStore.PublicKeys), len(dr.accountsStore.PrivateKeys))
+
+	// We should have 1 more new key in the store.
+	require.Equal(t, numKeys+1, len(dr.accountsStore.PrivateKeys))
 }
 
 func TestDirectKeymanager_ImportKeystores(t *testing.T) {
