@@ -22,6 +22,7 @@ go_library(
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/pcli:__pkg__",
         "//shared/aggregation:__subpackages__",
+        "//shared/depositutil:__subpackages__",
         "//proto/testing:__subpackages__",
     ],
     deps = [
