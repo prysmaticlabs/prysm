@@ -296,8 +296,8 @@ func (vs *Server) slotStartTime(slot uint64) uint64 {
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
-	firstValidBlockNumber *big.Int,
-	lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
+	currentPeriodInitialBlock *big.Int,
+	previousPeriodInitialBlock *big.Int) ([]eth1DataSingleVote, error) {
 
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -314,7 +314,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {
 			continue
 		}
-		if ok && firstValidBlockNumber.Cmp(height) == -1 && lastValidBlockNumber.Cmp(height) > -1 {
+		if ok && previousPeriodInitialBlock.Cmp(height) == -1 && currentPeriodInitialBlock.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
 	}
