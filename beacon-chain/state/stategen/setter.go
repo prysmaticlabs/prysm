@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
 
@@ -19,4 +20,22 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.Beaco
 	}
 
 	return s.saveHotState(ctx, root, state)
+}
+
+// ForceCheckpoint initiates a cold state save of the given state. This method does not update the
+// "last archived state" but simply saves the specified state from the root argument into the DB.
+func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
+	defer span.End()
+
+	root32 := bytesutil.ToBytes32(root)
+	fs, err := s.loadHotStateByRoot(ctx, root32)
+	if err != nil {
+		return err
+	}
+	if err := s.beaconDB.SaveState(ctx, fs, root32); err != nil {
+		return err
+	}
+
+	return nil
 }

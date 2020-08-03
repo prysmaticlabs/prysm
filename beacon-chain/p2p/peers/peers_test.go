@@ -1,11 +1,13 @@
-package peers
+package peers_test
 
 import (
 	"io/ioutil"
+	"math"
 	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
@@ -26,4 +28,9 @@ func TestMain(m *testing.M) {
 		flags.Init(resetFlags)
 	}()
 	os.Exit(m.Run())
+}
+
+// roundScore returns score rounded in accordance with the score manager's rounding factor.
+func roundScore(score float64) float64 {
+	return math.Round(score*peers.ScoreRoundingFactor) / peers.ScoreRoundingFactor
 }

@@ -72,6 +72,7 @@ var appFlags = []cli.Flag{
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
 	flags.WalletPasswordsDirFlag,
+	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -127,11 +128,12 @@ contract in order to activate the validator client`,
 							cmd.ChainConfigFileFlag,
 						}...),
 					Action: func(cliCtx *cli.Context) error {
+						featureconfig.ConfigureValidator(cliCtx)
+
 						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 							params.LoadChainConfigFile(chainConfigFileName)
 						}
-						featureconfig.ConfigureValidator(cliCtx)
 
 						keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {

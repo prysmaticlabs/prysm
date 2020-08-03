@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	//"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -76,4 +75,28 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
 	assert.Equal(t, false, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")
 	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+}
+
+func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
+	ctx := context.Background()
+	db, ssc := testDB.SetupDB(t)
+
+	svc := New(db, ssc)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+
+	r := [32]byte{'a'}
+	svc.hotStateCache.Put(r, beaconState)
+
+	if db.HasState(ctx, r) {
+		t.Fatal("Database has state stored already")
+	}
+	if err := svc.ForceCheckpoint(ctx, r[:]); err != nil {
+		t.Error(err)
+	}
+	if !db.HasState(ctx, r) {
+		t.Error("Did not save checkpoint to database")
+	}
 }

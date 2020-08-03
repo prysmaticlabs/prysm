@@ -24,12 +24,12 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
-				flags.PasswordFileFlag,
+				flags.WalletPasswordFileFlag,
 				featureconfig.AltonaTestnet,
-				featureconfig.MedallaTestnet,
+				featureconfig.OnyxTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := CreateWallet(cliCtx); err != nil {
+				if _, err := CreateWallet(cliCtx); err != nil {
 					log.Fatalf("Could not create a wallet: %v", err)
 				}
 				return nil
@@ -44,8 +44,9 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+				flags.WalletPasswordsDirFlag,
 				featureconfig.AltonaTestnet,
-				featureconfig.MedallaTestnet,
+				featureconfig.OnyxTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := EditWalletConfiguration(cliCtx); err != nil {
@@ -61,10 +62,10 @@ var WalletCommands = &cli.Command{
 				flags.WalletDirFlag,
 				flags.WalletPasswordsDirFlag,
 				flags.MnemonicFileFlag,
-				flags.PasswordFileFlag,
+				flags.WalletPasswordFileFlag,
 				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
-				featureconfig.MedallaTestnet,
+				featureconfig.OnyxTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := RecoverWallet(cliCtx); err != nil {

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -28,14 +29,15 @@ func init() {
 }
 
 type testWalletConfig struct {
-	walletDir        string
-	passwordsDir     string
-	exportDir        string
-	keysDir          string
-	accountsToExport string
-	passwordFile     string
-	numAccounts      int64
-	keymanagerKind   v2keymanager.Kind
+	walletDir           string
+	passwordsDir        string
+	exportDir           string
+	keysDir             string
+	accountsToExport    string
+	walletPasswordFile  string
+	accountPasswordFile string
+	numAccounts         int64
+	keymanagerKind      v2keymanager.Kind
 }
 
 func setupWalletCtx(
@@ -50,7 +52,8 @@ func setupWalletCtx(
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.BackupDirFlag.Name, cfg.exportDir, "")
 	set.String(flags.AccountsFlag.Name, cfg.accountsToExport, "")
-	set.String(flags.PasswordFileFlag.Name, cfg.passwordFile, "")
+	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
+	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
@@ -59,7 +62,8 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.exportDir))
 	assert.NoError(tb, set.Set(flags.AccountsFlag.Name, cfg.accountsToExport))
-	assert.NoError(tb, set.Set(flags.PasswordFileFlag.Name, cfg.passwordFile))
+	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
+	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
 	assert.NoError(tb, set.Set(flags.SkipMnemonicConfirmFlag.Name, "true"))
 	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
 	return cli.NewContext(&app, set, nil)
@@ -82,21 +86,6 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
 	})
 	return walletDir, passwordsDir, passwordFilePath
-}
-
-func TestCreateAndReadWallet(t *testing.T) {
-	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
-	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
-	require.NoError(t, wallet.SaveWallet())
-	require.NoError(t, err)
-	// We should be able to now read the wallet as well.
-	_, err = OpenWallet(cliCtx)
-	require.NoError(t, err)
 }
 
 func TestAccountTimestamp(t *testing.T) {
@@ -135,4 +124,20 @@ func TestAccountTimestamp(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
+	path := testutil.TempDir()
+	walletDir := filepath.Join(path, "test")
+	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+	got, err := isEmptyWallet(path)
+	require.NoError(t, err)
+	assert.Equal(t, true, got)
+
+	walletDir = filepath.Join(path, "direct")
+	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+	got, err = isEmptyWallet(path)
+	require.NoError(t, err)
+	assert.Equal(t, false, got)
+	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
 }

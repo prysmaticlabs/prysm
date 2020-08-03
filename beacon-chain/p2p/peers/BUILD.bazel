@@ -6,7 +6,7 @@ go_library(
     srcs = [
         "score_bad_responses.go",
         "score_block_providers.go",
-        "scorer.go",
+        "scorer_manager.go",
         "status.go",
         "store.go",
     ],
@@ -34,7 +34,7 @@ go_test(
         "peers_test.go",
         "score_bad_responses_test.go",
         "score_block_providers_test.go",
-        "scorer_test.go",
+        "scorer_manager_test.go",
         "status_test.go",
     ],
     embed = [":go_default_library"],

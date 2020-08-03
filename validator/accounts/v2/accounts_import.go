@@ -2,16 +2,15 @@ package v2
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -21,11 +20,37 @@ import (
 // ImportAccount uses the archived account made from ExportAccount to import an account and
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil && !errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "could not parse wallet directory")
+	ctx := context.Background()
+	wallet, err := createOrOpenWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		w, err := NewWallet(cliCtx, v2keymanager.Direct)
+		if err != nil && !errors.Is(err, ErrWalletExists) {
+			return nil, errors.Wrap(err, "could not create new wallet")
+		}
+		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
+			return nil, errors.Wrap(err, "could not initialize wallet")
+		}
+		log.WithField("wallet-path", w.walletDir).Info(
+			"Successfully created new wallet",
+		)
+		return w, err
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize wallet")
 	}
-	passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
+	if wallet.KeymanagerKind() != v2keymanager.Direct {
+		return errors.New(
+			"only non-HD wallets can import accounts, try creating a new wallet with wallet-v2 create",
+		)
+	}
+	cfg, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		return err
+	}
+	directCfg, err := direct.UnmarshalConfigFile(cfg)
+	if err != nil {
+		return err
+	}
+	km, err := direct.NewKeymanager(ctx, wallet, directCfg)
 	if err != nil {
 		return err
 	}
@@ -33,115 +58,62 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
-
-	accountsPath := filepath.Join(walletDir, v2keymanager.Direct.String())
-	if err := os.MkdirAll(accountsPath, DirectoryPermissions); err != nil {
-		return errors.Wrap(err, "could not create wallet directory")
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet")
 	}
-	if err := os.MkdirAll(passwordsDir, DirectoryPermissions); err != nil {
-		return errors.Wrap(err, "could not create passwords directory")
-	}
-
-	wallet := &Wallet{
-		accountsPath:   accountsPath,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
+	isDir, err := hasDir(keysDir)
+	if err != nil {
+		return errors.Wrap(err, "could not determine if path is a directory")
 	}
 
-	var accountsImported []string
-	ctx := context.Background()
-	if err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
+	keystoresImported := make([]*v2keymanager.Keystore, 0)
 
-		parentDir := filepath.Dir(path)
-		matches, err := filepath.Glob(filepath.Join(parentDir, direct.KeystoreFileName))
+	// Consider that the keysDir might be a path to a specific file and handle accordingly.
+	if isDir {
+		files, err := ioutil.ReadDir(keysDir)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not read dir")
 		}
-
-		var keystoreFileFound bool
-		for _, match := range matches {
-			if match == path {
-				keystoreFileFound = true
+		for i := 0; i < len(files); i++ {
+			if files[i].IsDir() {
+				continue
 			}
+			if !strings.HasPrefix(files[i].Name(), "keystore") {
+				continue
+			}
+			keystore, err := wallet.readKeystoreFile(ctx, filepath.Join(keysDir, files[i].Name()))
+			if err != nil {
+				return errors.Wrap(err, "could not import keystore")
+			}
+			keystoresImported = append(keystoresImported, keystore)
 		}
-		if !keystoreFileFound {
-			return nil
-		}
-
-		accountName, err := wallet.importKeystore(ctx, path)
+	} else {
+		keystore, err := wallet.readKeystoreFile(ctx, keysDir)
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}
-		if err := wallet.enterPasswordForAccount(cliCtx, accountName); err != nil {
-			return errors.Wrap(err, "could not verify password for keystore")
-		}
-		accountsImported = append(accountsImported, accountName)
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "could not walk files")
+		keystoresImported = append(keystoresImported, keystore)
 	}
 
-	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+	au := aurora.NewAurora(true)
+	if err := km.ImportKeystores(cliCtx, keystoresImported); err != nil {
+		return errors.Wrap(err, "could not import all keystores")
 	}
-	km, ok := keymanager.(*direct.Keymanager)
-	if !ok {
-		return errors.New("can only export accounts for a non-HD wallet")
-	}
-	if err := logAccountsImported(wallet, km, accountsImported); err != nil {
-		return errors.Wrap(err, "could not log accounts imported")
-	}
-
+	fmt.Printf(
+		"Successfully imported %s accounts, view all of them by running accounts-v2 list\n",
+		au.BrightMagenta(strconv.Itoa(len(keystoresImported))),
+	)
 	return nil
 }
 
-func (w *Wallet) importKeystore(ctx context.Context, keystoreFilePath string) (string, error) {
+func (w *Wallet) readKeystoreFile(ctx context.Context, keystoreFilePath string) (*v2keymanager.Keystore, error) {
 	keystoreBytes, err := ioutil.ReadFile(keystoreFilePath)
 	if err != nil {
-		return "", errors.Wrap(err, "could not read keystore file")
+		return nil, errors.Wrap(err, "could not read keystore file")
 	}
 	keystoreFile := &v2keymanager.Keystore{}
 	if err := json.Unmarshal(keystoreBytes, keystoreFile); err != nil {
-		return "", errors.Wrap(err, "could not decode keystore json")
+		return nil, errors.Wrap(err, "could not decode keystore json")
 	}
-	pubKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
-	if err != nil {
-		return "", errors.Wrap(err, "could not decode public key string in keystore")
-	}
-	accountName := petnames.DeterministicName(pubKeyBytes, "-")
-	keystoreFileName := filepath.Base(keystoreFilePath)
-	if err := w.WriteFileAtPath(ctx, accountName, keystoreFileName, keystoreBytes); err != nil {
-		return "", errors.Wrap(err, "could not write keystore to account dir")
-	}
-	return accountName, nil
-}
-
-func logAccountsImported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
-	au := aurora.NewAurora(true)
-
-	numAccounts := au.BrightYellow(len(accountNames))
-	fmt.Println("")
-	if len(accountNames) == 1 {
-		fmt.Printf("Imported %d validator account\n", numAccounts)
-	} else {
-		fmt.Printf("Imported %d validator accounts\n", numAccounts)
-	}
-	for _, accountName := range accountNames {
-		fmt.Println("")
-		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
-
-		publicKey, err := keymanager.PublicKeyForAccount(accountName)
-		if err != nil {
-			return errors.Wrap(err, "could not get public key")
-		}
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), publicKey)
-
-		dirPath := au.BrightCyan("(wallet dir)")
-		fmt.Printf("%s %s\n", dirPath, filepath.Join(wallet.AccountsDir(), accountName))
-	}
-	return nil
+	return keystoreFile, nil
 }

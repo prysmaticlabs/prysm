@@ -77,7 +77,7 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
-	resp, err := peers.Scorer().BadResponses(pid)
+	resp, err := peers.Scorers().BadResponsesScorer().Count(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}

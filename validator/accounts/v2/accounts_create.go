@@ -6,6 +6,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -20,15 +21,16 @@ var log = logrus.WithField("prefix", "accounts-v2")
 // a wallet from the user's specified path.
 func CreateAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	wallet, err := createOrOpenWallet(cliCtx, CreateWallet)
 	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
+		return err
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
+	log.Info("Creating a new account...")
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return errors.New("cannot create a new account for a remote keymanager")
@@ -37,7 +39,13 @@ func CreateAccount(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("not a direct keymanager")
 		}
-		password, err := inputPassword(cliCtx, newAccountPasswordPromptText, confirmPass)
+		password, err := inputPassword(
+			cliCtx,
+			flags.AccountPasswordFileFlag,
+			newAccountPasswordPromptText,
+			confirmPass,
+			promptutil.ValidatePasswordInput,
+		)
 		if err != nil {
 			return errors.Wrap(err, "could not input new account password")
 		}

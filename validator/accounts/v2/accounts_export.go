@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 )
 
@@ -24,44 +22,8 @@ const archiveFilename = "backup.zip"
 
 // ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
 func ExportAccount(cliCtx *cli.Context) error {
-	outputDir, err := inputDirectory(cliCtx, exportDirPromptText, flags.BackupDirFlag)
-	if err != nil {
-		return errors.Wrap(err, "could not parse output directory")
-	}
-
-	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	keymanager, err := wallet.InitializeKeymanager(context.Background(), true /* skip mnemonic confirm */)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
-	}
-	km, ok := keymanager.(*direct.Keymanager)
-	if !ok {
-		return errors.New("can only export accounts for a non-HD wallet")
-	}
-	allAccounts, err := km.ValidatingAccountNames()
-	if err != nil {
-		return errors.Wrap(err, "could not get account names")
-	}
-	accounts, err := selectAccounts(cliCtx, allAccounts)
-	if err != nil {
-		return errors.Wrap(err, "could not select accounts")
-	}
-	if len(accounts) == 0 {
-		return errors.New("no accounts to export")
-	}
-
-	if err := wallet.zipAccounts(accounts, outputDir); err != nil {
-		return errors.Wrap(err, "could not export accounts")
-	}
-
-	if err := logAccountsExported(wallet, km, accounts); err != nil {
-		return errors.Wrap(err, "could not log out exported accounts")
-	}
-
-	return nil
+	// TODO(#6777): Re-enable export command.
+	return errors.New("this feature is unimplemented")
 }
 
 func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
@@ -214,30 +176,4 @@ func copyFileFromZip(archive *zip.Writer, sourcePath string, info os.FileInfo, p
 	}()
 	_, err = io.Copy(writer, file)
 	return err
-}
-
-func logAccountsExported(wallet *Wallet, keymanager *direct.Keymanager, accountNames []string) error {
-	au := aurora.NewAurora(true)
-
-	numAccounts := au.BrightYellow(len(accountNames))
-	fmt.Println("")
-	if len(accountNames) == 1 {
-		fmt.Printf("Exported %d validator account\n", numAccounts)
-	} else {
-		fmt.Printf("Exported %d validator accounts\n", numAccounts)
-	}
-	for _, accountName := range accountNames {
-		fmt.Println("")
-		fmt.Printf("%s\n", au.BrightGreen(accountName).Bold())
-
-		publicKey, err := keymanager.PublicKeyForAccount(accountName)
-		if err != nil {
-			return errors.Wrap(err, "could not get public key")
-		}
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[public key]").Bold(), publicKey)
-
-		dirPath := au.BrightCyan("(wallet dir)")
-		fmt.Printf("%s %s\n", dirPath, filepath.Join(wallet.AccountsDir(), accountName))
-	}
-	return nil
 }
