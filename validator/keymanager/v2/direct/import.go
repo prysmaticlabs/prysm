@@ -45,8 +45,10 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		}
 	}
 	fmt.Println("Importing accounts, this may take a while...")
+	var privKeyBytes []byte
+	var pubKeyBytes []byte
 	for i := 0; i < len(keystores); i++ {
-		privKeyBytes, pubKeyBytes, err := dr.attemptDecryptKeystore(decryptor, keystores[i], password)
+		privKeyBytes, pubKeyBytes, password, err = dr.attemptDecryptKeystore(decryptor, keystores[i], password)
 		if err != nil {
 			return err
 		}
@@ -79,7 +81,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 // it prompts the user for the correct password until it confirms.
 func (dr *Keymanager) attemptDecryptKeystore(
 	enc *keystorev4.Encryptor, keystore *v2keymanager.Keystore, password string,
-) ([]byte, []byte, error) {
+) ([]byte, []byte, string, error) {
 	// Attempt to decrypt the keystore with the specifies password.
 	var privKeyBytes []byte
 	var err error
@@ -87,18 +89,18 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		privKeyBytes, err = dr.askUntilPasswordConfirms(enc, keystore)
+		privKeyBytes, password, err = dr.askUntilPasswordConfirms(enc, keystore)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not confirm password via prompt")
+			return nil, nil, "", errors.Wrap(err, "could not confirm password via prompt")
 		}
 	} else if err != nil {
-		return nil, nil, errors.Wrap(err, "could not decrypt keystore")
+		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 	}
 	pubKeyBytes, err := hex.DecodeString(keystore.Pubkey)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not decode pubkey from keystore")
+		return nil, nil, "", errors.Wrap(err, "could not decode pubkey from keystore")
 	}
-	return privKeyBytes, pubKeyBytes, nil
+	return privKeyBytes, pubKeyBytes, password, nil
 }
 
 func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
