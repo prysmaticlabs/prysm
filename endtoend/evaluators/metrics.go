@@ -19,10 +19,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-const maxMemStatsBytes = 100000000 // 1 MB.
+const maxMemStatsBytes = 2000000000 // 2 GiB.
 
 // MetricsCheck performs a check on metrics to make sure caches are functioning, and
-// overall health is good. Not checking the first epoch so the sample size isn't too small.
+// overall health is good. Not checking the first 2 epochs so the sample size isn't too small.
 var MetricsCheck = types.Evaluator{
 	Name:       "metrics_check_epoch_%d",
 	Policy:     afterNthEpoch(1),

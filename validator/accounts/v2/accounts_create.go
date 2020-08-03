@@ -6,6 +6,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -38,7 +39,13 @@ func CreateAccount(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("not a direct keymanager")
 		}
-		password, err := inputPassword(cliCtx, flags.AccountPasswordFileFlag, newAccountPasswordPromptText, confirmPass)
+		password, err := inputPassword(
+			cliCtx,
+			flags.AccountPasswordFileFlag,
+			newAccountPasswordPromptText,
+			confirmPass,
+			promptutil.ValidatePasswordInput,
+		)
 		if err != nil {
 			return errors.Wrap(err, "could not input new account password")
 		}
