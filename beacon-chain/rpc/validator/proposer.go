@@ -314,7 +314,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {
 			continue
 		}
-		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
+		if ok && firstValidBlockNumber.Cmp(height) == -1 && lastValidBlockNumber.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
 	}
