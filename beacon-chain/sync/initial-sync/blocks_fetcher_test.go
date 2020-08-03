@@ -470,20 +470,20 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 			p2p:         p2p,
 		})
 
-	_, peers := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
+	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: 1,
 		Step:      1,
 		Count:     blockBatchLimit,
 	}
-	blocks, err := fetcher.requestBlocks(ctx, req, peers[0])
+	blocks, err := fetcher.requestBlocks(ctx, req, peerIDs[0])
 	assert.NoError(t, err)
 	assert.Equal(t, blockBatchLimit, uint64(len(blocks)), "Incorrect number of blocks returned")
 
 	// Test context cancellation.
 	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
-	blocks, err = fetcher.requestBlocks(ctx, req, peers[0])
+	blocks, err = fetcher.requestBlocks(ctx, req, peerIDs[0])
 	assert.ErrorContains(t, "context canceled", err)
 }
 
@@ -584,15 +584,15 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		blocks = append(blocks, makeSequence(51200, 51264)...)
 		blocks = append(blocks, 55000)
 		blocks = append(blocks, makeSequence(57000, 57256)...)
-		var peers []*peerData
+		var peersData []*peerData
 		for i := 0; i < size; i++ {
-			peers = append(peers, &peerData{
+			peersData = append(peersData, &peerData{
 				blocks:         blocks,
 				finalizedEpoch: 1800,
 				headSlot:       57000,
 			})
 		}
-		return peers
+		return peersData
 	}
 	chainConfig := struct {
 		peers []*peerData
@@ -667,15 +667,11 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 		peersPercentage float64
 	}
 
-	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
-	fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
-		headFetcher: mc,
-		p2p:         p2p,
-	})
+	batchSize := uint64(flags.Get().BlockBatchLimit)
 	tests := []struct {
 		name   string
 		args   args
-		update func(s *peers.PeerScorer)
+		update func(s *peers.BlockProviderScorer)
 		want   []peer.ID
 	}{
 		{
@@ -723,7 +719,27 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			want: []peer.ID{"ghi", "def", "abc", "xyz", "jkl"},
 		},
 		{
-			name: "multiple peers with scores",
+			name: "multiple peers same capacity different scores",
+			args: args{
+				peers: []weightedPeer{
+					{"abc", 10},
+					{"def", 10},
+					{"ghi", 10},
+					{"jkl", 10},
+					{"xyz", 10},
+				},
+				peersPercentage: 0.8,
+			},
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("xyz", batchSize*5)
+				s.IncrementProcessedBlocks("def", batchSize*4)
+				s.IncrementProcessedBlocks("ghi", batchSize*2)
+				s.IncrementProcessedBlocks("abc", batchSize+1)
+			},
+			want: []peer.ID{"xyz", "def", "ghi", "abc"},
+		},
+		{
+			name: "multiple peers different capacities and scores",
 			args: args{
 				peers: []weightedPeer{
 					{"abc", 20},
@@ -734,40 +750,44 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				},
 				peersPercentage: 0.8,
 			},
-			update: func(s *peers.PeerScorer) {
+			update: func(s *peers.BlockProviderScorer) {
 				// Make sure that score takes priority over capacity.
-				s.IncrementRequestedBlocks("ghi", 64)
-				s.IncrementRequestedBlocks("def", 64)
-				s.IncrementReturnedBlocks("def", 32)
+				s.IncrementProcessedBlocks("ghi", batchSize*4)
+				s.IncrementProcessedBlocks("def", batchSize*5)
 				// Break tie using capacity as a tie-breaker (abc and ghi have the same score).
-				s.IncrementRequestedBlocks("abc", 64)
-				s.IncrementRequestedBlocks("xyz", 64)
+				s.IncrementProcessedBlocks("abc", batchSize*3)
+				s.IncrementProcessedBlocks("xyz", batchSize*3)
 				// Exclude peer (peers percentage is 80%).
-				s.IncrementRequestedBlocks("jkl", 128)
+				s.IncrementProcessedBlocks("jkl", batchSize)
 			},
 			want: []peer.ID{"def", "ghi", "abc", "xyz"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+			fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
+				headFetcher: mc,
+				p2p:         p2p,
+			})
 			// Non-leaking bucket, with initial capacity of 100.
 			fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 100, false)
-			pids := make([]peer.ID, 0)
+			peerIDs := make([]peer.ID, 0)
 			for _, pid := range tt.args.peers {
-				pids = append(pids, pid.ID)
+				peerIDs = append(peerIDs, pid.ID)
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
 			if tt.update != nil {
-				tt.update(fetcher.p2p.Peers().Scorer())
+				tt.update(fetcher.p2p.Peers().Scorers().BlockProviderScorer())
 			}
-			got, err := fetcher.filterPeers(context.Background(), pids, tt.args.peersPercentage)
+			got, err := fetcher.filterPeers(context.Background(), peerIDs, tt.args.peersPercentage)
 			require.NoError(t, err)
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
 			sort.SliceStable(got, func(i, j int) bool {
-				score1 := fetcher.p2p.Peers().Scorer().ScoreBlockProvider(got[i])
-				score2 := fetcher.p2p.Peers().Scorer().ScoreBlockProvider(got[j])
+				score1 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(got[i])
+				score2 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(got[j])
 				if score1 == score2 {
 					cap1 := fetcher.rateLimiter.Remaining(got[i].String())
 					cap2 := fetcher.rateLimiter.Remaining(got[j].String())
