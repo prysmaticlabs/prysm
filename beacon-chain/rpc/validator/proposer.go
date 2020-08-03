@@ -313,6 +313,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		if err != nil {
 			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
 		}
+		// Make sure we don't "undo deposit progress". See https://github.com/ethereum/eth2.0-specs/pull/1836
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {
 			continue
 		}
@@ -582,7 +583,7 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 	if depositsTillHeight == 0 {
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
-	// Check for the validity of deposit count.
+	// // Make sure we don't "undo deposit progress". See https://github.com/ethereum/eth2.0-specs/pull/1836
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
 	if depositsTillHeight < currentETH1Data.DepositCount {
 		return currentETH1Data, nil
