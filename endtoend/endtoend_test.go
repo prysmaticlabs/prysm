@@ -40,9 +40,10 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	keystorePath := components.StartEth1Node(t)
 	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
 	bootnodeENR := components.StartBootnode(t)
-	components.StartBeaconNodes(t, config, bootnodeENR)
+	beaconPIDs := components.StartBeaconNodes(t, config, bootnodeENR)
 	components.StartValidatorClients(t, config, keystorePath)
 	defer helpers.LogOutput(t, config)
+	defer helpers.KillProcesses(t, beaconPIDs)
 	defer func() {
 		for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 			if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, i); err != nil {
