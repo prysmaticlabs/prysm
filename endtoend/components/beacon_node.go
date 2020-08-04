@@ -36,7 +36,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	if err != nil {
 		t.Fatal(err)
 	}
-	profileFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeCpuProfileFileName, index))
+	profileFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeCPUProfileFileName, index))
 	if err != nil {
 		t.Fatal(err)
 	}
