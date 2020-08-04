@@ -21,10 +21,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		v.attesterHistoryByPubKeyLock.RLock()
 		attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 		v.attesterHistoryByPubKeyLock.RUnlock()
-		if !ok {
-			return nil
-		}
-		if isNewAttSlashable(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch) {
+		if ok && isNewAttSlashable(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch) {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			}
@@ -47,9 +44,11 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	if featureconfig.Get().LocalProtection {
 		v.attesterHistoryByPubKeyLock.Lock()
-		attesterHistory := v.attesterHistoryByPubKey[pubKey]
-		attesterHistory = markAttestationForTargetEpoch(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
-		v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
+		if ok {
+			attesterHistory = markAttestationForTargetEpoch(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
+			v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		}
 		v.attesterHistoryByPubKeyLock.Unlock()
 	}
 
@@ -107,6 +106,9 @@ func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 // markAttestationForTargetEpoch returns the modified attestation history with the passed-in epochs marked
 // as attested for. This is done to prevent the validator client from signing any slashable attestations.
 func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) *slashpb.AttestationHistory {
+	if history == nil {
+		return nil
+	}
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	if targetEpoch > history.LatestEpochWritten {
