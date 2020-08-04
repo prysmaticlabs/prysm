@@ -58,7 +58,7 @@ func (store *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys
 
 // SaveAttestationHistoryForPubKeys saves the attestation histories for the requested validator public keys.
 func (store *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*slashpb.AttestationHistory) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistory")
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeys")
 	defer span.End()
 
 	encoded := make(map[[48]byte][]byte)
