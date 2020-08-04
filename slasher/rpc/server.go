@@ -36,8 +36,6 @@ type Server struct {
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
-	ss.attestationLock.Lock()
-	defer ss.attestationLock.Unlock()
 
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
@@ -90,6 +88,10 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		log.WithError(err).Error("failed to verify indexed attestation signature")
 		return nil, status.Errorf(codes.Internal, "could not verify indexed attestation signature: %v: %v", req, err)
 	}
+
+	ss.attestationLock.Lock()
+	defer ss.attestationLock.Unlock()
+
 	slashings, err := ss.detector.DetectAttesterSlashings(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not detect attester slashings for attestation: %v: %v", req, err)
@@ -113,8 +115,6 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconBlockHeader) (*slashpb.ProposerSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableBlock")
 	defer span.End()
-	ss.proposeLock.Lock()
-	defer ss.proposeLock.Unlock()
 
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
@@ -144,6 +144,10 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 		req.Header, pkMap[req.Header.ProposerIndex], req.Signature, domain); err != nil {
 		return nil, err
 	}
+
+	ss.proposeLock.Lock()
+	defer ss.proposeLock.Unlock()
+
 	slashing, err := ss.detector.DetectDoubleProposals(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not detect proposer slashing for block: %v: %v", req, err)
