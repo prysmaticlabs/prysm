@@ -36,10 +36,15 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	if err != nil {
 		t.Fatal(err)
 	}
+	profileFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeCpuProfileFileName, index))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
+		fmt.Sprintf("--cpuprofile=%s", profileFile.Name()),
 		fmt.Sprintf("--deposit-contract=%s", e2e.TestParams.ContractAddress.Hex()),
 		fmt.Sprintf("--rpc-port=%d", e2e.TestParams.BeaconNodeRPCPort+index),
 		fmt.Sprintf("--http-web3provider=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
