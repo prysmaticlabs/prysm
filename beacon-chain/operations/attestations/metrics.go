@@ -6,18 +6,6 @@ import (
 )
 
 var (
-	aggregatedAttsCount = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "aggregated_attestations_in_pool_total",
-			Help: "The number of aggregated attestations in the pool.",
-		},
-	)
-	unaggregatedAttsCount = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "unaggregated_attestations_in_pool_total",
-			Help: "The number of unaggregated attestations in the pool.",
-		},
-	)
 	expiredAggregatedAtts = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "expired_aggregated_atts_total",
 		Help: "The number of expired and deleted aggregated attestations in the pool.",
@@ -31,8 +19,3 @@ var (
 		Help: "The number of expired and deleted block attestations in the pool.",
 	})
 )
-
-func (s *Service) updateMetrics() {
-	aggregatedAttsCount.Set(float64(s.pool.AggregatedAttestationCount()))
-	unaggregatedAttsCount.Set(float64(s.pool.UnaggregatedAttestationCount()))
-}

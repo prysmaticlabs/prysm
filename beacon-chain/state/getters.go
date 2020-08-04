@@ -1073,19 +1073,6 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	return b.state.FinalizedCheckpoint.Epoch
 }
 
-// finalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) finalizedCheckpointEpoch() uint64 {
-	if !b.HasInnerState() {
-		return 0
-	}
-	if b.state.FinalizedCheckpoint == nil {
-		return 0
-	}
-
-	return b.state.FinalizedCheckpoint.Epoch
-}
-
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
 	if input == nil {
 		return nil

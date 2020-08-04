@@ -29,7 +29,6 @@ type Remote struct {
 	paths               []string
 	conn                *grpc.ClientConn
 	accounts            map[[48]byte]*accountInfo
-	signClientInitiator func(*grpc.ClientConn)
 }
 
 type accountInfo struct {

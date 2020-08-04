@@ -46,10 +46,6 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	return s.attPool.SaveUnaggregatedAttestation(a)
 }
 
-func (s *Service) subnetCount() int {
-	return int(params.BeaconNetworkConfig().AttestationSubnetCount)
-}
-
 func (s *Service) persistentSubnetIndices() []uint64 {
 	return cache.SubnetIDs.GetAllSubnets()
 }

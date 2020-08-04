@@ -1,17 +1,13 @@
 package blockchain
 
 import (
-	"time"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 var (
@@ -88,13 +84,6 @@ var (
 		Name: "beacon_reorg_total",
 		Help: "Count the number of times beacon chain has a reorg",
 	})
-	sentBlockPropagationHistogram = promauto.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "block_sent_latency_milliseconds",
-			Help:    "Captures blocks broadcast time. Blocks sent in milliseconds distribution",
-			Buckets: []float64{1000, 2000, 3000, 4000, 5000, 6000},
-		},
-	)
 	attestationInclusionDelay = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "attestation_inclusion_delay_slots",
@@ -202,18 +191,6 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 		totalEligibleBalances.Set(float64(precompute.Balances.ActivePrevEpoch))
 		totalVotedTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttested))
 	}
-}
-
-// This captures metrics for block sent time by subtracts slot start time.
-func captureSentTimeMetric(genesisTime uint64, currentSlot uint64) error {
-	startTime, err := helpers.SlotToTime(genesisTime, currentSlot)
-	if err != nil {
-		return err
-	}
-	diffMs := roughtime.Now().Sub(startTime) / time.Millisecond
-	sentBlockPropagationHistogram.Observe(float64(diffMs))
-
-	return nil
 }
 
 func reportAttestationInclusion(blk *ethpb.BeaconBlock) {
