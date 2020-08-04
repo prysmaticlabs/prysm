@@ -188,7 +188,7 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 		}
 	}
 	if !withinCommittee {
-		return fmt.Debugf("validator index %d is not within the committee: %v",
+		return fmt.Errorf("validator index %d is not within the committee: %v",
 			validatorIndex, committee)
 	}
 	return nil
