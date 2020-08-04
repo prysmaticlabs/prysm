@@ -26,9 +26,9 @@ const (
 
 // Remote is a key manager that accesses a remote wallet daemon.
 type Remote struct {
-	paths               []string
-	conn                *grpc.ClientConn
-	accounts            map[[48]byte]*accountInfo
+	paths    []string
+	conn     *grpc.ClientConn
+	accounts map[[48]byte]*accountInfo
 }
 
 type accountInfo struct {
