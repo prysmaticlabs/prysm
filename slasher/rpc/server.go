@@ -38,6 +38,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	defer span.End()
 	ss.attestationLock.Lock()
 	defer ss.attestationLock.Unlock()
+
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}
@@ -114,6 +115,7 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	defer span.End()
 	ss.proposeLock.Lock()
 	defer ss.proposeLock.Unlock()
+
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}
