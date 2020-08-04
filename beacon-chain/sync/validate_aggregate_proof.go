@@ -37,7 +37,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode message")
+		log.WithError(err).Debug("Failed to decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -188,7 +188,7 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 		}
 	}
 	if !withinCommittee {
-		return fmt.Errorf("validator index %d is not within the committee: %v",
+		return fmt.Debugf("validator index %d is not within the committee: %v",
 			validatorIndex, committee)
 	}
 	return nil
