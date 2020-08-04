@@ -40,6 +40,7 @@ func KillProcesses(t *testing.T, pIDs []int) {
 			t.Fatal(err)
 		}
 	}
+	time.Sleep(5 * time.Second)
 }
 
 // DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
