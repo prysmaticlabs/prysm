@@ -38,7 +38,7 @@ type subHandler func(context.Context, proto.Message) error
 func (s *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode message")
+		log.WithError(err).Debug("Failed to decode message")
 		return pubsub.ValidationReject
 	}
 	msg.ValidatorData = m
@@ -132,14 +132,14 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 		span.AddAttributes(trace.StringAttribute("topic", topic))
 
 		if msg.ValidatorData == nil {
-			log.Error("Received nil message on pubsub")
+			log.Debug("Received nil message on pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			traceutil.AnnotateError(span, err)
-			log.WithError(err).Error("Failed to handle p2p pubsub")
+			log.WithError(err).Debug("Failed to handle p2p pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
@@ -216,7 +216,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 						go func(idx uint64) {
 							_, err := s.p2p.FindPeersWithSubnet(idx)
 							if err != nil {
-								log.Errorf("Could not search for peers: %v", err)
+								log.Debugf("Could not search for peers: %v", err)
 								return
 							}
 						}(i)
@@ -322,7 +322,7 @@ func (s *Service) subscribeAggregatorSubnet(subscriptions map[uint64]*pubsub.Sub
 		go func(idx uint64) {
 			_, err := s.p2p.FindPeersWithSubnet(idx)
 			if err != nil {
-				log.Errorf("Could not search for peers: %v", err)
+				log.Debugf("Could not search for peers: %v", err)
 				return
 			}
 		}(idx)
@@ -341,7 +341,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 			// perform a search for peers with the desired committee index.
 			_, err := s.p2p.FindPeersWithSubnet(idx)
 			if err != nil {
-				log.Errorf("Could not search for peers: %v", err)
+				log.Debugf("Could not search for peers: %v", err)
 				return
 			}
 		}(idx)

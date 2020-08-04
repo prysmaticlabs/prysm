@@ -53,7 +53,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 		fmt.Sprintf("--bootstrap-node=%s", enr),
 		fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50),
 		"--pprof",
-		"--verbosity=trace",
+		"--verbosity=debug",
 		"--force-clear-db",
 		"--e2e-config",
 	}
