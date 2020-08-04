@@ -31,6 +31,7 @@ type Listener interface {
 	Ping(*enode.Node) error
 	RequestENR(*enode.Node) (*enode.Node, error)
 	LocalNode() *enode.LocalNode
+	AllNodes() []*enode.Node
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
@@ -109,6 +110,13 @@ func (s *Service) createListener(
 	// Check for the real local address which may
 	// be different in the presence of virtual networks.
 	ipAddr = s.localAddress(networkVersion, ipAddr)
+	// If local ip is specified then use that instead.
+	if s.cfg.LocalIP != "" {
+		ipAddr = net.ParseIP(s.cfg.LocalIP)
+		if ipAddr == nil {
+			return nil, errors.New("invalid local ip provided")
+		}
+	}
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
 		Port: int(s.cfg.UDPPort),
@@ -136,8 +144,10 @@ func (s *Service) createListener(
 		}
 	}
 	dv5Cfg := discover.Config{
-		PrivateKey: privKey,
+		PrivateKey:   privKey,
+		ValidSchemes: enode.ValidSchemes,
 	}
+
 	dv5Cfg.Bootnodes = []*enode.Node{}
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)

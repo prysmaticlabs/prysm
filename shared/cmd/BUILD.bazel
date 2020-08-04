@@ -36,6 +36,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

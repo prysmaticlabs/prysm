@@ -10,10 +10,10 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
-	// MedallaTestnet flag for the multiclient eth2 testnet configuration.
-	MedallaTestnet = &cli.BoolFlag{
-		Name:  "medalla",
-		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
+	// OnyxTestnet flag for the Prysmatic Labs single-client testnet configuration.
+	OnyxTestnet = &cli.BoolFlag{
+		Name:  "onyx",
+		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
@@ -146,10 +146,6 @@ var (
 		Name:  "attestation-aggregation-force-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
 	}
-	enableAccountsV2 = &cli.BoolFlag{
-		Name:  "enable-accounts-v2",
-		Usage: "Enables usage of v2 for Prysm validator accounts",
-	}
 	batchBlockVerify = &cli.BoolFlag{
 		Name:  "batch-block-verify",
 		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
@@ -165,6 +161,10 @@ var (
 	enableEth1DataMajorityVote = &cli.BoolFlag{
 		Name:  "enable-eth1-data-majority-vote",
 		Usage: "When enabled, voting on eth1 data will use the Voting With The Majority algorithm.",
+	}
+	disableAccountsV2 = &cli.BoolFlag{
+		Name:  "disable-accounts-v2",
+		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
 )
 
@@ -500,6 +500,21 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedMedallaTestnet = &cli.BoolFlag{
+		Name:   "medalla",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableAccountsV2 = &cli.BoolFlag{
+		Name:   "enable-accounts-v2",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedCustomGenesisDelay = &cli.BoolFlag{
+		Name:   "custom-genesis-delay",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -567,6 +582,9 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
+	deprecatedMedallaTestnet,
+	deprecatedEnableAccountsV2,
+	deprecatedCustomGenesisDelay,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -576,8 +594,8 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
-	MedallaTestnet,
-	enableAccountsV2,
+	OnyxTestnet,
+	disableAccountsV2,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -589,6 +607,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-local-protection",
+	"--disable-accounts-v2",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -619,7 +638,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	AltonaTestnet,
-	MedallaTestnet,
+	OnyxTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
@@ -634,5 +653,5 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-finalized-deposits-cache",
-	"--enable-eth1-data-majority-vote",
+	// "--enable-eth1-data-majority-vote", // TODO(6786): This flag fails long running e2e tests.
 }

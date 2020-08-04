@@ -21,11 +21,12 @@ import (
 
 func TestCreateOrOpenWallet(t *testing.T) {
 	hook := logTest.NewGlobal()
-	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: walletPasswordFile,
 	})
 	createDirectWallet := func(cliCtx *cli.Context) (*Wallet, error) {
 		w, err := NewWallet(cliCtx, v2keymanager.Direct)
@@ -43,21 +44,20 @@ func TestCreateOrOpenWallet(t *testing.T) {
 	createdWallet, err := createOrOpenWallet(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	testutil.AssertLogsContain(t, hook, "Successfully created new wallet")
-	testutil.AssertLogsDoNotContain(t, hook, "Successfully opened wallet")
 
 	openedWallet, err := createOrOpenWallet(cliCtx, createDirectWallet)
 	require.NoError(t, err)
-	testutil.AssertLogsContain(t, hook, "Successfully opened wallet")
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
 }
 
 func TestCreateWallet_Direct(t *testing.T) {
-	walletDir, passwordsDir, _ := setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		passwordsDir:   passwordsDir,
-		keymanagerKind: v2keymanager.Direct,
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: walletPasswordFile,
 	})
 
 	// We attempt to create the wallet.
@@ -77,7 +77,6 @@ func TestCreateWallet_Direct(t *testing.T) {
 
 	// We assert the created configuration was as desired.
 	wantedCfg := direct.DefaultConfig()
-	wantedCfg.AccountPasswordsDirectory = passwordsDir
 	assert.DeepEqual(t, wantedCfg, cfg)
 }
 
