@@ -700,6 +700,9 @@ func hasDir(dirPath string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
+	if info == nil {
+		return false, nil
+	}
 	return info.IsDir(), err
 }
 
