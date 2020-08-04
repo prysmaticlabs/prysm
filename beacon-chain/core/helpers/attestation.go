@@ -150,7 +150,7 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 		return fmt.Errorf(
 			"attestation slot %d not within attestation propagation range of %d to %d (current slot)",
 			attSlot,
-			currentSlot-params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+			lowerBoundsSlot,
 			currentSlot,
 		)
 	}
