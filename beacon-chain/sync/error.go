@@ -63,10 +63,10 @@ func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (ui
 func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream, encoder p2p.EncodingProvider) {
 	resp, err := createErrorResponse(responseCode, reason, encoder)
 	if err != nil {
-		log.WithError(err).Error("Failed to generate a response error")
+		log.WithError(err).Debug("Failed to generate a response error")
 	} else {
 		if _, err := stream.Write(resp); err != nil {
-			log.WithError(err).Errorf("Failed to write to stream")
+			log.WithError(err).Debugf("Failed to write to stream")
 		}
 	}
 }

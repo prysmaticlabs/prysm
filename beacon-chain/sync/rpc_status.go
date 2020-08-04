@@ -35,14 +35,14 @@ func (s *Service) maintainPeerStatuses() {
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
 					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
 					if err := s.p2p.Disconnect(id); err != nil {
-						log.Errorf("Error when disconnecting with peer: %v", err)
+						log.Debugf("Error when disconnecting with peer: %v", err)
 					}
 					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
 				}
 				if s.p2p.Peers().IsBad(id) {
 					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
-						log.Errorf("Error when disconnecting with bad peer: %v", err)
+						log.Debugf("Error when disconnecting with bad peer: %v", err)
 					}
 					return
 				}
@@ -54,7 +54,7 @@ func (s *Service) maintainPeerStatuses() {
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
 					if err := s.reValidatePeer(s.ctx, id); err != nil {
-						log.WithField("peer", id).WithError(err).Error("Failed to revalidate peer")
+						log.WithField("peer", id).WithError(err).Debug("Failed to revalidate peer")
 						s.p2p.Peers().Scorers().BadResponsesScorer().Increment(id)
 					}
 				}
@@ -176,7 +176,7 @@ func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
@@ -208,7 +208,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 				return err
 			}
 			if err := stream.Close(); err != nil { // Close before disconnecting.
-				log.WithError(err).Error("Failed to close stream")
+				log.WithError(err).Debug("Failed to close stream")
 			}
 			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
@@ -222,7 +222,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		originalErr := err
 		resp, err := s.generateErrorResponse(respCode, err.Error())
 		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
+			log.WithError(err).Debug("Failed to generate a response error")
 		} else {
 			if _, err := stream.Write(resp); err != nil {
 				// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
@@ -230,11 +230,11 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			}
 		}
 		if err := stream.Close(); err != nil { // Close before disconnecting.
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		time.Sleep(flushDelay)
 		if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
-			log.WithError(err).Error("Failed to disconnect from peer")
+			log.WithError(err).Debug("Failed to disconnect from peer")
 		}
 		return originalErr
 	}
@@ -262,7 +262,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		log.WithError(err).Error("Failed to write to stream")
+		log.WithError(err).Debug("Failed to write to stream")
 	}
 	_, err = s.p2p.Encoding().EncodeWithMaxLength(stream, resp)
 	return err
