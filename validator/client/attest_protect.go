@@ -19,8 +19,11 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	if featureconfig.Get().LocalProtection {
 		v.attesterHistoryByPubKeyLock.RLock()
-		attesterHistory := v.attesterHistoryByPubKey[pubKey]
+		attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 		v.attesterHistoryByPubKeyLock.RUnlock()
+		if !ok {
+			return nil
+		}
 		if isNewAttSlashable(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch) {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
@@ -64,6 +67,9 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
 // and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
 func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) bool {
+	if history == nil {
+		return false
+	}
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 

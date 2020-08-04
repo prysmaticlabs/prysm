@@ -14,9 +14,10 @@ import (
 func unmarshalAttestationHistory(ctx context.Context, enc []byte) (*slashpb.AttestationHistory, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.unmarshalAttestationHistory")
 	defer span.End()
+	copiedEnc := make([]byte, len(enc))
+	copy(copiedEnc, enc)
 	history := &slashpb.AttestationHistory{}
-	err := proto.Unmarshal(enc, history)
-	if err != nil {
+	if err := proto.Unmarshal(copiedEnc, history); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return history, nil
