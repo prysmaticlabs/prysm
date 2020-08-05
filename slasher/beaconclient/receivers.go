@@ -183,7 +183,7 @@ func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.B
 			log.Info("Context closed, attempting to restart attestation stream")
 			_, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
 			if err != nil {
-				log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
+				log.Debug("failed to dial beacon node")
 				continue
 			}
 			stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
@@ -208,7 +208,7 @@ func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_St
 			log.Info("Context closed, attempting to restart block stream")
 			_, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
 			if err != nil {
-				log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
+				log.Debug("failed to dial beacon node")
 				continue
 			}
 			stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
