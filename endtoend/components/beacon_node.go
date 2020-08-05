@@ -18,16 +18,14 @@ import (
 )
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) []int {
-	var pIDs []int
+func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) {
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		pIDs = append(pIDs, StartNewBeaconNode(t, config, i, enr))
+		StartNewBeaconNode(t, config, i, enr)
 	}
-	return pIDs
 }
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) int {
+func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
@@ -38,15 +36,10 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	if err != nil {
 		t.Fatal(err)
 	}
-	profileFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeCPUProfileFileName, index))
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		fmt.Sprintf("--cpuprofile=%s", profileFile.Name()),
 		fmt.Sprintf("--deposit-contract=%s", e2e.TestParams.ContractAddress.Hex()),
 		fmt.Sprintf("--rpc-port=%d", e2e.TestParams.BeaconNodeRPCPort+index),
 		fmt.Sprintf("--http-web3provider=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
@@ -75,7 +68,6 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
-	return cmd.Process.Pid
 }
 
 // StartBootnode starts a bootnode and returns its ENR and process ID.
