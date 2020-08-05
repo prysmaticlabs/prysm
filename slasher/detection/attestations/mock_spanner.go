@@ -2,7 +2,6 @@ package attestations
 
 import (
 	"context"
-	"sync"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
@@ -14,11 +13,7 @@ var _ = iface.SpanDetector(&MockSpanDetector{})
 // MockSpanDetector defines a struct which can detect slashable
 // attestation offenses by tracking validator min-max
 // spans from validators.
-type MockSpanDetector struct {
-	// Slice of epochs for valindex => min-max span.
-	spans []map[uint64]types.Span
-	lock  sync.RWMutex
-}
+type MockSpanDetector struct{}
 
 // DetectSlashingsForAttestation mocks a detected slashing, if the sent attestation data
 // has a source epoch of 0, nothing will be detected. If the sent attestation data has a target
