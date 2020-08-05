@@ -76,7 +76,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		log := log.WithField("peer", stream.Conn().RemotePeer().Pretty())
 
 		if err := stream.SetReadDeadline(roughtime.Now().Add(ttfbTimeout)); err != nil {
-			log.WithError(err).Error("Could not set stream read deadline")
+			log.WithError(err).Debug("Could not set stream read deadline")
 			return
 		}
 

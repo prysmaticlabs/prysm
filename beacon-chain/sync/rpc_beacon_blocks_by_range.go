@@ -22,7 +22,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	defer span.End()
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
@@ -112,14 +112,14 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(step)
 	blks, err := s.db.Blocks(ctx, filter)
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve blocks")
+		log.WithError(err).Debug("Failed to retrieve blocks")
 		s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 		traceutil.AnnotateError(span, err)
 		return err
 	}
 	roots, err := s.db.BlockRoots(ctx, filter)
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve block roots")
+		log.WithError(err).Debug("Failed to retrieve block roots")
 		s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 		traceutil.AnnotateError(span, err)
 		return err
@@ -128,7 +128,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	if startSlot == 0 {
 		genBlock, genRoot, err := s.retrieveGenesisBlock(ctx)
 		if err != nil {
-			log.WithError(err).Error("Failed to retrieve genesis block")
+			log.WithError(err).Debug("Failed to retrieve genesis block")
 			s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 			traceutil.AnnotateError(span, err)
 			return err
@@ -151,7 +151,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		if isRequestedSlotStep {
 			canonical, err := s.chain.IsCanonical(ctx, roots[i])
 			if err != nil {
-				log.WithError(err).Error("Failed to determine canonical block")
+				log.WithError(err).Debug("Failed to determine canonical block")
 				s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 				traceutil.AnnotateError(span, err)
 				return err
@@ -160,7 +160,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 				continue
 			}
 			if err := s.chunkWriter(stream, b); err != nil {
-				log.WithError(err).Error("Failed to send a chunked response")
+				log.WithError(err).Debug("Failed to send a chunked response")
 				s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 				traceutil.AnnotateError(span, err)
 				return err

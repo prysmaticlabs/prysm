@@ -24,6 +24,7 @@ go_library(
         "//shared/aggregation:__subpackages__",
         "//shared/depositutil:__subpackages__",
         "//proto/testing:__subpackages__",
+        "//slasher/rpc:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",
