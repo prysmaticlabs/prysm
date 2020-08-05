@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -268,25 +267,19 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	if err != nil {
 		return "", err
 	}
-	_, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	// Upon confirmation of the withdrawal key, proceed to display
+	// and write associated deposit data to disk.
+	tx, _, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
-	// We write the ssz-encoded deposit data to disk as a .ssz file.
-	encodedDepositData, err := ssz.Marshal(depositData)
-	if err != nil {
-		return "", errors.Wrap(err, "could not marshal deposit data")
-	}
-	if logAccountInfo {
-		// Log the deposit transaction data to the user.
-		fmt.Printf(`
-========================SSZ Deposit Data===============================
-
+	// Log the deposit transaction data to the user.
+	fmt.Printf(`
+======================Eth1 Deposit Transaction Data================
 %#x
-
-===================================================================`, encodedDepositData)
-	}
+===================================================================`, tx.Data())
+	fmt.Println("")
 
 	// Finally, write the account creation timestamps as a files.
 	newAccountNumber := dr.seedCfg.NextAccount
@@ -365,7 +358,7 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 	return publicKeys, nil
 }
 
-// DepositDataForAccount with a given index returns and ssz-encoded deposit data object.
+// DepositDataForAccount with a given index returns the RLP encoded eth1 deposit transaction data.
 func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, accountIndex)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, accountIndex)
@@ -388,11 +381,11 @@ func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	_, depositData, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	tx, _, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate deposit transaction data")
 	}
-	return ssz.Marshal(depositData)
+	return tx.Data(), nil
 }
 
 func (dr *Keymanager) initializeSecretKeysCache() error {

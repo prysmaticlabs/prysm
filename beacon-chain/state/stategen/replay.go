@@ -318,34 +318,6 @@ func (s *State) archivedState(ctx context.Context, slot uint64) (*state.BeaconSt
 	return st, err
 }
 
-// This recomputes a state given the block root.
-func (s *State) recoverStateByRoot(ctx context.Context, root [32]byte) (*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.recoverStateByRoot")
-	defer span.End()
-
-	lastAncestorState, err := s.lastAncestorState(ctx, root)
-	if err != nil {
-		return nil, err
-	}
-	if lastAncestorState == nil {
-		return nil, errUnknownState
-	}
-
-	targetBlk, err := s.beaconDB.Block(ctx, root)
-	if err != nil {
-		return nil, err
-	}
-	if targetBlk == nil {
-		return nil, errUnknownBlock
-	}
-	blks, err := s.LoadBlocks(ctx, lastAncestorState.Slot()+1, targetBlk.Block.Slot, root)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not load blocks for cold state using root")
-	}
-
-	return s.ReplayBlocks(ctx, lastAncestorState, blks, targetBlk.Block.Slot)
-}
-
 // This processes a state up to input slot.
 func (s *State) processStateUpTo(ctx context.Context, state *state.BeaconState, slot uint64) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.processStateUpTo")

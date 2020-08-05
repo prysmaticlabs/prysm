@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -14,7 +15,7 @@ import (
 
 func TestPreSignatureValidation(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   false,
+		LocalProtection:   true,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
@@ -46,9 +47,39 @@ func TestPreSignatureValidation(t *testing.T) {
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
+func TestPreSignatureValidation_NilLocal(t *testing.T) {
+	config := &featureconfig.Flags{
+		LocalProtection:   true,
+		SlasherProtection: false,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
+	validator, _, finish := setup(t)
+	defer finish()
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: []byte("great block"),
+			Source: &ethpb.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 10,
+				Root:  []byte("good target"),
+			},
+		},
+	}
+	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	err := validator.preAttSignValidations(context.Background(), att, fakePubkey)
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
+}
+
 func TestPostSignatureUpdate(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   false,
+		LocalProtection:   true,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
@@ -77,6 +108,36 @@ func TestPostSignatureUpdate(t *testing.T) {
 	require.ErrorContains(t, failedPostAttSignExternalErr, err, "Expected error on post signature update is detected as slashable")
 	mockProtector.AllowAttestation = true
 	err = validator.postAttSignUpdate(context.Background(), att, validatorPubKey)
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
+}
+
+func TestPostSignatureUpdate_NilLocal(t *testing.T) {
+	config := &featureconfig.Flags{
+		LocalProtection:   true,
+		SlasherProtection: false,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
+	validator, _, finish := setup(t)
+	defer finish()
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: []byte("great block"),
+			Source: &ethpb.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 10,
+				Root:  []byte("good target"),
+			},
+		},
+	}
+	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	err := validator.postAttSignUpdate(context.Background(), att, fakePubkey)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 

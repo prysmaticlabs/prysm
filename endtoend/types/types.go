@@ -14,6 +14,7 @@ type E2EConfig struct {
 	TestSync       bool
 	TestSlasher    bool
 	TestDeposits   bool
+	UsePprof       bool
 	Evaluators     []Evaluator
 }
 

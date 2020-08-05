@@ -99,4 +99,9 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 	if !db.HasState(ctx, r) {
 		t.Error("Did not save checkpoint to database")
 	}
+
+	// Should not panic with genesis finalized root.
+	if err := svc.ForceCheckpoint(ctx, params.BeaconConfig().ZeroHash[:]); err != nil {
+		t.Error(err)
+	}
 }

@@ -11,9 +11,9 @@ import (
 const (
 	// Constants for passwords.
 	minPasswordLength = 8
-	// Min password score of 3 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
+	// Min password score of 2 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
 	// library for strong-entropy password computation.
-	minPasswordScore = 3
+	minPasswordScore = 2
 )
 
 // NotEmpty is a validation function to make sure the input given isn't empty and is valid unicode.
