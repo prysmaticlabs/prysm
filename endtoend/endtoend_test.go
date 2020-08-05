@@ -43,13 +43,15 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	components.StartBeaconNodes(t, config, bootnodeENR)
 	components.StartValidatorClients(t, config, keystorePath)
 	defer helpers.LogOutput(t, config)
-	defer func() {
-		for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-			if err := helpers.WriteHeapFile(e2e.TestParams.LogPath, i); err != nil {
-				t.Error(err)
+	if config.UsePprof {
+		defer func() {
+			for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+				if err := helpers.WritePprofFiles(e2e.TestParams.LogPath, i); err != nil {
+					t.Error(err)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
 	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
@@ -138,8 +140,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	conns = append(conns, syncConn)
 
-	// Sleep a second for every 8 blocks that need to be synced for the newly started node.
-	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 8 * config.EpochsToRun)
+	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
+	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 4 * config.EpochsToRun)
 	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
 	time.Sleep(time.Until(waitForSync))
 
