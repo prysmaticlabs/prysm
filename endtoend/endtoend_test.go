@@ -43,13 +43,15 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	components.StartBeaconNodes(t, config, bootnodeENR)
 	components.StartValidatorClients(t, config, keystorePath)
 	defer helpers.LogOutput(t, config)
-	defer func() {
-		for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-			if err := helpers.WritePprofFiles(e2e.TestParams.LogPath, i); err != nil {
-				t.Error(err)
+	if config.UsePprof {
+		defer func() {
+			for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+				if err := helpers.WritePprofFiles(e2e.TestParams.LogPath, i); err != nil {
+					t.Error(err)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
 	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)

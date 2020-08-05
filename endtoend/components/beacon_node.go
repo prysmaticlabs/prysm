@@ -51,11 +51,13 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 		fmt.Sprintf("--bootstrap-node=%s", enr),
-		fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50),
-		"--pprof",
 		"--verbosity=debug",
 		"--force-clear-db",
 		"--e2e-config",
+	}
+	if config.UsePprof {
+		args = append(args, fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50))
+		args = append(args, "--pprof")
 	}
 	args = append(args, featureconfig.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
