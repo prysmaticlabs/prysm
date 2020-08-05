@@ -15,6 +15,7 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
 )
 
@@ -180,9 +181,14 @@ func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.B
 		select {
 		case <-ticker.C:
 			log.Info("Context closed, attempting to restart attestation stream")
-			_, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
+			conn, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
 			if err != nil {
-				log.Debug("failed to dial beacon node")
+				log.Debug("Failed to dial beacon node")
+				continue
+			}
+			log.Debugf("connection status %v", conn.GetState())
+			if conn.GetState() == connectivity.TransientFailure || conn.GetState() == connectivity.Idle {
+				log.Debug("Beacon node is still down")
 				continue
 			}
 			stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
@@ -205,9 +211,14 @@ func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_St
 		select {
 		case <-ticker.C:
 			log.Info("Context closed, attempting to restart block stream")
-			_, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
+			conn, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
 			if err != nil {
-				log.Debug("failed to dial beacon node")
+				log.Debug("Failed to dial beacon node")
+				continue
+			}
+			log.Debugf("connection status %v", conn.GetState())
+			if conn.GetState() == connectivity.TransientFailure || conn.GetState() == connectivity.Idle {
+				log.Debug("Beacon node is still down")
 				continue
 			}
 			stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
