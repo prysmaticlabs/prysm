@@ -141,12 +141,12 @@ var (
 	}
 	// ChainID defines a flag to set the chain id. If none is set, it derives this value from NetworkConfig
 	ChainID = &cli.Uint64Flag{
-		Name: "chain-id",
+		Name:  "chain-id",
 		Usage: "Sets the chain id of the beacon chain",
 	}
 	// NetworkID defines a flag to set the network id. If none is set, it derives this value from NetworkConfig
 	NetworkID = &cli.Uint64Flag{
-		Name: "network-id",
+		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
 	}
 )
