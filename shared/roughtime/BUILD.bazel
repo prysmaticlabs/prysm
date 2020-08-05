@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/roughtime",
     visibility = ["//visibility:public"],
     deps = [
-        "//shared/runutil:go_default_library",
         "@com_github_cloudflare_roughtime//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
