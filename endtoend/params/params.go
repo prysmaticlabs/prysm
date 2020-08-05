@@ -38,6 +38,9 @@ var BootNodeLogFileName = "bootnode.log"
 // BeaconNodeLogFileName is the file name used for the beacon chain node logs.
 var BeaconNodeLogFileName = "beacon-%d.log"
 
+// BeaconNodeCPUProfileFileName is the file name used for the beacon chain cpu profiles.
+var BeaconNodeCPUProfileFileName = "beacon-cpu-%d.out"
+
 // SlasherLogFileName is the file name used for the slasher client logs.
 var SlasherLogFileName = "slasher-%d.log"
 

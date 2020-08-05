@@ -23,8 +23,26 @@ import (
 const (
 	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
 	filePollingInterval = 500 * time.Millisecond
-	heapFileName        = "node_heap_%d.pb.gz"
+	memoryHeapFileName  = "node_heap_%d.pb.gz"
+	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
 )
+
+// KillProcesses finds the passed in process IDs and kills the process.
+func KillProcesses(t *testing.T, pIDs []int) {
+	for _, id := range pIDs {
+		process, err := os.FindProcess(id)
+		if err != nil {
+			t.Fatalf("Could not find process %d: %v", id, err)
+		}
+		if err := process.Kill(); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := process.Wait(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	time.Sleep(5 * time.Second)
+}
 
 // DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
 // If not, it just creates the requested file.
@@ -121,23 +139,30 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 	}
 
 	t.Logf("==================== Start of %s %d error output ==================\n", title, index)
-	var lines uint64
 	for _, err := range errorLines {
-		lines++
-		if lines >= 10 {
-			break
-		}
 		t.Log(err)
 	}
 }
 
-// WriteHeapFile writes a heap file to the test path.
-func WriteHeapFile(testDir string, index int) error {
-	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
-	filePath := filepath.Join(testDir, fmt.Sprintf(heapFileName, index))
+// WritePprofFiles writes the memory heap and cpu profile files to the test path.
+func WritePprofFiles(testDir string, index int) error {
 	if err := os.MkdirAll(filepath.Join(testDir), os.ModePerm); err != nil {
 		return err
 	}
+	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	filePath := filepath.Join(testDir, fmt.Sprintf(memoryHeapFileName, index))
+	if err := writeURLRespAtPath(url, filePath); err != nil {
+		return err
+	}
+	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
+	if err := writeURLRespAtPath(url, filePath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeURLRespAtPath(url string, filePath string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
