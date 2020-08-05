@@ -178,4 +178,5 @@ func writeURLRespAtPath(url string, filePath string) error {
 	if _, err := file.Write(body); err != nil {
 		return err
 	}
+	return nil
 }
