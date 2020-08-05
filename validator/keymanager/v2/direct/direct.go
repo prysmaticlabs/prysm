@@ -2,6 +2,7 @@ package direct
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -372,16 +373,22 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 	var secretKey []byte
 	var password string
 	var err error
+	publicKey, err := hex.DecodeString(keystore.Pubkey)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "could not decode public key")
+	}
+	formattedPublicKey := fmt.Sprintf("%#x", bytesutil.Trunc(publicKey))
 	for {
 		password, err = promptutil.PasswordPrompt(
-			"Wrong password entered, try again", promptutil.NotEmpty,
+			fmt.Sprintf("\nPlease try again, could not use password to import account %s", au.BrightGreen(formattedPublicKey)),
+			promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, "", fmt.Errorf("could not read account password: %v", err)
 		}
 		secretKey, err = decryptor.Decrypt(keystore.Crypto, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Println(au.Red("Incorrect password entered, please try again"))
+			fmt.Print(au.Red("Incorrect password entered, please try again"))
 			continue
 		}
 		if err != nil {

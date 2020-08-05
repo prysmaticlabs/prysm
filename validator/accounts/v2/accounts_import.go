@@ -61,14 +61,14 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet")
 	}
-	isDir, err := hasDir(keysDir)
-	if err != nil {
-		return errors.Wrap(err, "could not determine if path is a directory")
-	}
 
 	keystoresImported := make([]*v2keymanager.Keystore, 0)
 
 	// Consider that the keysDir might be a path to a specific file and handle accordingly.
+	isDir, err := hasDir(keysDir)
+	if err != nil {
+		return errors.Wrap(err, "could not determine if path is a directory")
+	}
 	if isDir {
 		files, err := ioutil.ReadDir(keysDir)
 		if err != nil {
