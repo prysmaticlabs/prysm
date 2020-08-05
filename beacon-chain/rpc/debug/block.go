@@ -42,7 +42,10 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	ds.GenesisTimeFetcher.CurrentSlot()
 
 	// Attestation has one epoch to get included in the chain. This blocks users from requesting too soon.
-	epochBack := ds.GenesisTimeFetcher.CurrentSlot() - params.BeaconConfig().SlotsPerEpoch
+	epochBack := uint64(0)
+	if ds.GenesisTimeFetcher.CurrentSlot() > params.BeaconConfig().SlotsPerEpoch {
+		epochBack = ds.GenesisTimeFetcher.CurrentSlot() - params.BeaconConfig().SlotsPerEpoch
+	}
 	if epochBack < req.Slot {
 		return nil, fmt.Errorf("attestation has one epoch window, please request slot older than %d", epochBack)
 	}
