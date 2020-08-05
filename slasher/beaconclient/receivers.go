@@ -7,6 +7,8 @@ import (
 	"io"
 	"time"
 
+	"google.golang.org/grpc"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -46,7 +48,7 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 		if err != nil {
 			if e, ok := status.FromError(err); ok {
 				switch e.Code() {
-				case codes.Canceled:
+				case codes.Canceled, codes.Internal:
 					stream, err = bs.restartBlockStream(ctx)
 					if err != nil {
 						log.WithError(err).Error("Could not restart stream")
@@ -109,7 +111,7 @@ func (bs *Service) ReceiveAttestations(ctx context.Context) {
 		if err != nil {
 			if e, ok := status.FromError(err); ok {
 				switch e.Code() {
-				case codes.Canceled:
+				case codes.Canceled, codes.Internal:
 					stream, err = bs.restartIndexedAttestationStream(ctx)
 					if err != nil {
 						log.WithError(err).Error("Could not restart stream")
@@ -179,6 +181,11 @@ func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.B
 		select {
 		case <-ticker.C:
 			log.Info("Context closed, attempting to restart attestation stream")
+			_, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
+			if err != nil {
+				log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
+				continue
+			}
 			stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 			if err != nil {
 				continue
@@ -199,6 +206,11 @@ func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_St
 		select {
 		case <-ticker.C:
 			log.Info("Context closed, attempting to restart block stream")
+			_, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
+			if err != nil {
+				log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
+				continue
+			}
 			stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
 			if err != nil {
 				continue
