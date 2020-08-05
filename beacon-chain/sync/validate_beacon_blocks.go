@@ -40,7 +40,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode message")
+		log.WithError(err).Debug("Failed to decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -80,7 +80,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	// Check if parent is a bad block and then reject the block.
 	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block.ParentRoot)) {
-		log.Errorf("Received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block.ParentRoot)
+		log.Debugf("Received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block.ParentRoot)
 		s.setBadBlock(blockRoot)
 		return pubsub.ValidationReject
 	}

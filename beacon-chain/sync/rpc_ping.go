@@ -20,7 +20,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	m, ok := msg.(*uint64)
 	if !ok {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
@@ -36,19 +36,19 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, seqError, stream)
 		}
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return err
 	}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return err
 	}
 	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.MetadataSeq()); err != nil {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return err
 	}
@@ -56,7 +56,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	if valid {
 		// If the sequence number was valid we're done.
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return nil
 	}
@@ -65,7 +65,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	go func() {
 		defer func() {
 			if err := stream.Close(); err != nil {
-				log.WithError(err).Error("Failed to close stream")
+				log.WithError(err).Debug("Failed to close stream")
 			}
 		}()
 		// New context so the calling function doesn't cancel on us.

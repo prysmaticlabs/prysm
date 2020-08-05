@@ -64,7 +64,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		return nil, err
 	}
 
-	if cliCtx.IsSet(flags.EnableHistoricalDetectionFlag.Name) {
+	if cliCtx.Bool(flags.EnableHistoricalDetectionFlag.Name) {
 		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.
 		cmdConfig := cmd.Get()
 		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
@@ -230,7 +230,7 @@ func (s *SlasherNode) registerDetectionService() error {
 		ChainFetcher:          bs,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
-		HistoricalDetection:   s.cliCtx.IsSet(flags.EnableHistoricalDetectionFlag.Name),
+		HistoricalDetection:   s.cliCtx.Bool(flags.EnableHistoricalDetectionFlag.Name),
 	})
 	return s.services.RegisterService(ds)
 }

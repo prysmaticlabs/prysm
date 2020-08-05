@@ -197,6 +197,31 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	}
 }
 
+func TestChainService_CorrectGenesisRoots(t *testing.T) {
+	ctx := context.Background()
+	db, sc := testDB.SetupDB(t)
+
+	chainService := setupBeaconChain(t, db, sc)
+
+	genesisBlk := testutil.NewBeaconBlock()
+	blkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
+	s := testutil.NewBeaconState()
+	require.NoError(t, s.SetSlot(0))
+	require.NoError(t, db.SaveState(ctx, s, blkRoot))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
+	// Test the start function.
+	chainService.Start()
+
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.justifiedCheckpt.Root, "Justified Checkpoint root is incorrect")
+
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+
+}
+
 func TestChainService_InitializeChainInfo(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	ctx := context.Background()

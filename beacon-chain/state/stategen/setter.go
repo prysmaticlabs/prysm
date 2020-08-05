@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -29,6 +30,12 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	defer span.End()
 
 	root32 := bytesutil.ToBytes32(root)
+	// Before the first finalized check point, the finalized root is zero hash.
+	// Return early if there hasn't been a finalized check point.
+	if root32 == params.BeaconConfig().ZeroHash {
+		return nil
+	}
+
 	fs, err := s.loadHotStateByRoot(ctx, root32)
 	if err != nil {
 		return err

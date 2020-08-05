@@ -176,7 +176,7 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
 		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
