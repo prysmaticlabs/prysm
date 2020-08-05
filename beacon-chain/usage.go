@@ -106,6 +106,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableDebugRPCEndpoints,
 			flags.SlotsPerArchivedPoint,
 			flags.HistoricalSlasherNode,
+			flags.ChainID,
+			flags.NetworkID,
 		},
 	},
 	{
