@@ -47,7 +47,19 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 	if err != nil {
 		return err
 	}
-	return topicHandle.Publish(ctx, data, opts...)
+
+	// Wait for at least 1 peer to be available to receive the published message.
+	for {
+		if len(topicHandle.ListPeers()) > 0 {
+			return topicHandle.Publish(ctx, data, opts...)
+		}
+		select {
+		case <- ctx.Done():
+			return ctx.Err()
+		default:
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 }
 
 // SubscribeToTopic joins (if necessary) and subscribes to PubSub topic.

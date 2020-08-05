@@ -89,7 +89,7 @@ func (s *Service) listenForNewNodes() {
 			continue
 		}
 		go func(info *peer.AddrInfo) {
-			if err := s.connectWithPeer(*info); err != nil {
+			if err := s.connectWithPeer(s.ctx, *info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(peerInfo)

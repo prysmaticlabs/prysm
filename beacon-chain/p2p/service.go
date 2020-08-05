@@ -390,21 +390,21 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	for _, info := range addrInfos {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
-			if err := s.connectWithPeer(info); err != nil {
+			if err := s.connectWithPeer(s.ctx, info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(info)
 	}
 }
 
-func (s *Service) connectWithPeer(info peer.AddrInfo) error {
+func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error {
 	if info.ID == s.host.ID() {
 		return nil
 	}
 	if s.Peers().IsBad(info.ID) {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
+	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 	if err := s.host.Connect(ctx, info); err != nil {
 		s.Peers().Scorers().BadResponsesScorer().Increment(info.ID)

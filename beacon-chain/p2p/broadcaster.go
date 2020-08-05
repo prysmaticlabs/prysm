@@ -5,11 +5,13 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -22,6 +24,10 @@ var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub top
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
 	defer span.End()
+	twoSlots := time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, twoSlots)
+	defer cancel()
+
 	forkDigest, err := s.forkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
@@ -41,12 +47,31 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
 	defer span.End()
+	oneEpoch := time.Duration(1*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, oneEpoch)
+	defer cancel()
 	forkDigest, err := s.forkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
+	// Ensure we have peers with this subnet.
+	if !s.hasPeerWithSubnet(subnet) {
+		for {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			ok, err := s.FindPeersWithSubnet(ctx, subnet)
+			if err != nil {
+				return err
+			}
+			if ok {
+				break
+			}
+		}
+	}
+
 	return s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest))
 }
 
