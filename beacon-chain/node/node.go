@@ -138,6 +138,16 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
 		params.OverrideBeaconNetworkConfig(networkCfg)
 	}
+	if cliCtx.IsSet(flags.ChainID.Name) {
+		c := params.BeaconNetworkConfig()
+		c.ChainID = cliCtx.Uint64(flags.ChainID.Name)
+		params.OverrideBeaconNetworkConfig(c)
+	}
+	if cliCtx.IsSet(flags.NetworkID.Name) {
+		c := params.BeaconNetworkConfig()
+		c.NetworkID = cliCtx.Uint64(flags.NetworkID.Name)
+		params.OverrideBeaconNetworkConfig(c)
+	}
 
 	registry := shared.NewServiceRegistry()
 
