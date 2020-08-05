@@ -27,9 +27,6 @@ func (store *Store) Close() error {
 func (store *Store) update(fn func(*bolt.Tx) error) error {
 	return store.db.Update(fn)
 }
-func (store *Store) batch(fn func(*bolt.Tx) error) error {
-	return store.db.Batch(fn)
-}
 func (store *Store) view(fn func(*bolt.Tx) error) error {
 	return store.db.View(fn)
 }
