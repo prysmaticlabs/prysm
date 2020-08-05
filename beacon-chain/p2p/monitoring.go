@@ -15,6 +15,12 @@ var (
 		Name: "p2p_repeat_attempts",
 		Help: "The number of repeat attempts the connection handler is triggered for a peer.",
 	})
+	savedAttestationBroadcasts = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "p2p_attestation_subnet_recovered_broadcasts",
+		Help: "The number of attestations that were attempted to be broadcast with no peers on " +
+			"the subnet. The beacon node increments this counter when the broadcast is blocked " +
+			"until a subnet peer can be found.",
+	})
 )
 
 func (s *Service) updateMetrics() {

@@ -67,6 +67,7 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 				return err
 			}
 			if ok {
+				savedAttestationBroadcasts.Inc()
 				break
 			}
 		}
