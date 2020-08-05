@@ -26,6 +26,8 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			}
 			return errors.New(failedPreAttSignLocalErr)
+		} else if !ok {
+			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
 		}
 	}
 
@@ -48,6 +50,8 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 		if ok {
 			attesterHistory = markAttestationForTargetEpoch(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
 			v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		} else {
+			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
 		}
 		v.attesterHistoryByPubKeyLock.Unlock()
 	}
