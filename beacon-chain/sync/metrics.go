@@ -89,7 +89,7 @@ func (s *Service) updateMetrics() {
 	// We update the dynamic subnet topics.
 	digest, err := s.forkDigest()
 	if err != nil {
-		log.WithError(err).Errorf("Could not compute fork digest")
+		log.WithError(err).Debugf("Could not compute fork digest")
 	}
 	indices := s.aggregatorSubnetIndices(s.chain.CurrentSlot())
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]

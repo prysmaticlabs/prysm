@@ -39,7 +39,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			break
 		}
 		if err != nil {
-			log.WithError(err).Error("Unable to retrieve block from stream")
+			log.WithError(err).Debug("Unable to retrieve block from stream")
 			return err
 		}
 
@@ -60,7 +60,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
@@ -75,10 +75,10 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	if len(blockRoots) == 0 {
 		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
 		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
+			log.WithError(err).Debug("Failed to generate a response error")
 		} else {
 			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
+				log.WithError(err).Debugf("Failed to write to stream")
 			}
 		}
 		return errors.New("no block roots provided")
@@ -90,10 +90,10 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
 		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "requested more than the max block limit")
 		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
+			log.WithError(err).Debug("Failed to generate a response error")
 		} else {
 			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
+				log.WithError(err).Debugf("Failed to write to stream")
 			}
 		}
 		return errors.New("requested more than the max block limit")
@@ -103,13 +103,13 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	for _, root := range blockRoots {
 		blk, err := s.db.Block(ctx, root)
 		if err != nil {
-			log.WithError(err).Error("Failed to fetch block")
+			log.WithError(err).Debug("Failed to fetch block")
 			resp, err := s.generateErrorResponse(responseCodeServerError, genericError)
 			if err != nil {
-				log.WithError(err).Error("Failed to generate a response error")
+				log.WithError(err).Debug("Failed to generate a response error")
 			} else {
 				if _, err := stream.Write(resp); err != nil {
-					log.WithError(err).Errorf("Failed to write to stream")
+					log.WithError(err).Debugf("Failed to write to stream")
 				}
 			}
 			return err

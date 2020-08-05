@@ -15,8 +15,7 @@ func unmarshalAttestationHistory(ctx context.Context, enc []byte) (*slashpb.Atte
 	ctx, span := trace.StartSpan(ctx, "Validator.unmarshalAttestationHistory")
 	defer span.End()
 	history := &slashpb.AttestationHistory{}
-	err := proto.Unmarshal(enc, history)
-	if err != nil {
+	if err := proto.Unmarshal(enc, history); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return history, nil
@@ -24,7 +23,7 @@ func unmarshalAttestationHistory(ctx context.Context, enc []byte) (*slashpb.Atte
 
 // AttestationHistoryForPubKeys accepts an array of validator public keys and returns a mapping of corresponding attestation history.
 func (store *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistory")
+	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeys")
 	defer span.End()
 
 	if len(publicKeys) == 0 {
@@ -38,7 +37,7 @@ func (store *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys
 		for _, key := range publicKeys {
 			enc := bucket.Get(key[:])
 			var attestationHistory *slashpb.AttestationHistory
-			if enc == nil {
+			if len(enc) == 0 {
 				newMap := make(map[uint64]uint64)
 				newMap[0] = params.BeaconConfig().FarFutureEpoch
 				attestationHistory = &slashpb.AttestationHistory{
@@ -59,7 +58,7 @@ func (store *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys
 
 // SaveAttestationHistoryForPubKeys saves the attestation histories for the requested validator public keys.
 func (store *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*slashpb.AttestationHistory) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistory")
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeys")
 	defer span.End()
 
 	encoded := make(map[[48]byte][]byte)
