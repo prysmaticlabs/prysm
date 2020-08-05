@@ -59,6 +59,7 @@ type Service struct {
 	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
 	publicKeyCache              *cache.PublicKeyCache
 	genesisValidatorRoot        []byte
+	beaconDialOptions           []grpc.DialOption
 }
 
 // Config options for the beaconclient service.
@@ -173,6 +174,7 @@ func (bs *Service) Start() {
 	if err != nil {
 		log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
 	}
+	bs.beaconDialOptions = beaconOpts
 	log.Info("Successfully started gRPC connection")
 	bs.conn = conn
 	bs.beaconClient = ethpb.NewBeaconChainClient(bs.conn)
