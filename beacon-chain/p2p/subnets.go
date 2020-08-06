@@ -6,7 +6,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -23,12 +22,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		return false, nil
 	}
 	iterator := s.dv5Listener.RandomNodes()
-
-	// Select appropriate size for search.
-	maxSize := uint64(len(s.dv5Listener.AllNodes()))
-	min := int(mathutil.Min(maxSize, lookupLimit))
-
-	nodes := enode.ReadNodes(iterator, min)
+	nodes := enode.ReadNodes(iterator, lookupLimit)
 	exists := false
 	for _, node := range nodes {
 		if node.IP() == nil {
