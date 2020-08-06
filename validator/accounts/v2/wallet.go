@@ -13,7 +13,6 @@ import (
 	"time"
 
 	petname "github.com/dustinkirkland/golang-petname"
-	"github.com/k0kubun/go-ansi"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -23,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -97,7 +95,7 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 		walletDir:      walletDir,
 	}
-	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
+	if keymanagerKind == v2keymanager.Derived {
 		walletPassword, err := inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,
@@ -189,9 +187,12 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 				validateExistingPass,
 			)
 		} else {
-			passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
-			if err != nil {
-				return nil, err
+			passwordsDir := w.passwordsDir
+			if passwordsDir == "" {
+				passwordsDir, err = inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
+				if err != nil {
+					return nil, err
+				}
 			}
 			w.passwordsDir = passwordsDir
 			au := aurora.NewAurora(true)
@@ -501,86 +502,6 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 	return nil
 }
 
-func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames []string, pubKeys [][]byte) error {
-	au := aurora.NewAurora(true)
-	var password string
-	var err error
-	ctx := context.Background()
-	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return err
-		}
-		password = string(data)
-		for i := 0; i < len(accountNames); i++ {
-			err = w.checkPasswordForAccount(accountNames[i], password)
-			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				return fmt.Errorf("invalid password for account with public key %#x", pubKeys[i])
-			}
-			if err != nil {
-				return err
-			}
-			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
-				return errors.Wrap(err, "could not write password to disk")
-			}
-		}
-	} else {
-		password, err = inputWeakPassword(
-			cliCtx,
-			flags.AccountPasswordFileFlag,
-			"Enter the password for your imported accounts",
-		)
-		fmt.Println("Importing accounts, this may take a while...")
-		bar := progressbar.NewOptions(
-			len(accountNames),
-			progressbar.OptionFullWidth(),
-			progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
-			progressbar.OptionEnableColorCodes(true),
-			progressbar.OptionSetTheme(progressbar.Theme{
-				Saucer:        "[green]=[reset]",
-				SaucerHead:    "[green]>[reset]",
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			}),
-			progressbar.OptionOnCompletion(func() { fmt.Println() }),
-			progressbar.OptionSetDescription("Importing accounts"),
-		)
-		ctx := context.Background()
-		for i := 0; i < len(accountNames); i++ {
-			// We check if the individual account unlocks with the global password.
-			err = w.checkPasswordForAccount(accountNames[i], password)
-			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				// If the password fails for an individual account, we ask the user to input
-				// that individual account's password until it succeeds.
-				individualPassword, err := w.askUntilPasswordConfirms(cliCtx, accountNames[i], pubKeys[i])
-				if err != nil {
-					return err
-				}
-				if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, individualPassword); err != nil {
-					return errors.Wrap(err, "could not write password to disk")
-				}
-				if err := bar.Add(1); err != nil {
-					return errors.Wrap(err, "could not add to progress bar")
-				}
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Finished importing %#x\n", au.BrightMagenta(bytesutil.Trunc(pubKeys[i])))
-			if err := w.WritePasswordToDisk(ctx, accountNames[i]+direct.PasswordFileSuffix, password); err != nil {
-				return errors.Wrap(err, "could not write password to disk")
-			}
-			if err := bar.Add(1); err != nil {
-				return errors.Wrap(err, "could not add to progress bar")
-			}
-		}
-	}
-	return nil
-}
-
 func (w *Wallet) askUntilPasswordConfirms(cliCtx *cli.Context, accountName string, pubKey []byte) (string, error) {
 	// Loop asking for the password until the user enters it correctly.
 	var password string
@@ -670,7 +591,11 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
 		if !isEmptyWallet {
-			return OpenWallet(cliCtx)
+			wallet, err := OpenWallet(cliCtx)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not open wallet")
+			}
+			return wallet, nil
 		}
 	}
 	return creationFunc(cliCtx)
