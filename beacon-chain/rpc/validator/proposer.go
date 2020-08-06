@@ -226,6 +226,8 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
 
+	log.Errorf("majority vote at slot %v", slot)
+
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
 	}
@@ -235,7 +237,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 	eth1DataNotification = false
 
 	slotsPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
-	currentPeriodVotingStartTime := vs.slotStartTime(slot)
+	currentPeriodVotingStartTime := vs.slotStartTime(slot) + 1 - 1
 	// Can't use slotStartTime function because slot would be negative in the initial voting period.
 	previousPeriodVotingStartTime := currentPeriodVotingStartTime -
 		slotsPerVotingPeriod*params.BeaconConfig().SecondsPerSlot
@@ -264,6 +266,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 	if len(headState.Eth1DataVotes()) == 0 {
+		log.Error("No votes. Choosing default eth1data.")
 		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
 		if err != nil {
 			log.WithError(err).Error("Failed to get eth1 data from current period block number")
@@ -272,11 +275,17 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 		return eth1Data, nil
 	}
 
+	log.Errorf("votes at slot: %v", slot)
+	for _, v := range headState.Eth1DataVotes() {
+		log.Errorf("Deposit count: %v, Hash: %v", v.DepositCount, hex.EncodeToString(v.BlockHash))
+	}
+
 	inRangeVotes, err := vs.inRangeVotes(ctx, currentPeriodInitialBlock, previousPeriodInitialBlock)
 	if err != nil {
 		return nil, err
 	}
 	if len(inRangeVotes) == 0 {
+		log.Error("No votes in range. Choosing default eth1data.")
 		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
 		if err != nil {
 			log.WithError(err).Error("Failed to get eth1 data from current period block number")
@@ -286,6 +295,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, slot uint64) (*ethpb
 	}
 
 	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
+	log.Errorf("Chosen hash: %v, Votes: %v", hex.EncodeToString(chosenVote.data.eth1Data.BlockHash), chosenVote.votes)
 	return &chosenVote.data.eth1Data, nil
 }
 
@@ -319,7 +329,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		}
 		// previousPeriodInitialBlock.Cmp(height) == -1 filters out all blocks AT or BEFORE previousPeriodInitialBlock
 		// currentPeriodInitialBlock.Cmp(height) > -1 filters out all blocks AFTER currentPeriodInitialBlock
-		if ok && previousPeriodInitialBlock.Cmp(height) == -1 && currentPeriodInitialBlock.Cmp(height) > -1 {
+		if ok && previousPeriodInitialBlock.Cmp(height) < 1 && currentPeriodInitialBlock.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
 	}
