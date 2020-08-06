@@ -49,13 +49,14 @@ message SignRequest {
     // Signature domain and the beacon chain objects to allow server to verify
     // the contents and to prevent slashing.
     bytes signature_domain = 3;
+    // Beacon chain objects. [100-200]
     oneof object {
-        ethereum.eth.v1alpha1.BeaconBlock block = 4;
-        ethereum.eth.v1alpha1.AttestationData attestation_data = 5;
-        ethereum.eth.v1alpha1.AggregateAttestationAndProof aggregate_attestation_and_proof = 6;
-        ethereum.eth.v1alpha1.VoluntaryExit exit = 7;
-        uint64 slot = 8;
-        uint64 epoch = 9;
+        ethereum.eth.v1alpha1.BeaconBlock block = 101;
+        ethereum.eth.v1alpha1.AttestationData attestation_data = 102;
+        ethereum.eth.v1alpha1.AggregateAttestationAndProof aggregate_attestation_and_proof = 103;
+        ethereum.eth.v1alpha1.VoluntaryExit exit = 104;
+        uint64 slot = 105;
+        uint64 epoch = 106;
     }
 }
 
