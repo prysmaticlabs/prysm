@@ -10,6 +10,7 @@ import (
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -88,9 +89,20 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	} else if err != nil {
 		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 	}
-	pubKeyBytes, err := hex.DecodeString(keystore.Pubkey)
-	if err != nil {
-		return nil, nil, "", errors.Wrap(err, "could not decode pubkey from keystore")
+	var pubKeyBytes []byte
+	// Attempt to use the pubkey present in the keystore itself as a field. If unavailable,
+	// then utilize the public key directly from the private key.
+	if keystore.Pubkey != "" {
+		pubKeyBytes, err = hex.DecodeString(keystore.Pubkey)
+		if err != nil {
+			return nil, nil, "", errors.Wrap(err, "could not decode pubkey from keystore")
+		}
+	} else {
+		privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
+		if err != nil {
+			return nil, nil, "", errors.Wrap(err, "could not initialize private key from bytes")
+		}
+		pubKeyBytes = privKey.PublicKey().Marshal()
 	}
 	return privKeyBytes, pubKeyBytes, password, nil
 }
