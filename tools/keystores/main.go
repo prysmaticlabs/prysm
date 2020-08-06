@@ -71,7 +71,7 @@ func main() {
 			},
 			{
 				Name:  "encrypt",
-				Usage: "encrypt a specified hex string into a keystore file",
+				Usage: "encrypt a specified hex value of a BLS12-381 private key into a keystore file",
 				Flags: []cli.Flag{
 					passwordFlag,
 					privateKeyFlag,
