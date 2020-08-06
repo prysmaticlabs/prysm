@@ -30,7 +30,7 @@ type attList []*ethpb.Attestation
 var aggregateSignatures = bls.AggregateSignatures
 var signatureFromBytes = bls.SignatureFromBytes
 
-var log = logrus.WithField("prefix", "aggregation.attestations")
+var _ = logrus.WithField("prefix", "aggregation.attestations")
 
 // ErrInvalidAttestationCount is returned when insufficient number
 // of attestations is provided for aggregation.

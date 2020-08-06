@@ -17,6 +17,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -96,24 +97,18 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 		walletDir:      walletDir,
 	}
-	if keymanagerKind == v2keymanager.Derived {
+	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
 		walletPassword, err := inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,
 			newWalletPasswordPromptText,
 			confirmPass,
+			promptutil.ValidatePasswordInput,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get password")
 		}
 		w.walletPassword = walletPassword
-	}
-	if keymanagerKind == v2keymanager.Direct {
-		passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get password directory")
-		}
-		w.passwordsDir = passwordsDir
 	}
 	return w, nil
 }
@@ -152,13 +147,25 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		accountsPath:   walletPath,
 		keymanagerKind: keymanagerKind,
 	}
+	// Check if the wallet is using the new, fast keystore format.
+	hasNewFormat, err := hasDir(filepath.Join(walletPath, direct.AccountsPath))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read wallet dir")
+	}
 	log.Infof("%s %s", au.BrightMagenta("(wallet directory)"), w.walletDir)
 	if keymanagerKind == v2keymanager.Derived {
+		validateExistingPass := func(input string) error {
+			if input == "" {
+				return errors.New("password input cannot be empty")
+			}
+			return nil
+		}
 		walletPassword, err := inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,
 			walletPasswordPromptText,
 			noConfirmPass,
+			validateExistingPass,
 		)
 		if err != nil {
 			return nil, err
@@ -166,29 +173,46 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 		w.walletPassword = walletPassword
 	}
 	if keymanagerKind == v2keymanager.Direct {
-		keymanagerCfg, err := w.ReadKeymanagerConfigFromDisk(context.Background())
-		if err != nil {
-			return nil, err
-		}
-		directCfg, err := direct.UnmarshalConfigFile(keymanagerCfg)
-		if err != nil {
-			return nil, err
-		}
-		w.passwordsDir = directCfg.AccountPasswordsDirectory
-		// If the user provided a flag and for the password directory, and that value does not match
-		// the wallet's configuration then log a warning to the user.
-		// See https://github.com/prysmaticlabs/prysm/issues/6794.
-		if cliCtx.IsSet(flags.WalletPasswordsDirFlag.Name) && cliCtx.String(flags.WalletPasswordsDirFlag.Name) != w.passwordsDir {
-			log.Warnf("The provided value for --%s does not match the wallet configuration. "+
-				"Please edit your wallet password directory using wallet-v2 edit-config.",
-				flags.WalletPasswordsDirFlag.Name,
+		var walletPassword string
+		if hasNewFormat {
+			validateExistingPass := func(input string) error {
+				if input == "" {
+					return errors.New("password input cannot be empty")
+				}
+				return nil
+			}
+			walletPassword, err = inputPassword(
+				cliCtx,
+				flags.WalletPasswordFileFlag,
+				walletPasswordPromptText,
+				noConfirmPass,
+				validateExistingPass,
 			)
-			w.passwordsDir = cliCtx.String(flags.WalletPasswordsDirFlag.Name) // Override config value.
+		} else {
+			passwordsDir, err := inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
+			if err != nil {
+				return nil, err
+			}
+			w.passwordsDir = passwordsDir
+			au := aurora.NewAurora(true)
+			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
+			fmt.Println("\nWe have revamped how imported accounts work, improving speed significantly for your " +
+				"validators as well as reducing memory and CPU requirements. This unifies all your existing accounts " +
+				"into a single format protected by a strong password. You'll need to set a new password for this " +
+				"updated wallet format")
+			walletPassword, err = inputPassword(
+				cliCtx,
+				flags.WalletPasswordFileFlag,
+				newWalletPasswordPromptText,
+				confirmPass,
+				promptutil.ValidatePasswordInput,
+			)
 		}
-		au := aurora.NewAurora(true)
-		log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
+		if err != nil {
+			return nil, err
+		}
+		w.walletPassword = walletPassword
 	}
-	log.Info("Successfully opened wallet")
 	return w, nil
 }
 
@@ -197,7 +221,7 @@ func (w *Wallet) SaveWallet() error {
 	if err := os.MkdirAll(w.accountsPath, DirectoryPermissions); err != nil {
 		return errors.Wrap(err, "could not create wallet directory")
 	}
-	if w.keymanagerKind == v2keymanager.Direct {
+	if w.keymanagerKind == v2keymanager.Direct && w.passwordsDir != "" {
 		if err := os.MkdirAll(w.passwordsDir, DirectoryPermissions); err != nil {
 			return errors.Wrap(err, "could not create passwords directory")
 		}
@@ -213,6 +237,11 @@ func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 // AccountsDir for the wallet.
 func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
+}
+
+// Password for the wallet.
+func (w *Wallet) Password() string {
+	return w.walletPassword
 }
 
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
@@ -620,10 +649,13 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 	if err != nil {
 		return 0, fmt.Errorf("could not read files in directory: %s", walletPath)
 	}
-	if len(list) != 1 {
-		return 0, fmt.Errorf("wanted 1 directory in wallet dir, received %d", len(list))
+	for _, n := range list {
+		keymanagerKind, err := v2keymanager.ParseKind(n)
+		if err == nil {
+			return keymanagerKind, nil
+		}
 	}
-	return v2keymanager.ParseKind(list[0])
+	return 0, errors.New("no keymanager folder, 'direct', 'remote', nor 'derived' found in wallet path")
 }
 
 func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
@@ -668,19 +700,26 @@ func hasDir(dirPath string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
+	if info == nil {
+		return false, err
+	}
 	return info.IsDir(), err
 }
 
 // isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.
 // Returns true if exists, false otherwise.
 func isEmptyWallet(name string) (bool, error) {
-	f, err := os.Open(name)
+	expanded, err := expandPath(name)
+	if err != nil {
+		return false, err
+	}
+	f, err := os.Open(expanded)
 	if err != nil {
 		return false, err
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.Debugf("Could not close directory: %s", name)
+			log.Debugf("Could not close directory: %s", expanded)
 		}
 	}()
 	names, err := f.Readdirnames(-1)

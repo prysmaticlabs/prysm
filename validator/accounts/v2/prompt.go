@@ -22,7 +22,7 @@ const (
 	importKeysDirPromptText      = "Enter the directory or filepath where your keystores to import are located"
 	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
 	walletDirPromptText          = "Enter a wallet directory"
-	passwordsDirPromptText       = "Directory where passwords will be stored"
+	passwordsDirPromptText       = "Directory where your account passwords are"
 	newWalletPasswordPromptText  = "New wallet password"
 	confirmPasswordPromptText    = "Confirm password"
 	walletPasswordPromptText     = "Wallet password"
@@ -82,6 +82,7 @@ func inputPassword(
 	passwordFileFlag *cli.StringFlag,
 	promptText string,
 	confirmPassword passwordConfirm,
+	passwordValidator func(input string) error,
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
@@ -94,7 +95,7 @@ func inputPassword(
 			return "", errors.Wrap(err, "could not read password file")
 		}
 		enteredPassword := strings.TrimRight(string(data), "\r\n")
-		if err := promptutil.ValidatePasswordInput(enteredPassword); err != nil {
+		if err := passwordValidator(enteredPassword); err != nil {
 			return "", errors.Wrap(err, "password did not pass validation")
 		}
 		return enteredPassword, nil
@@ -103,13 +104,13 @@ func inputPassword(
 	var walletPassword string
 	var err error
 	for !hasValidPassword {
-		walletPassword, err = promptutil.PasswordPrompt(promptText, promptutil.ValidatePasswordInput)
+		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
 		if err != nil {
 			return "", fmt.Errorf("could not read account password: %v", err)
 		}
 
 		if confirmPassword == confirmPass {
-			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, promptutil.ValidatePasswordInput)
+			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
 			if err != nil {
 				return "", fmt.Errorf("could not read password confirmation: %v", err)
 			}
@@ -138,7 +139,6 @@ func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 		}
 		return strings.TrimRight(string(data), "\r\n"), nil
 	}
-
 	walletPassword, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
 	if err != nil {
 		return "", fmt.Errorf("could not read account password: %v", err)

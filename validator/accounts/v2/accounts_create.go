@@ -38,12 +38,8 @@ func CreateAccount(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("not a direct keymanager")
 		}
-		password, err := inputPassword(cliCtx, flags.AccountPasswordFileFlag, newAccountPasswordPromptText, confirmPass)
-		if err != nil {
-			return errors.Wrap(err, "could not input new account password")
-		}
 		// Create a new validator account using the specified keymanager.
-		if _, err := km.CreateAccount(ctx, password); err != nil {
+		if _, err := km.CreateAccount(ctx); err != nil {
 			return errors.Wrap(err, "could not create account in wallet")
 		}
 	case v2keymanager.Derived:

@@ -87,14 +87,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
-	for {
-		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
-		chainStartRes, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		// If context is canceled we stop the loop.
+
+	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
+	chainStartRes, err := stream.Recv()
+	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
@@ -102,8 +98,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
-		break
 	}
+
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
@@ -152,14 +148,10 @@ func (v *validator) WaitForSynced(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain Synced streaming client")
 	}
-	for {
-		log.Info("Waiting for chainstart to occur and the beacon node to be fully synced")
-		syncedRes, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		// If context is canceled we stop the loop.
+
+	log.Info("Waiting for chainstart to occur and the beacon node to be fully synced")
+	syncedRes, err := stream.Recv()
+	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
@@ -167,8 +159,8 @@ func (v *validator) WaitForSynced(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive Synced from stream")
 		}
 		v.genesisTime = syncedRes.GenesisTime
-		break
 	}
+
 	// Once the Synced log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)

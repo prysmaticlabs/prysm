@@ -33,16 +33,25 @@ func init() {
 func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
-	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
+	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
 
-	keystorePath, eth1PID := components.StartEth1Node(t)
-	bootnodeENR, bootnodePID := components.StartBootnode(t)
-	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
-	valProcessIDs := components.StartValidatorClients(t, config, keystorePath)
-	processIDs := append(valProcessIDs, bProcessIDs...)
-	processIDs = append(processIDs, []int{eth1PID, bootnodePID}...)
+	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+
+	keystorePath := components.StartEth1Node(t)
+	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
+	bootnodeENR := components.StartBootnode(t)
+	components.StartBeaconNodes(t, config, bootnodeENR)
+	components.StartValidatorClients(t, config, keystorePath)
 	defer helpers.LogOutput(t, config)
-	defer helpers.KillProcesses(t, processIDs)
+	if config.UsePprof {
+		defer func() {
+			for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+				if err := helpers.WritePprofFiles(e2e.TestParams.LogPath, i); err != nil {
+					t.Error(err)
+				}
+			}
+		}()
+	}
 
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
 	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
@@ -50,7 +59,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	t.Run("chain started", func(t *testing.T) {
 		if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
 			t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
@@ -63,14 +71,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	if config.TestSlasher {
-		slasherPIDs := components.StartSlashers(t)
-		defer helpers.KillProcesses(t, slasherPIDs)
+		go components.StartSlashers(t)
 	}
 	if config.TestDeposits {
-		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
-		valPid := components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
-		defer helpers.KillProcesses(t, []int{valPid})
-		components.SendAndMineDeposits(t, keystorePath, valCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
+		go components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+		go components.SendAndMineDeposits(t, keystorePath, int(e2e.DepositCount), minGenesisActiveCount)
 	}
 
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)
@@ -128,15 +133,15 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	index := e2e.TestParams.BeaconNodeCount
-	processID := components.StartNewBeaconNode(t, config, index, bootnodeENR)
+	components.StartNewBeaconNode(t, config, index, bootnodeENR)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
 	}
 	conns = append(conns, syncConn)
 
-	// Sleep a second for every 8 blocks that need to be synced for the newly started node.
-	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 8 * config.EpochsToRun)
+	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
+	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 4 * config.EpochsToRun)
 	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
 	time.Sleep(time.Until(waitForSync))
 
@@ -145,7 +150,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
-	defer helpers.KillProcesses(t, []int{processID})
 	t.Run("sync completed", func(t *testing.T) {
 		if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
 			t.Errorf("Failed to sync: %v", err)
