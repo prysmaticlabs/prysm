@@ -287,6 +287,7 @@ func (s *Service) Start() {
 		log.Info("Enabled debug RPC endpoints")
 		debugServer := &debug.Server{
 			GenesisTimeFetcher: s.genesisTimeFetcher,
+			BeaconDB:           s.beaconDB,
 			StateGen:           s.stateGen,
 			HeadFetcher:        s.headFetcher,
 			PeerManager:        s.peerManager,
