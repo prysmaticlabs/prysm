@@ -1,3 +1,7 @@
+// This tool allows for simple encrypting and decrypting of EIP-2335 compliant, BLS12-381
+// keystore.json files which as password protected. This is helpful in development to inspect
+// the contents of keystores created by eth2 wallets or to easily produce keystores from a
+// specified secret to move them around in a standard format between eth2 clients.
 package main
 
 import (
@@ -12,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/urfave/cli/v2"
@@ -64,11 +69,11 @@ func main() {
 func decrypt(cliCtx *cli.Context) error {
 	keystorePath := cliCtx.String(keystoresFlag.Name)
 	if keystorePath == "" {
-		panic("need to be set")
+		return errors.New("--keystore must be set")
 	}
 	fullPath, err := expandPath(keystorePath)
 	if err != nil {
-		panic(err)
+		return errors.Wrapf(err, "could not expand path: %s", keystorePath)
 	}
 	password := cliCtx.String(passwordFlag.Name)
 	isPasswordSet := cliCtx.IsSet(passwordFlag.Name)
@@ -80,54 +85,59 @@ func decrypt(cliCtx *cli.Context) error {
 	}
 	isDir, err := hasDir(fullPath)
 	if err != nil {
-		panic(err)
+		return errors.Wrapf(err, "could not check if path exists: %s", fullPath)
 	}
 	if isDir {
 		files, err := ioutil.ReadDir(fullPath)
 		if err != nil {
-			panic(err)
+			return errors.Wrapf(err, "could not read directory: %s", fullPath)
 		}
 		for _, f := range files {
 			if f.IsDir() {
 				continue
 			}
-			if !strings.HasPrefix(f.Name(), "keystore") {
-				continue
+			keystorePath := filepath.Join(fullPath, f.Name())
+			if err := readAndDecryptKeystore(keystorePath, password); err != nil {
+				fmt.Printf("could not read nor decrypt keystore at path %s: %v\n", keystorePath, err)
 			}
-			readAndDecryptKeystore(filepath.Join(fullPath, f.Name()), password)
 		}
+		return nil
 	}
-	readAndDecryptKeystore(fullPath, password)
-	return nil
+	return readAndDecryptKeystore(fullPath, password)
 }
 
 func encrypt(cliCtx *cli.Context) error {
 	return nil
 }
 
-func readAndDecryptKeystore(fullPath string, password string) {
+func readAndDecryptKeystore(fullPath string, password string) error {
 	file, err := ioutil.ReadFile(fullPath)
 	if err != nil {
-		panic(err)
+		return errors.Wrapf(err, "could not read file at path: %s", fullPath)
 	}
 	decryptor := keystorev4.New()
 	keystoreFile := &v2keymanager.Keystore{}
 
 	if err := json.Unmarshal(file, keystoreFile); err != nil {
-		panic(err)
+		return errors.Wrap(err, "could not JSON unmarshal keystore file")
 	}
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password.
 	privKeyBytes, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	if err != nil {
-		panic(err)
+		if strings.Contains(err.Error(), "invalid checksum") {
+			return fmt.Errorf("incorrect password for keystore at path: %s", fullPath)
+		}
+		return err
 	}
 	publicKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
 	if err != nil {
-		panic(err)
+		return errors.Wrapf(err, "could not parse public key for keystore at path: %s", fullPath)
 	}
+	fmt.Printf("\nDecrypted keystore %s\n", fullPath)
 	fmt.Printf("Privkey: %#x\n", privKeyBytes)
 	fmt.Printf("Pubkey: %#x\n", publicKeyBytes)
+	return nil
 }
 
 // Checks if the item at the specified path exists and is a directory.
