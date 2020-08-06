@@ -49,7 +49,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 					BeaconBlockRoot: make([]byte, 32),
 				},
 				AggregationBits: bitfield.Bitlist{0x03},
-				Signature: make([]byte, 96),
+				Signature:       make([]byte, 96),
 			},
 			AggregatorIndex: 100,
 		},

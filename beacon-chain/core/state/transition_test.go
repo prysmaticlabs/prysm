@@ -18,6 +18,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -149,7 +150,8 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
-		DepositRoot:  []byte{2},
+		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		BlockHash: make([]byte, 32),
 	}
 	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1); err != nil {
 		t.Fatal(err)
@@ -190,17 +192,12 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          beaconState.Slot() + 1,
-			ParentRoot:    parentRoot[:],
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: randaoReveal,
-				Eth1Data:     eth1Data,
-			},
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.ProposerIndex = proposerIdx
+	block.Block.Slot = beaconState.Slot() + 1
+	block.Block.ParentRoot = parentRoot[:]
+	block.Block.Body.RandaoReveal = randaoReveal
+	block.Block.Body.Eth1Data = eth1Data
 
 	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
