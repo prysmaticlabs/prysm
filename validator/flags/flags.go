@@ -136,9 +136,9 @@ var (
 	// WalletPasswordsDirFlag defines the path for a passwords directory for
 	// Prysm accounts-v2.
 	WalletPasswordsDirFlag = &cli.StringFlag{
-		Name:  "passwords-dir",
-		Usage: "Path to a directory on-disk where account passwords are stored",
-		Value: filepath.Join(DefaultValidatorDir(), PasswordsDefaultDirName),
+		Name:   "passwords-dir",
+		Usage:  "DEPRECATED. DO NOT USE.",
+		Hidden: true,
 	}
 	// AccountPasswordFileFlag is path to a file containing a password for a new validator account.
 	AccountPasswordFileFlag = &cli.StringFlag{
