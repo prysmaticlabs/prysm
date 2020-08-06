@@ -56,6 +56,9 @@ var (
 
 func main() {
 	app := &cli.App{
+		Name:        "Keystore utility",
+		Description: "Utility to encrypt and decrypt EIP-2335 compliant keystore.json files for BLS12-381 private keys",
+		Usage:       "",
 		Commands: []*cli.Command{
 			{
 				Name:  "decrypt",
@@ -124,7 +127,7 @@ func decrypt(cliCtx *cli.Context) error {
 	return readAndDecryptKeystore(fullPath, password)
 }
 
-// Attempts to encrypt a passed-in BLS-12381 private key into the EIP-2335
+// Attempts to encrypt a passed-in BLS12-3381 private key into the EIP-2335
 // keystore.json format. If a file at the specified output path exists, asks the user
 // to confirm overwriting its contents. If the value passed in is not a valid BLS12-381
 // private key, the function will fail.
@@ -181,7 +184,7 @@ func encrypt(cliCtx *cli.Context) error {
 	}
 	privKey, err := bls.SecretKeyFromBytes(bytesValue)
 	if err != nil {
-		return errors.Wrap(err, "not a valid BLS-12381 private key")
+		return errors.Wrap(err, "not a valid BLS12-381 private key")
 	}
 	pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 	encryptor := keystorev4.New()
