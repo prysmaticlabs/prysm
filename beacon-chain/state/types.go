@@ -125,11 +125,14 @@ func (r *reference) MinusRef() {
 	r.lock.Unlock()
 }
 
+// a container to hold the map and a reference tracker for how many
+// states shared this.
 type validatorMapHandler struct {
 	valIdxMap map[[48]byte]uint64
 	mapRef    *reference
 }
 
+// A constructor for the map handler.
 func newValHandler(vals []*ethpb.Validator) *validatorMapHandler {
 	return &validatorMapHandler{
 		valIdxMap: coreutils.ValidatorIndexMap(vals),
@@ -137,6 +140,7 @@ func newValHandler(vals []*ethpb.Validator) *validatorMapHandler {
 	}
 }
 
+// copies the whole map and returns a map handler with the copied map.
 func (v *validatorMapHandler) copy() *validatorMapHandler {
 	if v == nil || v.valIdxMap == nil {
 		return &validatorMapHandler{valIdxMap: map[[48]byte]uint64{}, mapRef: new(reference)}
