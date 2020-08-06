@@ -584,7 +584,7 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b22 := testutil.NewBeaconBlock()
 	b22.Block.Slot = 2
 	b22.Block.ParentRoot = r1[:]
-	b22.Block.StateRoot= []byte{'B'}
+	b22.Block.StateRoot = []byte{'B'}
 	r22, err := b22.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err

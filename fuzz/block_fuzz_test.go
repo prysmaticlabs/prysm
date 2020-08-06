@@ -28,7 +28,7 @@ func TestBeaconFuzzBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 		//t.Run(f.Name(), func(t *testing.T) {
-			BeaconFuzzBlock(b)
+		BeaconFuzzBlock(b)
 		//})
 	}
 }
