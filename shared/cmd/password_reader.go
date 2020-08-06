@@ -9,7 +9,7 @@ import (
 
 // ErrNonInteractiveTerminal occurs when the StdInPasswordReader is used in a non-interactive
 // environment.
-var ErrNonInteractiveTerminal = errors.New("terminal is input is non-interactive")
+var ErrNonInteractiveTerminal = errors.New("terminal input is non-interactive")
 
 // PasswordReader reads a password from a mock or stdin.
 type PasswordReader interface {
