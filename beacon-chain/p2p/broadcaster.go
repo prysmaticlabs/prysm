@@ -60,13 +60,13 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 		return err
 	}
 	// Ensure we have peers with this subnet.
-	s.subnetLocker(subnet).RLock()
+	//s.subnetLocker(subnet).RLock()
 	hasPeer := s.hasPeerWithSubnet(subnet)
-	s.subnetLocker(subnet).RUnlock()
+	//s.subnetLocker(subnet).RUnlock()
 	if !hasPeer {
-		if err := func () error {
-			s.subnetLocker(subnet).Lock()
-			defer s.subnetLocker(subnet).Unlock()
+		if err := func() error {
+			//s.subnetLocker(subnet).Lock()
+			//defer s.subnetLocker(subnet).Unlock()
 			for i := 0; i < maxSubnetDiscoveryAttempts; i++ {
 				if err := ctx.Err(); err != nil {
 					return err
