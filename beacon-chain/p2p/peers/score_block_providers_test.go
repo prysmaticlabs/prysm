@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -24,7 +25,36 @@ func TestPeerScorer_BlockProvider_Score(t *testing.T) {
 		{
 			name: "nonexistent peer",
 			check: func(scorer *peers.BlockProviderScorer) {
-				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for unregistered provider")
+				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "existent peer with zero score",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.Touch("peer1")
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "existent peer via increment",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.IncrementProcessedBlocks("peer1", 0)
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "boost score of stale peer",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.IncrementProcessedBlocks("peer1", batchSize*3)
+				assert.Equal(t, 0.05*3, scorer.Score("peer1"), "Unexpected score")
+				scorer.Touch("peer1", time.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")
 			},
 		},
 		{
@@ -34,7 +64,7 @@ func TestPeerScorer_BlockProvider_Score(t *testing.T) {
 				scorer.IncrementProcessedBlocks("peer1", 0)
 			},
 			check: func(scorer *peers.BlockProviderScorer) {
-				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for registered provider")
+				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
 			},
 		},
 		{
@@ -117,6 +147,7 @@ func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
 	tests := []struct {
 		name   string
 		update func(s *peers.BlockProviderScorer)
+		score  func(pid peer.ID, score float64) float64
 		have   []peer.ID
 		want   []peer.ID
 	}{
@@ -166,6 +197,25 @@ func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
 			have: []peer.ID{"peer3", "peer2", "peer1"},
 			want: []peer.ID{"peer1", "peer3", "peer2"},
 		},
+		{
+			name: "custom scorer",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*3)
+				s.IncrementProcessedBlocks("peer2", batchSize*1)
+				s.IncrementProcessedBlocks("peer3", batchSize*2)
+			},
+			score: func(pid peer.ID, score float64) float64 {
+				if pid == "peer2" {
+					return score + 0.3 // 0.2 + 0.3 = 0.5 > 0.4 (of peer3)
+				}
+				if pid == "peer1" {
+					return 0.0
+				}
+				return score
+			},
+			have: []peer.ID{"peer3", "peer2", "peer1"},
+			want: []peer.ID{"peer2", "peer3", "peer1"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -180,7 +230,7 @@ func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
 			})
 			scorer := peerStatuses.Scorers().BlockProviderScorer()
 			tt.update(scorer)
-			assert.DeepEqual(t, tt.want, scorer.Sorted(tt.have))
+			assert.DeepEqual(t, tt.want, scorer.Sorted(tt.have, tt.score))
 		})
 	}
 }

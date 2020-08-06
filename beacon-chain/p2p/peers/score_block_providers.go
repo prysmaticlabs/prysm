@@ -23,6 +23,10 @@ const (
 	// decay interval. Effectively, this param provides minimum expected performance for a peer to remain
 	// high scorer.
 	DefaultBlockProviderDecay = uint64(10 * 64)
+	// DefaultBlockProviderStalePeerRefreshInterval defines default interval at which peers should be given
+	// opportunity to provide blocks (their score gets boosted, up until they are selected for
+	// fetching).
+	DefaultBlockProviderStalePeerRefreshInterval = 1 * time.Minute
 )
 
 // BlockProviderScorer represents block provider scoring service.
@@ -48,6 +52,9 @@ type BlockProviderScorerConfig struct {
 	DecayInterval time.Duration
 	// Decay specifies number of blocks subtracted from stats on each decay step.
 	Decay uint64
+	// StalePeerRefreshInterval is an interval at which peers should be given an opportunity
+	// to provide blocks (scores are boosted to max up until such peers are selected).
+	StalePeerRefreshInterval time.Duration
 }
 
 // newBlockProviderScorer creates block provider scoring service.
@@ -73,6 +80,9 @@ func newBlockProviderScorer(
 	if scorer.config.Decay == 0 {
 		scorer.config.Decay = DefaultBlockProviderDecay
 	}
+	if scorer.config.StalePeerRefreshInterval == 0 {
+		scorer.config.StalePeerRefreshInterval = DefaultBlockProviderStalePeerRefreshInterval
+	}
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	scorer.maxScore = 1.0
 	if batchSize > 0 {
@@ -94,8 +104,9 @@ func (s *BlockProviderScorer) Score(pid peer.ID) float64 {
 func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 	score := float64(0)
 	peerData, ok := s.store.peers[pid]
-	if !ok {
-		return score
+	// Boost score of new peers or peers that haven't been accessed for too long.
+	if !ok || time.Since(peerData.blockProviderUpdated) >= s.config.StalePeerRefreshInterval {
+		return s.maxScore
 	}
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	if batchSize > 0 {
@@ -114,6 +125,7 @@ func (s *BlockProviderScorer) Params() *BlockProviderScorerConfig {
 func (s *BlockProviderScorer) IncrementProcessedBlocks(pid peer.ID, cnt uint64) {
 	s.store.Lock()
 	defer s.store.Unlock()
+	defer s.touch(pid)
 
 	if cnt <= 0 {
 		return
@@ -126,6 +138,26 @@ func (s *BlockProviderScorer) IncrementProcessedBlocks(pid peer.ID, cnt uint64) 
 	}
 	if cnt > 0 {
 		s.store.peers[pid].processedBlocks += cnt
+	}
+}
+
+// Touch updates last access time for a given peer. This allows to detect peers that are
+// stale and boost their scores to increase chances in block fetching participation.
+func (s *BlockProviderScorer) Touch(pid peer.ID, t ...time.Time) {
+	s.store.Lock()
+	defer s.store.Unlock()
+	s.touch(pid, t...)
+}
+
+// touch is a lock-free version of Touch.
+func (s *BlockProviderScorer) touch(pid peer.ID, t ...time.Time) {
+	if _, ok := s.store.peers[pid]; !ok {
+		s.store.peers[pid] = &peerData{}
+	}
+	if len(t) == 1 {
+		s.store.peers[pid].blockProviderUpdated = t[0]
+	} else {
+		s.store.peers[pid].blockProviderUpdated = time.Now()
 	}
 }
 
@@ -161,7 +193,8 @@ func (s *BlockProviderScorer) Decay() {
 }
 
 // Sorted returns list of block providers sorted by score in descending order.
-func (s *BlockProviderScorer) Sorted(pids []peer.ID) []peer.ID {
+// When custom scorer function is provided, items are returned in order provided by it.
+func (s *BlockProviderScorer) Sorted(pids []peer.ID, scoreFn func(pid peer.ID, score float64) float64) []peer.ID {
 	s.store.Lock()
 	defer s.store.Unlock()
 
@@ -171,7 +204,11 @@ func (s *BlockProviderScorer) Sorted(pids []peer.ID) []peer.ID {
 	scores := make(map[peer.ID]float64, len(pids))
 	peers := make([]peer.ID, len(pids))
 	for i, pid := range pids {
-		scores[pid] = s.score(pid)
+		if scoreFn != nil {
+			scores[pid] = scoreFn(pid, s.score(pid))
+		} else {
+			scores[pid] = s.score(pid)
+		}
 		peers[i] = pid
 	}
 	sort.Slice(peers, func(i, j int) bool {
