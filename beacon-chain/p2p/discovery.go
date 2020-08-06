@@ -31,7 +31,6 @@ type Listener interface {
 	Ping(*enode.Node) error
 	RequestENR(*enode.Node) (*enode.Node, error)
 	LocalNode() *enode.LocalNode
-	AllNodes() []*enode.Node
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
@@ -144,10 +143,8 @@ func (s *Service) createListener(
 		}
 	}
 	dv5Cfg := discover.Config{
-		PrivateKey:   privKey,
-		ValidSchemes: enode.ValidSchemes,
+		PrivateKey: privKey,
 	}
-
 	dv5Cfg.Bootnodes = []*enode.Node{}
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
