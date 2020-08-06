@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -18,6 +19,8 @@ const (
 	// PasswordsDefaultDirName where account-v2 passwords are stored.
 	PasswordsDefaultDirName = "prysm-wallet-v2-passwords"
 )
+
+var log = logrus.WithField("prefix", "flags")
 
 var (
 	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
@@ -133,13 +136,6 @@ var (
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
 		Value: filepath.Join(DefaultValidatorDir(), WalletDefaultDirName),
 	}
-	// WalletPasswordsDirFlag defines the path for a passwords directory for
-	// Prysm accounts-v2.
-	WalletPasswordsDirFlag = &cli.StringFlag{
-		Name:   "passwords-dir",
-		Usage:  "DEPRECATED. DO NOT USE.",
-		Hidden: true,
-	}
 	// AccountPasswordFileFlag is path to a file containing a password for a new validator account.
 	AccountPasswordFileFlag = &cli.StringFlag{
 		Name:  "account-password-file",
@@ -222,6 +218,32 @@ var (
 		Value: "",
 	}
 )
+
+// Deprecated flags list.
+const deprecatedUsage = "DEPRECATED. DO NOT USE."
+
+var (
+	// DeprecatedPasswordsDirFlag is a deprecated flag.
+	DeprecatedPasswordsDirFlag = &cli.StringFlag{
+		Name:   "passwords-dir",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+)
+
+// DeprecatedFlags is a slice holding all of the validator client's deprecated flags.
+var DeprecatedFlags = []cli.Flag{
+	DeprecatedPasswordsDirFlag,
+}
+
+// ComplainOnDeprecatedFlags logs out a error log if a deprecated flag is used, letting the user know it will be removed soon.
+func ComplainOnDeprecatedFlags(ctx *cli.Context) {
+	for _, f := range DeprecatedFlags {
+		if ctx.IsSet(f.Names()[0]) {
+			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
+		}
+	}
+}
 
 // DefaultValidatorDir returns OS-specific default validator directory.
 func DefaultValidatorDir() string {
