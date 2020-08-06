@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
 	"github.com/urfave/cli/v2"
 )
 
@@ -99,6 +102,34 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 		}
 		return enteredMnemonic, nil
 	}
+	allowedLanguages := map[string][]string{
+		"english":             wordlists.English,
+		"chinese_simplified":  wordlists.ChineseSimplified,
+		"chinese_traditional": wordlists.ChineseTraditional,
+		"french":              wordlists.French,
+		"italian":             wordlists.Italian,
+		"japanese":            wordlists.Japanese,
+		"korean":              wordlists.Korean,
+		"spanish":             wordlists.Spanish,
+	}
+	languages := make([]string, 0)
+	for k := range allowedLanguages {
+		languages = append(languages, k)
+	}
+	sort.Strings(languages)
+	selectedLanguage, err := promptutil.ValidatePrompt(
+		fmt.Sprintf("Enter the language of your seed phrase: %s", strings.Join(languages, ", ")),
+		func(input string) error {
+			if _, ok := allowedLanguages[input]; !ok {
+				return errors.New("input not in the list of allowed languages")
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return "", fmt.Errorf("could not get mnemonic language: %v", err)
+	}
+	bip39.SetWordList(allowedLanguages[selectedLanguage])
 	mnemonicPhrase, err := promptutil.ValidatePrompt("Enter the seed phrase for the wallet you would like to recover", validateMnemonic)
 	if err != nil {
 		return "", fmt.Errorf("could not get mnemonic phrase: %v", err)
