@@ -151,7 +151,7 @@ var (
 	}
 	// EnableRoughtime defines a flag then when set, enables periodic roughtime syncs.
 	EnableRoughtime = &cli.BoolFlag{
-		Name:        "enable-roughtime",
-		Usage:       "Enables periodic roughtime syncs.",
+		Name:  "enable-roughtime",
+		Usage: "Enables periodic roughtime syncs.",
 	}
 )
