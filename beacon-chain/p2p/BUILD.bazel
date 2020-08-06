@@ -47,7 +47,6 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/iputils:go_default_library",
-        "//shared/mathutil:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
