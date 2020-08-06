@@ -102,7 +102,6 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
-		break
 	}
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
@@ -167,7 +166,6 @@ func (v *validator) WaitForSynced(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive Synced from stream")
 		}
 		v.genesisTime = syncedRes.GenesisTime
-		break
 	}
 	// Once the Synced log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
