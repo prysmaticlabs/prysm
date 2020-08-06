@@ -165,10 +165,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
-	if err := vs.deleteAttsInPool(ctx, blk.Block.Body.Attestations); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not delete attestations in pool: %v", err)
-	}
-
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
