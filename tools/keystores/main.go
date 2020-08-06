@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -38,10 +39,10 @@ var (
 		Value: "",
 		Usage: "Password for the keystore(s)",
 	}
-	valueToEncryptFlag = &cli.StringFlag{
-		Name:     "value-to-encrypt",
+	privateKeyFlag = &cli.StringFlag{
+		Name:     "private-key",
 		Value:    "",
-		Usage:    "Hex string for the value you wish you encrypt into a keystore file",
+		Usage:    "Hex string for the BLS12-381 private key you wish encrypt into a keystore file",
 		Required: true,
 	}
 	outputPathFlag = &cli.StringFlag{
@@ -70,7 +71,7 @@ func main() {
 				Usage: "encrypt a specified hex string into a keystore file",
 				Flags: []cli.Flag{
 					passwordFlag,
-					valueToEncryptFlag,
+					privateKeyFlag,
 					outputPathFlag,
 				},
 				Action: encrypt,
@@ -123,6 +124,10 @@ func decrypt(cliCtx *cli.Context) error {
 	return readAndDecryptKeystore(fullPath, password)
 }
 
+// Attempts to encrypt a passed-in BLS-12381 private key into the EIP-2335
+// keystore.json format. If a file at the specified output path exists, asks the user
+// to confirm overwriting its contents. If the value passed in is not a valid BLS12-381
+// private key, the function will fail.
 func encrypt(cliCtx *cli.Context) error {
 	var err error
 	password := cliCtx.String(passwordFlag.Name)
@@ -133,9 +138,9 @@ func encrypt(cliCtx *cli.Context) error {
 			return nil
 		})
 	}
-	valueToEncrypt := cliCtx.String(valueToEncryptFlag.Name)
-	if valueToEncrypt == "" {
-		return nil
+	privateKeyString := cliCtx.String(privateKeyFlag.Name)
+	if privateKeyString == "" {
+		return errors.New("--private-key must not be empty")
 	}
 	outputPath := cliCtx.String(outputPathFlag.Name)
 	if outputPath == "" {
@@ -145,35 +150,75 @@ func encrypt(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not expand path: %s", outputPath)
 	}
-	bytesValue, err := hex.DecodeString(valueToEncrypt)
+	exists, err := fileExists(fullPath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "could not check if file exists: %s", fullPath)
 	}
+	if exists {
+		response, err := promptutil.ValidatePrompt(
+			fmt.Sprintf("file at path %s already exists, are you sure you want to overwrite it? [y/n]", fullPath),
+			func(s string) error {
+				input := strings.ToLower(s)
+				if input != "y" && input != "n" {
+					return errors.New("please confirm the above text")
+				}
+				return nil
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "could not validate prompt confirmation")
+		}
+		if response == "n" {
+			return nil
+		}
+	}
+	if len(privateKeyString) > 2 && strings.Contains(privateKeyString, "0x") {
+		privateKeyString = privateKeyString[2:] // Strip the 0x prefix, if any.
+	}
+	bytesValue, err := hex.DecodeString(privateKeyString)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode as hex string: %s", privateKeyString)
+	}
+	privKey, err := bls.SecretKeyFromBytes(bytesValue)
+	if err != nil {
+		return errors.Wrap(err, "not a valid BLS-12381 private key")
+	}
+	pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not generate new random uuid")
 	}
 	cryptoFields, err := encryptor.Encrypt(bytesValue, password)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not encrypt into new keystore")
 	}
 	item := &v2keymanager.Keystore{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Version: encryptor.Version(),
+		Pubkey:  pubKey,
 		Name:    encryptor.Name(),
 	}
 	encodedFile, err := json.MarshalIndent(item, "", "\t")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not json marshal keystore")
 	}
 	if err := ioutil.WriteFile(fullPath, encodedFile, params.BeaconIoConfig().ReadWritePermissions); err != nil {
-		return err
+		return errors.Wrapf(err, "could not write file at path: %s", fullPath)
 	}
+	fmt.Printf(
+		"\nWrote encrypted keystore file at path %s\n",
+		au.BrightMagenta(fullPath),
+	)
+	fmt.Printf("Pubkey: %s\n", au.BrightGreen(
+		fmt.Sprintf("%#x", privKey.PublicKey().Marshal()),
+	))
 	return nil
 }
 
+// Reads the keystore file at the provided path and attempts
+// to decrypt it with the specified passwords.
 func readAndDecryptKeystore(fullPath string, password string) error {
 	file, err := ioutil.ReadFile(fullPath)
 	if err != nil {
@@ -218,6 +263,21 @@ func hasDir(dirPath string) (bool, error) {
 		return false, err
 	}
 	return info.IsDir(), nil
+}
+
+// Check if a file at the specified path exists.
+func fileExists(filePath string) (bool, error) {
+	fullPath, err := expandPath(filePath)
+	if err != nil {
+		return false, err
+	}
+	if _, err := os.Stat(fullPath); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // Expands a file path
