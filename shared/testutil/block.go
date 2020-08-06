@@ -198,15 +198,11 @@ func GenerateProposerSlashingForValidator(
 		},
 	}
 	currentEpoch := helpers.CurrentEpoch(bState)
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	var err error
+	header1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
 		return nil, err
 	}
-	root, err := helpers.ComputeSigningRoot(header1.Header, domain)
-	if err != nil {
-		return nil, err
-	}
-	header1.Signature = priv.Sign(root[:]).Marshal()
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -217,11 +213,10 @@ func GenerateProposerSlashingForValidator(
 			ParentRoot:    make([]byte, 32),
 		},
 	}
-	root, err = helpers.ComputeSigningRoot(header2.Header, domain)
+	header2.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, header2.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
 		return nil, err
 	}
-	header2.Signature = priv.Sign(root[:]).Marshal()
 
 	return &ethpb.ProposerSlashing{
 		Header_1: header1,
@@ -273,16 +268,11 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{idx},
 	}
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
+	var err error
+	att1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
 		return nil, err
 	}
-	dataRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
-	if err != nil {
-		return nil, err
-	}
-	sig := priv.Sign(dataRoot[:])
-	att1.Signature = bls.AggregateSignatures([]bls.Signature{sig}).Marshal()
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -300,12 +290,10 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{idx},
 	}
-	dataRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	att2.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
 		return nil, err
 	}
-	sig = priv.Sign(dataRoot[:])
-	att2.Signature = bls.AggregateSignatures([]bls.Signature{sig}).Marshal()
 
 	return &ethpb.AttesterSlashing{
 		Attestation_1: att1,
@@ -513,15 +501,10 @@ func generateVoluntaryExits(
 				ValidatorIndex: valIndex,
 			},
 		}
-		domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit, bState.GenesisValidatorRoot())
+		exit.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privs[valIndex])
 		if err != nil {
 			return nil, err
 		}
-		root, err := helpers.ComputeSigningRoot(exit.Exit, domain)
-		if err != nil {
-			return nil, err
-		}
-		exit.Signature = privs[valIndex].Sign(root[:]).Marshal()
 		voluntaryExits[i] = exit
 	}
 	return voluntaryExits, nil

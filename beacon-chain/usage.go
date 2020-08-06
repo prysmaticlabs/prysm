@@ -46,7 +46,6 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			cmd.MinimalConfigFlag,
 			cmd.E2EConfigFlag,
-			cmd.CustomGenesisDelayFlag,
 			cmd.RPCMaxPageSizeFlag,
 			cmd.NoDiscovery,
 			cmd.BootstrapNode,
@@ -107,6 +106,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableDebugRPCEndpoints,
 			flags.SlotsPerArchivedPoint,
 			flags.HistoricalSlasherNode,
+			flags.ChainID,
+			flags.NetworkID,
 		},
 	},
 	{

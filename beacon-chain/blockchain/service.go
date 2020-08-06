@@ -63,10 +63,8 @@ type Service struct {
 	finalizedCheckpt          *ethpb.Checkpoint
 	prevFinalizedCheckpt      *ethpb.Checkpoint
 	nextEpochBoundarySlot     uint64
-	voteLock                  sync.RWMutex
 	initSyncState             map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots             [][32]byte
-	initSyncStateLock         sync.RWMutex
 	checkpointState           *cache.CheckpointStateCache
 	checkpointStateLock       sync.Mutex
 	stateGen                  *stategen.State
@@ -176,7 +174,7 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
 		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)

@@ -33,7 +33,7 @@ func (s *Service) processPendingAttsQueue() {
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
 		mutex.Lock()
 		if err := s.processPendingAtts(ctx); err != nil {
-			log.WithError(err).Errorf("Could not process pending attestation: %v", err)
+			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
 		}
 		mutex.Unlock()
 	})
@@ -86,7 +86,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 						// Broadcasting the signed attestation again once a node is able to process it.
 						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
-							log.WithError(err).Error("Failed to broadcast")
+							log.WithError(err).Debug("Failed to broadcast")
 						}
 					}
 				} else {
@@ -102,7 +102,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 					// Broadcasting the signed attestation again once a node is able to process it.
 					if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
-						log.WithError(err).Error("Failed to broadcast")
+						log.WithError(err).Debug("Failed to broadcast")
 					}
 				}
 			}
@@ -147,10 +147,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 			req := [][32]byte{bRoot}
 			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil && err == io.EOF {
-				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
-					traceutil.AnnotateError(span, err)
-					log.Errorf("Could not send recent block request: %v", err)
-				}
+				traceutil.AnnotateError(span, err)
+				log.Debugf("Could not send recent block request: %v", err)
 			}
 		}
 	}

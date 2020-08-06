@@ -58,5 +58,6 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil/require:go_default_library",
     ],
 )

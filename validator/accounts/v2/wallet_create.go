@@ -58,11 +58,13 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 }
 
 func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
+	if wallet == nil {
+		return errors.New("nil wallet")
+	}
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	defaultConfig := direct.DefaultConfig()
-	defaultConfig.AccountPasswordsDirectory = wallet.passwordsDir
 	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), defaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")

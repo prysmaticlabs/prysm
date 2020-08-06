@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -251,16 +252,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
 		t.Fatal(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := helpers.ComputeSigningRoot(block.Block, domain)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sig := privKeys[proposerIdx].Sign(root[:])
-	block.Signature = sig.Marshal()
+	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
 	if err != nil {
@@ -299,16 +292,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
 		t.Fatal(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := helpers.ComputeSigningRoot(block.Block, domain)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sig := privKeys[proposerIdx].Sign(root[:])
-	block.Signature = sig.Marshal()
+	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
 	if err != nil {
@@ -471,16 +456,6 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	}
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain, err := helpers.Domain(
-		beaconState.Fork(),
-		currentEpoch,
-		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorRoot(),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
@@ -488,11 +463,8 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 			StateRoot:     []byte("A"),
 		},
 	}
-	root, err := helpers.ComputeSigningRoot(header1.Header, domain)
-	if err != nil {
-		t.Fatal(err)
-	}
-	header1.Signature = privKeys[proposerSlashIdx].Sign(root[:]).Marshal()[:]
+	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	require.NoError(t, err)
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -501,11 +473,8 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 			StateRoot:     []byte("B"),
 		},
 	}
-	root, err = helpers.ComputeSigningRoot(header2.Header, domain)
-	if err != nil {
-		t.Fatal(err)
-	}
-	header2.Signature = privKeys[proposerSlashIdx].Sign(root[:]).Marshal()[:]
+	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	require.NoError(t, err)
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
@@ -526,7 +495,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 			Target: &ethpb.Checkpoint{Epoch: 0}},
 		AttestingIndices: []uint64{0, 1},
 	}
-	domain, err = helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -609,15 +578,8 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 			Epoch:          0,
 		},
 	}
-	domain, err = helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	signingRoot, err := helpers.ComputeSigningRoot(exit.Exit, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
-	exit.Signature = privKeys[exit.Exit.ValidatorIndex].Sign(signingRoot[:]).Marshal()[:]
+	exit.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privKeys[exit.Exit.ValidatorIndex])
+	require.NoError(t, err)
 
 	header := beaconState.LatestBlockHeader()
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())

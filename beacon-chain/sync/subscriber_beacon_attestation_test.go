@@ -83,12 +83,10 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		},
 		AggregationBits: bitfield.Bitlist{0b0101},
 	}
-	domain, err := helpers.Domain(s.Fork(), att.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
+	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	att.Signature, err = helpers.ComputeDomainAndSign(s, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, sKeys[committee[0]])
 	require.NoError(t, err)
-	att.Signature = sKeys[16].Sign(attRoot[:]).Marshal()
-
 	p.ReceivePubSub("/eth2/%x/beacon_attestation_0", att)
 
 	time.Sleep(time.Second * 1)

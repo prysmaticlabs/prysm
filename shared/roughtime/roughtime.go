@@ -2,14 +2,12 @@
 package roughtime
 
 import (
-	"context"
 	"math"
 	"time"
 
 	rt "github.com/cloudflare/roughtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -43,7 +41,19 @@ var offsetsRejected = promauto.NewCounter(prometheus.CounterOpts{
 
 func init() {
 	recalibrateRoughtime()
-	runutil.RunEvery(context.Background(), RecalibrationInterval, recalibrateRoughtime)
+	go func() {
+		for {
+			wait := RecalibrationInterval
+			// recalibrate every minute if there is a large skew.
+			if offset > 2*time.Second {
+				wait = 1 * time.Minute
+			}
+			select {
+			case <-time.After(wait):
+				recalibrateRoughtime()
+			}
+		}
+	}()
 }
 
 func recalibrateRoughtime() {
@@ -83,7 +93,7 @@ func recalibrateRoughtime() {
 		return
 	}
 
-	log.Infof("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
+	log.Debugf("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
 	offset = newOffset
 }
 

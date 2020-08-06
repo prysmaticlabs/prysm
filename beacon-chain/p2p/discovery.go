@@ -109,6 +109,13 @@ func (s *Service) createListener(
 	// Check for the real local address which may
 	// be different in the presence of virtual networks.
 	ipAddr = s.localAddress(networkVersion, ipAddr)
+	// If local ip is specified then use that instead.
+	if s.cfg.LocalIP != "" {
+		ipAddr = net.ParseIP(s.cfg.LocalIP)
+		if ipAddr == nil {
+			return nil, errors.New("invalid local ip provided")
+		}
+	}
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
 		Port: int(s.cfg.UDPPort),

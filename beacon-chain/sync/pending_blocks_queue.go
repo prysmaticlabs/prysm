@@ -29,7 +29,7 @@ func (s *Service) processPendingBlocksQueue() {
 	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
 		if err := s.processPendingBlocks(ctx); err != nil {
-			log.WithError(err).Error("Failed to process pending blocks")
+			log.WithError(err).Debug("Failed to process pending blocks")
 		}
 		locker.Unlock()
 	})
@@ -117,10 +117,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
-					traceutil.AnnotateError(span, err)
-					log.Errorf("Could not send recent block request: %v", err)
-				}
+				traceutil.AnnotateError(span, err)
+				log.Debugf("Could not send recent block request: %v", err)
 			}
 			span.End()
 			continue
@@ -132,14 +130,14 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-			log.Errorf("Could not process block from slot %d: %v", b.Block.Slot, err)
+			log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 			s.setBadBlock(blkRoot)
 			traceutil.AnnotateError(span, err)
 		}
 
 		// Broadcasting the block again once a node is able to process it.
 		if err := s.p2p.Broadcast(ctx, b); err != nil {
-			log.WithError(err).Error("Failed to broadcast block")
+			log.WithError(err).Debug("Failed to broadcast block")
 		}
 
 		s.pendingQueueLock.Lock()

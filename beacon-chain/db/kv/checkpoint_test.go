@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -91,16 +92,11 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
-func TestStore_JustifiedCheckpoint_DefaultCantBeNil(t *testing.T) {
+func TestStore_JustifiedCheckpoint_DefaultIsZeroHash(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	genesisRoot := [32]byte{'A'}
-	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatal(err)
-	}
-
-	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
+	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	retrieved, err := db.JustifiedCheckpoint(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -110,16 +106,11 @@ func TestStore_JustifiedCheckpoint_DefaultCantBeNil(t *testing.T) {
 	}
 }
 
-func TestStore_FinalizedCheckpoint_DefaultCantBeNil(t *testing.T) {
+func TestStore_FinalizedCheckpoint_DefaultIsZeroHash(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	genesisRoot := [32]byte{'B'}
-	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatal(err)
-	}
-
-	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
+	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	retrieved, err := db.FinalizedCheckpoint(ctx)
 	if err != nil {
 		t.Fatal(err)

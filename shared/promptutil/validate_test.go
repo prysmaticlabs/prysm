@@ -34,9 +34,9 @@ func TestValidatePasswordInput(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "Unicode strings separated by a space character",
+			name:    "allow spaces",
 			input:   "x*329293@aAJSD i22903saj",
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -62,7 +62,7 @@ func TestIsValidUnicode(t *testing.T) {
 		{
 			name:  "Unicode strings separated by a space character",
 			input: "x*329293@aAJSD i22903saj",
-			want:  false,
+			want:  true,
 		},
 		{
 			name:  "Japanese",
