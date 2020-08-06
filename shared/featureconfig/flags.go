@@ -166,6 +166,11 @@ var (
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
+	// EnableRoughtime defines a flag then when set, enables periodic roughtime syncs.
+	enableRoughtime = &cli.BoolFlag{
+		Name:  "enable-roughtime",
+		Usage: "Enables periodic roughtime syncs.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -643,6 +648,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
+	enableRoughtime,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

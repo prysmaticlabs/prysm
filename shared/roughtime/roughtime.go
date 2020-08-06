@@ -2,13 +2,13 @@
 package roughtime
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"math"
 	"time"
 
 	rt "github.com/cloudflare/roughtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,9 +41,10 @@ var offsetsRejected = promauto.NewCounter(prometheus.CounterOpts{
 })
 
 func init() {
-	if flags.EnableRoughtime.IsSet() {
-		recalibrateRoughtime()
-		go func() {
+	go func() {
+		time.Sleep(1 * time.Second)
+		if featureconfig.Get().EnableRoughtime {
+			recalibrateRoughtime()
 			for {
 				wait := RecalibrationInterval
 				// recalibrate every minute if there is a large skew.
@@ -55,8 +56,8 @@ func init() {
 					recalibrateRoughtime()
 				}
 			}
-		}()
-	}
+		}
+	}()
 }
 
 func recalibrateRoughtime() {

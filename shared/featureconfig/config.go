@@ -60,6 +60,7 @@ type Flags struct {
 	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
 	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
 	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
+	EnableRoughtime                            bool
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -251,6 +252,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableEth1DataMajorityVote.Name) {
 		log.Warn("Enabling eth1data majority vote")
 		cfg.EnableEth1DataMajorityVote = true
+	}
+	if ctx.Bool(enableRoughtime.Name) {
+		log.Warn("Enabling roughtime sync")
+		cfg.EnableRoughtime = true
 	}
 	Init(cfg)
 }
