@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "aggregation")
+var _ = logrus.WithField("prefix", "aggregation")
 
 var (
 	// ErrBitsOverlap is returned when two bitlists overlap with each other.
