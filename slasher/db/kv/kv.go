@@ -54,9 +54,6 @@ func (db *Store) ClearSpanCache() {
 func (db *Store) update(fn func(*bolt.Tx) error) error {
 	return db.db.Update(fn)
 }
-func (db *Store) batch(fn func(*bolt.Tx) error) error {
-	return db.db.Batch(fn)
-}
 func (db *Store) view(fn func(*bolt.Tx) error) error {
 	return db.db.View(fn)
 }
