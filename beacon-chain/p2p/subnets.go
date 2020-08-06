@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -129,4 +130,15 @@ func retrieveBitvector(record *enr.Record) (bitfield.Bitvector64, error) {
 		return nil, err
 	}
 	return bitV, nil
+}
+
+func (s *Service) subnetLocker(i uint64) *sync.RWMutex {
+	s.subnetsLockLock.Lock()
+	defer s.subnetsLockLock.Unlock()
+	l, ok := s.subnetsLock[i]
+	if !ok {
+		l = &sync.RWMutex{}
+		s.subnetsLock[i] = l
+	}
+	return l
 }

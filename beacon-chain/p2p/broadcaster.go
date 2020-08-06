@@ -20,6 +20,9 @@ import (
 // GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
+// Max number of attempts to search the network for a specific subnet.
+const maxSubnetDiscoveryAttempts = 3
+
 // Broadcast a message to the p2p network.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
@@ -57,19 +60,29 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 		return err
 	}
 	// Ensure we have peers with this subnet.
-	if !s.hasPeerWithSubnet(subnet) {
-		for {
-			if err := ctx.Err(); err != nil {
-				return err
+	s.subnetLocker(subnet).RLock()
+	hasPeer := s.hasPeerWithSubnet(subnet)
+	s.subnetLocker(subnet).RUnlock()
+	if !hasPeer {
+		if err := func () error {
+			s.subnetLocker(subnet).Lock()
+			defer s.subnetLocker(subnet).Unlock()
+			for i := 0; i < maxSubnetDiscoveryAttempts; i++ {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+				ok, err := s.FindPeersWithSubnet(ctx, subnet)
+				if err != nil {
+					return err
+				}
+				if ok {
+					savedAttestationBroadcasts.Inc()
+					break
+				}
 			}
-			ok, err := s.FindPeersWithSubnet(ctx, subnet)
-			if err != nil {
-				return err
-			}
-			if ok {
-				savedAttestationBroadcasts.Inc()
-				break
-			}
+			return nil
+		}(); err != nil {
+			return err
 		}
 	}
 

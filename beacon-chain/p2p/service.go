@@ -73,6 +73,8 @@ type Service struct {
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
 	joinedTopicsLock      sync.Mutex
+	subnetsLock           map[uint64]*sync.RWMutex
+	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -105,6 +107,7 @@ func NewService(cfg *Config) (*Service, error) {
 		exclusionList: cache,
 		isPreGenesis:  true,
 		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
+		subnetsLock:   make(map[uint64]*sync.RWMutex),
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)

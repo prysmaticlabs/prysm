@@ -54,7 +54,7 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 			return topicHandle.Publish(ctx, data, opts...)
 		}
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return ctx.Err()
 		default:
 			time.Sleep(200 * time.Millisecond)
