@@ -114,7 +114,6 @@ func ImportAccount(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not read dir")
 		}
-		keystoreFileNames := make([]string, 0)
 		if len(files) == 0 {
 			return fmt.Errorf("directory %s has no files, cannot import from it", keysDir)
 		}
