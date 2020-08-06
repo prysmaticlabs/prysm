@@ -53,6 +53,7 @@ go_test(
         "references_test.go",
         "state_trie_test.go",
         "types_test.go",
+        "validator_map_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
