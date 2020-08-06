@@ -32,6 +32,8 @@ func TestPeerScorer_PeerScorerManager_Init(t *testing.T) {
 		t.Run("block providers scorer", func(t *testing.T) {
 			params := peerStatuses.Scorers().BlockProviderScorer().Params()
 			assert.Equal(t, peers.DefaultBlockProviderProcessedBatchWeight, params.ProcessedBatchWeight)
+			assert.Equal(t, peers.DefaultBlockProviderProcessedBlocksCap, params.ProcessedBlocksCap)
+			assert.Equal(t, peers.DefaultBlockProviderProcessedBatchWeight, params.ProcessedBatchWeight)
 			assert.Equal(t, peers.DefaultBlockProviderDecayInterval, params.DecayInterval)
 		})
 	})
