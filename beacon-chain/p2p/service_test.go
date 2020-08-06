@@ -25,10 +25,6 @@ import (
 
 type mockListener struct{}
 
-func (mockListener) AllNodes() []*enode.Node {
-	panic("implement me")
-}
-
 func (mockListener) Self() *enode.Node {
 	panic("implement me")
 }
