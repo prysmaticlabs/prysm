@@ -423,6 +423,9 @@ func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaco
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
 func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
+	defer span.End()
+
 	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
@@ -512,6 +515,9 @@ func (vs *Server) canonicalEth1Data(
 }
 
 func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.depositTrie")
+	defer span.End()
+
 	var depositTrie *trieutil.SparseMerkleTrie
 
 	var finalizedDeposits *depositcache.FinalizedDeposits
