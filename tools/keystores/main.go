@@ -242,13 +242,25 @@ func readAndDecryptKeystore(fullPath string, password string) error {
 		}
 		return err
 	}
-	publicKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
-	if err != nil {
-		return errors.Wrapf(err, "could not parse public key for keystore at path: %s", fullPath)
+
+	var pubKeyBytes []byte
+	// Attempt to use the pubkey present in the keystore itself as a field. If unavailable,
+	// then utilize the public key directly from the private key.
+	if keystoreFile.Pubkey != "" {
+		pubKeyBytes, err = hex.DecodeString(keystoreFile.Pubkey)
+		if err != nil {
+			return errors.Wrap(err, "could not decode pubkey from keystore")
+		}
+	} else {
+		privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
+		if err != nil {
+			return errors.Wrap(err, "could not initialize private key from bytes")
+		}
+		pubKeyBytes = privKey.PublicKey().Marshal()
 	}
 	fmt.Printf("\nDecrypted keystore %s\n", au.BrightMagenta(fullPath))
 	fmt.Printf("Privkey: %#x\n", au.BrightGreen(privKeyBytes))
-	fmt.Printf("Pubkey: %#x\n", au.BrightGreen(publicKeyBytes))
+	fmt.Printf("Pubkey: %#x\n", au.BrightGreen(pubKeyBytes))
 	return nil
 }
 
