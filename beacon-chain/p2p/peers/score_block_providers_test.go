@@ -288,6 +288,15 @@ func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
 			name:   "peer not registered",
 			update: nil,
 			check: func(s *peers.BlockProviderScorer) {
+				assert.Equal(t, fmt.Sprintf(format, 100.0, 1.0, 0), s.FormatScorePretty("peer1"))
+			},
+		},
+		{
+			name: "peer registered zero blocks",
+			update: func(s *peers.BlockProviderScorer) {
+				s.Touch("peer1")
+			},
+			check: func(s *peers.BlockProviderScorer) {
 				assert.Equal(t, fmt.Sprintf(format, 0.0, 0.0, 0), s.FormatScorePretty("peer1"))
 			},
 		},
