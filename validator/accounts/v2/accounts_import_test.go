@@ -14,8 +14,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -23,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestImport_Noninteractive(t *testing.T) {
