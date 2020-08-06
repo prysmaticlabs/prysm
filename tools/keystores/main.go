@@ -16,7 +16,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/urfave/cli/v2"
@@ -35,6 +38,19 @@ var (
 		Value: "",
 		Usage: "Password for the keystore(s)",
 	}
+	valueToEncryptFlag = &cli.StringFlag{
+		Name:     "value-to-encrypt",
+		Value:    "",
+		Usage:    "Hex string for the value you wish you encrypt into a keystore file",
+		Required: true,
+	}
+	outputPathFlag = &cli.StringFlag{
+		Name:     "output-path",
+		Value:    "",
+		Usage:    "Output path to write the newly encrypted keystore file",
+		Required: true,
+	}
+	au = aurora.NewAurora(true /* enable colors */)
 )
 
 func main() {
@@ -53,8 +69,9 @@ func main() {
 				Name:  "encrypt",
 				Usage: "encrypt a specified hex string into a keystore file",
 				Flags: []cli.Flag{
-					keystoresFlag,
 					passwordFlag,
+					valueToEncryptFlag,
+					outputPathFlag,
 				},
 				Action: encrypt,
 			},
@@ -107,6 +124,53 @@ func decrypt(cliCtx *cli.Context) error {
 }
 
 func encrypt(cliCtx *cli.Context) error {
+	var err error
+	password := cliCtx.String(passwordFlag.Name)
+	isPasswordSet := cliCtx.IsSet(passwordFlag.Name)
+	if !isPasswordSet {
+		password, err = promptutil.PasswordPrompt("Input the keystore(s) password", func(s string) error {
+			// Any password is valid.
+			return nil
+		})
+	}
+	valueToEncrypt := cliCtx.String(valueToEncryptFlag.Name)
+	if valueToEncrypt == "" {
+		return nil
+	}
+	outputPath := cliCtx.String(outputPathFlag.Name)
+	if outputPath == "" {
+		return errors.New("--output-path must be set")
+	}
+	fullPath, err := expandPath(outputPath)
+	if err != nil {
+		return errors.Wrapf(err, "could not expand path: %s", outputPath)
+	}
+	bytesValue, err := hex.DecodeString(valueToEncrypt)
+	if err != nil {
+		return err
+	}
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return err
+	}
+	cryptoFields, err := encryptor.Encrypt(bytesValue, password)
+	if err != nil {
+		return err
+	}
+	item := &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
+	encodedFile, err := json.MarshalIndent(item, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(fullPath, encodedFile, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -134,9 +198,9 @@ func readAndDecryptKeystore(fullPath string, password string) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not parse public key for keystore at path: %s", fullPath)
 	}
-	fmt.Printf("\nDecrypted keystore %s\n", fullPath)
-	fmt.Printf("Privkey: %#x\n", privKeyBytes)
-	fmt.Printf("Pubkey: %#x\n", publicKeyBytes)
+	fmt.Printf("\nDecrypted keystore %s\n", au.BrightMagenta(fullPath))
+	fmt.Printf("Privkey: %#x\n", au.BrightGreen(privKeyBytes))
+	fmt.Printf("Pubkey: %#x\n", au.BrightGreen(publicKeyBytes))
 	return nil
 }
 
