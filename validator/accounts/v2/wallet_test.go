@@ -11,15 +11,24 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+)
+
+const (
+	walletDirName    = "wallet"
+	passwordDirName  = "walletpasswords"
+	exportDirName    = "export"
+	passwordFileName = "password.txt"
+	password         = "OhWOWthisisatest42!$"
+	mnemonicFileName = "mnemonic.txt"
+	mnemonic         = "garage car helmet trade salmon embrace market giant movie wet same champion dawn chair shield drill amazing panther accident puzzle garden mosquito kind arena"
 )
 
 func init() {

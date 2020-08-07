@@ -53,7 +53,6 @@ go_test(
         "accounts_create_test.go",
         "accounts_import_test.go",
         "accounts_list_test.go",
-        "consts_test.go",
         "wallet_create_test.go",
         "wallet_edit_test.go",
         "wallet_recover_test.go",

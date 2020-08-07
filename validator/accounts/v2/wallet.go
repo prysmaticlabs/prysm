@@ -50,7 +50,6 @@ type Wallet struct {
 	walletDir      string
 	accountsPath   string
 	keymanagerKind v2keymanager.Kind
-	walletPassword string
 }
 
 func init() {
@@ -170,7 +169,7 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = derived.NewKeymanager(cliCtx, w, cfg, skipMnemonicConfirm, w.walletPassword)
+		keymanager, err = derived.NewKeymanager(cliCtx, w, cfg, skipMnemonicConfirm)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
