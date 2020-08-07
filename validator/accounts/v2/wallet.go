@@ -94,7 +94,7 @@ func NewWallet(
 		keymanagerKind: keymanagerKind,
 		walletDir:      walletDir,
 	}
-	if keymanagerKind == v2keymanager.Derived {
+	if keymanagerKind == v2keymanager.Derived || keymanagerKind == v2keymanager.Direct {
 		walletPassword, err := inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,
@@ -257,6 +257,7 @@ func (w *Wallet) InitializeKeymanager(
 		}
 		keymanager, err = derived.NewKeymanager(ctx, w, cfg, skipMnemonicConfirm, w.walletPassword)
 		if err != nil {
+			``
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
 	case v2keymanager.Remote:
