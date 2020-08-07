@@ -13,7 +13,10 @@ go_library(
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

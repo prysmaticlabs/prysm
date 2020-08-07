@@ -19,7 +19,10 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
