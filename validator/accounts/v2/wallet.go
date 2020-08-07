@@ -10,6 +10,7 @@ import (
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -66,7 +67,7 @@ func NewWallet(
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
-	walletExists, err := hasDir(walletDir)
+	walletExists, err := fileutil.HasDir(walletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
@@ -96,7 +97,7 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok, err := hasDir(walletDir)
+	ok, err := fileutil.HasDir(walletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
@@ -208,7 +209,7 @@ func (w *Wallet) ListDirs() ([]string, error) {
 	}
 	dirNames := make([]string, 0)
 	for _, item := range list {
-		ok, err := hasDir(filepath.Join(w.AccountsDir(), item))
+		ok, err := fileutil.HasDir(filepath.Join(w.AccountsDir(), item))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
 		}
@@ -280,7 +281,7 @@ func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName s
 // for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error) {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
-	if !fileExists(configFilePath) {
+	if !fileutil.FileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
 	return os.Open(configFilePath)
@@ -302,7 +303,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 // within the wallet path.
 func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
 	configFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
-	if !fileExists(configFilePath) {
+	if !fileutil.FileExists(configFilePath) {
 		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
 	}
 	return os.Open(configFilePath)
@@ -347,7 +348,7 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 
 func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
 	directory := cliCtx.String(flags.WalletDirFlag.Name)
-	ok, err := hasDir(directory)
+	ok, err := fileutil.HasDir(directory)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 	}
@@ -363,40 +364,10 @@ func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 	return creationFunc(cliCtx)
 }
 
-// Returns true if a file is not a directory and exists
-// at the specified path.
-func fileExists(filename string) bool {
-	filePath, err := expandPath(filename)
-	if err != nil {
-		return false
-	}
-	info, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-// Checks if a directory indeed exists at the specified path.
-func hasDir(dirPath string) (bool, error) {
-	fullPath, err := expandPath(dirPath)
-	if err != nil {
-		return false, err
-	}
-	info, err := os.Stat(fullPath)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if info == nil {
-		return false, err
-	}
-	return info.IsDir(), err
-}
-
 // isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.
 // Returns true if exists, false otherwise.
 func isEmptyWallet(name string) (bool, error) {
-	expanded, err := expandPath(name)
+	expanded, err := fileutil.ExpandPath(name)
 	if err != nil {
 		return false, err
 	}

@@ -6,10 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"os/user"
-	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -20,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -434,7 +431,7 @@ func inputPassword(
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := expandPath(passwordFilePathInput)
+		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
@@ -472,28 +469,4 @@ func inputPassword(
 		}
 	}
 	return walletPassword, nil
-}
-
-// Expands a file path
-// 1. replace tilde with users home dir
-// 2. expands embedded environment variables
-// 3. cleans the path, e.g. /a/b/../c -> /a/c
-// Note, it has limitations, e.g. ~someuser/tmp will not be expanded
-func expandPath(p string) (string, error) {
-	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
-		if home := homeDir(); home != "" {
-			p = home + p[1:]
-		}
-	}
-	return filepath.Abs(path.Clean(os.ExpandEnv(p)))
-}
-
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
-	return ""
 }

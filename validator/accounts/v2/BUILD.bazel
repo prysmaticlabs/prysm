@@ -24,6 +24,7 @@ go_library(
     ],
     deps = [
         "//shared/featureconfig:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
