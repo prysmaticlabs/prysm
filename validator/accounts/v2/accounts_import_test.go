@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -100,7 +101,6 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()
-	keymanagerCfg.AccountPasswordsDirectory = passwordsDir
 	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
@@ -126,6 +126,67 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, len(keys))
+}
+
+func TestImport_SortByDerivationPath(t *testing.T) {
+	type test struct {
+		name  string
+		input []string
+		want  []string
+	}
+	tests := []test{
+		{
+			name: "Basic sort",
+			input: []string{
+				"keystore_m_12381_3600_2_0_0.json",
+				"keystore_m_12381_3600_1_0_0.json",
+				"keystore_m_12381_3600_0_0_0.json",
+			},
+			want: []string{
+				"keystore_m_12381_3600_0_0_0.json",
+				"keystore_m_12381_3600_1_0_0.json",
+				"keystore_m_12381_3600_2_0_0.json",
+			},
+		},
+		{
+			name: "Large digit accounts",
+			input: []string{
+				"keystore_m_12381_3600_30020330_0_0.json",
+				"keystore_m_12381_3600_430490934_0_0.json",
+				"keystore_m_12381_3600_0_0_0.json",
+				"keystore_m_12381_3600_333_0_0.json",
+			},
+			want: []string{
+				"keystore_m_12381_3600_0_0_0.json",
+				"keystore_m_12381_3600_333_0_0.json",
+				"keystore_m_12381_3600_30020330_0_0.json",
+				"keystore_m_12381_3600_430490934_0_0.json",
+			},
+		},
+		{
+			name: "Some filenames with derivation path, others without",
+			input: []string{
+				"keystore_m_12381_3600_4_0_0.json",
+				"keystore.json",
+				"keystore-2309023.json",
+				"keystore_m_12381_3600_1_0_0.json",
+				"keystore_m_12381_3600_3_0_0.json",
+			},
+			want: []string{
+				"keystore_m_12381_3600_1_0_0.json",
+				"keystore_m_12381_3600_3_0_0.json",
+				"keystore_m_12381_3600_4_0_0.json",
+				"keystore.json",
+				"keystore-2309023.json",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sort.Sort(byDerivationPath(tt.input))
+			assert.DeepEqual(t, tt.want, tt.input)
+		})
+	}
 }
 
 // Returns the fullPath to the newly created keystore file.
