@@ -204,7 +204,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
 	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct graffiti")
-	assert.Equal(t, params.BeaconConfig().MaxAttestations, uint64(len(block.Body.Attestations)), "Expected a full block of attestations")
+	assert.Equal(t, 1, len(block.Body.Attestations), "Expected block atts to be aggregated down to 1")
 	hasUnaggregatedAtt := false
 	for _, a := range block.Body.Attestations {
 		if !helpers.IsAggregated(a) {
@@ -212,7 +212,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 			break
 		}
 	}
-	assert.Equal(t, true, hasUnaggregatedAtt, "Expected block to contain at least one unaggregated attestation")
+	assert.Equal(t, false, hasUnaggregatedAtt, "Expected block to not have unaggregated attestation")
 }
 
 func TestProposeBlock_OK(t *testing.T) {
