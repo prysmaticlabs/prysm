@@ -13,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/urfave/cli/v2"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -173,7 +175,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 					test.opts.RemoteCertificate.ClientKeyPath = clientKeyPath
 				}
 			}
-			_, err := NewKeymanager(context.Background(), 1, test.opts)
+			_, err := NewKeymanager(&cli.Context{}, 1, test.opts)
 			if test.err == "" {
 				require.NoError(t, err)
 			} else {
