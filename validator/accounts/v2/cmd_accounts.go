@@ -55,12 +55,16 @@ this command outputs a deposit data string which is required to become a validat
 			},
 		},
 		{
-			Name:        "export",
-			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
+			Name: "export",
+			Description: "exports an account into an EIP-2335 compliant keystore.json file. If multiple accounts " +
+				"are selected, it exports a zip file of their respective keystores. Accounts to export can also" +
+				"be specified programmatically via a --export-for-public-keys flag which specifies a comma-separated" +
+				"list of public keys as hex strings",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.BackupDirFlag,
 				flags.AccountsFlag,
+				flags.ExportForPublicKeysFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 			},

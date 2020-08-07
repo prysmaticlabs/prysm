@@ -173,6 +173,13 @@ var (
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,
 	}
+	// ExportForPublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to export from their wallet.
+	ExportForPublicKeysFlag = &cli.StringFlag{
+		Name:  "export-for-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to export",
+		Value: "",
+	}
 	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
 	BackupDirFlag = &cli.StringFlag{
 		Name:  "backup-dir",

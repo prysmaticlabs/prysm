@@ -20,7 +20,7 @@ var log = logrus.WithField("prefix", "accounts-v2")
 // a wallet from the user's specified path.
 func CreateAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	wallet, err := createOrOpenWallet(cliCtx, CreateWallet)
+	wallet, err := openOrCreateWallet(cliCtx, CreateWallet)
 	if err != nil {
 		return err
 	}

@@ -2,46 +2,97 @@ package v2
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+
 	"github.com/urfave/cli/v2"
 )
 
 const allAccountsText = "All accounts"
 const archiveFilename = "backup.zip"
 
-// ExportAccount creates a zip archive of the selected accounts to be used in the future for importing accounts.
+// ExportAccount --
 func ExportAccount(cliCtx *cli.Context) error {
-	// TODO(#6777): Re-enable export command.
-	return errors.New("this feature is unimplemented")
+	ctx := context.Background()
+	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, nothing to export. Create a new wallet by running wallet-v2 create",
+		)
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize wallet")
+	}
+	if wallet.KeymanagerKind() == v2keymanager.Remote {
+		return errors.New(
+			"remote wallets cannot export accounts",
+		)
+	}
+	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	filteredPubKeys, err := selectAccounts(cliCtx, pubKeys)
+	if err != nil {
+		return errors.Wrap(err, "could not select accounts to export")
+	}
+	var keystoresToExport []*v2keymanager.Keystore
+	switch wallet.KeymanagerKind() {
+	case v2keymanager.Direct:
+		km, ok := keymanager.(*direct.Keymanager)
+		if !ok {
+			return errors.New("could not assert keymanager interface to concrete type")
+		}
+		keystoresToExport, err = km.ExportKeystores(ctx, filteredPubKeys)
+		if err != nil {
+			return errors.Wrap(err, "could not export accounts for direct keymanager")
+		}
+	case v2keymanager.Derived:
+		km, ok := keymanager.(*derived.Keymanager)
+		if !ok {
+			return errors.New("could not assert keymanager interface to concrete type")
+		}
+		//if err := km.ExportAccounts(ctx, []bls.PublicKey{}); err != nil {
+		//	return errors.Wrap(err, "could not export accounts for derived keymanager")
+		//}
+		_ = km
+		return nil
+	default:
+		return errors.New("keymanager kind not supported")
+	}
+	_ = keystoresToExport
+	return nil
 }
 
-func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
-	if len(accounts) == 1 {
-		return accounts, nil
-	}
-	if cliCtx.IsSet(flags.AccountsFlag.Name) {
-		enteredAccounts := cliCtx.StringSlice(flags.AccountsFlag.Name)
-		if len(enteredAccounts) == 1 && enteredAccounts[0] == "all" {
-			return accounts, nil
-		}
-		allAccountsStr := strings.Join(accounts, " ")
-		for _, accountName := range enteredAccounts {
-			if !strings.Contains(allAccountsStr, accountName) {
-				return nil, fmt.Errorf("entered account %s not found in given wallet directory", accountName)
-			}
-		}
-		return enteredAccounts, nil
+func selectAccounts(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
+	// Ask user for which accounts they wish to backup, then we
+	// filter the respective public keys.
+	pubKeyStrings := make([]string, len(pubKeys))
+	for i, pk := range pubKeys {
+		name := petnames.DeterministicName(pk[:], "-")
+		pubKeyStrings[i] = fmt.Sprintf(
+			"%d | %s | %#x", i, au.BrightGreen(name), au.BrightMagenta(bytesutil.Trunc(pk[:])),
+		)
 	}
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
@@ -52,20 +103,16 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 --------- Account ----------
 {{ "Name:" | faint }}	{{ .Name }}`,
 	}
-
 	var result string
 	var err error
-	exit := "Exit Account Selection"
-	results := []string{}
+	exit := "Done selecting"
+	results := make([]int, 0)
 	au := aurora.NewAurora(true)
-	// Alphabetical Sort of accounts.
-	sort.Strings(accounts)
-
 	for result != exit {
 		prompt := promptui.Select{
 			Label:        "Select accounts to backup",
 			HideSelected: true,
-			Items:        append([]string{exit, allAccountsText}, accounts...),
+			Items:        append([]string{exit, allAccountsText}, pubKeyStrings...),
 			Templates:    templates,
 		}
 
@@ -74,18 +121,44 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 			return nil, err
 		}
 		if result == exit {
-			fmt.Printf("%s\n", au.BrightRed("Exiting Selection").Bold())
-			return results, nil
+			fmt.Printf("%s\n", au.BrightRed("Done with selections").Bold())
+			break
 		}
 		if result == allAccountsText {
 			fmt.Printf("%s\n", au.BrightRed("[Selected all accounts]").Bold())
-			return accounts, nil
+			for i := 0; i < len(pubKeys); i++ {
+				results = append(results, i)
+			}
+			break
 		}
-		results = append(results, result)
-		fmt.Printf("%s %s\n", au.BrightRed("[Selected Account Name]").Bold(), result)
+		idx := strings.Index(result, " |")
+		accountIndexStr := result[:idx]
+		accountIndex, err := strconv.Atoi(accountIndexStr)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, accountIndex)
+		fmt.Printf("%s %s\n", au.BrightRed("[Selected account]").Bold(), result)
 	}
 
-	return results, nil
+	// Deduplicate the results.
+	seen := make(map[int]bool)
+	for i := 0; i < len(results); i++ {
+		if _, ok := seen[results[i]]; !ok {
+			seen[results[i]] = true
+		}
+	}
+
+	// Filter the public keys for export based on user input.
+	filteredPubKeys := make([]bls.PublicKey, 0)
+	for selectedIndex := range seen {
+		pk, err := bls.PublicKeyFromBytes(pubKeys[selectedIndex][:])
+		if err != nil {
+			return nil, err
+		}
+		filteredPubKeys = append(filteredPubKeys, pk)
+	}
+	return filteredPubKeys, nil
 }
 
 func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {

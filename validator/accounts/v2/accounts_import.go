@@ -62,7 +62,7 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	wallet, err := createOrOpenWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		w, err := NewWallet(cliCtx, v2keymanager.Direct)
 		if err != nil && !errors.Is(err, ErrWalletExists) {
 			return nil, errors.Wrap(err, "could not create new wallet")
