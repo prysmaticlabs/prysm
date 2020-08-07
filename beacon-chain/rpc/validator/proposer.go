@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"sort"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -664,16 +665,27 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 	if numAtts < params.BeaconConfig().MaxAttestations {
 		uAtts := vs.AttPool.UnaggregatedAttestations()
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
-		numUAtts := uint64(len(uAtts))
 		atts = append(atts, uAtts...)
 		atts, err = attaggregation.Aggregate(atts)
 		if err != nil {
-		   return nil, err
+			return nil, err
 		}
-		if len(atts) > params.BeaconConfig().MaxAttestations {
-		   atts = sort.MostProfitable(atts)
-		   atts = atts[:params.BeaconConfig().MaxAttestations]
+		if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
+			atts = protitableAtts(atts)
+			atts = atts[:params.BeaconConfig().MaxAttestations]
 		}
 	}
 	return atts, nil
+}
+
+// This sorts attestations by profitability.
+func protitableAtts(atts []*ethpb.Attestation) []*ethpb.Attestation {
+	// The most profitable attestations and the ones with the most aggregated bits and highest slot.
+	sort.Slice(atts, func(i, j int) bool {
+		return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
+	})
+	sort.Slice(atts, func(i, j int) bool {
+		return atts[i].Data.Slot > atts[j].Data.Slot
+	})
+	return atts
 }
