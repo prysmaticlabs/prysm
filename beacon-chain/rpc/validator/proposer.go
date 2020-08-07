@@ -51,6 +51,21 @@ type eth1DataAggregatedVote struct {
 	votes int
 }
 
+// profitableAtts implements the Sort interface to sort attestations
+// by highest slot and by highest aggregation bit count.
+type profitableAtts struct {
+	atts []*ethpb.Attestation
+}
+
+func (p profitableAtts) Len() int      { return len(p.atts) }
+func (p profitableAtts) Swap(i, j int) { p.atts[i], p.atts[j] = p.atts[j], p.atts[i] }
+func (p profitableAtts) Less(i, j int) bool {
+	if p.atts[i].Data.Slot == p.atts[j].Data.Slot {
+		return p.atts[i].AggregationBits.Count() < p.atts[j].AggregationBits.Count()
+	}
+	return p.atts[i].Data.Slot < p.atts[j].Data.Slot
+}
+
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
@@ -671,21 +686,9 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			return nil, err
 		}
 		if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
-			atts = protitableAtts(atts)
+			sort.Sort(profitableAtts{atts: atts})
 			atts = atts[:params.BeaconConfig().MaxAttestations]
 		}
 	}
 	return atts, nil
-}
-
-// This sorts attestations by profitability.
-func protitableAtts(atts []*ethpb.Attestation) []*ethpb.Attestation {
-	// The most profitable attestations and the ones with the most aggregated bits and highest slot.
-	sort.Slice(atts, func(i, j int) bool {
-		return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
-	})
-	sort.Slice(atts, func(i, j int) bool {
-		return atts[i].Data.Slot > atts[j].Data.Slot
-	})
-	return atts
 }
