@@ -406,7 +406,6 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 	var password string
 	var err error
 	for {
-		fmt.Println("Asking for password here")
 		password, err = promptutil.PasswordPrompt(
 			"Wrong password entered, try again", promptutil.NotEmpty,
 		)
