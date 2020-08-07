@@ -22,6 +22,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -667,6 +668,12 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 		if numUAtts+numAtts > params.BeaconConfig().MaxAttestations {
 			uAtts = uAtts[:params.BeaconConfig().MaxAttestations-numAtts]
 		}
+
+		uAtts, err = attaggregation.Aggregate(uAtts)
+		if err != nil {
+			return nil, err
+		}
+
 		atts = append(atts, uAtts...)
 	}
 	return atts, nil
