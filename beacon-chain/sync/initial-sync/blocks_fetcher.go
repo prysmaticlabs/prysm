@@ -434,12 +434,6 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, ratio 
 	// a higher score has higher chance to end up higher in the list.
 	scorer := f.p2p.Peers().Scorers().BlockProviderScorer()
 	peers = scorer.WeightSorted(f.rand, peers, func(peerID peer.ID, blockProviderScore float64) float64 {
-		l := f.getPeerLock(peerID)
-		if l == nil {
-			return blockProviderScore
-		}
-		l.Lock()
-		defer l.Unlock()
 		remaining, capacity := float64(f.rateLimiter.Remaining(peerID.String())), float64(f.rateLimiter.Capacity())
 		// When no capacity for a good peer left, allow less performant peer to take a chance.
 		if remaining < float64(f.blocksPerSecond) {

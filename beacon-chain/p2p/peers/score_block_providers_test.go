@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -53,7 +53,7 @@ func TestPeerScorer_BlockProvider_Score(t *testing.T) {
 			update: func(scorer *peers.BlockProviderScorer) {
 				scorer.IncrementProcessedBlocks("peer1", batchSize*3)
 				assert.Equal(t, 0.05*3, scorer.Score("peer1"), "Unexpected score")
-				scorer.Touch("peer1", time.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
+				scorer.Touch("peer1", roughtime.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
 			},
 			check: func(scorer *peers.BlockProviderScorer) {
 				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")

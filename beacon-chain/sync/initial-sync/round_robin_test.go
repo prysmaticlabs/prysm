@@ -398,7 +398,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		batch := []*eth.SignedBeaconBlock{}
+		var batch []*eth.SignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
 		for i := 1; i < 10; i++ {
 			parentRoot := currBlockRoot
@@ -416,7 +416,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		batch2 := []*eth.SignedBeaconBlock{}
+		var batch2 []*eth.SignedBeaconBlock
 		for i := 10; i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := &eth.SignedBeaconBlock{
@@ -529,13 +529,13 @@ func TestService_blockProviderScoring(t *testing.T) {
 		synced:       false,
 		chainStarted: true,
 	}
-	scorer := s.p2p.Peers().Scorer()
+	scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
 	expectedBlockSlots := makeSequence(1, 160)
 	currentSlot := uint64(160)
 
-	assert.Equal(t, scorer.BlockProviderMaxScore(), scorer.ScoreBlockProvider(peer1))
-	assert.Equal(t, scorer.BlockProviderMaxScore(), scorer.ScoreBlockProvider(peer2))
-	assert.Equal(t, scorer.BlockProviderMaxScore(), scorer.ScoreBlockProvider(peer3))
+	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer1))
+	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer2))
+	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer3))
 
 	assert.NoError(t, s.roundRobinSync(makeGenesisTime(currentSlot)))
 	if s.chain.HeadSlot() != currentSlot {
@@ -551,10 +551,10 @@ func TestService_blockProviderScoring(t *testing.T) {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}
 
-	score1 := scorer.ScoreBlockProvider(peer1)
-	score2 := scorer.ScoreBlockProvider(peer2)
-	score3 := scorer.ScoreBlockProvider(peer3)
+	score1 := scorer.Score(peer1)
+	score2 := scorer.Score(peer2)
+	score3 := scorer.Score(peer3)
 	assert.Equal(t, true, score1 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score1, peer1, score3)
 	assert.Equal(t, true, score2 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score2, peer2, score3)
-	assert.Equal(t, true, scorer.ReturnedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer")
+	assert.Equal(t, true, scorer.ProcessedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer")
 }

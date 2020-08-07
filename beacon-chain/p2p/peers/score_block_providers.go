@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 const (
@@ -158,7 +159,7 @@ func (s *BlockProviderScorer) touch(pid peer.ID, t ...time.Time) {
 	if len(t) == 1 {
 		s.store.peers[pid].blockProviderUpdated = t[0]
 	} else {
-		s.store.peers[pid].blockProviderUpdated = time.Now()
+		s.store.peers[pid].blockProviderUpdated = roughtime.Now()
 	}
 }
 

@@ -61,24 +61,9 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		return err
 	}
 
-	blockReceiver := s.chain.ReceiveBlockInitialSync
-	batchReceiver := s.chain.ReceiveBlockBatch
-
 	// Step 1 - Sync to end of finalized epoch.
-	for fetchedBlocks := range queue.fetchedBlocks {
-		// Use Batch Block Verify to process and verify batches directly.
-		if featureconfig.Get().BatchBlockVerify {
-			if err := s.processBatchedBlocks(ctx, genesis, fetchedBlocks, batchReceiver); err != nil {
-				log.WithError(err).Info("Batch is not processed")
-			}
-			continue
-		}
-		for _, blk := range fetchedBlocks {
-			if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-				log.WithError(err).Info("Block is not processed")
-				continue
-			}
-		}
+	for data := range queue.fetchedData {
+		s.processFetchedData(ctx, genesis, s.chain.HeadSlot(), data)
 	}
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
@@ -138,6 +123,37 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	}
 
 	return nil
+}
+
+// processFetchedData processes data received from queue.
+func (s *Service) processFetchedData(
+	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
+	defer func() {
+		if data.pid == "" {
+			return
+		}
+		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
+		if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
+			scorer.IncrementProcessedBlocks(data.pid, diff)
+		}
+	}()
+
+	blockReceiver := s.chain.ReceiveBlockInitialSync
+	batchReceiver := s.chain.ReceiveBlockBatch
+
+	// Use Batch Block Verify to process and verify batches directly.
+	if featureconfig.Get().BatchBlockVerify {
+		if err := s.processBatchedBlocks(ctx, genesis, data.blocks, batchReceiver); err != nil {
+			log.WithError(err).Info("Batch is not processed")
+		}
+		return
+	}
+	for _, blk := range data.blocks {
+		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+			log.WithError(err).Info("Block is not processed")
+			continue
+		}
+	}
 }
 
 // highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.
