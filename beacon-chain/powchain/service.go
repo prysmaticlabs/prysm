@@ -414,27 +414,26 @@ func (s *Service) waitForConnection() {
 	if errConnect != nil {
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 	}
-	ticker := time.NewTicker(backOffPeriod)
 	logCounter := 0
+	errorLogger := func(err error, msg string) {
+		if logCounter > logThreshold {
+			log.WithError(err).Error(msg)
+			logCounter = 0
+		}
+		logCounter++
+	}
+	ticker := time.NewTicker(backOffPeriod)
 	for {
 		select {
 		case <-ticker.C:
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
-				if logCounter > logThreshold {
-					log.WithError(errConnect).Error("Could not connect to powchain endpoint")
-					logCounter = 0
-				}
-				logCounter++
+				errorLogger(errConnect, "Could not connect to powchain endpoint")
 				continue
 			}
 			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
-				if logCounter > logThreshold {
-					log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
-					logCounter = 0
-				}
-				logCounter++
+				errorLogger(errSynced, "Could not check sync status of eth1 chain")
 				continue
 			}
 			if synced {
