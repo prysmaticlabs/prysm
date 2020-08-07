@@ -18,7 +18,6 @@ var WalletCommands = &cli.Command{
 				"either on-disk (direct), derived, or using remote credentials",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
 				flags.KeymanagerKindFlag,
 				flags.GrpcRemoteAddressFlag,
 				flags.RemoteSignerCertPathFlag,
@@ -27,6 +26,7 @@ var WalletCommands = &cli.Command{
 				flags.WalletPasswordFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if _, err := CreateWallet(cliCtx); err != nil {
@@ -44,9 +44,9 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
-				flags.WalletPasswordsDirFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := EditWalletConfiguration(cliCtx); err != nil {
@@ -60,12 +60,12 @@ var WalletCommands = &cli.Command{
 			Usage: "uses a derived wallet seed recovery phase to recreate an existing HD wallet",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
 				flags.MnemonicFileFlag,
 				flags.WalletPasswordFileFlag,
 				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := RecoverWallet(cliCtx); err != nil {
