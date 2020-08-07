@@ -13,14 +13,13 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/urfave/cli/v2"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/urfave/cli/v2"
 )
 
 var validClientCert = `-----BEGIN CERTIFICATE-----
