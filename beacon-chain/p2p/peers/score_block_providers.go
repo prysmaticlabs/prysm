@@ -24,7 +24,7 @@ const (
 	// DefaultBlockProviderDecay defines default blocks that are to be subtracted from stats on each
 	// decay interval. Effectively, this param provides minimum expected performance for a peer to remain
 	// high scorer.
-	DefaultBlockProviderDecay = uint64(10 * 64)
+	DefaultBlockProviderDecay = uint64(5 * 64)
 	// DefaultBlockProviderStalePeerRefreshInterval defines default interval at which peers should be given
 	// opportunity to provide blocks (their score gets boosted, up until they are selected for
 	// fetching).
