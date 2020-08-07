@@ -23,6 +23,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
@@ -34,6 +35,7 @@ go_library(
         "//validator/keymanager/v2/direct:go_default_library",
         "//validator/keymanager/v2/remote:go_default_library",
         "@com_github_dustinkirkland_golang_petname//:go_default_library",
+        "@com_github_google_uuid//:go_default_library",
         "@com_github_k0kubun_go_ansi//:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",

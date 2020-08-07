@@ -16,8 +16,6 @@ import (
 const (
 	// WalletDefaultDirName for accounts-v2.
 	WalletDefaultDirName = "prysm-wallet-v2"
-	// PasswordsDefaultDirName where account-v2 passwords are stored.
-	PasswordsDefaultDirName = "prysm-wallet-v2-passwords"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -145,6 +143,11 @@ var (
 	WalletPasswordFileFlag = &cli.StringFlag{
 		Name:  "wallet-password-file",
 		Usage: "Path to a plain-text, .txt file containing your wallet password",
+	}
+	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
+	ImportPrivateKeyFileFlag = &cli.StringFlag{
+		Name:  "import-private-key-file",
+		Usage: "Path to a plain-text, .txt file containing a hex string representation of a private key to import",
 	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{
