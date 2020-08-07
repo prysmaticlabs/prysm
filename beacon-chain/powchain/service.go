@@ -57,6 +57,9 @@ var (
 // time to wait before trying to reconnect with the eth1 node.
 var backOffPeriod = 6 * time.Second
 
+// Amount of times before we log the status of the eth1 dial attempt.
+var logThreshold = 20
+
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
@@ -412,17 +415,26 @@ func (s *Service) waitForConnection() {
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 	}
 	ticker := time.NewTicker(backOffPeriod)
+	logCounter := 0
 	for {
 		select {
 		case <-ticker.C:
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
-				log.WithError(errConnect).Error("Could not connect to powchain endpoint")
+				if logCounter > logThreshold {
+					log.WithError(errConnect).Error("Could not connect to powchain endpoint")
+					logCounter = 0
+				}
+				logCounter++
 				continue
 			}
 			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
-				log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+				if logCounter > logThreshold {
+					log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+					logCounter = 0
+				}
+				logCounter++
 				continue
 			}
 			if synced {
