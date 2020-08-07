@@ -414,6 +414,8 @@ func (s *Service) waitForConnection() {
 	if errConnect != nil {
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 	}
+	// Use a custom logger to only log errors
+	// once in  a while.
 	logCounter := 0
 	errorLogger := func(err error, msg string) {
 		if logCounter > logThreshold {
