@@ -189,7 +189,6 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet, km *direct.K
 	if len(privKeyString) > 2 && strings.Contains(privKeyString, "0x") {
 		privKeyString = privKeyString[2:] // Strip the 0x prefix, if any.
 	}
-	fmt.Println(privKeyString)
 	privKeyBytes, err := hex.DecodeString(strings.TrimRight(privKeyString, "\r\n"))
 	if err != nil {
 		return errors.Wrap(
