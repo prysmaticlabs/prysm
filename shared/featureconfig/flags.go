@@ -140,7 +140,7 @@ var (
 	}
 	disableNewBeaconStateLocks = &cli.BoolFlag{
 		Name:  "disable-new-beacon-state-locks",
-		Usage: "Enable new beacon state locking",
+		Usage: "Disable new beacon state locking",
 	}
 	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-maxcover",
