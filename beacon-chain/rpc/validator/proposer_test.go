@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"math/big"
+	"sort"
 	"testing"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -1940,4 +1941,25 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	require.NoError(t, s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)))
 	assert.Equal(t, 0, len(s.AttPool.AggregatedAttestations()), "Did not delete aggregated attestation")
 	assert.Equal(t, 0, len(s.AttPool.UnaggregatedAttestations()), "Did not delete unaggregated attestation")
+}
+
+func TestSortProfitableAtts(t *testing.T) {
+	atts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}},
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}},
+	}
+	sort.Sort(profitableAtts{atts: atts})
+	want := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}},
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}},
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}},
+	}
+	require.DeepEqual(t, want, atts)
 }
