@@ -3,14 +3,14 @@
 package flags
 
 import (
-	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 const (
@@ -248,7 +248,7 @@ func ComplainOnDeprecatedFlags(ctx *cli.Context) {
 // DefaultValidatorDir returns OS-specific default validator directory.
 func DefaultValidatorDir() string {
 	// Try to place the data folder in the user's home dir
-	home := homeDir()
+	home := fileutil.HomeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2Validators")
@@ -259,16 +259,5 @@ func DefaultValidatorDir() string {
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later
-	return ""
-}
-
-// homeDir returns home directory path.
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
 	return ""
 }
