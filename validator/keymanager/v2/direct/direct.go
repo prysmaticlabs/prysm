@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -44,8 +43,7 @@ const (
 
 // Config for a direct keymanager.
 type Config struct {
-	EIPVersion                string `json:"direct_eip_version"`
-	AccountPasswordsDirectory string `json:"direct_accounts_passwords_directory"`
+	EIPVersion string `json:"direct_eip_version"`
 }
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
@@ -66,8 +64,7 @@ type AccountStore struct {
 // DefaultConfig for a direct keymanager implementation.
 func DefaultConfig() *Config {
 	return &Config{
-		EIPVersion:                eipVersion,
-		AccountPasswordsDirectory: flags.WalletPasswordsDirFlag.Value,
+		EIPVersion: eipVersion,
 	}
 }
 
@@ -78,12 +75,6 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keym
 		cfg:           cfg,
 		keysCache:     make(map[[48]byte]bls.SecretKey),
 		accountsStore: &AccountStore{},
-	}
-	// If the user has previously created a direct keymanaged wallet, we perform
-	// a "silent migration" into this more effective format of storing a single keystore
-	// file containing all accounts.
-	if err := k.migrateToSingleKeystore(ctx); err != nil {
-		return nil, errors.Wrap(err, "could not migrate to single keystore format")
 	}
 
 	// If the wallet has the capability of unlocking accounts using
@@ -131,13 +122,6 @@ func (c *Config) String() string {
 	var b strings.Builder
 	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("EIP Version"), c.EIPVersion)
 	if _, err := b.WriteString(strAddr); err != nil {
-		log.Error(err)
-		return ""
-	}
-	strCrt := fmt.Sprintf(
-		"%s: %s\n", au.BrightMagenta("Accounts Passwords Directory"), c.AccountPasswordsDirectory,
-	)
-	if _, err := b.WriteString(strCrt); err != nil {
 		log.Error(err)
 		return ""
 	}

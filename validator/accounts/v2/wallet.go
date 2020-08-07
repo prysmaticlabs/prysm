@@ -57,7 +57,6 @@ var (
 type Wallet struct {
 	walletDir      string
 	accountsPath   string
-	passwordsDir   string
 	keymanagerKind v2keymanager.Kind
 	walletPassword string
 }
@@ -187,16 +186,6 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 				validateExistingPass,
 			)
 		} else {
-			passwordsDir := w.passwordsDir
-			if passwordsDir == "" {
-				passwordsDir, err = inputDirectory(cliCtx, passwordsDirPromptText, flags.WalletPasswordsDirFlag)
-				if err != nil {
-					return nil, err
-				}
-			}
-			w.passwordsDir = passwordsDir
-			au := aurora.NewAurora(true)
-			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), w.passwordsDir)
 			fmt.Println("\nWe have revamped how imported accounts work, improving speed significantly for your " +
 				"validators as well as reducing memory and CPU requirements. This unifies all your existing accounts " +
 				"into a single format protected by a strong password. You'll need to set a new password for this " +
@@ -221,11 +210,6 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 func (w *Wallet) SaveWallet() error {
 	if err := os.MkdirAll(w.accountsPath, DirectoryPermissions); err != nil {
 		return errors.Wrap(err, "could not create wallet directory")
-	}
-	if w.keymanagerKind == v2keymanager.Direct && w.passwordsDir != "" {
-		if err := os.MkdirAll(w.passwordsDir, DirectoryPermissions); err != nil {
-			return errors.Wrap(err, "could not create passwords directory")
-		}
 	}
 	return nil
 }
@@ -438,16 +422,6 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 	return nil
 }
 
-// ReadPasswordFromDisk --
-func (w *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName string) (string, error) {
-	fullPath := filepath.Join(w.passwordsDir, passwordFileName)
-	rawData, err := ioutil.ReadFile(fullPath)
-	if err != nil {
-		return "", errors.Wrapf(err, "could not read %s", fullPath)
-	}
-	return string(rawData), nil
-}
-
 // enterPasswordForAccount checks if a user has a password specified for the new account
 // either from a file or from stdin. Then, it saves the password to the wallet.
 func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string, pubKey []byte) error {
@@ -495,13 +469,81 @@ func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string
 			fmt.Print(au.Green("✔️\n").Bold())
 		}
 	}
-	ctx := context.Background()
-	if err := w.WritePasswordToDisk(ctx, accountName+direct.PasswordFileSuffix, password); err != nil {
-		return errors.Wrap(err, "could not write password to disk")
+	return nil
+}
+
+<<<<<<< HEAD
+=======
+func (w *Wallet) enterPasswordForAllAccounts(cliCtx *cli.Context, accountNames []string, pubKeys [][]byte) error {
+	au := aurora.NewAurora(true)
+	var password string
+	var err error
+	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return err
+		}
+		password = string(data)
+		for i := 0; i < len(accountNames); i++ {
+			err = w.checkPasswordForAccount(accountNames[i], password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				return fmt.Errorf("invalid password for account with public key %#x", pubKeys[i])
+			}
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		password, err = inputWeakPassword(
+			cliCtx,
+			flags.AccountPasswordFileFlag,
+			"Enter the password for your imported accounts",
+		)
+		fmt.Println("Importing accounts, this may take a while...")
+		bar := progressbar.NewOptions(
+			len(accountNames),
+			progressbar.OptionFullWidth(),
+			progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+			progressbar.OptionEnableColorCodes(true),
+			progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "[green]=[reset]",
+				SaucerHead:    "[green]>[reset]",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}),
+			progressbar.OptionOnCompletion(func() { fmt.Println() }),
+			progressbar.OptionSetDescription("Importing accounts"),
+		)
+		for i := 0; i < len(accountNames); i++ {
+			// We check if the individual account unlocks with the global password.
+			err = w.checkPasswordForAccount(accountNames[i], password)
+			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+				// If the password fails for an individual account, we ask the user to input
+				// that individual account's password until it succeeds.
+				_, err := w.askUntilPasswordConfirms(cliCtx, accountNames[i], pubKeys[i])
+				if err != nil {
+					return err
+				}
+				if err := bar.Add(1); err != nil {
+					return errors.Wrap(err, "could not add to progress bar")
+				}
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Finished importing %#x\n", au.BrightMagenta(bytesutil.Trunc(pubKeys[i])))
+			if err := bar.Add(1); err != nil {
+				return errors.Wrap(err, "could not add to progress bar")
+			}
+		}
 	}
 	return nil
 }
 
+>>>>>>> 6351d187efbe3b709c018e0a2ab43574cb34810b
 func (w *Wallet) askUntilPasswordConfirms(cliCtx *cli.Context, accountName string, pubKey []byte) (string, error) {
 	// Loop asking for the password until the user enters it correctly.
 	var password string
@@ -541,15 +583,6 @@ func (w *Wallet) checkPasswordForAccount(accountName string, password string) er
 	_, err = decryptor.Decrypt(keystoreJSON.Crypto, password)
 	if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
-	}
-	return nil
-}
-
-// WritePasswordToDisk --
-func (w *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
-	passwordPath := filepath.Join(w.passwordsDir, passwordFileName)
-	if err := ioutil.WriteFile(passwordPath, []byte(password), os.ModePerm); err != nil {
-		return errors.Wrapf(err, "could not write %s", passwordPath)
 	}
 	return nil
 }
