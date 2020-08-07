@@ -8,7 +8,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -42,7 +41,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
-		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
+		valMapHandler:         newValHandler(st.Validators),
 	}
 
 	for i := 0; i < fieldCount; i++ {
@@ -118,7 +117,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 			// Copy on write validator index map.
-			valIdxMap: b.valIdxMap,
+			valMapHandler: b.valMapHandler,
 		}
 	} else {
 		dst = &BeaconState{
@@ -159,7 +158,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 			// Copy on write validator index map.
-			valIdxMap: b.valIdxMap,
+			valMapHandler: b.valMapHandler,
 		}
 	}
 
@@ -167,6 +166,9 @@ func (b *BeaconState) Copy() *BeaconState {
 		ref.AddRef()
 		dst.sharedFieldReferences[field] = ref
 	}
+
+	// Increment ref for validator map
+	b.valMapHandler.mapRef.AddRef()
 
 	for i := range b.dirtyFields {
 		dst.dirtyFields[i] = true
