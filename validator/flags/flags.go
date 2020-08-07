@@ -7,17 +7,14 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 const (
 	// WalletDefaultDirName for accounts-v2.
 	WalletDefaultDirName = "prysm-wallet-v2"
-	// PasswordsDefaultDirName where account-v2 passwords are stored.
-	PasswordsDefaultDirName = "prysm-wallet-v2-passwords"
 )
 
 var log = logrus.WithField("prefix", "flags")
