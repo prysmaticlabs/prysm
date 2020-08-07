@@ -99,7 +99,7 @@ func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 	return f.store.prune(ctx, finalizedRoot)
 }
 
-// nodes returns the copied list of block nodes in the fork choice store.
+// Nodes returns the copied list of block nodes in the fork choice store.
 func (f *ForkChoice) Nodes() []*Node {
 	f.store.nodeIndicesLock.RLock()
 	defer f.store.nodeIndicesLock.RUnlock()
@@ -182,12 +182,12 @@ func (s *Store) PruneThreshold() uint64 {
 	return s.pruneThreshold
 }
 
-// justifiedEpoch of fork choice store.
+// JustifiedEpoch of fork choice store.
 func (s *Store) JustifiedEpoch() uint64 {
 	return s.justifiedEpoch
 }
 
-// finalizedEpoch of fork choice store.
+// FinalizedEpoch of fork choice store.
 func (s *Store) FinalizedEpoch() uint64 {
 	return s.finalizedEpoch
 }
