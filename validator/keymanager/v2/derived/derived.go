@@ -130,6 +130,17 @@ func NewKeymanager(
 			validateExistingPass,
 		)
 	}
+	//seedConfig, err := derived.InitializeWalletSeedFile(ctx, wallet.walletPassword, skipMnemonicConfirm)
+	//if err != nil {
+	//	return errors.Wrap(err, "could not initialize new wallet seed file")
+	//}
+	//seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
+	//if err != nil {
+	//	return errors.Wrap(err, "could not marshal encrypted wallet seed file")
+	//}
+	//if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
+	//	return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+	//}
 	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
@@ -270,6 +281,22 @@ func (dr *Keymanager) Config() *Config {
 // NextAccountNumber managed by the derived keymanager.
 func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
 	return dr.seedCfg.NextAccount
+}
+
+// RecoverFromMnemonic --
+func (dr *Keymanager) RecoverFromMnemonic(ctx context.Context, mnemonic string) error {
+	seedConfig, err := SeedFileFromMnemonic(ctx, mnemonic, dr.accountsPassword)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize new wallet seed file")
+	}
+	seedConfigFile, err := MarshalEncryptedSeedFile(ctx, seedConfig)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
+	}
+	if err := dr.wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
+		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+	}
+	return nil
 }
 
 // ValidatingAccountNames for the derived keymanager.

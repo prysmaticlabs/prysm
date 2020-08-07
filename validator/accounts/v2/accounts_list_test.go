@@ -121,7 +121,6 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		wallet,
 		derived.DefaultConfig(),
 		true, /* skip confirm */
-		password,
 	)
 	require.NoError(t, err)
 
