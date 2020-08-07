@@ -674,7 +674,6 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 		   atts = sort.MostProfitable(atts)
 		   atts = atts[:params.BeaconConfig().MaxAttestations]
 		}
-		atts = sort.MostProfitable(atts)
 	}
 	return atts, nil
 }
