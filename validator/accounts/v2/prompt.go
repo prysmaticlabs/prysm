@@ -20,22 +20,8 @@ import (
 
 const (
 	importKeysDirPromptText      = "Enter the directory or filepath where your keystores to import are located"
-	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
 	walletDirPromptText          = "Enter a wallet directory"
-	newWalletPasswordPromptText  = "New wallet password"
-	confirmPasswordPromptText    = "Confirm password"
-	walletPasswordPromptText     = "Wallet password"
-	newAccountPasswordPromptText = "New account password"
 	passwordForAccountPromptText = "Enter password for account with public key %#x"
-)
-
-type passwordConfirm int
-
-const (
-	// An enum to indicate to the prompt that confirming the password is not needed.
-	noConfirmPass passwordConfirm = iota
-	// An enum to indicate to the prompt to confirm the password entered.
-	confirmPass
 )
 
 var au = aurora.NewAurora(true)
@@ -65,55 +51,6 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 		return directory, nil
 	}
 	return expandPath(inputtedDir)
-}
-
-func inputPassword(
-	cliCtx *cli.Context,
-	passwordFileFlag *cli.StringFlag,
-	promptText string,
-	confirmPassword passwordConfirm,
-	passwordValidator func(input string) error,
-) (string, error) {
-	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := expandPath(passwordFilePathInput)
-		if err != nil {
-			return "", errors.Wrap(err, "could not determine absolute path of password file")
-		}
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return "", errors.Wrap(err, "could not read password file")
-		}
-		enteredPassword := strings.TrimRight(string(data), "\r\n")
-		if err := passwordValidator(enteredPassword); err != nil {
-			return "", errors.Wrap(err, "password did not pass validation")
-		}
-		return enteredPassword, nil
-	}
-	var hasValidPassword bool
-	var walletPassword string
-	var err error
-	for !hasValidPassword {
-		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
-		if err != nil {
-			return "", fmt.Errorf("could not read account password: %v", err)
-		}
-
-		if confirmPassword == confirmPass {
-			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
-			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
-			}
-			if walletPassword != passwordConfirmation {
-				log.Error("Passwords do not match")
-				continue
-			}
-			hasValidPassword = true
-		} else {
-			return walletPassword, nil
-		}
-	}
-	return walletPassword, nil
 }
 
 func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {

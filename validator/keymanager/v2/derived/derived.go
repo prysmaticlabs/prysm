@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
+	"github.com/urfave/cli/v2"
 	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -78,13 +79,13 @@ func DefaultConfig() *Config {
 
 // NewKeymanager instantiates a new derived keymanager from configuration options.
 func NewKeymanager(
-	ctx context.Context,
+	cliCtx *cli.Context,
 	wallet iface.Wallet,
 	cfg *Config,
 	skipMnemonicConfirm bool,
 	password string,
 ) (*Keymanager, error) {
-	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
 	}

@@ -78,6 +78,7 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	// Attempt to decrypt the keystore with the specifies password.
 	var privKeyBytes []byte
 	var err error
+	fmt.Printf("Attempting decrypt with %s\n", password)
 	privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
@@ -86,6 +87,7 @@ func (dr *Keymanager) attemptDecryptKeystore(
 		if err != nil {
 			return nil, nil, "", errors.Wrap(err, "could not confirm password via prompt")
 		}
+		fmt.Printf("Attempting decrypt with %s after ask until confirm\n", password)
 	} else if err != nil {
 		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 	}

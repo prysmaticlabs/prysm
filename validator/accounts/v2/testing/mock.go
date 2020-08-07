@@ -18,7 +18,6 @@ type Wallet struct {
 	EncryptedSeedFile []byte
 	AccountPasswords  map[string]string
 	UnlockAccounts    bool
-	WalletPassword    string
 	lock              sync.RWMutex
 }
 
@@ -36,11 +35,6 @@ func (m *Wallet) AccountNames() ([]string, error) {
 // AccountsDir --
 func (m *Wallet) AccountsDir() string {
 	return m.InnerAccountsDir
-}
-
-// Password --
-func (m *Wallet) Password() string {
-	return m.WalletPassword
 }
 
 // ListDirs --

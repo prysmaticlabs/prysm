@@ -25,7 +25,7 @@ func CreateAccount(cliCtx *cli.Context) error {
 		return err
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, skipMnemonicConfirm)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
