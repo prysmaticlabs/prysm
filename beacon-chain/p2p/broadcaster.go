@@ -59,14 +59,31 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 		traceutil.AnnotateError(span, err)
 		return err
 	}
+
+	// Non-blocking broadcast.
+	go s.broadcastAttestation(ctx, subnet, att, forkDigest)
+
+	return nil
+}
+
+func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation, forkDigest [4]byte) {
+	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
+	defer span.End()
+
 	// Ensure we have peers with this subnet.
-	//s.subnetLocker(subnet).RLock()
+	s.subnetLocker(subnet).RLock()
 	hasPeer := s.hasPeerWithSubnet(subnet)
-	//s.subnetLocker(subnet).RUnlock()
+	s.subnetLocker(subnet).RUnlock()
+
+	span.AddAttributes(trace.BoolAttribute("hasPeer", hasPeer))
+	span.AddAttributes(trace.Int64Attribute("subnet", int64(subnet)))
+
+	attestationBroadcastAttempts.Inc()
+
 	if !hasPeer {
 		if err := func() error {
-			//s.subnetLocker(subnet).Lock()
-			//defer s.subnetLocker(subnet).Unlock()
+			s.subnetLocker(subnet).Lock()
+			defer s.subnetLocker(subnet).Unlock()
 			for i := 0; i < maxSubnetDiscoveryAttempts; i++ {
 				if err := ctx.Err(); err != nil {
 					return err
@@ -82,11 +99,15 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 			}
 			return nil
 		}(); err != nil {
-			return err
+			log.WithError(err).Error("Failed to find peers")
+			traceutil.AnnotateError(span, err)
 		}
 	}
 
-	return s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest))
+	if err := s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest)); err != nil {
+		log.WithError(err).Error("Failed to broadcast attestation")
+		traceutil.AnnotateError(span, err)
+	}
 }
 
 // method to broadcast messages to other peers in our gossip mesh.
