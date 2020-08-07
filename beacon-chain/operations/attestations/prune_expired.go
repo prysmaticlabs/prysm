@@ -14,6 +14,7 @@ func (s *Service) pruneAttsPool() {
 		select {
 		case <-ticker.C:
 			s.pruneExpiredAtts()
+			s.updateMetrics()
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			ticker.Stop()

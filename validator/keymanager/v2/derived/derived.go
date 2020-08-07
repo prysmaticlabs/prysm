@@ -235,7 +235,7 @@ func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, err
 		if err != nil {
 			return nil, errors.Wrap(err, "could not derive validating key")
 		}
-		names = append(names, petnames.DeterministicName(validatingKey.Marshal(), "-"))
+		names = append(names, petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-"))
 	}
 	return names, nil
 }

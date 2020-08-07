@@ -47,7 +47,7 @@ func setupWalletCtx(
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
-	set.String(flags.WalletPasswordsDirFlag.Name, cfg.passwordsDir, "")
+	set.String(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir, "")
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.BackupDirFlag.Name, cfg.exportDir, "")
@@ -57,7 +57,7 @@ func setupWalletCtx(
 	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
-	assert.NoError(tb, set.Set(flags.WalletPasswordsDirFlag.Name, cfg.passwordsDir))
+	assert.NoError(tb, set.Set(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir))
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.exportDir))
