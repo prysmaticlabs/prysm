@@ -22,7 +22,6 @@ const (
 	importKeysDirPromptText      = "Enter the directory or filepath where your keystores to import are located"
 	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
 	walletDirPromptText          = "Enter a wallet directory"
-	passwordsDirPromptText       = "Directory where your account passwords are"
 	newWalletPasswordPromptText  = "New wallet password"
 	confirmPasswordPromptText    = "Confirm password"
 	walletPasswordPromptText     = "Wallet password"
@@ -54,15 +53,6 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 		}
 		if ok {
 			log.Infof("%s %s", au.BrightMagenta("(wallet path)"), directory)
-			return directory, nil
-		}
-	} else if flag.Name == flags.WalletPasswordsDirFlag.Name {
-		ok, err := hasDir(directory)
-		if err != nil {
-			return "", errors.Wrapf(err, "could not check if passwords dir %s exists", directory)
-		}
-		if ok {
-			log.Infof("%s %s", au.BrightMagenta("(account passwords path)"), directory)
 			return directory, nil
 		}
 	}

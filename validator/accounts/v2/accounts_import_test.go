@@ -101,7 +101,6 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanagerCfg := direct.DefaultConfig()
-	keymanagerCfg.AccountPasswordsDirectory = passwordsDir
 	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
