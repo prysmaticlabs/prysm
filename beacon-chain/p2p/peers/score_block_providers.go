@@ -9,6 +9,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 const (
@@ -192,15 +193,75 @@ func (s *BlockProviderScorer) Decay() {
 	}
 }
 
-// Sorted returns list of block providers sorted by score in descending order.
-// When custom scorer function is provided, items are returned in order provided by it.
-func (s *BlockProviderScorer) Sorted(pids []peer.ID, scoreFn func(pid peer.ID, score float64) float64) []peer.ID {
-	s.store.Lock()
-	defer s.store.Unlock()
-
+// WeightSorted returns a list of block providers weight sorted by score, where items are selected
+// probabilistically with more "heavy" items having a higher chance of being picked.
+func (s *BlockProviderScorer) WeightSorted(
+	r *rand.Rand, pids []peer.ID, scoreFn func(pid peer.ID, score float64) float64,
+) []peer.ID {
 	if len(pids) == 0 {
 		return pids
 	}
+	s.store.Lock()
+	defer s.store.Unlock()
+
+	// See http://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/ for details.
+	nextPID := func(weights map[peer.ID]float64) peer.ID {
+		totalWeight := 0
+		for _, w := range weights {
+			totalWeight += int(w)
+		}
+		if totalWeight <= 0 {
+			return ""
+		}
+		rnd := r.Intn(totalWeight)
+		for pid, w := range weights {
+			rnd -= int(w)
+			if rnd < 0 {
+				return pid
+			}
+		}
+		return ""
+	}
+
+	scores, _ := s.mapScoresAndPeers(pids, scoreFn)
+	peers := make([]peer.ID, 0)
+	for i := 0; i < len(pids); i++ {
+		if pid := nextPID(scores); pid != "" {
+			peers = append(peers, pid)
+			delete(scores, pid)
+		}
+	}
+	// Left over peers (like peers having zero weight), are added at the end of the list.
+	for pid := range scores {
+		peers = append(peers, pid)
+	}
+
+	return peers
+}
+
+// Sorted returns a list of block providers sorted by score in descending order.
+// When custom scorer function is provided, items are returned in order provided by it.
+func (s *BlockProviderScorer) Sorted(
+	pids []peer.ID, scoreFn func(pid peer.ID, score float64) float64,
+) []peer.ID {
+	if len(pids) == 0 {
+		return pids
+	}
+	s.store.Lock()
+	defer s.store.Unlock()
+
+	scores, peers := s.mapScoresAndPeers(pids, scoreFn)
+	sort.Slice(peers, func(i, j int) bool {
+		return scores[peers[i]] > scores[peers[j]]
+	})
+	return peers
+}
+
+// mapScoresAndPeers is a utility function to map peers and their respective scores (using custom
+// scoring function if necessary).
+func (s *BlockProviderScorer) mapScoresAndPeers(
+	pids []peer.ID, scoreFn func(pid peer.ID, score float64) float64,
+) (map[peer.ID]float64, []peer.ID) {
 	scores := make(map[peer.ID]float64, len(pids))
 	peers := make([]peer.ID, len(pids))
 	for i, pid := range pids {
@@ -211,10 +272,7 @@ func (s *BlockProviderScorer) Sorted(pids []peer.ID, scoreFn func(pid peer.ID, s
 		}
 		peers[i] = pid
 	}
-	sort.Slice(peers, func(i, j int) bool {
-		return scores[peers[i]] > scores[peers[j]]
-	})
-	return peers
+	return scores, peers
 }
 
 // FormatScorePretty returns full scoring information in a human-readable format.

@@ -3,12 +3,14 @@ package peers_test
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -140,6 +142,70 @@ func TestPeerScorer_BlockProvider_GettersSetters(t *testing.T) {
 	assert.Equal(t, uint64(0), scorer.ProcessedBlocks("peer1"), "Unexpected count for unregistered peer")
 	scorer.IncrementProcessedBlocks("peer1", 64)
 	assert.Equal(t, uint64(64), scorer.ProcessedBlocks("peer1"))
+}
+
+func TestPeerScorer_BlockProvider_WeightSorted(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+		ScorerParams: &peers.PeerScorerConfig{
+			BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+				ProcessedBatchWeight: 1,
+			},
+		},
+	})
+	scorer := peerStatuses.Scorers().BlockProviderScorer()
+	batchSize := uint64(flags.Get().BlockBatchLimit)
+	r := rand.NewDeterministicGenerator()
+
+	reverse := func(pids []peer.ID) []peer.ID {
+		tmp := make([]peer.ID, len(pids))
+		copy(tmp, pids)
+		for i, j := 0, len(tmp)-1; i < j; i, j = i+1, j-1 {
+			tmp[i], tmp[j] = tmp[j], tmp[i]
+		}
+		return tmp
+	}
+
+	shuffle := func(pids []peer.ID) []peer.ID {
+		tmp := make([]peer.ID, len(pids))
+		copy(tmp, pids)
+		r.Shuffle(len(tmp), func(i, j int) {
+			tmp[i], tmp[j] = tmp[j], tmp[i]
+		})
+		return tmp
+	}
+
+	var pids []peer.ID
+	for i := uint64(0); i < 10; i++ {
+		pid := peer.ID(i)
+		scorer.IncrementProcessedBlocks(pid, i*batchSize)
+		pids = append(pids, pid)
+	}
+	// Make sure that peers scores are correct (peer(n).score > peer(n-1).score).
+	// Peers should be returned in descending order (by score).
+	assert.DeepEqual(t, reverse(pids), scorer.Sorted(pids, nil))
+
+	// Run weighted sort lots of time, to get accurate statistics of whether more heavy items
+	// are indeed preferred when sorting.
+	scores := make(map[peer.ID]int, len(pids))
+	for i := 0; i < 1000; i++ {
+		score := len(pids) - 1
+		// The earlier in the list the item is, the more of a score will it get.
+		for _, pid := range scorer.WeightSorted(r, shuffle(pids), nil) {
+			scores[pid] += score
+			score--
+		}
+	}
+	var scoredPIDs []peer.ID
+	for pid := range scores {
+		scoredPIDs = append(scoredPIDs, pid)
+	}
+	sort.Slice(scoredPIDs, func(i, j int) bool {
+		return scores[scoredPIDs[i]] > scores[scoredPIDs[j]]
+	})
+	assert.Equal(t, len(pids), len(scoredPIDs))
+	assert.DeepEqual(t, reverse(pids), scoredPIDs, "Expected items with more weight to be picked more often")
 }
 
 func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
@@ -342,7 +408,8 @@ func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
 				s.IncrementProcessedBlocks("peer1", s.Params().ProcessedBlocksCap*5)
 			},
 			check: func(s *peers.BlockProviderScorer) {
-				assert.Equal(t, fmt.Sprintf(format, 100.0, 1.0, s.Params().ProcessedBlocksCap), s.FormatScorePretty("peer1"))
+				want := fmt.Sprintf(format, 100.0, 1.0, s.Params().ProcessedBlocksCap)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
 			},
 		},
 		{
@@ -351,15 +418,18 @@ func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
 				s.IncrementProcessedBlocks("peer1", batchSize*5)
 				s.IncrementProcessedBlocks("peer1", batchSize)
 				s.IncrementProcessedBlocks("peer1", batchSize/4)
-				assert.Equal(t, fmt.Sprintf(format, 30.0, 0.05*6, batchSize*6+batchSize/4), s.FormatScorePretty("peer1"))
+				want := fmt.Sprintf(format, 30.0, 0.05*6, batchSize*6+batchSize/4)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
 				// Maximize block count.
 				s.IncrementProcessedBlocks("peer1", s.Params().ProcessedBlocksCap)
-				assert.Equal(t, fmt.Sprintf(format, 100.0, 1.0, s.Params().ProcessedBlocksCap), s.FormatScorePretty("peer1"))
+				want = fmt.Sprintf(format, 100.0, 1.0, s.Params().ProcessedBlocksCap)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
 				// Half of blocks is to be decayed.
 				s.Decay()
 			},
 			check: func(s *peers.BlockProviderScorer) {
-				assert.Equal(t, fmt.Sprintf(format, 50.0, 0.5, s.Params().ProcessedBlocksCap/2), s.FormatScorePretty("peer1"))
+				want := fmt.Sprintf(format, 50.0, 0.5, s.Params().ProcessedBlocksCap/2)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
 			},
 		},
 	}
