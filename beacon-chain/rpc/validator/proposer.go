@@ -665,13 +665,13 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 		uAtts := vs.AttPool.UnaggregatedAttestations()
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
 		numUAtts := uint64(len(uAtts))
-		if numUAtts+numAtts > params.BeaconConfig().MaxAttestations {
-			uAtts = uAtts[:params.BeaconConfig().MaxAttestations-numAtts]
-		}
-
 		uAtts, err = attaggregation.Aggregate(uAtts)
 		if err != nil {
 			return nil, err
+		}
+
+		if numUAtts+numAtts > params.BeaconConfig().MaxAttestations {
+			uAtts = uAtts[:params.BeaconConfig().MaxAttestations-numAtts]
 		}
 
 		atts = append(atts, uAtts...)
