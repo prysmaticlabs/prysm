@@ -38,6 +38,7 @@ go_library(
         "//beacon-chain/sync:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/aggregation/attestations:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
