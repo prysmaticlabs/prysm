@@ -441,6 +441,7 @@ func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
 					BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
 						ProcessedBatchWeight: 0.05,
 						ProcessedBlocksCap:   20 * batchSize,
+						Decay:                10 * batchSize,
 					},
 				},
 			})
