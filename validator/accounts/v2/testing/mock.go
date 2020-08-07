@@ -48,26 +48,6 @@ func (m *Wallet) ListDirs() ([]string, error) {
 	return m.Directories, nil
 }
 
-// WritePasswordToDisk --
-func (m *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	m.AccountPasswords[passwordFileName] = password
-	return nil
-}
-
-// ReadPasswordFromDisk --
-func (m *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName string) (string, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	for name, password := range m.AccountPasswords {
-		if name == passwordFileName {
-			return password, nil
-		}
-	}
-	return "", errors.New("account not found")
-}
-
 // WriteFileAtPath --
 func (m *Wallet) WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error {
 	m.lock.Lock()
