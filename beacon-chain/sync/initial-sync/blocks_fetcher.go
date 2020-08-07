@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"sort"
 	"sync"
 	"time"
 
@@ -95,6 +94,7 @@ type fetchRequestParams struct {
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
+	pid          peer.ID
 	start, count uint64
 	blocks       []*eth.SignedBeaconBlock
 	err          error
@@ -253,7 +253,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 		return response
 	}
 
-	response.blocks, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
+	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
 	return response
 }
 
@@ -262,7 +262,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
 	start, count uint64,
 	peers []peer.ID,
-) ([]*eth.SignedBeaconBlock, error) {
+) ([]*eth.SignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -270,10 +270,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	var err error
 	peers, err = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	if err != nil {
-		return blocks, err
-	}
-	if len(peers) == 0 {
-		return blocks, errNoPeersAvailable
+		return blocks, "", err
 	}
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: start,
@@ -282,10 +279,11 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	}
 	for i := 0; i < len(peers); i++ {
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
-			return blocks, err
+			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+			return blocks, peers[i], err
 		}
 	}
-	return blocks, nil
+	return blocks, "", errNoPeersAvailable
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
@@ -428,42 +426,35 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, ratio 
 	if len(peers) == 0 {
 		return peers, nil
 	}
+
+	// Sort peers using both block provider score and, custom, capacity based score (see
+	// peerFilterCapacityWeight if you want to give different weights to provider's and capacity
+	// scores).
+	// Scores produced are used as weights, so peers are ordered probabilistically i.e. peer with
+	// a higher score has higher chance to end up higher in the list.
 	scorer := f.p2p.Peers().Scorers().BlockProviderScorer()
+	peers = scorer.WeightSorted(f.rand, peers, func(peerID peer.ID, blockProviderScore float64) float64 {
+		l := f.getPeerLock(peerID)
+		if l == nil {
+			return blockProviderScore
+		}
+		l.Lock()
+		defer l.Unlock()
+		remaining, capacity := float64(f.rateLimiter.Remaining(peerID.String())), float64(f.rateLimiter.Capacity())
+		// When no capacity for a good peer left, allow less performant peer to take a chance.
+		if remaining < float64(f.blocksPerSecond) {
+			return 0.0
+		}
+		capScore := remaining / capacity
+		overallScore := blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
+		return math.Round(overallScore*scorers.ScoreRoundingFactor) / scorers.ScoreRoundingFactor
+	})
 
-	// Sort peers by their score (in descending order), non-responsive peers will be constantly
-	// pushed down the list and trimmed when percentage is selected.
-	peers = scorer.Sorted(peers)
-
+	// Weak/slow peers will be pushed down the list and trimmed since only percentage of peers is selected.
 	limit := uint64(math.Round(float64(len(peers)) * ratio))
 	limit = mathutil.Max(limit, uint64(flags.Get().MinimumSyncPeers))
 	limit = mathutil.Min(limit, uint64(len(peers)))
 	peers = peers[:limit]
-
-	// Order peers by score and remaining capacity, effectively turning in-order
-	// round robin peer processing into a weighted one (peers with higher scores and higher
-	// remaining capacity are preferred). The effect of capacity on overall score is controlled
-	// via peerFilterCapacityWeight param.
-	sort.SliceStable(peers, func(i, j int) bool {
-		aggScore := func(peerID peer.ID) float64 {
-			blockProviderScore := scorer.Score(peerID)
-			l := f.getPeerLock(peerID)
-			if l == nil {
-				return blockProviderScore
-			}
-			l.Lock()
-			defer l.Unlock()
-			remaining, capacity := float64(f.rateLimiter.Remaining(peerID.String())), float64(f.rateLimiter.Capacity())
-			if remaining < float64(f.blocksPerSecond) {
-				// When no capacity for a good peer left, allow less performant peer to take a chance.
-				return 0.0
-			}
-			capScore := remaining / capacity
-			overallScore := blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
-			overallScore = math.Round(overallScore*scorers.ScoreRoundingFactor) / scorers.ScoreRoundingFactor
-			return overallScore
-		}
-		return aggScore(peers[i]) > aggScore(peers[j])
-	})
 
 	return peers, nil
 }
