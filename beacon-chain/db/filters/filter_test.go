@@ -2,6 +2,8 @@ package filters
 
 import (
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestQueryFilter_ChainsCorrectly(t *testing.T) {
@@ -11,9 +13,7 @@ func TestQueryFilter_ChainsCorrectly(t *testing.T) {
 		SetParentRoot([]byte{3, 4, 5})
 
 	filterSet := f.Filters()
-	if len(filterSet) != 3 {
-		t.Errorf("Expected 3 filters to have been set, received %d", len(filterSet))
-	}
+	assert.Equal(t, 3, len(filterSet), "Unexpected number of filters")
 	for k, v := range filterSet {
 		switch k {
 		case StartSlot:
