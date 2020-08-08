@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
@@ -43,13 +45,9 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		AttestingIndices: setA,
 	}
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
+	require.NoError(t, err, "Could not get signing root of beacon block header")
 	aggSigs := []bls.Signature{}
 	for _, index := range setA {
 		sig := privKeys[index].Sign(signingRoot[:])
@@ -67,9 +65,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		AttestingIndices: setB,
 	}
 	signingRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	aggSigs = []bls.Signature{}
 	for _, index := range setB {
 		sig := privKeys[index].Sign(signingRoot[:])
@@ -86,9 +82,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	if err := beaconState.SetSlot(currentSlot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(currentSlot))
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -97,9 +91,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	}
 
 	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	newRegistry := newState.Validators()
 	if !newRegistry[expectedSlashedVal].Slashed {
 		t.Errorf("Validator with index %d was not slashed despite performing a double vote", expectedSlashedVal)
