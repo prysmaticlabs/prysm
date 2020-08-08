@@ -83,8 +83,11 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	hasPeer := s.hasPeerWithSubnet(subnet)
 	s.subnetLocker(subnet).RUnlock()
 
-	span.AddAttributes(trace.BoolAttribute("hasPeer", hasPeer))
-	span.AddAttributes(trace.Int64Attribute("subnet", int64(subnet)))
+	span.AddAttributes(
+		trace.BoolAttribute("hasPeer", hasPeer),
+		trace.Int64Attribute("slot", int64(att.Data.Slot)),
+		trace.Int64Attribute("subnet", int64(subnet)),
+	)
 
 	attestationBroadcastAttempts.Inc()
 
