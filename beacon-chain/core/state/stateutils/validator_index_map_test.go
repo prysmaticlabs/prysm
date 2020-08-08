@@ -8,6 +8,8 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestValidatorIndexMap_OK(t *testing.T) {
@@ -22,9 +24,7 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 		},
 	}
 	state, err := beaconstate.InitializeFromProto(base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		key [48]byte
@@ -49,11 +49,7 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 	m := stateutils.ValidatorIndexMap(state.Validators())
 	for _, tt := range tests {
 		result, ok := m[tt.key]
-		if result != tt.val {
-			t.Errorf("Expected m[%s] = %d, got %d", tt.key, tt.val, result)
-		}
-		if ok != tt.ok {
-			t.Errorf("Expected ok=%v, got %v", tt.ok, ok)
-		}
+		assert.Equal(t, tt.val, result)
+		assert.Equal(t, tt.ok, ok)
 	}
 }
