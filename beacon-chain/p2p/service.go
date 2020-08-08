@@ -23,6 +23,8 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -401,6 +403,9 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 }
 
 func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.connectWithPeer")
+	defer span.End()
+
 	if info.ID == s.host.ID() {
 		return nil
 	}

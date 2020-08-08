@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -21,12 +22,13 @@ import (
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
 // Max number of attempts to search the network for a specific subnet.
-const maxSubnetDiscoveryAttempts = 3
+const maxSubnetDiscoveryAttempts = 1
 
 // Broadcast a message to the p2p network.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
 	defer span.End()
+
 	twoSlots := time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second
 	ctx, cancel := context.WithTimeout(ctx, twoSlots)
 	defer cancel()
@@ -50,9 +52,6 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
 	defer span.End()
-	oneEpoch := time.Duration(1*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot) * time.Second
-	ctx, cancel := context.WithTimeout(ctx, oneEpoch)
-	defer cancel()
 	forkDigest, err := s.forkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
@@ -60,8 +59,12 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 		return err
 	}
 
-	// Non-blocking broadcast.
-	go s.broadcastAttestation(ctx, subnet, att, forkDigest)
+	if featureconfig.Get().EnableAttBroadcastDiscoveryAttempts {
+		// Non-blocking broadcast.
+		go s.broadcastAttestation(ctx, subnet, att, forkDigest)
+	} else {
+		return s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest))
+	}
 
 	return nil
 }
@@ -69,6 +72,11 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation, forkDigest [4]byte) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
 	defer span.End()
+	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
+
+	oneEpoch := time.Duration(1*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, oneEpoch)
+	defer cancel()
 
 	// Ensure we have peers with this subnet.
 	s.subnetLocker(subnet).RLock()

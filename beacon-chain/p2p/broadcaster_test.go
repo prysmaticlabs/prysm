@@ -136,7 +136,6 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		t.Fatal("TODO")
 	}
 
-
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)

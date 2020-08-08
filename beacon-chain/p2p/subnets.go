@@ -8,6 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/go-bitfield"
+	"go.opencensus.io/trace"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -20,6 +22,11 @@ var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 // subscribed to a particular subnet. Then we try to connect
 // with those peers.
 func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
+	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("index", int64(index)))
+
 	if s.dv5Listener == nil {
 		// return if discovery isn't set
 		return false, nil
