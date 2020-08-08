@@ -19,11 +19,15 @@ func TestDeleteAttsInPool(t *testing.T) {
 	r := &Service{
 		attPool: attestations.NewPool(),
 	}
-	data := &ethpb.AttestationData{}
-	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}, Data: data}
-	att2 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}, Data: data}
-	att3 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}, Data: data}
-	att4 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: data}
+	data := &ethpb.AttestationData{
+		BeaconBlockRoot: make([]byte, 32),
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+	}
+	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}, Data: data, Signature: make([]byte, 96)}
+	att2 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}, Data: data, Signature: make([]byte, 96)}
+	att3 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}, Data: data, Signature: make([]byte, 96)}
+	att4 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: data, Signature: make([]byte, 96)}
 	require.NoError(t, r.attPool.SaveAggregatedAttestation(att1))
 	require.NoError(t, r.attPool.SaveAggregatedAttestation(att2))
 	require.NoError(t, r.attPool.SaveAggregatedAttestation(att3))
@@ -41,12 +45,22 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		// Aggregated.
 		{
 			AggregationBits: bitfield.Bitlist{0b00011111},
-			Data:            &ethpb.AttestationData{},
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: make([]byte, 32),
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			},
+			Signature: make([]byte, 96),
 		},
 		// Unaggregated.
 		{
 			AggregationBits: bitfield.Bitlist{0b00010001},
-			Data:            &ethpb.AttestationData{},
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: make([]byte, 32),
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			},
+			Signature: make([]byte, 96),
 		},
 	}
 

@@ -59,7 +59,11 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		{
 			name: "not aggregated",
 			att: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b10100}},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, 32),
+					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				}, AggregationBits: bitfield.Bitlist{0b10100}},
 			wantErrString: "attestation is not aggregated",
 		},
 		{

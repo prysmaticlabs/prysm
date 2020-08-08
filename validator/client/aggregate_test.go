@@ -50,8 +50,12 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
-			SelectionProof:  nil,
+			Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{
+				BeaconBlockRoot: make([]byte, 32),
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			}},
+			SelectionProof: nil,
 		},
 	}, nil)
 
@@ -94,8 +98,12 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 
 	agg := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 0,
-		Aggregate:       &ethpb.Attestation{AggregationBits: bitfield.NewBitlist(1), Data: &ethpb.AttestationData{}},
-		SelectionProof:  nil,
+		Aggregate: &ethpb.Attestation{AggregationBits: bitfield.NewBitlist(1), Data: &ethpb.AttestationData{
+			BeaconBlockRoot: make([]byte, 32),
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		}},
+		SelectionProof: nil,
 	}
 	sig, err := validator.aggregateAndProofSig(context.Background(), validatorPubKey, agg)
 	require.NoError(t, err)

@@ -120,8 +120,10 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantErrString: "nil attestation.Data field",
 		},
 		{
-			name:          "process nil field (a.Target) in attestation",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+			name: "process nil field (a.Target) in attestation",
+			a: &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: make([]byte, 32),
+				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "nil attestation.Data.Target field",
@@ -319,7 +321,11 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	d := &ethpb.AttestationData{}
+	d := &ethpb.AttestationData{
+		BeaconBlockRoot: make([]byte, 32),
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+	}
 	assert.ErrorContains(t, "beacon block  does not exist", service.verifyBeaconBlock(ctx, d))
 }
 
