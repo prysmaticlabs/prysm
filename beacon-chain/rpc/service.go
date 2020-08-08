@@ -40,6 +40,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
@@ -341,6 +342,11 @@ func (s *Service) startSlasherClient() {
 		log.Errorf("Could not dial endpoint: %s, %v", s.slasherProvider, err)
 		return
 	}
+	if conn.GetState() != connectivity.Ready {
+		log.Errorf("Slasher status is %s, please verify slasher is up", conn.GetState())
+		return
+	}
+
 	log.Info("Successfully started hash slinging slasher©️ gRPC connection")
 	s.slasherConn = conn
 	s.slasherClient = slashpb.NewSlasherClient(s.slasherConn)

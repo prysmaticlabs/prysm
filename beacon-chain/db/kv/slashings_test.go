@@ -6,6 +6,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStore_ProposerSlashing_CRUD(t *testing.T) {
@@ -32,35 +34,17 @@ func TestStore_ProposerSlashing_CRUD(t *testing.T) {
 		},
 	}
 	slashingRoot, err := prop.HashTreeRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	retrieved, err := db.ProposerSlashing(ctx, slashingRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if retrieved != nil {
-		t.Errorf("Expected nil proposer slashing, received %v", retrieved)
-	}
-	if err := db.SaveProposerSlashing(ctx, prop); err != nil {
-		t.Fatal(err)
-	}
-	if !db.HasProposerSlashing(ctx, slashingRoot) {
-		t.Error("Expected proposer slashing to exist in the db")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, (*ethpb.ProposerSlashing)(nil), retrieved, "Expected nil proposer slashing")
+	require.NoError(t, db.SaveProposerSlashing(ctx, prop))
+	assert.Equal(t, true, db.HasProposerSlashing(ctx, slashingRoot), "Expected proposer slashing to exist in the db")
 	retrieved, err = db.ProposerSlashing(ctx, slashingRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(prop, retrieved) {
-		t.Errorf("Wanted %v, received %v", prop, retrieved)
-	}
-	if err := db.deleteProposerSlashing(ctx, slashingRoot); err != nil {
-		t.Fatal(err)
-	}
-	if db.HasProposerSlashing(ctx, slashingRoot) {
-		t.Error("Expected proposer slashing to have been deleted from the db")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(prop, retrieved), "Wanted %v, received %v", prop, retrieved)
+	require.NoError(t, db.deleteProposerSlashing(ctx, slashingRoot))
+	assert.Equal(t, false, db.HasProposerSlashing(ctx, slashingRoot), "Expected proposer slashing to have been deleted from the db")
 }
 
 func TestStore_AttesterSlashing_CRUD(t *testing.T) {
@@ -99,33 +83,15 @@ func TestStore_AttesterSlashing_CRUD(t *testing.T) {
 		},
 	}
 	slashingRoot, err := att.HashTreeRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	retrieved, err := db.AttesterSlashing(ctx, slashingRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if retrieved != nil {
-		t.Errorf("Expected nil attester slashing, received %v", retrieved)
-	}
-	if err := db.SaveAttesterSlashing(ctx, att); err != nil {
-		t.Fatal(err)
-	}
-	if !db.HasAttesterSlashing(ctx, slashingRoot) {
-		t.Error("Expected attester slashing to exist in the db")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, (*ethpb.AttesterSlashing)(nil), retrieved, "Expected nil attester slashing")
+	require.NoError(t, db.SaveAttesterSlashing(ctx, att))
+	assert.Equal(t, true, db.HasAttesterSlashing(ctx, slashingRoot), "Expected attester slashing to exist in the db")
 	retrieved, err = db.AttesterSlashing(ctx, slashingRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(att, retrieved) {
-		t.Errorf("Wanted %v, received %v", att, retrieved)
-	}
-	if err := db.deleteAttesterSlashing(ctx, slashingRoot); err != nil {
-		t.Fatal(err)
-	}
-	if db.HasAttesterSlashing(ctx, slashingRoot) {
-		t.Error("Expected attester slashing to have been deleted from the db")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(att, retrieved), "Wanted %v, received %v", att, retrieved)
+	require.NoError(t, db.deleteAttesterSlashing(ctx, slashingRoot))
+	assert.Equal(t, false, db.HasAttesterSlashing(ctx, slashingRoot), "Expected attester slashing to have been deleted from the db")
 }

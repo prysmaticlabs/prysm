@@ -17,7 +17,6 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.3
-	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.5 // indirect
 	github.com/emicklei/dot v0.11.0
@@ -47,7 +46,7 @@ require (
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.1
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
-	github.com/json-iterator/go v1.1.9
+	github.com/json-iterator/go v1.1.10
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
@@ -83,7 +82,7 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
-	github.com/prometheus/client_golang v1.6.0
+	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20200709024211-e8095222f77b

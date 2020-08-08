@@ -151,7 +151,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
 		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
-		BlockHash: make([]byte, 32),
+		BlockHash:    make([]byte, 32),
 	}
 	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1); err != nil {
 		t.Fatal(err)

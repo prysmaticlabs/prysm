@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"sort"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -21,6 +22,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -46,6 +48,21 @@ type eth1DataSingleVote struct {
 type eth1DataAggregatedVote struct {
 	data  eth1DataSingleVote
 	votes int
+}
+
+// profitableAtts implements the Sort interface to sort attestations
+// by highest slot and by highest aggregation bit count.
+type profitableAtts struct {
+	atts []*ethpb.Attestation
+}
+
+func (p profitableAtts) Len() int      { return len(p.atts) }
+func (p profitableAtts) Swap(i, j int) { p.atts[i], p.atts[j] = p.atts[j], p.atts[i] }
+func (p profitableAtts) Less(i, j int) bool {
+	if p.atts[i].Data.Slot == p.atts[j].Data.Slot {
+		return p.atts[i].AggregationBits.Count() > p.atts[j].AggregationBits.Count()
+	}
+	return p.atts[i].Data.Slot > p.atts[j].Data.Slot
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -162,10 +179,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-	}
-
-	if err := vs.deleteAttsInPool(ctx, blk.Block.Body.Attestations); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not delete attestations in pool: %v", err)
 	}
 
 	return &ethpb.ProposeResponse{
@@ -422,6 +435,9 @@ func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaco
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
 func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
+	defer span.End()
+
 	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
@@ -511,6 +527,9 @@ func (vs *Server) canonicalEth1Data(
 }
 
 func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.depositTrie")
+	defer span.End()
+
 	var depositTrie *trieutil.SparseMerkleTrie
 
 	var finalizedDeposits *depositcache.FinalizedDeposits
@@ -660,11 +679,32 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 	if numAtts < params.BeaconConfig().MaxAttestations {
 		uAtts := vs.AttPool.UnaggregatedAttestations()
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
-		numUAtts := uint64(len(uAtts))
-		if numUAtts+numAtts > params.BeaconConfig().MaxAttestations {
-			uAtts = uAtts[:params.BeaconConfig().MaxAttestations-numAtts]
-		}
 		atts = append(atts, uAtts...)
+
+		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+		for _, att := range atts {
+			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
+			if err != nil {
+				return nil, err
+			}
+			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		}
+
+		attsForInclusion := make([]*ethpb.Attestation, 0)
+		for _, as := range attsByDataRoot {
+			as, err := attaggregation.Aggregate(as)
+			if err != nil {
+				return nil, err
+			}
+			attsForInclusion = append(attsForInclusion, as...)
+		}
+
+		if uint64(len(attsForInclusion)) > params.BeaconConfig().MaxAttestations {
+			sort.Sort(profitableAtts{atts: attsForInclusion})
+			attsForInclusion = attsForInclusion[:params.BeaconConfig().MaxAttestations]
+		}
+
+		atts = attsForInclusion
 	}
 	return atts, nil
 }

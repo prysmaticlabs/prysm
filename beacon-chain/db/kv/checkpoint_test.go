@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -11,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
@@ -22,25 +23,13 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Root:  root[:],
 	}
 	st := testutil.NewBeaconState()
-	if err := st.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := db.SaveState(ctx, st, root); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := db.SaveJustifiedCheckpoint(ctx, cp); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.SetSlot(1))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 
 	retrieved, err := db.JustifiedCheckpoint(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(cp, retrieved) {
-		t.Errorf("Wanted %v, received %v", cp, retrieved)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
 }
 
 func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
@@ -48,18 +37,14 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
-	if err := db.SaveGenesisBlockRoot(ctx, genesis); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
 	blk := testutil.NewBeaconBlock()
 	blk.Block.ParentRoot = genesis[:]
 	blk.Block.Slot = 40
 
 	root, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	cp := &ethpb.Checkpoint{
 		Epoch: 5,
@@ -67,29 +52,17 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	}
 
 	// a valid chain is required to save finalized checkpoint.
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, blk))
 	st := testutil.NewBeaconState()
-	if err := st.SetSlot(1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.SetSlot(1))
 	// a state is required to save checkpoint
-	if err := db.SaveState(ctx, st, root); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, st, root))
 
-	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 
 	retrieved, err := db.FinalizedCheckpoint(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(cp, retrieved) {
-		t.Errorf("Wanted %v, received %v", cp, retrieved)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
 }
 
 func TestStore_JustifiedCheckpoint_DefaultIsZeroHash(t *testing.T) {
@@ -98,12 +71,8 @@ func TestStore_JustifiedCheckpoint_DefaultIsZeroHash(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	retrieved, err := db.JustifiedCheckpoint(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(cp, retrieved) {
-		t.Errorf("Wanted %v, received %v", cp, retrieved)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
 }
 
 func TestStore_FinalizedCheckpoint_DefaultIsZeroHash(t *testing.T) {
@@ -112,12 +81,8 @@ func TestStore_FinalizedCheckpoint_DefaultIsZeroHash(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	retrieved, err := db.FinalizedCheckpoint(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(cp, retrieved) {
-		t.Errorf("Wanted %v, received %v", cp, retrieved)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
 }
 
 func TestStore_FinalizedCheckpoint_StateMustExist(t *testing.T) {
@@ -128,7 +93,5 @@ func TestStore_FinalizedCheckpoint_StateMustExist(t *testing.T) {
 		Root:  []byte{'B'},
 	}
 
-	if err := db.SaveFinalizedCheckpoint(ctx, cp); !strings.Contains(err.Error(), errMissingStateForCheckpoint.Error()) {
-		t.Fatalf("wanted err %v, got %v", errMissingStateForCheckpoint, err)
-	}
+	require.ErrorContains(t, errMissingStateForCheckpoint.Error(), db.SaveFinalizedCheckpoint(ctx, cp))
 }
