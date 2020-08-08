@@ -35,8 +35,8 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 1},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
@@ -51,8 +51,8 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AttestingIndices: []uint64{0, 1},
 	}

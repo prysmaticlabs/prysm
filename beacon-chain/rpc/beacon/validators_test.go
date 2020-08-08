@@ -1133,7 +1133,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 
 	bs := &Server{
 		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, sc),

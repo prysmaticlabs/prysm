@@ -220,7 +220,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.Se
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 1,
 			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target:         &ethpb.Checkpoint{Epoch: 0},
+			Target:         &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AggregationBits: aggBits,
 	}
@@ -258,7 +258,7 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 1,
 			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target:         &ethpb.Checkpoint{Epoch: 0},
+			Target:         &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AggregationBits: aggBits,
 	}

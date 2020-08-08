@@ -21,7 +21,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
 		}
@@ -395,7 +395,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	base := &pb.BeaconState{
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
-		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 6},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 6, Root: make([]byte, 32)},
 	}
 	limit, err := helpers.ValidatorChurnLimit(0)
 	if err != nil {

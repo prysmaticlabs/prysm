@@ -49,8 +49,8 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source: &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 		},
 	}
 
@@ -138,15 +138,15 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source: &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 		},
 	}
 	incomingAtt := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 2},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source: &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 		},
 	}
 	cfg := &detection.Config{

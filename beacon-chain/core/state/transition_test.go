@@ -268,8 +268,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{Epoch: 0},
-			Source: &ethpb.Checkpoint{Epoch: 0},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AggregationBits: bitfield.NewBitlist(3),
 	}
@@ -329,15 +329,15 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0},
-					Target: &ethpb.Checkpoint{Epoch: 0},
+					Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				},
 				AttestingIndices: []uint64{0, 1},
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1},
-					Target: &ethpb.Checkpoint{Epoch: 0},
+					Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				},
 				AttestingIndices: []uint64{0, 1},
 			},
@@ -352,7 +352,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},

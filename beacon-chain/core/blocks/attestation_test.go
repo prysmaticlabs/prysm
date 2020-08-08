@@ -25,7 +25,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Epoch: 0},
+				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				Slot:   5,
 			},
 		},
@@ -81,8 +81,8 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Epoch: 0},
-				Source: &ethpb.Checkpoint{Epoch: 1},
+				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+				Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 			},
 			AggregationBits: aggBits,
 		},
@@ -127,8 +127,8 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
-				Source: &ethpb.Checkpoint{Epoch: 1},
-				Target: &ethpb.Checkpoint{Epoch: 1},
+				Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+				Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 				Slot:   params.BeaconConfig().SlotsPerEpoch,
 			},
 			AggregationBits: aggBits,
@@ -404,7 +404,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AggregationBits: aggBits,
 	}
@@ -433,7 +433,7 @@ func TestProcessAttestationsNoVerify_BadAttIdx(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 100,
 			Source:         &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-			Target:         &ethpb.Checkpoint{Epoch: 0},
+			Target:         &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AggregationBits: aggBits,
 	}
@@ -486,8 +486,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	attestation := &ethpb.Attestation{
 		Signature: sig[:],
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 	}
 	for _, tt := range tests {

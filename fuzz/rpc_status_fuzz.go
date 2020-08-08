@@ -52,7 +52,7 @@ func init() {
 		SlashingPool: nil,
 		Chain: &mock.ChainService{
 			Root:                []byte("root"),
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 			Fork:                &pb.Fork{CurrentVersion: []byte("foo")},
 		},
 		StateNotifier:       (&mock.ChainService{}).StateNotifier(),

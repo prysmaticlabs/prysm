@@ -22,8 +22,8 @@ func init() {
 			idxAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0},
-					Target: &ethpb.Checkpoint{Epoch: 1},
+					Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 				},
 				Signature: []byte{1, 2},
 			},
@@ -32,8 +32,8 @@ func init() {
 			idxAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{1, 2},
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0},
-					Target: &ethpb.Checkpoint{Epoch: 2},
+					Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 				},
 				Signature: []byte{3, 4},
 			},
@@ -42,8 +42,8 @@ func init() {
 			idxAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1},
-					Target: &ethpb.Checkpoint{Epoch: 2},
+					Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 				},
 				Signature: []byte{5, 6},
 			},
@@ -52,8 +52,8 @@ func init() {
 			idxAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1},
-					Target: &ethpb.Checkpoint{Epoch: 3},
+					Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 				},
 				Signature: []byte{5, 6},
 			},
@@ -113,8 +113,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
@@ -125,8 +125,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
@@ -138,8 +138,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{1, 2, 3},
@@ -147,8 +147,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 2, 4},
@@ -156,8 +156,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 3"),
 					},
 					Signature: []byte{1, 2, 5},
@@ -169,8 +169,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{1, 2, 3},
@@ -178,8 +178,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 2, 4},
@@ -187,8 +187,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 3"),
 					},
 					Signature: []byte{1, 2, 5},
@@ -201,8 +201,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{1, 2, 3},
@@ -210,8 +210,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{1, 2, 4},
@@ -219,8 +219,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 3"),
 					},
 					Signature: []byte{1, 2, 5},
@@ -228,8 +228,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 3, 1},
@@ -237,8 +237,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{0, 2, 4},
@@ -246,8 +246,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{4},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 2, 9},
@@ -259,8 +259,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{1, 2, 4},
@@ -268,8 +268,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{4},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 2, 9},
@@ -282,8 +282,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{3, 5, 3},
@@ -291,8 +291,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{3, 5, 3},
@@ -300,8 +300,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 2, 4},
@@ -309,8 +309,8 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 3"),
 					},
 					Signature: []byte{1, 2, 5},
@@ -366,8 +366,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
@@ -377,8 +377,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
@@ -390,8 +390,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{1, 2, 3},
@@ -399,8 +399,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 5, 4},
@@ -408,8 +408,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 3"),
 					},
 					Signature: []byte{8, 2, 5},
@@ -420,8 +420,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{1, 2, 3},
@@ -429,8 +429,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 5, 4},
@@ -438,8 +438,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 3"),
 					},
 					Signature: []byte{8, 2, 5},
@@ -452,8 +452,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 1},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{3, 5, 3},
@@ -461,8 +461,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 2},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there"),
 					},
 					Signature: []byte{3, 5, 3},
@@ -470,8 +470,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{1},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 3},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 2"),
 					},
 					Signature: []byte{1, 2, 4},
@@ -479,8 +479,8 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source:          &ethpb.Checkpoint{Epoch: 0},
-						Target:          &ethpb.Checkpoint{Epoch: 5},
+						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Epoch: 5, Root: make([]byte, 32)},
 						BeaconBlockRoot: []byte("hi there 3"),
 					},
 					Signature: []byte{1, 2, 5},
@@ -535,8 +535,8 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
@@ -545,8 +545,8 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
@@ -559,24 +559,24 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 3},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
 					},
 					Signature: []byte{2, 4},
 				},
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 4},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 					},
 					Signature: []byte{3, 5},
 				},
@@ -585,16 +585,16 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2},
 				},
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 4},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 					},
 					Signature: []byte{3, 5},
 				},
@@ -607,24 +607,24 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 2},
 				},
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 3},
 				},
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 4},
 				},
@@ -633,8 +633,8 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 3},
 				},
@@ -647,24 +647,24 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 2},
 				},
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 3},
 				},
 				{
 					AttestingIndices: []uint64{0},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 4},
 				},
@@ -673,8 +673,8 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 				{
 					AttestingIndices: []uint64{3},
 					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: 0},
-						Target: &ethpb.Checkpoint{Epoch: 1},
+						Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+						Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					},
 					Signature: []byte{1, 2, 6},
 				},
