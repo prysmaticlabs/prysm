@@ -18,12 +18,12 @@ var lastHeadRoot [32]byte
 // New initializes a new fork choice store.
 func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkChoice {
 	s := &Store{
-		JustifiedEpoch: justifiedEpoch,
-		FinalizedEpoch: finalizedEpoch,
+		justifiedEpoch: justifiedEpoch,
+		finalizedEpoch: finalizedEpoch,
 		finalizedRoot:  finalizedRoot,
-		Nodes:          make([]*Node, 0),
-		NodeIndices:    make(map[[32]byte]uint64),
-		PruneThreshold: defaultPruneThreshold,
+		nodes:          make([]*Node, 0),
+		nodesIndices:   make(map[[32]byte]uint64),
+		pruneThreshold: defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
@@ -45,7 +45,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedR
 	// The only time it writes to node indices is inserting and pruning blocks from the store.
 	f.store.nodeIndicesLock.RLock()
 	defer f.store.nodeIndicesLock.RUnlock()
-	deltas, newVotes, err := computeDeltas(ctx, f.store.NodeIndices, f.votes, f.balances, newBalances)
+	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
@@ -104,8 +104,8 @@ func (f *ForkChoice) Nodes() []*Node {
 	f.store.nodeIndicesLock.RLock()
 	defer f.store.nodeIndicesLock.RUnlock()
 
-	cpy := make([]*Node, len(f.store.Nodes))
-	copy(cpy, f.store.Nodes)
+	cpy := make([]*Node, len(f.store.nodes))
+	copy(cpy, f.store.nodes)
 	return cpy
 }
 
@@ -121,12 +121,12 @@ func (f *ForkChoice) Node(root [32]byte) *Node {
 	f.store.nodeIndicesLock.RLock()
 	defer f.store.nodeIndicesLock.RUnlock()
 
-	index, ok := f.store.NodeIndices[root]
+	index, ok := f.store.nodesIndices[root]
 	if !ok {
 		return nil
 	}
 
-	return copyNode(f.store.Nodes[index])
+	return copyNode(f.store.nodes[index])
 }
 
 // HasNode returns true if the node exists in fork choice store,
@@ -135,7 +135,7 @@ func (f *ForkChoice) HasNode(root [32]byte) bool {
 	f.store.nodeIndicesLock.RLock()
 	defer f.store.nodeIndicesLock.RUnlock()
 
-	_, ok := f.store.NodeIndices[root]
+	_, ok := f.store.nodesIndices[root]
 	return ok
 }
 
@@ -145,34 +145,63 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 	f.store.nodeIndicesLock.RLock()
 	defer f.store.nodeIndicesLock.RUnlock()
 
-	i, ok := f.store.NodeIndices[root]
-	if !ok || i >= uint64(len(f.store.Nodes)) {
+	i, ok := f.store.nodesIndices[root]
+	if !ok || i >= uint64(len(f.store.nodes)) {
 		return false
 	}
 
-	return f.store.Nodes[i].Parent != NonExistentNode
+	return f.store.nodes[i].parent != NonExistentNode
 }
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error) {
-	i, ok := f.store.NodeIndices[root]
+	i, ok := f.store.nodesIndices[root]
 	if !ok {
 		return nil, errors.New("node does not exist")
 	}
-	if i >= uint64(len(f.store.Nodes)) {
+	if i >= uint64(len(f.store.nodes)) {
 		return nil, errors.New("node index out of range")
 	}
 
-	for f.store.Nodes[i].Slot > slot {
+	for f.store.nodes[i].slot > slot {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
 
-		i = f.store.Nodes[i].Parent
+		i = f.store.nodes[i].parent
 	}
-	if i >= uint64(len(f.store.Nodes)) {
+	if i >= uint64(len(f.store.nodes)) {
 		return nil, errors.New("node index out of range")
 	}
 
-	return f.store.Nodes[i].Root[:], nil
+	return f.store.nodes[i].root[:], nil
+}
+
+// PruneThreshold of fork choice store.
+func (s *Store) PruneThreshold() uint64 {
+	return s.pruneThreshold
+}
+
+// JustifiedEpoch of fork choice store.
+func (s *Store) JustifiedEpoch() uint64 {
+	return s.justifiedEpoch
+}
+
+// FinalizedEpoch of fork choice store.
+func (s *Store) FinalizedEpoch() uint64 {
+	return s.finalizedEpoch
+}
+
+// Nodes of fork choice store.
+func (s *Store) Nodes() []*Node {
+	s.nodeIndicesLock.RLock()
+	defer s.nodeIndicesLock.RUnlock()
+	return s.nodes
+}
+
+// NodesIndices of fork choice store.
+func (s *Store) NodesIndices() map[[32]byte]uint64 {
+	s.nodeIndicesLock.RLock()
+	defer s.nodeIndicesLock.RUnlock()
+	return s.nodesIndices
 }
