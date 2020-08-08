@@ -82,6 +82,7 @@ go_test(
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
