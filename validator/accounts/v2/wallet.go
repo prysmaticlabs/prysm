@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/k0kubun/go-ansi"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -61,10 +61,6 @@ type Wallet struct {
 	accountsPath   string
 	keymanagerKind v2keymanager.Kind
 	walletPassword string
-}
-
-func init() {
-	petname.NonDeterministicMode() // Set random account name generation.
 }
 
 // NewWallet given a set of configuration options, will leverage
@@ -314,7 +310,7 @@ func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName 
 		return errors.Wrapf(err, "could not create path: %s", accountPath)
 	}
 	fullPath := filepath.Join(accountPath, fileName)
-	if err := ioutil.WriteFile(fullPath, data, os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(fullPath, data, params.BeaconIoConfig().ReadWritePermissions); err != nil {
 		return errors.Wrapf(err, "could not write %s", filePath)
 	}
 	log.WithFields(logrus.Fields{
@@ -395,7 +391,7 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
 	// Write the config file to disk.
-	if err := ioutil.WriteFile(configFilePath, encoded, os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(configFilePath, encoded, params.BeaconIoConfig().ReadWritePermissions); err != nil {
 		return errors.Wrapf(err, "could not write %s", configFilePath)
 	}
 	log.WithField("configFilePath", configFilePath).Debug("Wrote keymanager config file to disk")
@@ -417,7 +413,7 @@ func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, 
 func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
 	seedFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
 	// Write the config file to disk.
-	if err := ioutil.WriteFile(seedFilePath, encoded, os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(seedFilePath, encoded, params.BeaconIoConfig().ReadWritePermissions); err != nil {
 		return errors.Wrapf(err, "could not write %s", seedFilePath)
 	}
 	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
