@@ -2,7 +2,6 @@ package blocks_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -12,6 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -31,9 +31,7 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -41,11 +39,8 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	}
 
 	want := "non-active validator cannot exit"
-
 	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
@@ -65,9 +60,7 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 		Validators: registry,
 		Slot:       0,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -75,11 +68,8 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 	}
 
 	want := "expected current epoch >= exit epoch"
-
 	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
@@ -100,9 +90,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 		Validators: registry,
 		Slot:       10,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -111,9 +99,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 
 	want := "validator has not been active long enough to exit"
 	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
@@ -139,23 +125,15 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		},
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = state.SetSlot(state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	priv := bls.RandKey()
 	val, err := state.ValidatorAtIndex(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()[:]
-	if err := state.UpdateValidatorAtIndex(0, val); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
 	exits[0].Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
@@ -166,9 +144,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
-	if err != nil {
-		t.Fatalf("Could not process exits: %v", err)
-	}
+	require.NoError(t, err, "Could not process exits")
 	newRegistry := newState.Validators()
 	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
