@@ -681,14 +681,31 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 		uAtts := vs.AttPool.UnaggregatedAttestations()
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
 		atts = append(atts, uAtts...)
-		atts, err = attaggregation.Aggregate(atts)
-		if err != nil {
-			return nil, err
+
+		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+		for _, att := range atts {
+			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
+			if err != nil {
+				return nil, err
+			}
+			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 		}
-		if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
-			sort.Sort(profitableAtts{atts: atts})
-			atts = atts[:params.BeaconConfig().MaxAttestations]
+
+		attsForInclusion := make([]*ethpb.Attestation, 0)
+		for _, as := range attsByDataRoot {
+			as, err := attaggregation.Aggregate(as)
+			if err != nil {
+				return nil, err
+			}
+			attsForInclusion = append(attsForInclusion, as...)
 		}
+
+		if uint64(len(attsForInclusion)) > params.BeaconConfig().MaxAttestations {
+			sort.Sort(profitableAtts{atts: attsForInclusion})
+			attsForInclusion = attsForInclusion[:params.BeaconConfig().MaxAttestations]
+		}
+
+		atts = attsForInclusion
 	}
 	return atts, nil
 }
