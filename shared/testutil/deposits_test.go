@@ -8,6 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
+func TestDeterministicGenesisState_HashTreeRoot(t *testing.T) {
+
+}
 func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	entries := 1
 	ResetCache()

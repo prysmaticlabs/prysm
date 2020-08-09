@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -47,7 +49,9 @@ func TestStore_OnBlock(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
 	roots, err := blockTree1(db, validGenesisRoot[:])
 	require.NoError(t, err)
-	random := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: validGenesisRoot[:]}}
+	random := testutil.NewBeaconBlock()
+	random.Block.Slot = 1
+	random.Block.ParentRoot = validGenesisRoot[:]
 	assert.NoError(t, db.SaveBlock(ctx, random))
 	randomParentRoot, err := stateutil.BlockRoot(random.Block)
 	assert.NoError(t, err)
@@ -386,6 +390,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 //    \- B3 - B4 - B6 - B8
 // (B1, and B3 are all from the same slots)
 func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
+	genesisRoot = bytesutil.PadTo(genesisRoot, 32)
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.Slot = 0
 	b0.Block.ParentRoot = genesisRoot
@@ -448,12 +453,11 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		beaconBlock.Block.Body = &ethpb.BeaconBlockBody{}
 		if err := db.SaveBlock(context.Background(), beaconBlock); err != nil {
 			return nil, err
 		}
 		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not save state")
 		}
 	}
 	if err := db.SaveState(context.Background(), st.Copy(), r1); err != nil {

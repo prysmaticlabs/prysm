@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -85,7 +84,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		},
 		{
 			name:          "attestation's target root not in db",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: []byte{'A'}}}},
+			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "target root does not exist in db",
@@ -155,22 +154,16 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Fork: &pb.Fork{
-			Epoch:           0,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-		RandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		StateRoots:          make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		BlockRoots:          make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestBlockHeader:   &ethpb.BeaconBlockHeader{},
-		JustificationBits:   []byte{0},
-		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		FinalizedCheckpoint: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
-		Validators:          []*ethpb.Validator{{PublicKey: bytesutil.PadTo([]byte("foo"), 48)}},
-		Balances:            []uint64{0},
-	})
+	s := testutil.NewBeaconState()
+	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)})
+	require.NoError(t, err)
+	val := &ethpb.Validator{
+		PublicKey:             bytesutil.PadTo([]byte("foo"), 48),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("bar"), 32),
+	}
+	err = s.SetValidators([]*ethpb.Validator{val})
+	require.NoError(t, err)
+	err = s.SetBalances([]uint64{0})
 	require.NoError(t, err)
 	r := [32]byte{'g'}
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, r))
@@ -235,7 +228,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	epoch := uint64(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
 	require.NoError(t, baseState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch))
-	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
@@ -246,7 +239,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	assert.NotNil(t, cached, "State should have been cached")
 
 	epoch = uint64(2)
-	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch}
+	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), 32)}
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	require.NoError(t, err)
@@ -326,7 +319,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	assert.ErrorContains(t, "beacon block  does not exist", service.verifyBeaconBlock(ctx, d))
+	assert.ErrorContains(t, "beacon block 0x000000000000 does not exist", service.verifyBeaconBlock(ctx, d))
 }
 
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
@@ -378,7 +371,9 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
 	r32, err := stateutil.BlockRoot(b32.Block)
 	require.NoError(t, err)
-	b33 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 33, ParentRoot: r32[:]}}
+	b33 := testutil.NewBeaconBlock()
+	b33.Block.Slot = 33
+	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
 	r33, err := stateutil.BlockRoot(b33.Block)
 	require.NoError(t, err)
@@ -400,7 +395,9 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
 	r32, err := stateutil.BlockRoot(b32.Block)
 	require.NoError(t, err)
-	b33 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 33, ParentRoot: r32[:]}}
+	b33 := testutil.NewBeaconBlock()
+	b33.Block.Slot = 33
+	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
 	r33, err := stateutil.BlockRoot(b33.Block)
 	require.NoError(t, err)

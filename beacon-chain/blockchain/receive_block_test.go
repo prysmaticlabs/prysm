@@ -322,8 +322,8 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, stateSummaryCache := testDB.SetupDB(t)
-			genesisBlockRoot := bytesutil.ToBytes32(nil)
-
+			genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
+			require.NoError(t, err)
 			cfg := &Config{
 				BeaconDB: db,
 				ForkChoiceStore: protoarray.New(
