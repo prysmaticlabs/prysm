@@ -6,15 +6,15 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -274,11 +274,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 0}})
+			err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 			require.NoError(t, err)
 
-			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-			require.NoError(t, err)
+			st := testutil.NewBeaconState()
 			mc := &mock.ChainService{
 				State: st,
 				Root:  genesisRoot[:],
@@ -310,15 +309,12 @@ func TestService_roundRobinSync(t *testing.T) {
 
 func TestService_processBlock(t *testing.T) {
 	beaconDB, _ := dbtest.SetupDB(t)
-	genesisBlk := &eth.BeaconBlock{
-		Slot: 0,
-	}
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk)
+	genesisBlk := testutil.NewBeaconBlock()
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
 	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: genesisBlk})
+	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
-	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-	require.NoError(t, err)
+	st := testutil.NewBeaconState()
 	s := NewInitialSync(&Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
@@ -332,20 +328,14 @@ func TestService_processBlock(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process duplicate block", func(t *testing.T) {
-		blk1 := &eth.SignedBeaconBlock{
-			Block: &eth.BeaconBlock{
-				Slot:       1,
-				ParentRoot: genesisBlkRoot[:],
-			},
-		}
+		blk1 := testutil.NewBeaconBlock()
+		blk1.Block.Slot = 1
+		blk1.Block.ParentRoot = genesisBlkRoot[:]
 		blk1Root, err := stateutil.BlockRoot(blk1.Block)
 		require.NoError(t, err)
-		blk2 := &eth.SignedBeaconBlock{
-			Block: &eth.BeaconBlock{
-				Slot:       2,
-				ParentRoot: blk1Root[:],
-			},
-		}
+		blk2 := testutil.NewBeaconBlock()
+		blk2.Block.Slot = 2
+		blk2.Block.ParentRoot = blk1Root[:]
 
 		// Process block normally.
 		err = s.processBlock(ctx, genesis, blk1, func(
@@ -376,15 +366,12 @@ func TestService_processBlock(t *testing.T) {
 
 func TestService_processBlockBatch(t *testing.T) {
 	beaconDB, _ := dbtest.SetupDB(t)
-	genesisBlk := &eth.BeaconBlock{
-		Slot: 0,
-	}
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk)
+	genesisBlk := testutil.NewBeaconBlock()
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
 	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: genesisBlk})
+	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
-	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-	require.NoError(t, err)
+	st := testutil.NewBeaconState()
 	s := NewInitialSync(&Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
@@ -402,12 +389,9 @@ func TestService_processBlockBatch(t *testing.T) {
 		currBlockRoot := genesisBlkRoot
 		for i := 1; i < 10; i++ {
 			parentRoot := currBlockRoot
-			blk1 := &eth.SignedBeaconBlock{
-				Block: &eth.BeaconBlock{
-					Slot:       uint64(i),
-					ParentRoot: parentRoot[:],
-				},
-			}
+			blk1 := testutil.NewBeaconBlock()
+			blk1.Block.Slot = uint64(i)
+			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := stateutil.BlockRoot(blk1.Block)
 			require.NoError(t, err)
 			err = beaconDB.SaveBlock(context.Background(), blk1)
@@ -419,12 +403,9 @@ func TestService_processBlockBatch(t *testing.T) {
 		batch2 := []*eth.SignedBeaconBlock{}
 		for i := 10; i < 20; i++ {
 			parentRoot := currBlockRoot
-			blk1 := &eth.SignedBeaconBlock{
-				Block: &eth.BeaconBlock{
-					Slot:       uint64(i),
-					ParentRoot: parentRoot[:],
-				},
-			}
+			blk1 := testutil.NewBeaconBlock()
+			blk1.Block.Slot = uint64(i)
+			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := stateutil.BlockRoot(blk1.Block)
 			require.NoError(t, err)
 			err = beaconDB.SaveBlock(context.Background(), blk1)
