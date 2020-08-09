@@ -514,6 +514,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			PublicKey: keys[i].PublicKey().Marshal(),
+			WithdrawalCredentials: make([]byte, 32),
 		}
 	}
 
@@ -535,33 +536,57 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 2,
+					Root: make([]byte, 32),
 				},
+				Source: &ethpb.Checkpoint{
+					Root: make([]byte, 32),
+				},
+				BeaconBlockRoot: make([]byte, 32),
 			},
 			AttestingIndices: []uint64{1},
+			Signature: make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 1,
+					Root: make([]byte, 32),
 				},
+				Source: &ethpb.Checkpoint{
+					Root: make([]byte, 32),
+				},
+				BeaconBlockRoot: make([]byte, 32),
 			},
 			AttestingIndices: []uint64{47, 99, 101},
+			Signature: make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 4,
+					Root: make([]byte, 32),
 				},
+				Source: &ethpb.Checkpoint{
+					Root: make([]byte, 32),
+				},
+				BeaconBlockRoot: make([]byte, 32),
 			},
 			AttestingIndices: []uint64{21, 72},
+			Signature: make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 7,
+					Root: make([]byte, 32),
 				},
+				Source: &ethpb.Checkpoint{
+					Root: make([]byte, 32),
+				},
+				BeaconBlockRoot: make([]byte, 32),
 			},
 			AttestingIndices: []uint64{100, 121, 122},
+			Signature: make([]byte, 96),
 		}},
 	}
 
