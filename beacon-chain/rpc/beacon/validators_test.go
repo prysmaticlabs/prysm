@@ -1368,20 +1368,34 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			PublicKey:             bytesutil.ToBytes(uint64(i), 48),
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 		}
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, InclusionDelay: 1}}
+	atts := []*pbp2p.PendingAttestation{{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+		},
+		InclusionDelay: 1,
+	}}
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, headState.SetValidators(validators))
 	require.NoError(t, headState.SetBalances(balances))
 	require.NoError(t, headState.SetPreviousEpochAttestations(atts))
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: params.BeaconConfig().SlotsPerEpoch}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
 	bRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -1411,7 +1425,8 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: params.BeaconConfig().SlotsPerEpoch}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
 	bRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -1700,9 +1715,7 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	blk := &ethpb.BeaconBlock{
-		Slot: 0,
-	}
+	blk := testutil.NewBeaconBlock().Block
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
@@ -1816,12 +1829,10 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	bf := []byte{0xff}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 0}},
-		AggregationBits: bf}
-	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 0}},
-		AggregationBits: bf}
+	att1 := testutil.NewAttestation()
+	att1.AggregationBits = bf
+	att2 := testutil.NewAttestation()
+	att2.AggregationBits = bf
 	rt := [32]byte{'A'}
 	att1.Data.Target.Root = rt[:]
 	att1.Data.BeaconBlockRoot = rt[:]

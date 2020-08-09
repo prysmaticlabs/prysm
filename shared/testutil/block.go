@@ -60,6 +60,23 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	}
 }
 
+// NewAttestation creates an attestation block with minimum marshalable fields.
+func NewAttestation() *ethpb.Attestation {
+	return &ethpb.Attestation{
+		AggregationBits: bitfield.Bitlist{0b1101},
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+}
+
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
