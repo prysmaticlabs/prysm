@@ -339,6 +339,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				},
 				AttestingIndices: []uint64{0, 1},
+				Signature:        make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
@@ -346,6 +347,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				},
 				AttestingIndices: []uint64{0, 1},
+				Signature:        make([]byte, 96),
 			},
 		},
 	}
@@ -377,6 +379,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		BodyRoot:   bodyRoot[:],
+		StateRoot:  make([]byte, 32),
 	})
 	if err != nil {
 		t.Fatal(err)
