@@ -138,8 +138,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			Slot:          0,
-			ParentRoot:  make([]byte, 32),
-			BodyRoot: make([]byte, 32),
+			ParentRoot:    make([]byte, 32),
+			BodyRoot:      make([]byte, 32),
 			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
 		},
 	}
@@ -151,8 +151,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			Slot:          0,
-			ParentRoot:  make([]byte, 32),
-			BodyRoot: make([]byte, 32),
+			ParentRoot:    make([]byte, 32),
+			BodyRoot:      make([]byte, 32),
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
 	}

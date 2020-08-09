@@ -61,8 +61,8 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	ctx := context.Background()
 
 	data := &ethpb.AttestationData{
-		Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		BeaconBlockRoot: make([]byte, 32),
 	}
 	att := &ethpb.IndexedAttestation{Data: data, Signature: make([]byte, 96)}
@@ -137,7 +137,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
 	ctx := context.Background()
-	
+
 	data := &ethpb.AttestationData{
 		BeaconBlockRoot: make([]byte, 32),
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
