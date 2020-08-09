@@ -69,13 +69,13 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		// Use Batch Block Verify to process and verify batches directly.
 		if featureconfig.Get().BatchBlockVerify {
 			if err := s.processBatchedBlocks(ctx, genesis, fetchedBlocks, batchReceiver); err != nil {
-				log.WithError(err).Info("Batch is not processed")
+				log.WithError(err).Debug("Batch is not processed")
 			}
 			continue
 		}
 		for _, blk := range fetchedBlocks {
 			if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-				log.WithError(err).Info("Block is not processed")
+				log.WithError(err).Debug("Block is not processed")
 				continue
 			}
 		}
