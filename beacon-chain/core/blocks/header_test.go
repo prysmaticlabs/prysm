@@ -248,22 +248,23 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
+			PublicKey: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			Slashed:   true,
 		}
 	}
 
-	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Validators:        validators,
-		Slot:              10,
-		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
+	state := testutil.NewBeaconState()
+	require.NoError(t,state.SetValidators(validators))
+	require.NoError(t,state.SetSlot(10))
+	require.NoError(t,state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:          9,
+		ProposerIndex: 0,
+		ParentRoot:    make([]byte, 32),
+		StateRoot:     make([]byte, 32),
+		BodyRoot:      make([]byte, 32),
+	}))
 
 	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	require.NoError(t, err)
@@ -272,16 +273,11 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
 	require.NoError(t, err)
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: pID,
-			Slot:          10,
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: []byte{'A', 'B', 'C'},
-			},
-			ParentRoot: latestBlockSignedRoot[:],
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.ProposerIndex = pID
+	block.Block.Slot = 10
+	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)

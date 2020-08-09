@@ -63,6 +63,7 @@ go_test(
         "randao_test.go",
     ],
     embed = [":go_default_library"],
+    shard_count = 2,
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",

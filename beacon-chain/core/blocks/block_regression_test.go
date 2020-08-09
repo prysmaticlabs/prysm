@@ -41,8 +41,10 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: setA,
+		Signature: make([]byte, 96),
 	}
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
@@ -61,8 +63,10 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: root2[:]},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: setB,
+		Signature: make([]byte, 96),
 	}
 	signingRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
