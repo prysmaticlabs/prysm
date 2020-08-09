@@ -35,17 +35,15 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 		}
 	}
 
-	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Validators:        validators,
-		Slot:              10,
-		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 10}, // Must be less than block.Slot
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
+	state := testutil.NewBeaconState()
+	require.NoError(t, state.SetSlot(10))
+	require.NoError(t, state.SetValidators(validators))
+	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot: 10,// Must be less than block.Slot
+		ParentRoot: make([]byte, 32),
+		StateRoot: make([]byte, 32),
+		BodyRoot: make([]byte, 32),
+	}))
 
 	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	require.NoError(t, err)
@@ -54,16 +52,11 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
 	require.NoError(t, err)
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: pID,
-			Slot:          10,
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: []byte{'A', 'B', 'C'},
-			},
-			ParentRoot: latestBlockSignedRoot[:],
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.ProposerIndex = pID
+	block.Block.Slot = 10
+	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 
@@ -81,7 +74,12 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9}))
+	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:       9,
+		ParentRoot: make([]byte, 32),
+		StateRoot:  make([]byte, 32),
+		BodyRoot:   make([]byte, 32),
+	}))
 	require.NoError(t, beaconState.SetSlot(10))
 
 	lbhdr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
@@ -90,16 +88,11 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	require.NoError(t, err)
 
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          10,
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: []byte{'A', 'B', 'C'},
-			},
-			ParentRoot: lbhdr[:],
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.ProposerIndex = proposerIdx
+	block.Block.Slot = 10
+	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.ParentRoot = lbhdr[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
 	require.NoError(t, err)
 
@@ -119,17 +112,16 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		}
 	}
 
-	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Validators:        validators,
-		Slot:              10,
-		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
-		Fork: &pb.Fork{
-			PreviousVersion: []byte{0, 0, 0, 0},
-			CurrentVersion:  []byte{0, 0, 0, 0},
-		},
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
+	state := testutil.NewBeaconState()
+	require.NoError(t, state.SetValidators(validators))
+	require.NoError(t, state.SetSlot(10))
+	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:                 9,
+		ProposerIndex:        0,
+		ParentRoot:           make([]byte, 32),
+		StateRoot:            make([]byte, 32),
+		BodyRoot:             make([]byte, 32),
+	}))
 
 	lbhsr, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)

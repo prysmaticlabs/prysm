@@ -57,7 +57,8 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
-			PublicKey: []byte{1, 2, 3},
+			PublicKey: bytesutil.PadTo([]byte{1, 2, 3}, 48),
+			WithdrawalCredentials: make([]byte, 32),
 			Signature: make([]byte, 96),
 		},
 	}
@@ -133,9 +134,11 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		Data: &ethpb.Deposit_Data{
 			PublicKey: sk.PublicKey().Marshal(),
 			Amount:    1000,
+			WithdrawalCredentials: make([]byte, 32),
+			Signature: make([]byte, 96),
 		},
 	}
-	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 8))
+	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
 	require.NoError(t, err)
 	sig := sk.Sign(sr[:])
 	deposit.Data.Signature = sig.Marshal()
