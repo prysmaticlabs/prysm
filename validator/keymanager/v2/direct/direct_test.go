@@ -63,6 +63,57 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
 }
 
+func TestDirectKeymanager_RemoveAccount(t *testing.T) {
+	hook := logTest.NewGlobal()
+	password := "secretPassw0rd$1999"
+	wallet := &mock.Wallet{
+		Files:          make(map[string]map[string][]byte),
+		WalletPassword: password,
+	}
+	dr := &Keymanager{
+		keysCache:     make(map[[48]byte]bls.SecretKey),
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
+	}
+	numAccounts := 5
+	ctx := context.Background()
+	for i := 0; i < numAccounts; i++ {
+		_, err := dr.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+	accounts, err := dr.ValidatingAccountNames()
+	require.NoError(t, err)
+	require.Equal(t, numAccounts, len(accounts))
+
+	accountToRemove := uint64(2)
+	accountName := accounts[accountToRemove]
+	// Remove an account from the keystore.
+	require.NoError(t, dr.RemoveAccount(ctx, accountToRemove))
+	// Ensure the keystore file was written to the wallet
+	// and ensure we can decrypt it using the EIP-2335 standard.
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	require.NotNil(t, encodedKeystore, "could not find keystore file")
+	keystoreFile := &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+
+	// We extract the accounts from the keystore.
+	decryptor := keystorev4.New()
+	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+	require.NoError(t, err, "Could not decrypt validator accounts")
+	store := &AccountStore{}
+	require.NoError(t, json.Unmarshal(encodedAccounts, store))
+
+	require.Equal(t, numAccounts-1, len(store.PublicKeys))
+	require.Equal(t, numAccounts-1, len(store.PrivateKeys))
+	testutil.AssertLogsContain(t, hook, accountName)
+	testutil.AssertLogsContain(t, hook, "Successfully removed validator account")
+}
+
 func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{

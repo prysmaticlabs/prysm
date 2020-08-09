@@ -19,14 +19,16 @@ import (
 )
 
 const (
-	importKeysDirPromptText      = "Enter the directory or filepath where your keystores to import are located"
-	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
-	walletDirPromptText          = "Enter a wallet directory"
-	newWalletPasswordPromptText  = "New wallet password"
-	confirmPasswordPromptText    = "Confirm password"
-	walletPasswordPromptText     = "Wallet password"
-	newAccountPasswordPromptText = "New account password"
-	passwordForAccountPromptText = "Enter password for account with public key %#x"
+	importKeysDirPromptText        = "Enter the directory or filepath where your keystores to import are located"
+	exportDirPromptText            = "Enter a file location to write the exported account(s) to"
+	walletDirPromptText            = "Enter a wallet directory"
+	newWalletPasswordPromptText    = "New wallet password"
+	confirmPasswordPromptText      = "Confirm password"
+	walletPasswordPromptText       = "Wallet password"
+	newAccountPasswordPromptText   = "New account password"
+	passwordForAccountPromptText   = "Enter password for account with public key %#x"
+	selectAccountsDeletePromptText = "Select the account(s) you would like to delete"
+	deleteAccountConfirmationText  = "Are you sure "
 )
 
 type passwordConfirm int

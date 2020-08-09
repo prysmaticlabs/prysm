@@ -26,7 +26,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	return errors.New("this feature is unimplemented")
 }
 
-func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
+func selectAccounts(cliCtx *cli.Context, promptText string, accounts []string) ([]string, error) {
 	if len(accounts) == 1 {
 		return accounts, nil
 	}
@@ -43,16 +43,8 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 		}
 		return enteredAccounts, nil
 	}
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}",
-		Active:   "\U0001F336 {{ .Name | cyan }}",
-		Inactive: "  {{ .Name | cyan }}",
-		Selected: "\U0001F336 {{ .Name | red | cyan }}",
-		Details: `
---------- Account ----------
-{{ "Name:" | faint }}	{{ .Name }}`,
-	}
 
+	var index int
 	var result string
 	var err error
 	exit := "Exit Account Selection"
@@ -62,14 +54,19 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 	sort.Strings(accounts)
 
 	for result != exit {
-		prompt := promptui.Select{
-			Label:        "Select accounts to backup",
-			HideSelected: true,
-			Items:        append([]string{exit, allAccountsText}, accounts...),
-			Templates:    templates,
+		if len(results) == len(accounts) {
+			fmt.Printf("%s\n", au.BrightRed("Exiting Selection").Bold())
+			return results, nil
 		}
 
-		_, result, err = prompt.Run()
+		commands := []string{exit, allAccountsText}
+		prompt := promptui.Select{
+			Label:        promptText,
+			HideSelected: true,
+			Items:        append(commands, accounts...),
+		}
+
+		index, result, err = prompt.Run()
 		if err != nil {
 			return nil, err
 		}
@@ -81,6 +78,7 @@ func selectAccounts(cliCtx *cli.Context, accounts []string) ([]string, error) {
 			fmt.Printf("%s\n", au.BrightRed("[Selected all accounts]").Bold())
 			return accounts, nil
 		}
+		accounts = append(accounts[:index-len(commands)], accounts[index-len(commands)+1:]...)
 		results = append(results, result)
 		fmt.Printf("%s %s\n", au.BrightRed("[Selected Account Name]").Bold(), result)
 	}

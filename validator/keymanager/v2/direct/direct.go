@@ -1,6 +1,7 @@
 package direct
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -182,7 +183,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 ===================================================================`, tx.Data())
 	fmt.Println("")
 
-	// Write the encoded keystore to disk with the timestamp appended
+	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
 		return "", err
@@ -198,6 +199,48 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	dr.keysCache[bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())] = validatingKey
 	dr.lock.Unlock()
 	return accountName, nil
+}
+
+// DeleteAccount --
+func (dr *Keymanager) DeleteAccount(ctx context.Context, publicKey []byte) error {
+	var index int
+	var found bool
+	for i, pubKey := range dr.accountsStore.PublicKeys {
+		if bytes.Equal(pubKey, publicKey) {
+			index = i
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("could not find public key %#x", publicKey)
+	}
+	deletedPublicKey := dr.accountsStore.PublicKeys[index]
+	accountName := petnames.DeterministicName(deletedPublicKey, "-")
+	dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
+	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
+	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+	if err != nil {
+		return errors.Wrap(err, "could not rewrite accounts keystore")
+	}
+
+	// Write the encoded keystore.
+	encoded, err := json.MarshalIndent(newStore, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+		return errors.Wrap(err, "could not write keystore file for accounts")
+	}
+
+	log.WithFields(logrus.Fields{
+		"name":      accountName,
+		"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
+	}).Info("Successfully deleted validator account")
+	dr.lock.Lock()
+	delete(dr.keysCache, bytesutil.ToBytes48(deletedPublicKey))
+	dr.lock.Unlock()
+	return nil
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.

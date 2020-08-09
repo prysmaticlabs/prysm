@@ -36,6 +36,25 @@ this command outputs a deposit data string which is required to become a validat
 			},
 		},
 		{
+			Name:        "delete",
+			Description: `deletes the selected accounts from a users wallet.`,
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := DeleteAccount(cliCtx); err != nil {
+					log.Fatalf("Could not delete account: %v", err)
+				}
+				return nil
+			},
+		},
+		{
 			Name:        "list",
 			Description: "Lists all validator accounts in a user's wallet directory",
 			Flags: []cli.Flag{
