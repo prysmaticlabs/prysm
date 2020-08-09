@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -107,7 +106,10 @@ func TestLoadHoteStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(gBlkRoot, beaconState))
 
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 11, ParentRoot: gBlkRoot[:], ProposerIndex: 8}}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 11
+	blk.Block.ProposerIndex = 8
+	blk.Block.ParentRoot = gBlkRoot[:]
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)

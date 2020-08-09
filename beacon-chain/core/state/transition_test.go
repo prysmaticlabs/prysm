@@ -245,7 +245,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		},
 		Header_2: &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
-				Slot: params.BeaconConfig().SlotsPerEpoch * 2,
+				Slot:       params.BeaconConfig().SlotsPerEpoch * 2,
 				ParentRoot: make([]byte, 32),
 				StateRoot:  make([]byte, 32),
 				BodyRoot:   make([]byte, 32),
@@ -517,12 +517,12 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	mockRoot2 := [32]byte{'A'}
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: []uint64{0, 1},
-		Signature: make([]byte, 96),
+		Signature:        make([]byte, 96),
 	}
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
@@ -545,7 +545,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: []uint64{0, 1},
-		Signature: make([]byte, 96),
+		Signature:        make([]byte, 96),
 	}
 
 	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
@@ -576,15 +576,15 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	aggBits.SetBitAt(0, true)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Slot:   beaconState.Slot(),
+			Slot:            beaconState.Slot(),
 			BeaconBlockRoot: make([]byte, 32),
-			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState), Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState), Root: make([]byte, 32)},
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  mockRoot[:],
 			}},
 		AggregationBits: aggBits,
-		Signature: make([]byte, 96),
+		Signature:       make([]byte, 96),
 	}
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
@@ -646,7 +646,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 			Slot:          beaconState.Slot() + 1,
 			ProposerIndex: proposerIndex,
 			Body: &ethpb.BeaconBlockBody{
-				Graffiti: make([]byte, 32),
+				Graffiti:          make([]byte, 32),
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
 				AttesterSlashings: attesterSlashings,

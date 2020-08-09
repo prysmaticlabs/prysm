@@ -66,13 +66,13 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 
 	a := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{Root: tr[:]},
-			Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: tr[:]},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 			BeaconBlockRoot: make([]byte, 32),
-			Slot:   1,
+			Slot:            1,
 		},
 		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-		Signature: make([]byte, 96),
+		Signature:       make([]byte, 96),
 	}
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2

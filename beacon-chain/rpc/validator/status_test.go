@@ -592,18 +592,18 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 1,
-			PublicKey:         pbKey,
+			ActivationEpoch:       currentSlot/params.BeaconConfig().SlotsPerEpoch + 1,
+			PublicKey:             pbKey,
 			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 4,
-			PublicKey:         pubKey(5),
+			ActivationEpoch:       currentSlot/params.BeaconConfig().SlotsPerEpoch + 4,
+			PublicKey:             pubKey(5),
 			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 	}
 	state := testutil.NewBeaconState()
