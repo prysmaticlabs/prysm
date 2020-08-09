@@ -49,9 +49,11 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 
 	cfg := &detection.Config{
@@ -138,16 +140,20 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	incomingAtt := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	cfg := &detection.Config{
 		SlasherDB: db,
@@ -227,7 +233,10 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
+			StateRoot:     make([]byte, 32),
+			ParentRoot:    make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 
 	cfg := &detection.Config{
