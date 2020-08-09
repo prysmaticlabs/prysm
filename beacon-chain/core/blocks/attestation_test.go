@@ -311,8 +311,9 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
 	data := &ethpb.AttestationData{
-		Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-		Target: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+		Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+		Target:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+		BeaconBlockRoot: make([]byte, 32),
 	}
 	aggBits1 := bitfield.NewBitlist(9)
 	aggBits1.SetBitAt(0, true)
@@ -320,6 +321,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	att1 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits1,
+		Signature:       make([]byte, 32),
 	}
 
 	cfc := beaconState.CurrentJustifiedCheckpoint()
@@ -347,6 +349,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	att2 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits2,
+		Signature:       make([]byte, 32),
 	}
 
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
@@ -365,16 +368,13 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	aggregatedAtt, err := attaggregation.AggregatePair(att1, att2)
 	require.NoError(t, err)
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Attestations: []*ethpb.Attestation{aggregatedAtt},
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.Body.Attestations = []*ethpb.Attestation{aggregatedAtt}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, block.Body)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, block.Block.Body)
 	assert.NoError(t, err)
 }
 
