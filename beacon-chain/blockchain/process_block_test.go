@@ -485,7 +485,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
-	b1.Block.ParentRoot = []byte{'a'}
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.HashTreeRoot()
 	require.NoError(t, err)
 	b100 := testutil.NewBeaconBlock()
@@ -502,7 +502,6 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		beaconBlock.Block.Body = &ethpb.BeaconBlockBody{}
 		require.NoError(t, db.SaveBlock(context.Background(), beaconBlock))
 	}
 
@@ -587,7 +586,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		if test.args.diffFinalizedCheckPoint {
 			b1 := testutil.NewBeaconBlock()
 			b1.Block.Slot = 1
-			b1.Block.ParentRoot = []byte{'a'}
+			b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 			r1, err := b1.HashTreeRoot()
 			require.NoError(t, err)
 			b100 := testutil.NewBeaconBlock()
