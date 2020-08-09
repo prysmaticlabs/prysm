@@ -28,6 +28,8 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
+			PublicKey: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			Slashed:   true,
 		}
@@ -110,6 +112,8 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
+			PublicKey: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			Slashed:   true,
 		}
@@ -155,6 +159,8 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
+			PublicKey: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			Slashed:   true,
 		}
@@ -200,6 +206,8 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
+			PublicKey: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			Slashed:   true,
 		}
