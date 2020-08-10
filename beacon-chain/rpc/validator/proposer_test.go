@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"math/big"
+	"sort"
 	"testing"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -203,7 +204,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
 	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct graffiti")
-	assert.Equal(t, params.BeaconConfig().MaxAttestations, uint64(len(block.Body.Attestations)), "Expected a full block of attestations")
+	assert.Equal(t, params.BeaconConfig().MaxAttestations, uint64(len(block.Body.Attestations)), "Expected block atts to be aggregated down to 1")
 	hasUnaggregatedAtt := false
 	for _, a := range block.Body.Attestations {
 		if !helpers.IsAggregated(a) {
@@ -211,7 +212,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 			break
 		}
 	}
-	assert.Equal(t, true, hasUnaggregatedAtt, "Expected block to contain at least one unaggregated attestation")
+	assert.Equal(t, false, hasUnaggregatedAtt, "Expected block to not have unaggregated attestation")
 }
 
 func TestProposeBlock_OK(t *testing.T) {
@@ -1312,7 +1313,7 @@ func TestEth1DataMajorityVote_ChooseHighestCount(t *testing.T) {
 	hash := majorityVoteEth1Data.BlockHash
 
 	expectedHash := []byte("first")
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	}
 }
@@ -1373,7 +1374,7 @@ func TestEth1DataMajorityVote_HighestCountBeforeRange_ChooseHighestCountWithinRa
 	hash := majorityVoteEth1Data.BlockHash
 
 	expectedHash := []byte("first")
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	}
 }
@@ -1433,7 +1434,7 @@ func TestEth1DataMajorityVote_HighestCountAfterRange_ChooseHighestCountWithinRan
 	hash := majorityVoteEth1Data.BlockHash
 
 	expectedHash := []byte("first")
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	}
 }
@@ -1493,7 +1494,7 @@ func TestEth1DataMajorityVote_HighestCountOnUnknownBlock_ChooseKnownBlockWithHig
 	hash := majorityVoteEth1Data.BlockHash
 
 	expectedHash := []byte("first")
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	}
 }
@@ -1555,7 +1556,7 @@ func TestEth1DataMajorityVote_NoVotesInRange_ChooseDefault(t *testing.T) {
 
 	expectedHash := make([]byte, 32)
 	copy(expectedHash, "second")
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	}
 }
@@ -1610,7 +1611,7 @@ func TestEth1DataMajorityVote_NoVotes_ChooseDefault(t *testing.T) {
 
 	expectedHash := make([]byte, 32)
 	copy(expectedHash, "second")
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	}
 }
@@ -1669,7 +1670,7 @@ func TestEth1DataMajorityVote_SameCount_ChooseMoreRecentBlock(t *testing.T) {
 	hash := majorityVoteEth1Data.BlockHash
 
 	expectedHash := []byte("second")
-	if bytes.Compare(hash, expectedHash) != 0 {
+	if !bytes.Equal(hash, expectedHash) {
 		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	}
 }
@@ -1940,4 +1941,25 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	require.NoError(t, s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)))
 	assert.Equal(t, 0, len(s.AttPool.AggregatedAttestations()), "Did not delete aggregated attestation")
 	assert.Equal(t, 0, len(s.AttPool.UnaggregatedAttestations()), "Did not delete unaggregated attestation")
+}
+
+func TestSortProfitableAtts(t *testing.T) {
+	atts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}},
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}},
+	}
+	sort.Sort(profitableAtts{atts: atts})
+	want := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}},
+		{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}},
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}},
+	}
+	require.DeepEqual(t, want, atts)
 }

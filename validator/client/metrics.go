@@ -181,7 +181,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
-		if _, ok := v.startBalances[pubKeyBytes]; ok == false {
+		if _, ok := v.startBalances[pubKeyBytes]; !ok {
 			v.startBalances[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
 		}
 

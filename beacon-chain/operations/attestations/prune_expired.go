@@ -62,8 +62,5 @@ func (s *Service) expired(slot uint64) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
 	expirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(roughtime.Now().Unix())
-	if currentTime >= expirationTime {
-		return true
-	}
-	return false
+	return currentTime >= expirationTime
 }

@@ -32,7 +32,7 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created wallet with on-disk keymanager configuration. " +
 				"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 		)
@@ -40,7 +40,7 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 		if err = createDerivedKeymanagerWallet(cliCtx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created HD wallet and saved configuration to disk. " +
 				"Make a new validator account with ./prysm.sh validator accounts-2 create",
 		)
@@ -48,7 +48,7 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 		if err = createRemoteKeymanagerWallet(cliCtx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with remote keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:

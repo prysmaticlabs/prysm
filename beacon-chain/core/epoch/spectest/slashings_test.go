@@ -10,12 +10,11 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func runSlashingsTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/slashings/pyspec_tests")
 	for _, folder := range testFolders {
@@ -29,22 +28,16 @@ func runSlashingsTests(t *testing.T, config string) {
 
 func processSlashingsWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
 	state, err := epoch.ProcessSlashings(state)
-	if err != nil {
-		t.Fatalf("could not process slashings: %v", err)
-	}
+	require.NoError(t, err, "Could not process slashings")
 	return state, nil
 }
 
 func processSlashingsPrecomputeWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
 	ctx := context.Background()
 	vp, bp, err := precompute.New(ctx, state)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, bp, err = precompute.ProcessAttestations(ctx, state, vp, bp)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	return state, precompute.ProcessSlashingsPrecompute(state, bp)
 }
