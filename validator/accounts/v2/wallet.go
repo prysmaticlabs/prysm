@@ -50,6 +50,8 @@ var (
 type Wallet struct {
 	walletDir      string
 	accountsPath   string
+	configFilePath string
+	walletFileLock *flock.Flock
 	keymanagerKind v2keymanager.Kind
 }
 
@@ -280,7 +282,33 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 	if !fileutil.FileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
+	w.configFilePath = configFilePath
 	return os.Open(configFilePath)
+
+}
+
+// LockConfigFile lock read and write to wallet file in order to prevent
+// two validators from using the same keys.
+func (w *Wallet) LockConfigFile(ctx context.Context) error {
+	fileLock := flock.New(w.configFilePath)
+	locked, err := fileLock.TryLock()
+	if err != nil {
+		return errors.Wrapf(err, "failed to lock wallet config file: %s", w.configFilePath)
+	}
+	if !locked {
+		return fmt.Errorf("failed to lock wallet config file: %s", w.configFilePath)
+	}
+	w.walletFileLock = fileLock
+	return nil
+}
+
+// UnlockWalletConfigFile unlock wallet file.
+// should be called before client is closing in order to remove the file lock.
+func (w *Wallet) UnlockWalletConfigFile() error {
+	if w.walletFileLock == nil {
+		return errors.New("trying to unlock a nil lock")
+	}
+	return w.walletFileLock.Unlock()
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -26,6 +27,9 @@ func ListAccounts(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(cliCtx, true /* skip mnemonic confirm */)
+	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+		return errors.New("wrong wallet password entered")
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
