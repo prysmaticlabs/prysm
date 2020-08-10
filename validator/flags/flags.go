@@ -177,6 +177,12 @@ var (
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to export",
 		Value: "",
 	}
+	// ExportsPasswordFile for encrypting exported accounts.
+	ExportsPasswordFile = &cli.StringFlag{
+		Name:  "exports-password-file",
+		Usage: "Path to a plain-text, .txt file containing the desired password for your exported accounts",
+		Value: "",
+	}
 	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
 	BackupDirFlag = &cli.StringFlag{
 		Name:  "backup-dir",

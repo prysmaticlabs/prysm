@@ -65,6 +65,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupDirFlag,
 				flags.AccountsFlag,
 				flags.ExportForPublicKeysFlag,
+				flags.ExportsPasswordFile,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 			},

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -27,10 +25,15 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const allAccountsText = "All accounts"
-const archiveFilename = "backup.zip"
+const (
+	allAccountsText  = "All accounts"
+	archiveFilename  = "backup.zip"
+	exportPromptText = "Enter the directory where your backup.zip file will be written to"
+)
 
-// ExportAccount --
+// ExportAccount allows users to select validator accounts from their wallet
+// and export them as a backup.zip file containing the keys as EIP-2335 compliant
+// keystore.json files, which are compatible with importing in other eth2 clients.
 func ExportAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
@@ -56,6 +59,10 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 
 	// Input the directory where they wish to export their accounts.
+	backupDir, err := inputDirectory(cliCtx, exportPromptText, flags.BackupDirFlag)
+	if err != nil {
+		return errors.Wrap(err, "could not parse keys directory")
+	}
 
 	// Allow the user to interactively select the accounts to export.
 	filteredPubKeys, err := selectAccountsToExport(cliCtx, pubKeys)
@@ -66,7 +73,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	// Ask the user for their desired password for their exported accounts.
 	exportsPassword, err := promptutil.InputPassword(
 		cliCtx,
-		flags.WalletPasswordFileFlag,
+		flags.ExportsPasswordFile,
 		"Enter a new password for your exported accounts",
 		"Confirm new password",
 		promptutil.ConfirmPass,
@@ -92,15 +99,12 @@ func ExportAccount(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		//if err := km.ExportAccounts(ctx, []bls.PublicKey{}); err != nil {
-		//	return errors.Wrap(err, "could not export accounts for derived keymanager")
-		//}
 		_ = km
 		return nil
 	default:
 		return errors.New("keymanager kind not supported")
 	}
-	return writeKeystoresToOutputDir(keystoresToExport, "/Users/zypherx/Desktop/mybackup")
+	return zipKeystoresToOutputDir(keystoresToExport, backupDir)
 }
 
 // Ask user for which accounts they wish to backup via an interactive prompt.
@@ -179,12 +183,14 @@ func selectAccountsToExport(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.Publ
 	return filteredPubKeys, nil
 }
 
-func writeKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outputDir string) error {
+// Zips a list of keystore into respective EIP-2335 keystore.json files and
+// writes their zipped format into the specified output directory.
+func zipKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outputDir string) error {
 	if len(keystoresToExport) == 0 {
 		return errors.New("nothing to export")
 	}
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
-		return err
+		return errors.Wrapf(err, "could not create directory at path: %s", outputDir)
 	}
 	// Marshal and zip all keystore files together and write the zip file
 	// to the specified output directory.
@@ -192,9 +198,10 @@ func writeKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outpu
 	if fileutil.FileExists(archivePath) {
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
+	// We create a new file to store our backup.zip.
 	zipfile, err := os.Create(archivePath)
 	if err != nil {
-		return errors.Wrap(err, "could not create zip file")
+		return errors.Wrapf(err, "could not create zip file with path: %s", archivePath)
 	}
 	defer func() {
 		if err := zipfile.Close(); err != nil {
@@ -207,20 +214,22 @@ func writeKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outpu
 	for i, k := range keystoresToExport {
 		encodedFile, err := json.MarshalIndent(k, "", "\t")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not marshal keystore to JSON file")
 		}
 		f, err := writer.Create(fmt.Sprintf("keystore-%d.json", i))
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not write keystore file to zip")
 		}
-		_, err = f.Write(encodedFile)
-		if err != nil {
-			return err
+		if _, err = f.Write(encodedFile); err != nil {
+			return errors.Wrap(err, "could not write keystore file contents")
 		}
 	}
-	err = writer.Close()
-	if err != nil {
-		return err
+	// We close the zip writer when done.
+	if err := writer.Close(); err != nil {
+		return errors.Wrap(err, "could not close zip file after writing")
 	}
+	log.WithField(
+		"backup-path", archivePath,
+	).Infof("Successfully backed up %d accounts", len(keystoresToExport))
 	return nil
 }
