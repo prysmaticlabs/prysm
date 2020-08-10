@@ -383,7 +383,11 @@ func openOrCreateWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
 		if !isEmptyWallet {
-			return OpenWallet(cliCtx)
+			wallet, err := OpenWallet(cliCtx)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not open wallet")
+			}
+			return wallet, nil
 		}
 	}
 	return creationFunc(cliCtx)
