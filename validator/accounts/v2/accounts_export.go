@@ -13,7 +13,6 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,7 +20,6 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -55,7 +53,10 @@ func ExportAccount(cliCtx *cli.Context) error {
 	filteredPubKeys, err := selectAccountsToExport(cliCtx, pubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not select accounts to export")
+
 	}
+	// Ask the user for their desired password for their exported accounts.
+
 	var keystoresToExport []*v2keymanager.Keystore
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:

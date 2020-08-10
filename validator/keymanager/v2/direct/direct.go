@@ -32,12 +32,10 @@ const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// PasswordFileSuffix for passwords persisted as text to disk.
-	PasswordFileSuffix = ".pass"
 	// AccountsPath where all direct keymanager keystores are kept.
-	AccountsPath                   = "accounts"
-	accountsKeystoreFileName       = "all-accounts.keystore.json"
-	accountsKeystoreFileNameFormat = "all-accounts.keystore.json"
-	eipVersion                     = "EIP-2335"
+	AccountsPath             = "accounts"
+	accountsKeystoreFileName = "all-accounts.keystore.json"
+	eipVersion               = "EIP-2335"
 )
 
 // Config for a direct keymanager.
