@@ -57,7 +57,7 @@ func runShuffleTest(testCase *ShuffleTestCase) error {
 	}
 
 	seed := common.BytesToHash(baseSeed)
-	testIndices := make([]uint64, testCase.Count, testCase.Count)
+	testIndices := make([]uint64, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
 		testIndices[i] = i
 	}
