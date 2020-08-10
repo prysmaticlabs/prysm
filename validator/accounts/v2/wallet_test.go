@@ -134,7 +134,7 @@ func Test_LockUnlockFile(t *testing.T) {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
 	defer unlock(t, wallet)
-	_, err = wallet.InitializeKeymanager(ctx, true)
+	_, err = wallet.InitializeKeymanager(cliCtx, true)
 	require.NoError(t, err)
 	assert.NoError(t, err)
 	err = wallet.LockConfigFile(ctx)
