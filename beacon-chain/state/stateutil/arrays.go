@@ -79,8 +79,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 		return rt, nil
 	}
 
-	var res [32]byte
-	res = h.merkleizeWithCache(leaves, length, fieldName, hashFunc)
+	res := h.merkleizeWithCache(leaves, length, fieldName, hashFunc)
 	if h.rootsCache != nil {
 		leavesCache[fieldName] = leaves
 	}
@@ -90,9 +89,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	fieldName string, hasher func([]byte) [32]byte) [32]byte {
 	if len(leaves) == 1 {
-		var root [32]byte
-		root = leaves[0]
-		return root
+		return leaves[0]
 	}
 	hashLayer := leaves
 	layers := make([][][32]byte, htrutils.GetDepth(length)+1)
@@ -103,8 +100,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	}
 	layers[0] = hashLayer
 	layers, hashLayer = merkleizeTrieLeaves(layers, hashLayer, hasher)
-	var root [32]byte
-	root = hashLayer[0]
+	root := hashLayer[0]
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
 	}

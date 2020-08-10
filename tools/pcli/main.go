@@ -127,7 +127,7 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					if text = strings.Replace(text, "\n", "", -1); text == "" {
+					if text = strings.ReplaceAll(text, "\n", ""); text == "" {
 						log.Fatal("Empty block path given")
 					}
 					blockPath = text
@@ -148,7 +148,7 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					if text = strings.Replace(text, "\n", "", -1); text == "" {
+					if text = strings.ReplaceAll(text, "\n", ""); text == "" {
 						log.Fatal("Empty state path given")
 					}
 					preStatePath = text
