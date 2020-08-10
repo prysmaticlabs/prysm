@@ -54,7 +54,6 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 						log.WithError(err).Error("Could not restart stream")
 						return
 					}
-					break
 				default:
 					log.WithError(err).Errorf("Could not receive block from beacon node. rpc status: %v", e.Code())
 					return
@@ -117,7 +116,6 @@ func (bs *Service) ReceiveAttestations(ctx context.Context) {
 						log.WithError(err).Error("Could not restart stream")
 						return
 					}
-					break
 				default:
 					log.WithError(err).Errorf("Could not receive attestations from beacon node. rpc status: %v", e.Code())
 					return

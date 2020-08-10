@@ -264,7 +264,7 @@ func MakeEmptyBitlists(i int) []byte {
 // HighestBitIndex returns the index of the highest
 // bit set from bitlist `b`.
 func HighestBitIndex(b []byte) (int, error) {
-	if b == nil || len(b) == 0 {
+	if len(b) == 0 {
 		return 0, errors.New("input list can't be empty or nil")
 	}
 
