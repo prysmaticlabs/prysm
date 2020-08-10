@@ -2,18 +2,14 @@ package v2
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/gofrs/flock"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -23,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 const (
@@ -176,7 +171,6 @@ func (w *Wallet) InitializeKeymanager(
 		}
 		keymanager, err = derived.NewKeymanager(cliCtx, w, cfg, skipMnemonicConfirm)
 		if err != nil {
-			``
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
 	case v2keymanager.Remote:
@@ -349,99 +343,6 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 		return errors.Wrapf(err, "could not write %s", seedFilePath)
 	}
 	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
-	return nil
-}
-
-// enterPasswordForAccount checks if a user has a password specified for the new account
-// either from a file or from stdin. Then, it saves the password to the wallet.
-func (w *Wallet) enterPasswordForAccount(cliCtx *cli.Context, accountName string, pubKey []byte) error {
-	au := aurora.NewAurora(true)
-	var password string
-	var err error
-	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return err
-		}
-		password = string(data)
-		err = w.checkPasswordForAccount(accountName, password)
-		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			return fmt.Errorf("invalid password entered for account with public key %#x", pubKey)
-		}
-		if err != nil {
-			return err
-		}
-	} else {
-		pubKeyStr := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
-		attemptingPassword := true
-		// Loop asking for the password until the user enters it correctly.
-		for attemptingPassword {
-			// Ask the user for the password to their account.
-			password, err = inputWeakPassword(
-				cliCtx,
-				flags.AccountPasswordFileFlag,
-				fmt.Sprintf(passwordForAccountPromptText, au.BrightGreen(pubKeyStr)),
-			)
-			if err != nil {
-				return errors.Wrap(err, "could not input password")
-			}
-			err = w.checkPasswordForAccount(accountName, password)
-			if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-				fmt.Print(au.Red("X").Bold())
-				fmt.Print(au.Red("\nIncorrect password entered, please try again"))
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			attemptingPassword = false
-			fmt.Print(au.Green("✔️\n").Bold())
-		}
-	}
-	return nil
-}
-
-func (w *Wallet) askUntilPasswordConfirms(cliCtx *cli.Context, accountName string, pubKey []byte) (string, error) {
-	// Loop asking for the password until the user enters it correctly.
-	var password string
-	var err error
-	for {
-		password, err = inputWeakPassword(
-			cliCtx,
-			flags.AccountPasswordFileFlag,
-			fmt.Sprintf(passwordForAccountPromptText, bytesutil.Trunc(pubKey)),
-		)
-		if err != nil {
-			return "", errors.Wrap(err, "could not input password")
-		}
-		err = w.checkPasswordForAccount(accountName, password)
-		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Println(au.Red("Incorrect password entered, please try again"))
-			continue
-		}
-		if err != nil {
-			return "", err
-		}
-		break
-	}
-	return password, nil
-}
-
-func (w *Wallet) checkPasswordForAccount(accountName string, password string) error {
-	encoded, err := w.ReadFileAtPath(context.Background(), accountName, direct.KeystoreFileName)
-	if err != nil {
-		return errors.Wrap(err, "could not read keystore file")
-	}
-	keystoreJSON := &v2keymanager.Keystore{}
-	if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
-		return errors.Wrap(err, "could not decode json")
-	}
-	decryptor := keystorev4.New()
-	_, err = decryptor.Decrypt(keystoreJSON.Crypto, password)
-	if err != nil {
-		return errors.Wrap(err, "could not decrypt keystore")
-	}
 	return nil
 }
 
