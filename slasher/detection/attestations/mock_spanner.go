@@ -64,7 +64,7 @@ func (s *MockSpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx u
 
 // ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
 func (s *MockSpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64]types.Span {
-	return make(map[uint64]types.Span, 0)
+	return make(map[uint64]types.Span)
 }
 
 // DeleteValidatorSpansByEpoch mocks the delete spans by epoch function.

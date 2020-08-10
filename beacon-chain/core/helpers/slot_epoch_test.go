@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -25,9 +27,7 @@ func TestSlotToEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		if tt.epoch != SlotToEpoch(tt.slot) {
-			t.Errorf("SlotToEpoch(%d) = %d, wanted: %d", tt.slot, SlotToEpoch(tt.slot), tt.epoch)
-		}
+		assert.Equal(t, tt.epoch, SlotToEpoch(tt.slot), "SlotToEpoch(%d)", tt.slot)
 	}
 }
 
@@ -44,12 +44,8 @@ func TestCurrentEpoch_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tt.epoch != CurrentEpoch(state) {
-			t.Errorf("ActiveCurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.epoch, CurrentEpoch(state), "ActiveCurrentEpoch(%d)", state.Slot())
 	}
 }
 
@@ -64,12 +60,8 @@ func TestPrevEpoch_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tt.epoch != PrevEpoch(state) {
-			t.Errorf("ActivePrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.epoch, PrevEpoch(state), "ActivePrevEpoch(%d)", state.Slot())
 	}
 }
 
@@ -86,12 +78,8 @@ func TestNextEpoch_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tt.epoch != NextEpoch(state) {
-			t.Errorf("NextEpoch(%d) = %d, wanted: %d", state.Slot(), NextEpoch(state), tt.epoch)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.epoch, NextEpoch(state), "NextEpoch(%d)", state.Slot())
 	}
 }
 
@@ -106,9 +94,7 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.epoch}
-		if tt.startSlot != StartSlot(tt.epoch) {
-			t.Errorf("StartSlot(%d) = %d, wanted: %d", state.Slot, StartSlot(tt.epoch), tt.startSlot)
-		}
+		assert.Equal(t, tt.startSlot, StartSlot(tt.epoch), "StartSlot(%d)", state.Slot)
 	}
 }
 
@@ -138,9 +124,7 @@ func TestIsEpochStart(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if IsEpochStart(tt.slot) != tt.result {
-			t.Errorf("IsEpochStart(%d) = %v, wanted %v", tt.slot, IsEpochStart(tt.slot), tt.result)
-		}
+		assert.Equal(t, tt.result, IsEpochStart(tt.slot), "IsEpochStart(%d)", tt.slot)
 	}
 }
 
@@ -166,9 +150,7 @@ func TestIsEpochEnd(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if IsEpochEnd(tt.slot) != tt.result {
-			t.Errorf("IsEpochEnd(%d) = %v, wanted %v", tt.slot, IsEpochEnd(tt.slot), tt.result)
-		}
+		assert.Equal(t, tt.result, IsEpochEnd(tt.slot), "IsEpochEnd(%d)", tt.slot)
 	}
 }
 
@@ -184,9 +166,7 @@ func TestSlotsSinceEpochStarts(t *testing.T) {
 		{slots: 10*params.BeaconConfig().SlotsPerEpoch + 2, wantedSlots: 2},
 	}
 	for _, tt := range tests {
-		if got := SlotsSinceEpochStarts(tt.slots); got != tt.wantedSlots {
-			t.Errorf("SlotsSinceEpochStarts() = %v, want %v", got, tt.wantedSlots)
-		}
+		assert.Equal(t, tt.wantedSlots, SlotsSinceEpochStarts(tt.slots))
 	}
 }
 
@@ -200,9 +180,7 @@ func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 		{startSlot: 10*params.BeaconConfig().SlotsPerEpoch - (params.BeaconConfig().SlotsPerEpoch - 1), roundedUpSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, tt := range tests {
-		if tt.roundedUpSlot != RoundUpToNearestEpoch(tt.startSlot) {
-			t.Errorf("RoundUpToNearestEpoch(%d) = %d, wanted: %d", tt.startSlot, RoundUpToNearestEpoch(tt.startSlot), tt.roundedUpSlot)
-		}
+		assert.Equal(t, tt.roundedUpSlot, RoundUpToNearestEpoch(tt.startSlot), "RoundUpToNearestEpoch(%d)", tt.startSlot)
 	}
 }
 
