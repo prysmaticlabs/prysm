@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -27,8 +28,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
 
 func TestValidatorIndex_OK(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
