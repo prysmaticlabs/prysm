@@ -10,25 +10,20 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func runDepositTest(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/deposit/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
 			depositFile, err := testutil.BazelFileBytes(folderPath, "deposit.ssz")
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			deposit := &ethpb.Deposit{}
-			if err := deposit.UnmarshalSSZ(depositFile); err != nil {
-				t.Fatalf("Failed to unmarshal: %v", err)
-			}
+			require.NoError(t, deposit.UnmarshalSSZ(depositFile), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
 			testutil.RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, state *state.BeaconState, body *ethpb.BeaconBlockBody) (*state.BeaconState, error) {
