@@ -52,7 +52,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
-	filteredPubKeys, err := selectAccounts(cliCtx, pubKeys)
+	filteredPubKeys, err := selectAccountsToExport(cliCtx, pubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not select accounts to export")
 	}
@@ -84,7 +84,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	return nil
 }
 
-func selectAccounts(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
+func selectAccountsToExport(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
 	// Ask user for which accounts they wish to backup, then we
 	// filter the respective public keys.
 	pubKeyStrings := make([]string, len(pubKeys))
