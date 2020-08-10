@@ -49,11 +49,11 @@ func ComputeDomainAndSign(state *state.BeaconState, epoch uint64, obj interface{
 //    ))
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 	return signingData(func() ([32]byte, error) {
-		switch object.(type) {
+		switch t := object.(type) {
 		case *ethpb.BeaconBlock:
-			return stateutil.BlockRoot(object.(*ethpb.BeaconBlock))
+			return stateutil.BlockRoot(t)
 		case *ethpb.AttestationData:
-			return stateutil.AttestationDataRoot(object.(*ethpb.AttestationData))
+			return stateutil.AttestationDataRoot(t)
 		default:
 			// utilise generic ssz library
 			return ssz.HashTreeRoot(object)
