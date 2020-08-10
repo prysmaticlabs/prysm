@@ -54,9 +54,7 @@ func (kv *Store) Backup(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-				return b.ForEach(func(k []byte, v []byte) error {
-					return b2.Put(k, v)
-				})
+				return b.ForEach(b2.Put)
 			})
 		})
 	})

@@ -107,6 +107,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
+		"graffiti":        string(b.Body.Graffiti),
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {
