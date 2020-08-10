@@ -29,7 +29,7 @@ func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byt
 			return fmt.Errorf("validator history empty for public key %#x", publicKey)
 		}
 		slotBits := valBucket.Get(bytesutil.Bytes8(epoch))
-		if slotBits == nil || len(slotBits) == 0 {
+		if len(slotBits) == 0 {
 			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
 			return nil
 		}

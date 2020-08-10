@@ -87,8 +87,6 @@ func (g *Gateway) Start() {
 			return
 		}
 	}()
-
-	return
 }
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.

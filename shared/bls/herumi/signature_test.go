@@ -204,13 +204,10 @@ func TestSignatureFromBytes(t *testing.T) {
 			} else {
 				if err != nil {
 					t.Errorf("Unexpected error returned: %v", err)
-				} else {
-					if bytes.Compare(res.Marshal(), test.input) != 0 {
-						t.Errorf("Unexpected result: expected %x, received %x", test.input, res.Marshal())
-					}
+				} else if !bytes.Equal(res.Marshal(), test.input) {
+					t.Errorf("Unexpected result: expected %x, received %x", test.input, res.Marshal())
 				}
 			}
-
 		})
 	}
 }
