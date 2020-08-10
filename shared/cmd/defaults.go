@@ -19,13 +19,15 @@ package cmd
 import (
 	"path/filepath"
 	"runtime"
+
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
 func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
-	home := homeDir()
+	home := fileutil.HomeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2")

@@ -31,14 +31,6 @@ func RecoverWallet(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not create new wallet")
 	}
 	ctx := context.Background()
-	seedConfig, err := derived.SeedFileFromMnemonic(ctx, mnemonic, wallet.walletPassword)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize new wallet seed file")
-	}
-	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
-	}
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -49,10 +41,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
-		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
-	}
-	keymanager, err := wallet.InitializeKeymanager(ctx, true)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, true)
 	if err != nil {
 		return err
 	}
@@ -60,7 +49,9 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if !ok {
 		return errors.New("not a derived keymanager")
 	}
-
+	if err := km.WriteEncryptedSeedToWallet(ctx, mnemonic); err != nil {
+		return err
+	}
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
