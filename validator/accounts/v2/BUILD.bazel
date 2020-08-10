@@ -24,6 +24,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
