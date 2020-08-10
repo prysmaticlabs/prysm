@@ -1,10 +1,15 @@
 package p2p
 
 import (
+	"context"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/go-bitfield"
+	"go.opencensus.io/trace"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -16,7 +21,12 @@ var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
 // with those peers.
-func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
+func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
+	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("index", int64(index)))
+
 	if s.dv5Listener == nil {
 		// return if discovery isn't set
 		return false, nil
@@ -25,6 +35,9 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 	nodes := enode.ReadNodes(iterator, lookupLimit)
 	exists := false
 	for _, node := range nodes {
+		if err := ctx.Err(); err != nil {
+			return false, err
+		}
 		if node.IP() == nil {
 			continue
 		}
@@ -55,7 +68,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 					continue
 				}
 				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
-				if err := s.connectWithPeer(*info); err != nil {
+				if err := s.connectWithPeer(ctx, *info); err != nil {
 					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 					continue
 				}
@@ -64,6 +77,10 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		}
 	}
 	return exists, nil
+}
+
+func (s *Service) hasPeerWithSubnet(subnet uint64) bool {
+	return len(s.Peers().SubscribedToSubnet(subnet)) > 0
 }
 
 // Updates the service's discv5 listener record's attestation subnet
@@ -114,4 +131,15 @@ func retrieveBitvector(record *enr.Record) (bitfield.Bitvector64, error) {
 		return nil, err
 	}
 	return bitV, nil
+}
+
+func (s *Service) subnetLocker(i uint64) *sync.RWMutex {
+	s.subnetsLockLock.Lock()
+	defer s.subnetsLockLock.Unlock()
+	l, ok := s.subnetsLock[i]
+	if !ok {
+		l = &sync.RWMutex{}
+		s.subnetsLock[i] = l
+	}
+	return l
 }

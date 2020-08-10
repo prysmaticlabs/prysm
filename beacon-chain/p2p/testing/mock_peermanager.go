@@ -41,7 +41,7 @@ func (m MockPeerManager) RefreshENR() {
 }
 
 // FindPeersWithSubnet .
-func (m MockPeerManager) FindPeersWithSubnet(index uint64) (bool, error) {
+func (m MockPeerManager) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
 	return true, nil
 }
 
