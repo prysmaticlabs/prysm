@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"context"
 	"crypto/rand"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -140,4 +142,42 @@ func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, false, got)
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+}
+
+func Test_LockUnlockFile(t *testing.T) {
+	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
+	numAccounts := int64(5)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		passwordsDir:        passwordsDir,
+		walletPasswordFile:  passwordFile,
+		accountPasswordFile: passwordFile,
+		keymanagerKind:      v2keymanager.Derived,
+		numAccounts:         numAccounts,
+	})
+
+	// We attempt to create the wallet.
+	_, err := CreateWallet(cliCtx)
+	require.NoError(t, err)
+
+	// We attempt to open the newly created wallet.
+	ctx := context.Background()
+	wallet, err := OpenWallet(cliCtx)
+	defer unlock(t, wallet)
+	_, err = wallet.InitializeKeymanager(ctx, true)
+	require.NoError(t, err)
+	assert.NoError(t, err)
+	err = wallet.LockConfigFile(ctx)
+	assert.NoError(t, err)
+	err = wallet.LockConfigFile(ctx)
+	assert.ErrorContains(t, "failed to lock wallet config file", err)
+	unlock(t, wallet)
+	err = wallet.LockConfigFile(ctx)
+	assert.NoError(t, err)
+
+}
+
+func unlock(tb assertions.AssertionTestingTB, wallet *Wallet) {
+	err := wallet.UnlockWalletConfigFile()
+	require.NoError(tb, err)
 }
