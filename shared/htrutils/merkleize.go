@@ -83,7 +83,7 @@ func Merkleize(hasher Hasher, count uint64, limit uint64, leaf func(i uint64) []
 	}
 	depth := GetDepth(count)
 	limitDepth := GetDepth(limit)
-	tmp := make([][32]byte, limitDepth+1, limitDepth+1)
+	tmp := make([][32]byte, limitDepth+1)
 
 	j := uint8(0)
 	hArr := [32]byte{}
@@ -148,7 +148,7 @@ func ConstructProof(hasher Hasher, count uint64, limit uint64, leaf func(i uint6
 	limitDepth := GetDepth(limit)
 	branch = append(branch, trieutil.ZeroHashes[:limitDepth]...)
 
-	tmp := make([][32]byte, limitDepth+1, limitDepth+1)
+	tmp := make([][32]byte, limitDepth+1)
 
 	j := uint8(0)
 	hArr := [32]byte{}

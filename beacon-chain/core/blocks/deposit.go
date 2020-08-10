@@ -179,10 +179,8 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
-	} else {
-		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-			return nil, err
-		}
+	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
+		return nil, err
 	}
 
 	return beaconState, nil
