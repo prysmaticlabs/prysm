@@ -3,8 +3,10 @@ package v2
 import (
 	"archive/zip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,6 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -43,7 +47,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 			"remote wallets cannot export accounts",
 		)
 	}
-	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -51,12 +55,26 @@ func ExportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
+
+	// Input the directory where they wish to export their accounts.
+	outputDir := "/Users/rauljordan/Desktop/exports"
+
 	filteredPubKeys, err := selectAccountsToExport(cliCtx, pubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not select accounts to export")
-
 	}
 	// Ask the user for their desired password for their exported accounts.
+	exportsPassword, err := promptutil.InputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		"Enter a new password for your exported accounts",
+		"Confirm new password",
+		promptutil.ConfirmPass,
+		promptutil.ValidatePasswordInput,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not determine password for exported accounts")
+	}
 
 	var keystoresToExport []*v2keymanager.Keystore
 	switch wallet.KeymanagerKind() {
@@ -65,7 +83,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		keystoresToExport, err = km.ExportKeystores(ctx, filteredPubKeys)
+		keystoresToExport, err = km.ExportKeystores(ctx, filteredPubKeys, exportsPassword)
 		if err != nil {
 			return errors.Wrap(err, "could not export accounts for direct keymanager")
 		}
@@ -82,13 +100,24 @@ func ExportAccount(cliCtx *cli.Context) error {
 	default:
 		return errors.New("keymanager kind not supported")
 	}
-	_ = keystoresToExport
+	if len(keystoresToExport) != 1 {
+		return errors.New("wrong num keystores")
+	}
+	encodedFile, err := json.MarshalIndent(keystoresToExport[0], "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(filepath.Join(outputDir, "keystore.json"), encodedFile, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return err
+	}
 	return nil
 }
 
+// Ask user for which accounts they wish to backup via an interactive prompt.
 func selectAccountsToExport(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
-	// Ask user for which accounts they wish to backup, then we
-	// filter the respective public keys.
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")

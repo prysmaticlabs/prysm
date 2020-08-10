@@ -30,8 +30,6 @@ import (
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
-	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore-*.json"
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// AccountsPath where all direct keymanager keystores are kept.
