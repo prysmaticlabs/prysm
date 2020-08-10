@@ -176,18 +176,12 @@ func (m *stateMachine) trigger(event eventID, data interface{}) error {
 
 // isFirst checks whether a given machine has the lowest start block.
 func (m *stateMachine) isFirst() bool {
-	if m.start == (*m.smm).keys[0] {
-		return true
-	}
-	return false
+	return m.start == (*m.smm).keys[0]
 }
 
 // isLast checks whether a given machine has the highest start block.
 func (m *stateMachine) isLast() bool {
-	if m.start == (*m.smm).keys[len((*m.smm).keys)-1] {
-		return true
-	}
-	return false
+	return m.start == (*m.smm).keys[len((*m.smm).keys)-1]
 }
 
 // String returns human-readable representation of a FSM state.

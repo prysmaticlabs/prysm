@@ -331,7 +331,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	ticker := slotutil.GetSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case _ = <-ticker.C():
+		case <-ticker.C():
 			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
