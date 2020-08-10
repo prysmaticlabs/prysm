@@ -9,6 +9,7 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSkipSlotCache_OK(t *testing.T) {
@@ -16,9 +17,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	defer state.SkipSlotCache.Disable()
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	originalState, err := beaconstate.InitializeFromProto(bState.CloneInnerState())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
@@ -26,18 +25,12 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
 	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	originalState, err = state.ExecuteStateTransition(context.Background(), originalState, blk)
-	if err != nil {
-		t.Fatalf("Could not run state transition: %v", err)
-	}
+	require.NoError(t, err, "Could not run state transition")
 
 	bState, err = state.ExecuteStateTransition(context.Background(), bState, blk)
-	if err != nil {
-		t.Fatalf("Could not process state transition: %v", err)
-	}
+	require.NoError(t, err, "Could not process state transition")
 
 	if !ssz.DeepEqual(originalState.CloneInnerState(), bState.CloneInnerState()) {
 		t.Fatal("Skipped slots cache leads to different states")
