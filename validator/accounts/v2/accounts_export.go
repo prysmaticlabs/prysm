@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -57,12 +56,13 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 
 	// Input the directory where they wish to export their accounts.
-	outputDir := "/Users/rauljordan/Desktop/exports"
 
+	// Allow the user to interactively select the accounts to export.
 	filteredPubKeys, err := selectAccountsToExport(cliCtx, pubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not select accounts to export")
 	}
+
 	// Ask the user for their desired password for their exported accounts.
 	exportsPassword, err := promptutil.InputPassword(
 		cliCtx,
@@ -100,20 +100,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	default:
 		return errors.New("keymanager kind not supported")
 	}
-	if len(keystoresToExport) != 1 {
-		return errors.New("wrong num keystores")
-	}
-	encodedFile, err := json.MarshalIndent(keystoresToExport[0], "", "\t")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
-		return err
-	}
-	if err := ioutil.WriteFile(filepath.Join(outputDir, "keystore.json"), encodedFile, params.BeaconIoConfig().ReadWritePermissions); err != nil {
-		return err
-	}
-	return nil
+	return writeKeystoresToOutputDir(keystoresToExport, "/Users/zypherx/Desktop/mybackup")
 }
 
 // Ask user for which accounts they wish to backup via an interactive prompt.
@@ -192,12 +179,16 @@ func selectAccountsToExport(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.Publ
 	return filteredPubKeys, nil
 }
 
-func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
-	sourcePath := filepath.Dir(w.accountsPath)
-	archivePath := filepath.Join(targetPath, archiveFilename)
-	if err := os.MkdirAll(targetPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
-		return errors.Wrap(err, "could not create target folder")
+func writeKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outputDir string) error {
+	if len(keystoresToExport) == 0 {
+		return errors.New("nothing to export")
 	}
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		return err
+	}
+	// Marshal and zip all keystore files together and write the zip file
+	// to the specified output directory.
+	archivePath := filepath.Join(outputDir, archiveFilename)
 	if fileutil.FileExists(archivePath) {
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
@@ -210,74 +201,26 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 			log.WithError(err).Error("Could not close zipfile")
 		}
 	}()
-
-	archive := zip.NewWriter(zipfile)
-	defer func() {
-		if err := archive.Close(); err != nil {
-			log.WithError(err).Error("Could not close archive")
-		}
-	}()
-
-	err = filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
+	// Using this zip file, we create a new zip writer which we write
+	// files to directly from our marshaled keystores.
+	writer := zip.NewWriter(zipfile)
+	for i, k := range keystoresToExport {
+		encodedFile, err := json.MarshalIndent(k, "", "\t")
 		if err != nil {
-			return errors.Wrapf(err, "could not walk %s", sourcePath)
+			return err
 		}
-
-		var isAccount bool
-		for _, accountName := range accounts {
-			if strings.Contains(path, accountName) {
-				// Add all files under the account folder to the archive.
-				isAccount = true
-			} else if !info.IsDir() && info.Name() == KeymanagerConfigFileName {
-				// Add the keymanager config file to the archive as well.
-				isAccount = true
-			}
+		f, err := writer.Create(fmt.Sprintf("keystore-%d.json", i))
+		if err != nil {
+			return err
 		}
-		if !isAccount {
-			return nil
+		_, err = f.Write(encodedFile)
+		if err != nil {
+			return err
 		}
-
-		return copyFileFromZip(archive, sourcePath, info, path)
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not walk files")
 	}
-	return nil
-}
-
-func copyFileFromZip(archive *zip.Writer, sourcePath string, info os.FileInfo, path string) error {
-	sourceDir := filepath.Base(sourcePath)
-	header, err := zip.FileInfoHeader(info)
-	if err != nil {
-		return errors.Wrap(err, "could not get zip file info header")
-	}
-	if sourceDir != "" {
-		header.Name = filepath.Join(sourceDir, strings.TrimPrefix(path, sourcePath))
-	}
-	if info.IsDir() {
-		header.Name += "/"
-	} else {
-		header.Method = zip.Deflate
-	}
-
-	writer, err := archive.CreateHeader(header)
-	if err != nil {
-		return errors.Wrap(err, "could not create header")
-	}
-
-	if info.IsDir() {
-		return nil
-	}
-
-	file, err := os.Open(path)
+	err = writer.Close()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			log.WithError(err).Error("Could not close file")
-		}
-	}()
-	_, err = io.Copy(writer, file)
-	return err
+	return nil
 }
