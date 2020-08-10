@@ -69,7 +69,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 			return nil, errors.Wrap(err, "could not create new wallet")
 		}
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet")
+			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", w.walletDir).Info(
 			"Successfully created new wallet",
@@ -100,13 +100,13 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
+
+	keystoresImported := make([]*v2keymanager.Keystore, 0)
+	// Consider that the keysDir might be a path to a specific file and handle accordingly.
 	isDir, err := fileutil.HasDir(keysDir)
 	if err != nil {
 		return errors.Wrap(err, "could not determine if path is a directory")
 	}
-
-	keystoresImported := make([]*v2keymanager.Keystore, 0)
-	// Consider that the keysDir might be a path to a specific file and handle accordingly.
 	if isDir {
 		files, err := ioutil.ReadDir(keysDir)
 		if err != nil {
