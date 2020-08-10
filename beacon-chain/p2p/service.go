@@ -365,18 +365,15 @@ func (s *Service) awaitStateInitialized() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	for {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Initialized {
-				data, ok := event.Data.(*statefeed.InitializedData)
-				if !ok {
-					log.Fatalf("Received wrong data over state initialized feed: %v", data)
-				}
-				s.genesisTime = data.StartTime
-				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
-				return
+	for event := range stateChannel {
+		if event.Type == statefeed.Initialized {
+			data, ok := event.Data.(*statefeed.InitializedData)
+			if !ok {
+				log.Fatalf("Received wrong data over state initialized feed: %v", data)
 			}
+			s.genesisTime = data.StartTime
+			s.genesisValidatorsRoot = data.GenesisValidatorsRoot
+			return
 		}
 	}
 }
