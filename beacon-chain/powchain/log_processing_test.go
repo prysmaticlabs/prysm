@@ -362,11 +362,9 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	// Receive the chain started event.
 	for started := false; !started; {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.ChainStarted {
-				started = true
-			}
+		event := <-stateChannel
+		if event.Type == statefeed.ChainStarted {
+			started = true
 		}
 	}
 
@@ -457,11 +455,9 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	// Receive the chain started event.
 	for started := false; !started; {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.ChainStarted {
-				started = true
-			}
+		event := <-stateChannel
+		if event.Type == statefeed.ChainStarted {
+			started = true
 		}
 	}
 
