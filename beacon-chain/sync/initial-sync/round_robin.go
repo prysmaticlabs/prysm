@@ -144,13 +144,13 @@ func (s *Service) processFetchedData(
 	// Use Batch Block Verify to process and verify batches directly.
 	if featureconfig.Get().BatchBlockVerify {
 		if err := s.processBatchedBlocks(ctx, genesis, data.blocks, batchReceiver); err != nil {
-			log.WithError(err).Info("Batch is not processed")
+			log.WithError(err).Debug("Batch is not processed")
 		}
 		return
 	}
 	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Info("Block is not processed")
+			log.WithError(err).Debug("Block is not processed")
 			continue
 		}
 	}
