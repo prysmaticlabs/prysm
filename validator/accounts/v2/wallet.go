@@ -386,6 +386,7 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 	if !fileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
+	w.configFilePath = configFilePath
 	return os.Open(configFilePath)
 
 }
@@ -400,6 +401,7 @@ func (w *Wallet) LockConfigFile(ctx context.Context) error {
 	}
 	if locked {
 		w.walletFileLock = fileLock
+		return nil
 	}
 	return fmt.Errorf("failed to lock wallet config file: %s", w.configFilePath)
 }
