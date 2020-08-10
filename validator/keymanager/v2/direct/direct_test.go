@@ -67,8 +67,7 @@ func TestDirectKeymanager_RemoveAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files:          make(map[string]map[string][]byte),
-		WalletPassword: password,
+		Files: make(map[string]map[string][]byte),
 	}
 	dr := &Keymanager{
 		keysCache:     make(map[[48]byte]bls.SecretKey),
@@ -88,7 +87,7 @@ func TestDirectKeymanager_RemoveAccount(t *testing.T) {
 	accountToRemove := uint64(2)
 	accountName := accounts[accountToRemove]
 	// Remove an account from the keystore.
-	require.NoError(t, dr.RemoveAccount(ctx, accountToRemove))
+	require.NoError(t, dr.DeleteAccount(ctx, accountToRemove))
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	var encodedKeystore []byte

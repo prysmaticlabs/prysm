@@ -247,7 +247,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	return accountName, nil
 }
 
-// DeleteAccount --
+// DeleteAccount takes in a public key and removes the account entirely. This includes its disk keystore and cached keystore.
 func (dr *Keymanager) DeleteAccount(ctx context.Context, publicKey []byte) error {
 	var index int
 	var found bool
