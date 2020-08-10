@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -22,7 +24,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		return err
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, skipMnemonicConfirm)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -38,10 +40,31 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(strings.Join(accounts, ", "))
+
+	formattedPubKeys := make([]string, len(accounts))
+	for i, account := range accounts {
+		formattedPubKeys[i] = account[:14]
+	}
+	allAccountStr := strings.Join(formattedPubKeys, ", ")
+
 	if len(accounts) == 1 {
+		promptText := "Are you sure you want to delete 1 account? (%s)"
+		_, err = promptutil.ValidatePrompt(fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateConfirmation)
+		if err != nil {
+			return err
+		}
 		log.Info("Deleting account...")
 	} else {
+		promptText := "Are you sure you want to delete %d accounts? (%s)"
+		if len(accounts) == len(allAccounts) {
+			promptText = fmt.Sprintf("Are you sure you want to delete all accounts? (%s)", au.BrightGreen(allAccountStr))
+		} else {
+			promptText = fmt.Sprintf(promptText, len(accounts), au.BrightGreen(allAccountStr))
+		}
+		_, err = promptutil.ValidatePrompt(promptText, promptutil.ValidateConfirmation)
+		if err != nil {
+			return err
+		}
 		log.Info("Deleting accounts...")
 	}
 	switch wallet.KeymanagerKind() {
@@ -67,11 +90,6 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
 	}
-	formattedPubKeys := make([]string, len(accounts))
-	for i, account := range accounts {
-		formattedPubKeys[i] = account[:8]
-	}
-	allAccountStr := strings.Join(formattedPubKeys, ", ")
 	log.WithField("publicKeys", allAccountStr).Info("Accounts deleted")
 	return nil
 }
