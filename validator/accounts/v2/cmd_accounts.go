@@ -55,31 +55,31 @@ this command outputs a deposit data string which is required to become a validat
 			},
 		},
 		{
-			Name: "export",
-			Description: "exports an account into an EIP-2335 compliant keystore.json file. If multiple accounts " +
-				"are selected, it exports a zip file of their respective keystores. Accounts to export can also" +
-				"be specified programmatically via a --export-for-public-keys flag which specifies a comma-separated" +
-				"list of public keys as hex strings",
+			Name: "backup",
+			Description: "backup accounts into EIP-2335 compliant keystore.json files zipped into a backup.zip file" +
+				"at a desired output directory. Accounts to backup can also" +
+				"be specified programmatically via a --backup-for-public-keys flag which specifies a comma-separated" +
+				"list of hex string public keys",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.BackupDirFlag,
 				flags.AccountsFlag,
-				flags.ExportForPublicKeysFlag,
-				flags.ExportsPasswordFile,
+				flags.BackupForPublicKeysFlag,
+				flags.BackupsPasswordFile,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ExportAccount(cliCtx); err != nil {
-					log.Fatalf("Could not export accounts: %v", err)
+				if err := BackupAccounts(cliCtx); err != nil {
+					log.Fatalf("Could not backup accounts: %v", err)
 				}
 				return nil
 			},
 		},
 		{
 			Name:        "import",
-			Description: `imports the accounts from a given zip file to the provided wallet path. This zip can be created using the export command`,
+			Description: `imports eth2 validator accounts stored in EIP-2335 keystore.json files from an external directory`,
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.KeysDirFlag,
@@ -91,7 +91,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ImportAccount(cliCtx); err != nil {
+				if err := ImportAccounts(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil

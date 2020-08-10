@@ -28,17 +28,17 @@ import (
 const (
 	allAccountsText  = "All accounts"
 	archiveFilename  = "backup.zip"
-	exportPromptText = "Enter the directory where your backup.zip file will be written to"
+	backupPromptText = "Enter the directory where your backup.zip file will be written to"
 )
 
-// ExportAccount allows users to select validator accounts from their wallet
+// BackupAccounts allows users to select validator accounts from their wallet
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other eth2 clients.
-func ExportAccount(cliCtx *cli.Context) error {
+func BackupAccounts(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
-			"no wallet found, nothing to export. Create a new wallet by running wallet-v2 create",
+			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",
 		)
 	})
 	if err != nil {
@@ -46,7 +46,7 @@ func ExportAccount(cliCtx *cli.Context) error {
 	}
 	if wallet.KeymanagerKind() == v2keymanager.Remote {
 		return errors.New(
-			"remote wallets cannot export accounts",
+			"remote wallets cannot backup accounts",
 		)
 	}
 	keymanager, err := wallet.InitializeKeymanager(cliCtx, true /* skip mnemonic confirm */)
@@ -58,41 +58,41 @@ func ExportAccount(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
 
-	// Input the directory where they wish to export their accounts.
-	backupDir, err := inputDirectory(cliCtx, exportPromptText, flags.BackupDirFlag)
+	// Input the directory where they wish to backup their accounts.
+	backupDir, err := inputDirectory(cliCtx, backupPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
 
-	// Allow the user to interactively select the accounts to export.
-	filteredPubKeys, err := selectAccountsToExport(cliCtx, pubKeys)
+	// Allow the user to interactively select the accounts to backup.
+	filteredPubKeys, err := selectAccountsToBackup(cliCtx, pubKeys)
 	if err != nil {
-		return errors.Wrap(err, "could not select accounts to export")
+		return errors.Wrap(err, "could not select accounts to backup")
 	}
 
-	// Ask the user for their desired password for their exported accounts.
-	exportsPassword, err := promptutil.InputPassword(
+	// Ask the user for their desired password for their backed up accounts.
+	backupsPassword, err := promptutil.InputPassword(
 		cliCtx,
-		flags.ExportsPasswordFile,
-		"Enter a new password for your exported accounts",
+		flags.BackupsPasswordFile,
+		"Enter a new password for your backed up accounts",
 		"Confirm new password",
 		promptutil.ConfirmPass,
 		promptutil.ValidatePasswordInput,
 	)
 	if err != nil {
-		return errors.Wrap(err, "could not determine password for exported accounts")
+		return errors.Wrap(err, "could not determine password for backed up accounts")
 	}
 
-	var keystoresToExport []*v2keymanager.Keystore
+	var keystoresToBackup []*v2keymanager.Keystore
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		keystoresToExport, err = km.ExportKeystores(ctx, filteredPubKeys, exportsPassword)
+		keystoresToBackup, err = km.ExtractKeystores(ctx, filteredPubKeys, backupsPassword)
 		if err != nil {
-			return errors.Wrap(err, "could not export accounts for direct keymanager")
+			return errors.Wrap(err, "could not backup accounts for direct keymanager")
 		}
 	case v2keymanager.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
@@ -104,11 +104,11 @@ func ExportAccount(cliCtx *cli.Context) error {
 	default:
 		return errors.New("keymanager kind not supported")
 	}
-	return zipKeystoresToOutputDir(keystoresToExport, backupDir)
+	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
 
 // Ask user for which accounts they wish to backup via an interactive prompt.
-func selectAccountsToExport(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
+func selectAccountsToBackup(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")
@@ -171,7 +171,7 @@ func selectAccountsToExport(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.Publ
 		}
 	}
 
-	// Filter the public keys for export based on user input.
+	// Filter the public keys for backup based on user input.
 	filteredPubKeys := make([]bls.PublicKey, 0)
 	for selectedIndex := range seen {
 		pk, err := bls.PublicKeyFromBytes(pubKeys[selectedIndex][:])
@@ -185,9 +185,9 @@ func selectAccountsToExport(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.Publ
 
 // Zips a list of keystore into respective EIP-2335 keystore.json files and
 // writes their zipped format into the specified output directory.
-func zipKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outputDir string) error {
-	if len(keystoresToExport) == 0 {
-		return errors.New("nothing to export")
+func zipKeystoresToOutputDir(keystoresToBackup []*v2keymanager.Keystore, outputDir string) error {
+	if len(keystoresToBackup) == 0 {
+		return errors.New("nothing to backup")
 	}
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not create directory at path: %s", outputDir)
@@ -211,7 +211,7 @@ func zipKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outputD
 	// Using this zip file, we create a new zip writer which we write
 	// files to directly from our marshaled keystores.
 	writer := zip.NewWriter(zipfile)
-	for i, k := range keystoresToExport {
+	for i, k := range keystoresToBackup {
 		encodedFile, err := json.MarshalIndent(k, "", "\t")
 		if err != nil {
 			return errors.Wrap(err, "could not marshal keystore to JSON file")
@@ -230,6 +230,6 @@ func zipKeystoresToOutputDir(keystoresToExport []*v2keymanager.Keystore, outputD
 	}
 	log.WithField(
 		"backup-path", archivePath,
-	).Infof("Successfully backed up %d accounts", len(keystoresToExport))
+	).Infof("Successfully backed up %d accounts", len(keystoresToBackup))
 	return nil
 }

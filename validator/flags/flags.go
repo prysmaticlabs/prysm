@@ -170,23 +170,23 @@ var (
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,
 	}
-	// ExportForPublicKeysFlag defines a comma-separated list of hex string public keys
-	// for accounts which a user desires to export from their wallet.
-	ExportForPublicKeysFlag = &cli.StringFlag{
-		Name:  "export-for-public-keys",
-		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to export",
+	// BackupForPublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to backup from their wallet.
+	BackupForPublicKeysFlag = &cli.StringFlag{
+		Name:  "backup-for-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
 		Value: "",
 	}
-	// ExportsPasswordFile for encrypting exported accounts.
-	ExportsPasswordFile = &cli.StringFlag{
-		Name:  "exports-password-file",
-		Usage: "Path to a plain-text, .txt file containing the desired password for your exported accounts",
+	// BackupsPasswordFile for encrypting accounts a user wishes to back up.
+	BackupsPasswordFile = &cli.StringFlag{
+		Name:  "backups-password-file",
+		Usage: "Path to a plain-text, .txt file containing the desired password for your backed up accounts",
 		Value: "",
 	}
 	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
 	BackupDirFlag = &cli.StringFlag{
 		Name:  "backup-dir",
-		Usage: "Path to a directory where accounts will be exported into a zip file",
+		Usage: "Path to a directory where accounts will be backed up into a zip file",
 		Value: DefaultValidatorDir(),
 	}
 	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.

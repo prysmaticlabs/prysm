@@ -66,7 +66,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	time.Sleep(time.Second)
 	createKeystore(t, keysDir)
 
-	require.NoError(t, ImportAccount(cliCtx))
+	require.NoError(t, ImportAccounts(cliCtx))
 
 	wallet, err = OpenWallet(cliCtx)
 	require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(accounts), 0)
 
-	require.NoError(t, ImportAccount(cliCtx))
+	require.NoError(t, ImportAccounts(cliCtx))
 
 	wallet, err = OpenWallet(cliCtx)
 	require.NoError(t, err)
