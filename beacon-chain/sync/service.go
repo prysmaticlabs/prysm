@@ -231,7 +231,7 @@ func (s *Service) registerHandlers() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	for s.chainStarted == false {
+	for !s.chainStarted {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {

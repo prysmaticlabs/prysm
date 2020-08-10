@@ -279,9 +279,6 @@ func ConstructDialOptions(
 		),
 	}
 
-	for _, opt := range extraOpts {
-		dialOpts = append(dialOpts, opt)
-	}
-
+	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
 }
