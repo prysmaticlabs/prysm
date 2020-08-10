@@ -1,11 +1,14 @@
 package fileutil
 
 import (
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // ExpandPath given a string which may be a relative path.
@@ -61,4 +64,13 @@ func FileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+// ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.
+func ReadFileAsBytes(filename string) ([]byte, error) {
+	filePath, err := ExpandPath(filename)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not determine absolute path of password file")
+	}
+	return ioutil.ReadFile(filePath)
 }

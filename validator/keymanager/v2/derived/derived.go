@@ -106,6 +106,9 @@ func NewKeymanager(
 		return nil, err
 	}
 	var accountsPassword string
+	// If the user does not have any accounts in their wallet, we ask them to
+	// set a new wallet password, which will be used for encrypting/decrypting
+	// their wallet secret to and from disk.
 	if len(walletFiles) == 0 {
 		accountsPassword, err = inputPassword(
 			cliCtx,
@@ -133,35 +136,36 @@ func NewKeymanager(
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	ctx := context.Background()
+	var encodedSeedFile []byte
 	if !fileutil.FileExists(filepath.Join(wallet.AccountsDir(), EncryptedSeedFileName)) {
 		seedConfig, err := initializeWalletSeedFile(accountsPassword, skipMnemonicConfirm)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 		}
-		seedConfigFile, err := marshalEncryptedSeedFile(seedConfig)
+		encodedSeedFile, err = marshalEncryptedSeedFile(seedConfig)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not marshal encrypted wallet seed file")
 		}
-		if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
+		if err = wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
 			return nil, errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 		}
-	}
-
-	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
-	}
-	enc, err := ioutil.ReadAll(seedConfigFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read seed configuration file contents")
-	}
-	defer func() {
-		if err := seedConfigFile.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
+	} else {
+		seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
 		}
-	}()
+		encodedSeedFile, err = ioutil.ReadAll(seedConfigFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read seed configuration file contents")
+		}
+		defer func() {
+			if err := seedConfigFile.Close(); err != nil {
+				log.Errorf("Could not close keymanager config file: %v", err)
+			}
+		}()
+	}
 	seedConfig := &SeedConfig{}
-	if err := json.Unmarshal(enc, seedConfig); err != nil {
+	if err := json.Unmarshal(encodedSeedFile, seedConfig); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
 	decryptor := keystorev4.New()
@@ -223,8 +227,9 @@ func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
 	return dr.seedCfg.NextAccount
 }
 
-// RecoverFromMnemonic given a mnemonic phrase, is able to regenerate a wallet seed.
-func (dr *Keymanager) RecoverFromMnemonic(ctx context.Context, mnemonic string) error {
+// WriteEncryptedSeedToWallet given a mnemonic phrase, is able to regenerate a wallet seed
+// encrypt it, and write it to the wallet's path.
+func (dr *Keymanager) WriteEncryptedSeedToWallet(ctx context.Context, mnemonic string) error {
 	seedConfig, err := seedFileFromMnemonic(mnemonic, dr.accountsPassword)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
@@ -435,13 +440,9 @@ func inputPassword(
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
+		data, err := fileutil.ReadFileAsBytes(passwordFilePathInput)
 		if err != nil {
-			return "", errors.Wrap(err, "could not determine absolute path of password file")
-		}
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return "", errors.Wrap(err, "could not read password file")
+			return "", errors.Wrap(err, "could not read file as bytes")
 		}
 		enteredPassword := strings.TrimRight(string(data), "\r\n")
 		if err := passwordValidator(enteredPassword); err != nil {

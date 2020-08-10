@@ -49,10 +49,9 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if !ok {
 		return errors.New("not a derived keymanager")
 	}
-	if err := km.RecoverFromMnemonic(ctx, mnemonic); err != nil {
+	if err := km.WriteEncryptedSeedToWallet(ctx, mnemonic); err != nil {
 		return err
 	}
-
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
