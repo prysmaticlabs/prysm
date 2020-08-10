@@ -91,7 +91,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		ValidatorClient.wallet = wallet
 		ctx := context.Background()
 		keyManagerV2, err = wallet.InitializeKeymanager(
-			ctx, false, /* skipMnemonicConfirm */
+			cliCtx, false, /* skipMnemonicConfirm */
 		)
 		if err != nil {
 			log.Fatalf("Could not read existing keymanager for wallet: %v", err)

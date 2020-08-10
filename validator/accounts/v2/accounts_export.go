@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -168,7 +169,7 @@ func (w *Wallet) zipAccounts(accounts []string, targetPath string) error {
 	if err := os.MkdirAll(targetPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return errors.Wrap(err, "could not create target folder")
 	}
-	if fileExists(archivePath) {
+	if fileutil.FileExists(archivePath) {
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
 	zipfile, err := os.Create(archivePath)

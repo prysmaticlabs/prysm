@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -76,16 +75,7 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 }
 
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
-	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	ctx := context.Background()
-	seedConfig, err := derived.InitializeWalletSeedFile(ctx, wallet.walletPassword, skipMnemonicConfirm)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize new wallet seed file")
-	}
-	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
-	}
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -95,9 +85,6 @@ func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
-	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
-		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
 	return nil
 }

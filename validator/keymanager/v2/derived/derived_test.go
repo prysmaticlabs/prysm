@@ -69,7 +69,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		walletPassword: password,
+		accountsPassword: password,
 	}
 	ctx := context.Background()
 	accountName, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
@@ -105,8 +105,8 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		seed:           make([]byte, 32),
-		walletPassword: "hello world",
+		seed:             make([]byte, 32),
+		accountsPassword: "hello world",
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -154,7 +154,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		walletPassword: "hello world",
+		accountsPassword: "hello world",
 	}
 
 	// First, generate some accounts.
