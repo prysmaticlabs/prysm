@@ -8,6 +8,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//shared/bls:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/promptutil:go_default_library",
         "//validator/keymanager/v2:go_default_library",
