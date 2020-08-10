@@ -399,11 +399,11 @@ func (w *Wallet) LockConfigFile(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to lock wallet config file: %s", w.configFilePath)
 	}
-	if locked {
-		w.walletFileLock = fileLock
-		return nil
+	if !locked {
+		return fmt.Errorf("failed to lock wallet config file: %s", w.configFilePath)
 	}
-	return fmt.Errorf("failed to lock wallet config file: %s", w.configFilePath)
+	w.walletFileLock = fileLock
+	return nil
 }
 
 // UnlockWalletConfigFile unlock wallet file.
