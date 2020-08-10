@@ -110,7 +110,7 @@ func BenchmarkShuffleList(b *testing.B) {
 	listSizes := []uint64{400000, 40000, 400}
 	seed := [32]byte{123, 42}
 	for _, listSize := range listSizes {
-		testIndices := make([]uint64, listSize, listSize)
+		testIndices := make([]uint64, listSize)
 		for i := uint64(0); i < listSize; i++ {
 			testIndices[i] = i
 		}
