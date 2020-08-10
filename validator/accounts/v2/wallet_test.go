@@ -170,7 +170,6 @@ func Test_LockUnlockFile(t *testing.T) {
 	err = wallet.LockConfigFile(ctx)
 	assert.NoError(t, err)
 	err = wallet.LockConfigFile(ctx)
-	assert.NoError(t, err)
 	assert.ErrorContains(t, "failed to lock wallet config file", err)
 	unlock(t, wallet)
 	err = wallet.LockConfigFile(ctx)
