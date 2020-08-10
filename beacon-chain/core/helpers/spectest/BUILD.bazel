@@ -22,6 +22,7 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_go_yaml_yaml//:go_default_library",
     ],
