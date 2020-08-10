@@ -3,6 +3,7 @@ package direct
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -70,9 +71,10 @@ func TestDirectKeymanager_RemoveAccount(t *testing.T) {
 		Files: make(map[string]map[string][]byte),
 	}
 	dr := &Keymanager{
-		keysCache:     make(map[[48]byte]bls.SecretKey),
-		wallet:        wallet,
-		accountsStore: &AccountStore{},
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
 	}
 	numAccounts := 5
 	ctx := context.Background()
@@ -80,14 +82,14 @@ func TestDirectKeymanager_RemoveAccount(t *testing.T) {
 		_, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
-	accounts, err := dr.ValidatingAccountNames()
+	accounts, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accounts))
 
 	accountToRemove := uint64(2)
-	accountName := accounts[accountToRemove]
+	accountPubKey := accounts[accountToRemove]
 	// Remove an account from the keystore.
-	require.NoError(t, dr.DeleteAccount(ctx, accountToRemove))
+	require.NoError(t, dr.DeleteAccount(ctx, accountPubKey[:]))
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	var encodedKeystore []byte
@@ -109,8 +111,8 @@ func TestDirectKeymanager_RemoveAccount(t *testing.T) {
 
 	require.Equal(t, numAccounts-1, len(store.PublicKeys))
 	require.Equal(t, numAccounts-1, len(store.PrivateKeys))
-	testutil.AssertLogsContain(t, hook, accountName)
-	testutil.AssertLogsContain(t, hook, "Successfully removed validator account")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
+	testutil.AssertLogsContain(t, hook, "Successfully deleted validator account")
 }
 
 func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
