@@ -6,6 +6,7 @@ go_library(
     srcs = ["fileutil.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/fileutil",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_pkg_errors//:go_default_library"],
 )
 
 go_test(
