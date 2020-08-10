@@ -341,7 +341,6 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
-	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
