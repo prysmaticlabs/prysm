@@ -9,14 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSigningRoot_ComputeOK(t *testing.T) {
 	emptyBlock := &ethpb.BeaconBlock{}
 	_, err := ComputeSigningRoot(emptyBlock, []byte{'T', 'E', 'S', 'T'})
-	if err != nil {
-		t.Errorf("Could not compute signing root of block: %v", err)
-	}
+	assert.NoError(t, err, "Could not compute signing root of block")
 }
 
 func TestComputeDomain_OK(t *testing.T) {
@@ -49,18 +49,12 @@ func TestSigningRoot_Compatibility(t *testing.T) {
 		Body:          &ethpb.BeaconBlockBody{},
 	}
 	root, err := ComputeSigningRoot(blk, params.BeaconConfig().DomainBeaconProposer[:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	newRoot, err := signingData(func() ([32]byte, error) {
 		return stateutil.BlockRoot(blk)
 	}, params.BeaconConfig().DomainBeaconProposer[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if root != newRoot {
-		t.Errorf("Wanted root of %#x but got %#x", root, newRoot)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, root, newRoot, "Wanted root of %#x but got %#x", root, newRoot)
 }
 
 func TestComputeForkDigest_OK(t *testing.T) {
@@ -75,12 +69,8 @@ func TestComputeForkDigest_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		digest, err := ComputeForkDigest(tt.version, tt.root[:])
-		if err != nil {
-			t.Error(err)
-		}
-		if digest != tt.result {
-			t.Errorf("wanted domain version: %#x, got: %#x", digest, tt.result)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.result, digest, "Wanted domain version: %#x, got: %#x", digest, tt.result)
 	}
 }
 

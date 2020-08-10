@@ -105,7 +105,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		return nil, err
 	}
 	if len(pubKeys) == 0 {
-		log.Warn("No keys found; nothing to validate")
+		log.Error("No keys found. Please verify `--keystore-path` is the correct path")
 	} else {
 		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
 		for _, key := range pubKeys {

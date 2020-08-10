@@ -3,11 +3,14 @@ package peers_test
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -15,34 +18,116 @@ func TestPeerScorer_BlockProvider_Score(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
-		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
-				ProcessedBatchWeight: 0.05,
+	batchSize := uint64(flags.Get().BlockBatchLimit)
+	tests := []struct {
+		name   string
+		update func(scorer *peers.BlockProviderScorer)
+		check  func(scorer *peers.BlockProviderScorer)
+	}{
+		{
+			name: "nonexistent peer",
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")
 			},
 		},
-	})
-	scorer := peerStatuses.Scorers().BlockProviderScorer()
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+		{
+			name: "existent peer with zero score",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.Touch("peer1")
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "existent peer via increment",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.IncrementProcessedBlocks("peer1", 0)
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "boost score of stale peer",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.IncrementProcessedBlocks("peer1", batchSize*3)
+				assert.Equal(t, 0.05*3, scorer.Score("peer1"), "Unexpected score")
+				scorer.Touch("peer1", roughtime.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "increment with 0 score",
+			update: func(scorer *peers.BlockProviderScorer) {
+				// Increment to zero (provider is added to cache but score is unchanged).
+				scorer.IncrementProcessedBlocks("peer1", 0)
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "partial score",
+			update: func(scorer *peers.BlockProviderScorer) {
+				// Partial score (less than a single batch of blocks processed).
+				scorer.IncrementProcessedBlocks("peer1", batchSize/2)
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "single batch",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.IncrementProcessedBlocks("peer1", batchSize)
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, roundScore(0.05), scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "multiple batches",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.IncrementProcessedBlocks("peer1", batchSize*13)
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, roundScore(0.05*13), scorer.Score("peer1"), "Unexpected score")
+			},
+		},
+		{
+			name: "maximum score cap",
+			update: func(scorer *peers.BlockProviderScorer) {
+				scorer.IncrementProcessedBlocks("peer1", batchSize*2)
+				assert.Equal(t, roundScore(0.05*2), scorer.Score("peer1"), "Unexpected score")
+				scorer.IncrementProcessedBlocks("peer1", scorer.Params().ProcessedBlocksCap)
+			},
+			check: func(scorer *peers.BlockProviderScorer) {
+				assert.Equal(t, scorer.Params().ProcessedBlocksCap, scorer.ProcessedBlocks("peer1"))
+				assert.Equal(t, 1.0, scorer.Score("peer1"))
+			},
+		},
+	}
 
-	// Start with non-exitent provider.
-	assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for unregistered provider")
-	// Increment to zero (provider is added to cache but score is unchanged).
-	scorer.IncrementProcessedBlocks("peer1", 0)
-	assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for registered provider")
-
-	// Partial score (less than a single batch of blocks processed).
-	scorer.IncrementProcessedBlocks("peer1", batchSize/2)
-	assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score")
-
-	// Single batch.
-	scorer.IncrementProcessedBlocks("peer1", batchSize)
-	assert.Equal(t, roundScore(0.05), scorer.Score("peer1"), "Unexpected score")
-
-	// Multiple batches.
-	scorer.IncrementProcessedBlocks("peer2", batchSize*13)
-	assert.Equal(t, roundScore(0.05*13), scorer.Score("peer2"), "Unexpected score")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+				PeerLimit: 30,
+				ScorerParams: &peers.PeerScorerConfig{
+					BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+						ProcessedBatchWeight: 0.05,
+					},
+				},
+			})
+			scorer := peerStatuses.Scorers().BlockProviderScorer()
+			if tt.update != nil {
+				tt.update(scorer)
+			}
+			tt.check(scorer)
+		})
+	}
 }
 
 func TestPeerScorer_BlockProvider_GettersSetters(t *testing.T) {
@@ -59,11 +144,76 @@ func TestPeerScorer_BlockProvider_GettersSetters(t *testing.T) {
 	assert.Equal(t, uint64(64), scorer.ProcessedBlocks("peer1"))
 }
 
+func TestPeerScorer_BlockProvider_WeightSorted(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+		ScorerParams: &peers.PeerScorerConfig{
+			BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+				ProcessedBatchWeight: 1,
+			},
+		},
+	})
+	scorer := peerStatuses.Scorers().BlockProviderScorer()
+	batchSize := uint64(flags.Get().BlockBatchLimit)
+	r := rand.NewDeterministicGenerator()
+
+	reverse := func(pids []peer.ID) []peer.ID {
+		tmp := make([]peer.ID, len(pids))
+		copy(tmp, pids)
+		for i, j := 0, len(tmp)-1; i < j; i, j = i+1, j-1 {
+			tmp[i], tmp[j] = tmp[j], tmp[i]
+		}
+		return tmp
+	}
+
+	shuffle := func(pids []peer.ID) []peer.ID {
+		tmp := make([]peer.ID, len(pids))
+		copy(tmp, pids)
+		r.Shuffle(len(tmp), func(i, j int) {
+			tmp[i], tmp[j] = tmp[j], tmp[i]
+		})
+		return tmp
+	}
+
+	var pids []peer.ID
+	for i := uint64(0); i < 10; i++ {
+		pid := peer.ID(i)
+		scorer.IncrementProcessedBlocks(pid, i*batchSize)
+		pids = append(pids, pid)
+	}
+	// Make sure that peers scores are correct (peer(n).score > peer(n-1).score).
+	// Peers should be returned in descending order (by score).
+	assert.DeepEqual(t, reverse(pids), scorer.Sorted(pids, nil))
+
+	// Run weighted sort lots of time, to get accurate statistics of whether more heavy items
+	// are indeed preferred when sorting.
+	scores := make(map[peer.ID]int, len(pids))
+	for i := 0; i < 1000; i++ {
+		score := len(pids) - 1
+		// The earlier in the list the item is, the more of a score will it get.
+		for _, pid := range scorer.WeightSorted(r, shuffle(pids), nil) {
+			scores[pid] += score
+			score--
+		}
+	}
+	var scoredPIDs []peer.ID
+	for pid := range scores {
+		scoredPIDs = append(scoredPIDs, pid)
+	}
+	sort.Slice(scoredPIDs, func(i, j int) bool {
+		return scores[scoredPIDs[i]] > scores[scoredPIDs[j]]
+	})
+	assert.Equal(t, len(pids), len(scoredPIDs))
+	assert.DeepEqual(t, reverse(pids), scoredPIDs, "Expected items with more weight to be picked more often")
+}
+
 func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	tests := []struct {
 		name   string
 		update func(s *peers.BlockProviderScorer)
+		score  func(pid peer.ID, score float64) float64
 		have   []peer.ID
 		want   []peer.ID
 	}{
@@ -113,6 +263,25 @@ func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
 			have: []peer.ID{"peer3", "peer2", "peer1"},
 			want: []peer.ID{"peer1", "peer3", "peer2"},
 		},
+		{
+			name: "custom scorer",
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("peer1", batchSize*3)
+				s.IncrementProcessedBlocks("peer2", batchSize*1)
+				s.IncrementProcessedBlocks("peer3", batchSize*2)
+			},
+			score: func(pid peer.ID, score float64) float64 {
+				if pid == "peer2" {
+					return score + 0.3 // 0.2 + 0.3 = 0.5 > 0.4 (of peer3)
+				}
+				if pid == "peer1" {
+					return 0.0
+				}
+				return score
+			},
+			have: []peer.ID{"peer3", "peer2", "peer1"},
+			want: []peer.ID{"peer2", "peer3", "peer1"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -127,7 +296,7 @@ func TestPeerScorer_BlockProvider_Sorted(t *testing.T) {
 			})
 			scorer := peerStatuses.Scorers().BlockProviderScorer()
 			tt.update(scorer)
-			assert.DeepEqual(t, tt.want, scorer.Sorted(tt.have))
+			assert.DeepEqual(t, tt.want, scorer.Sorted(tt.have, tt.score))
 		})
 	}
 }
@@ -138,70 +307,22 @@ func TestPeerScorer_BlockProvider_MaxScore(t *testing.T) {
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 
 	tests := []struct {
-		name   string
-		update func(s *peers.BlockProviderScorer)
-		want   float64
+		name string
+		cfg  *peers.BlockProviderScorerConfig
+		want float64
 	}{
 		{
-			// Minimal max.score is a reward for a single batch.
-			name:   "no peers",
-			update: nil,
-			want:   0.2,
+			name: "default config",
+			cfg:  &peers.BlockProviderScorerConfig{},
+			want: 1.0,
 		},
 		{
-			name: "partial batch",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize/4)
+			name: "custom config",
+			cfg: &peers.BlockProviderScorerConfig{
+				ProcessedBatchWeight: 0.5,
+				ProcessedBlocksCap:   batchSize * 300,
 			},
-			want: 0.2,
-		},
-		{
-			name: "single batch",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize)
-			},
-			want: 0.2,
-		},
-		{
-			name: "3/2 of a batch",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize*3/2)
-			},
-			want: 0.2,
-		},
-		{
-			name: "multiple batches",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize*5)
-			},
-			want: 0.2 * 5,
-		},
-		{
-			name: "multiple peers",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize*5)
-				s.IncrementProcessedBlocks("peer1", batchSize)
-				s.IncrementProcessedBlocks("peer2", batchSize*10)
-				s.IncrementProcessedBlocks("peer1", batchSize/4)
-			},
-			want: 0.2 * 10,
-		},
-		{
-			// Even after stats is decayed, max. attained blocks count must remain
-			// (as a ballpark of overall performance of peers during life-cycle of service).
-			name: "decaying",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize*5)
-				s.IncrementProcessedBlocks("peer1", batchSize)
-				s.IncrementProcessedBlocks("peer2", batchSize*10)
-				s.IncrementProcessedBlocks("peer1", batchSize/4)
-				for i := 0; i < 10; i++ {
-					s.Decay()
-				}
-				assert.Equal(t, uint64(0), s.ProcessedBlocks("peer1"))
-				assert.Equal(t, uint64(0), s.ProcessedBlocks("peer2"))
-			},
-			want: 0.2 * 10,
+			want: 150.0,
 		},
 	}
 
@@ -209,15 +330,10 @@ func TestPeerScorer_BlockProvider_MaxScore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 				ScorerParams: &peers.PeerScorerConfig{
-					BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
-						ProcessedBatchWeight: 0.2,
-					},
+					BlockProviderScorerConfig: tt.cfg,
 				},
 			})
 			scorer := peerStatuses.Scorers().BlockProviderScorer()
-			if tt.update != nil {
-				tt.update(scorer)
-			}
 			assert.Equal(t, tt.want, scorer.MaxScore())
 		})
 	}
@@ -227,94 +343,94 @@ func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	batchSize := uint64(flags.Get().BlockBatchLimit)
-	prettyFormat := "[%0.1f%%, raw: %v,  blocks: %d/%d]"
+	format := "[%0.1f%%, raw: %0.2f,  blocks: %d/1280]"
 
 	tests := []struct {
 		name   string
 		update func(s *peers.BlockProviderScorer)
-		want   string
+		check  func(s *peers.BlockProviderScorer)
 	}{
 		{
-			// Minimal max.score is a reward for a single batch.
-			name:   "no peers",
+			name:   "peer not registered",
 			update: nil,
-			want:   fmt.Sprintf(prettyFormat, 0.0, 0, 0, batchSize),
+			check: func(s *peers.BlockProviderScorer) {
+				assert.Equal(t, fmt.Sprintf(format, 100.0, 1.0, 0), s.FormatScorePretty("peer1"))
+			},
+		},
+		{
+			name: "peer registered zero blocks",
+			update: func(s *peers.BlockProviderScorer) {
+				s.Touch("peer1")
+			},
+			check: func(s *peers.BlockProviderScorer) {
+				assert.Equal(t, fmt.Sprintf(format, 0.0, 0.0, 0), s.FormatScorePretty("peer1"))
+			},
 		},
 		{
 			name: "partial batch",
 			update: func(s *peers.BlockProviderScorer) {
 				s.IncrementProcessedBlocks("peer1", batchSize/4)
 			},
-			want: fmt.Sprintf(prettyFormat, 0.0, 0, batchSize/4, batchSize),
+			check: func(s *peers.BlockProviderScorer) {
+				assert.Equal(t, fmt.Sprintf(format, 0.0, 0.0, batchSize/4), s.FormatScorePretty("peer1"))
+			},
 		},
 		{
 			name: "single batch",
 			update: func(s *peers.BlockProviderScorer) {
 				s.IncrementProcessedBlocks("peer1", batchSize)
-				// There was some other peer who increased maximally attainable number of blocks.
-				s.IncrementProcessedBlocks("peer2", batchSize*5)
 			},
-			want: fmt.Sprintf(prettyFormat, 20.0, 0.05, batchSize, batchSize*5),
-		},
-		{
-			name: "single batch max score",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize)
+			check: func(s *peers.BlockProviderScorer) {
+				assert.Equal(t, fmt.Sprintf(format, 5.0, 0.05, batchSize), s.FormatScorePretty("peer1"))
 			},
-			want: fmt.Sprintf(prettyFormat, 100.0, 0.05, batchSize, batchSize),
 		},
 		{
 			name: "3/2 of a batch",
 			update: func(s *peers.BlockProviderScorer) {
 				s.IncrementProcessedBlocks("peer1", batchSize*3/2)
-				s.IncrementProcessedBlocks("peer2", batchSize*5)
 			},
-			want: fmt.Sprintf(prettyFormat, 20.0, 0.05, batchSize*3/2, batchSize*5),
-		},
-		{
-			name: "3/2 of a batch max score",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize*3/2)
+			check: func(s *peers.BlockProviderScorer) {
+				assert.Equal(t, fmt.Sprintf(format, 5.0, 0.05, batchSize*3/2), s.FormatScorePretty("peer1"))
 			},
-			want: fmt.Sprintf(prettyFormat, 100.0, 0.05, batchSize*3/2, batchSize*3/2),
 		},
 		{
 			name: "multiple batches",
 			update: func(s *peers.BlockProviderScorer) {
 				s.IncrementProcessedBlocks("peer1", batchSize*5)
-				s.IncrementProcessedBlocks("peer2", batchSize*10)
 			},
-			want: fmt.Sprintf(prettyFormat, 50.0, 0.05*5, batchSize*5, batchSize*10),
+			check: func(s *peers.BlockProviderScorer) {
+				assert.Equal(t, fmt.Sprintf(format, 25.0, 0.05*5, batchSize*5), s.FormatScorePretty("peer1"))
+			},
 		},
 		{
 			name: "multiple batches max score",
 			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize*5)
+				s.IncrementProcessedBlocks("peer1", s.Params().ProcessedBlocksCap*5)
 			},
-			want: fmt.Sprintf(prettyFormat, 100.0, 0.05*5, batchSize*5, batchSize*5),
-		},
-		{
-			name: "multiple peers",
-			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("peer1", batchSize*5)
-				s.IncrementProcessedBlocks("peer1", batchSize)
-				s.IncrementProcessedBlocks("peer2", batchSize*10)
-				s.IncrementProcessedBlocks("peer1", batchSize/4)
+			check: func(s *peers.BlockProviderScorer) {
+				want := fmt.Sprintf(format, 100.0, 1.0, s.Params().ProcessedBlocksCap)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
 			},
-			want: fmt.Sprintf(prettyFormat, 60.0, 0.05*6, batchSize*6+batchSize/4, batchSize*10),
 		},
 		{
 			name: "decaying",
 			update: func(s *peers.BlockProviderScorer) {
 				s.IncrementProcessedBlocks("peer1", batchSize*5)
 				s.IncrementProcessedBlocks("peer1", batchSize)
-				s.IncrementProcessedBlocks("peer2", batchSize*10)
 				s.IncrementProcessedBlocks("peer1", batchSize/4)
-				expected := fmt.Sprintf(prettyFormat, 60.0, 0.05*6, batchSize*6+batchSize/4, batchSize*10)
-				assert.Equal(t, expected, s.FormatScorePretty("peer1"))
+				want := fmt.Sprintf(format, 30.0, 0.05*6, batchSize*6+batchSize/4)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
+				// Maximize block count.
+				s.IncrementProcessedBlocks("peer1", s.Params().ProcessedBlocksCap)
+				want = fmt.Sprintf(format, 100.0, 1.0, s.Params().ProcessedBlocksCap)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
+				// Half of blocks is to be decayed.
 				s.Decay()
 			},
-			want: fmt.Sprintf(prettyFormat, 50.0, 0.05*5, batchSize*5+batchSize/4, batchSize*10),
+			check: func(s *peers.BlockProviderScorer) {
+				want := fmt.Sprintf(format, 50.0, 0.5, s.Params().ProcessedBlocksCap/2)
+				assert.Equal(t, want, s.FormatScorePretty("peer1"))
+			},
 		},
 	}
 
@@ -324,6 +440,8 @@ func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
 				ScorerParams: &peers.PeerScorerConfig{
 					BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
 						ProcessedBatchWeight: 0.05,
+						ProcessedBlocksCap:   20 * batchSize,
+						Decay:                10 * batchSize,
 					},
 				},
 			})
@@ -331,7 +449,7 @@ func TestPeerScorer_BlockProvider_FormatScorePretty(t *testing.T) {
 			if tt.update != nil {
 				tt.update(scorer)
 			}
-			assert.Equal(t, tt.want, scorer.FormatScorePretty("peer1"))
+			tt.check(scorer)
 		})
 	}
 }

@@ -138,9 +138,9 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "naive",
 	}
-	newBeaconStateLocks = &cli.BoolFlag{
-		Name:  "new-beacon-state-locks",
-		Usage: "Enable new beacon state locking",
+	disableNewBeaconStateLocks = &cli.BoolFlag{
+		Name:  "disable-new-beacon-state-locks",
+		Usage: "Disable new beacon state locking",
 	}
 	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-maxcover",
@@ -166,13 +166,17 @@ var (
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
+	enableAttBroadcastDiscoveryAttempts = &cli.BoolFlag{
+		Name:  "enable-att-broadcast-discovery-attempts",
+		Usage: "Enable experimental attestation subnet discovery before broadcasting.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	forceMaxCoverAttestationAggregation,
-	newBeaconStateLocks,
 	batchBlockVerify,
+	enableAttBroadcastDiscoveryAttempts,
 }
 
 // Deprecated flags list.
@@ -515,6 +519,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedNewBeaconStateLocks = &cli.BoolFlag{
+		Name:   "new-beacon-state-locks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -585,6 +594,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedMedallaTestnet,
 	deprecatedEnableAccountsV2,
 	deprecatedCustomGenesisDelay,
+	deprecatedNewBeaconStateLocks,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -635,7 +645,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	newBeaconStateLocks,
+	disableNewBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	AltonaTestnet,
 	OnyxTestnet,
@@ -643,6 +653,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
+	enableAttBroadcastDiscoveryAttempts,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
