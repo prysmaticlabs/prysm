@@ -138,9 +138,9 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "naive",
 	}
-	newBeaconStateLocks = &cli.BoolFlag{
-		Name:  "new-beacon-state-locks",
-		Usage: "Enable new beacon state locking",
+	disableNewBeaconStateLocks = &cli.BoolFlag{
+		Name:  "disable-new-beacon-state-locks",
+		Usage: "Disable new beacon state locking",
 	}
 	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-maxcover",
@@ -171,7 +171,6 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	forceMaxCoverAttestationAggregation,
-	newBeaconStateLocks,
 	batchBlockVerify,
 }
 
@@ -515,6 +514,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedNewBeaconStateLocks = &cli.BoolFlag{
+		Name:   "new-beacon-state-locks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -585,6 +589,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedMedallaTestnet,
 	deprecatedEnableAccountsV2,
 	deprecatedCustomGenesisDelay,
+	deprecatedNewBeaconStateLocks,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -635,7 +640,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	newBeaconStateLocks,
+	disableNewBeaconStateLocks,
 	forceMaxCoverAttestationAggregation,
 	AltonaTestnet,
 	OnyxTestnet,
