@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofrs/flock"
 	"github.com/k0kubun/go-ansi"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -383,7 +384,16 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 	if !fileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
-	return os.Open(configFilePath)
+	fileLock := flock.New(configFilePath)
+	locked, err := fileLock.TryLock()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to lock wallet config file: %s", configFilePath)
+	}
+	if locked {
+		return os.Open(configFilePath)
+	}
+	return nil, fmt.Errorf("failed to lock wallet config file: %s", configFilePath)
+
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file
