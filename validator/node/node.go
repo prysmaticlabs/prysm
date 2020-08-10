@@ -42,6 +42,7 @@ type ValidatorClient struct {
 	cliCtx   *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
+	wallet   *accountsv2.Wallet
 	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
@@ -87,12 +88,15 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		if err != nil {
 			log.Fatalf("Could not open wallet: %v", err)
 		}
+		ValidatorClient.wallet = wallet
+		ctx := context.Background()
 		keyManagerV2, err = wallet.InitializeKeymanager(
-			context.Background(), false, /* skipMnemonicConfirm */
+			ctx, false, /* skipMnemonicConfirm */
 		)
 		if err != nil {
 			log.Fatalf("Could not read existing keymanager for wallet: %v", err)
 		}
+		wallet.LockConfigFile(ctx)
 	} else {
 		keyManagerV1, err = selectV1Keymanager(cliCtx)
 		if err != nil {
@@ -189,7 +193,9 @@ func (s *ValidatorClient) Close() {
 
 	s.services.StopAll()
 	log.Info("Stopping Prysm validator")
-
+	if err := s.wallet.UnlockWalletConfigFile(); err != nil {
+		log.WithError(err).Errorf("Failed to unlock wallet config file.")
+	}
 	close(s.stop)
 }
 
