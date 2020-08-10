@@ -62,11 +62,10 @@ func TestDirectKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 		privKeys[i] = priv.Marshal()
 		pubKeys[i] = priv.PublicKey().Marshal()
 	}
-	wallet := &mock.Wallet{
-		WalletPassword: "Passw0rdz$%@49",
-	}
+	wallet := &mock.Wallet{}
 	dr := &Keymanager{
-		wallet: wallet,
+		wallet:           wallet,
+		accountsPassword: "Mypassw0rdz932",
 	}
 	ctx := context.Background()
 	_, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
@@ -122,12 +121,12 @@ func TestDirectKeymanager_ImportKeystores(t *testing.T) {
 
 	// Setup the keymanager.
 	wallet := &mock.Wallet{
-		Files:          make(map[string]map[string][]byte),
-		WalletPassword: password,
+		Files: make(map[string]map[string][]byte),
 	}
 	dr := &Keymanager{
-		wallet:        wallet,
-		accountsStore: &AccountStore{},
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
 	}
 
 	// Create several keystores and attempt to import them.

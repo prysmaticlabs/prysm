@@ -23,7 +23,7 @@ import (
 func (dr *Keymanager) ImportKeystores(
 	cliCtx *cli.Context,
 	keystores []*v2keymanager.Keystore,
-	useWalletPassword bool,
+	useAccountsPassword bool,
 ) error {
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(keystores))
@@ -31,8 +31,8 @@ func (dr *Keymanager) ImportKeystores(
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	var password string
 	var err error
-	if useWalletPassword {
-		password = dr.wallet.Password()
+	if useAccountsPassword {
+		password = dr.accountsPassword
 	} else {
 		if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
 			passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
