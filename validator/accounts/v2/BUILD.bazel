@@ -69,6 +69,7 @@ go_test(
         "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/assertions:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
