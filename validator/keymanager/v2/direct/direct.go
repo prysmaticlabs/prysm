@@ -3,6 +3,7 @@ package direct
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -383,7 +384,6 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
-	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -414,7 +414,6 @@ func (dr *Keymanager) createAccountsKeystore(
 			_, privKeyExists := existingPrivKeys[string(sk)]
 			_, pubKeyExists := existingPubKeys[string(pk)]
 			if privKeyExists || pubKeyExists {
-				fmt.Printf("Pubkey %#x has already been imported\n", au.BrightRed(bytesutil.Trunc(pk)))
 				continue
 			}
 			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
@@ -445,16 +444,22 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 	var secretKey []byte
 	var password string
 	var err error
+	publicKey, err := hex.DecodeString(keystore.Pubkey)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "could not decode public key")
+	}
+	formattedPublicKey := fmt.Sprintf("%#x", bytesutil.Trunc(publicKey))
 	for {
 		password, err = promptutil.PasswordPrompt(
-			"Wrong password entered, try again", promptutil.NotEmpty,
+			fmt.Sprintf("\nPlease try again, could not use password to import account %s", au.BrightGreen(formattedPublicKey)),
+			promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, "", fmt.Errorf("could not read account password: %v", err)
 		}
 		secretKey, err = decryptor.Decrypt(keystore.Crypto, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Println(au.Red("Incorrect password entered, please try again"))
+			fmt.Print(au.Red("Incorrect password entered, please try again"))
 			continue
 		}
 		if err != nil {
