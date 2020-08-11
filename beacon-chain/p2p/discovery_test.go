@@ -205,3 +205,24 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
+
+func TestHostIsResolved(t *testing.T) {
+	// As defined in RFC 2606 , example.org is a
+	// reserved example domain name.
+	exampleHost := "example.org"
+	exampleIP := "93.184.216.34"
+
+	s := &Service{
+		cfg: &Config{
+			HostDNS: exampleHost,
+		},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
+	}
+	ip, key := createAddrAndPrivKey(t)
+	list, err := s.createListener(ip, key)
+	require.NoError(t, err)
+
+	newIP := list.Self().IP()
+	assert.Equal(t, exampleIP, newIP.String(), "Did not resolve to expected IP")
+}
