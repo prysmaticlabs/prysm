@@ -83,7 +83,7 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(cliCtx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:        wallet,
 		cfg:           cfg,
@@ -98,7 +98,7 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 	var accountsPassword string
 	if len(walletFiles) == 0 {
 		accountsPassword, err = inputPassword(
-			ctx,
+			cliCtx,
 			flags.WalletPasswordFileFlag,
 			newWalletPasswordPromptText,
 			confirmPass,
@@ -112,7 +112,7 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 			return nil
 		}
 		accountsPassword, err = inputPassword(
-			ctx,
+			cliCtx,
 			flags.WalletPasswordFileFlag,
 			walletPasswordPromptText,
 			noConfirmPass,
@@ -128,8 +128,22 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 	// passphrases, then we initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via password unlock.
 	// This cache is needed to process Sign requests using a public key.
-	if err := k.initializeSecretKeysCache(ctx); err != nil {
+	if err := k.initializeSecretKeysCache(cliCtx); err != nil {
 		return nil, errors.Wrap(err, "could not initialize keys cache")
+	}
+
+	// If the user desires and sets the --rescan-keystores-from-dir flag, we begin
+	// a goroutine to listen for file changes at the specified directory and dynamically load
+	// keys from valid keystore.json files observed into our validator client.
+	if cliCtx.IsSet(flags.RescanKeystoresFromDirectory.Name) {
+		hasDir, err := fileutil.HasDir(cliCtx.String(flags.RescanKeystoresFromDirectory.Name))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if rescan keystores directory exists")
+		}
+		if !hasDir {
+			return nil, errors.Wrap(err, "directory to rescan keystores does not exist")
+		}
+		// Begin listening for changes...
 	}
 	return k, nil
 }

@@ -14,7 +14,12 @@ import (
 
 	joonix "github.com/joonix/log"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"google.golang.org/grpc"
+
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -27,11 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"github.com/urfave/cli/v2/altsrc"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"google.golang.org/grpc"
 )
 
 // connTimeout defines a period after which connection to beacon node is cancelled.
@@ -74,6 +74,7 @@ var appFlags = []cli.Flag{
 	flags.DeprecatedPasswordsDirFlag,
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
+	flags.RescanKeystoresFromDirectory,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -180,22 +181,15 @@ contract in order to activate the validator client`,
 					Action: func(cliCtx *cli.Context) error {
 						var err error
 						var pubKeys [][]byte
-						if cliCtx.String(flags.KeyManager.Name) != "" {
-							pubKeysBytes48, success := node.ExtractPublicKeysFromKeymanager(
-								cliCtx,
-								nil, /* nil v1 keymanager */
-								nil, /* nil v2 keymanager */
-							)
-							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success
-						} else {
+						if cliCtx.String(flags.KeyManager.Name) == "" {
 							keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
 							if err != nil {
 								return err
 							}
 							pubKeys, err = v1.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
-						}
-						if err != nil {
-							return err
+							if err != nil {
+								return err
+							}
 						}
 						ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
 						defer cancel()

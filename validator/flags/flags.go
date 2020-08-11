@@ -219,6 +219,15 @@ var (
 		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
+	// RescanKeystoresFromDirectory allows for a validator client to watch for file changes
+	// in a certain directory and load in any new keystore.json files as accounts into the wallet,
+	// allowing for dynamic refresh of validator keys while the client is running.
+	RescanKeystoresFromDirectory = &cli.StringFlag{
+		Name: "rescan-keystores-from-dir",
+		Usage: "Directory where the Prysm validator will watch for file changes to dynamically add keys " +
+			"to its wallet from keystore.json files in the directory",
+		Value: "",
+	}
 )
 
 // Deprecated flags list.
