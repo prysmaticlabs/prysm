@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"context"
 	"crypto/rand"
 	"flag"
 	"fmt"
@@ -8,19 +9,28 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	walletDirName    = "wallet"
+	passwordDirName  = "walletpasswords"
+	exportDirName    = "export"
+	passwordFileName = "password.txt"
+	password         = "OhWOWthisisatest42!$"
+	mnemonicFileName = "mnemonic.txt"
+	mnemonic         = "garage car helmet trade salmon embrace market giant movie wet same champion dawn chair shield drill amazing panther accident puzzle garden mosquito kind arena"
 )
 
 func init() {
@@ -88,44 +98,6 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	return walletDir, passwordsDir, passwordFilePath
 }
 
-func TestAccountTimestamp(t *testing.T) {
-	tests := []struct {
-		name     string
-		fileName string
-		want     time.Time
-		wantErr  bool
-	}{
-		{
-			name:     "keystore with timestamp",
-			fileName: "keystore-1234567.json",
-			want:     time.Unix(1234567, 0),
-		},
-		{
-			name:     "keystore with deriv path and timestamp",
-			fileName: "keystore-12313-313-00-0-5500550.json",
-			want:     time.Unix(5500550, 0),
-		},
-		{
-			name:     "keystore with no timestamp",
-			fileName: "keystore.json",
-			want:     time.Unix(0, 0),
-			wantErr:  true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := AccountTimestamp(tt.fileName)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("AccountTimestamp() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AccountTimestamp() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
 	path := testutil.TempDir()
 	walletDir := filepath.Join(path, "test")
@@ -140,4 +112,42 @@ func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, false, got)
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+}
+
+func Test_LockUnlockFile(t *testing.T) {
+	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
+	numAccounts := int64(5)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		passwordsDir:        passwordsDir,
+		walletPasswordFile:  passwordFile,
+		accountPasswordFile: passwordFile,
+		keymanagerKind:      v2keymanager.Derived,
+		numAccounts:         numAccounts,
+	})
+
+	// We attempt to create the wallet.
+	_, err := CreateWallet(cliCtx)
+	require.NoError(t, err)
+
+	// We attempt to open the newly created wallet.
+	ctx := context.Background()
+	wallet, err := OpenWallet(cliCtx)
+	defer unlock(t, wallet)
+	_, err = wallet.InitializeKeymanager(cliCtx, true)
+	require.NoError(t, err)
+	assert.NoError(t, err)
+	err = wallet.LockConfigFile(ctx)
+	assert.NoError(t, err)
+	err = wallet.LockConfigFile(ctx)
+	assert.ErrorContains(t, "failed to lock wallet config file", err)
+	unlock(t, wallet)
+	err = wallet.LockConfigFile(ctx)
+	assert.NoError(t, err)
+
+}
+
+func unlock(tb assertions.AssertionTestingTB, wallet *Wallet) {
+	err := wallet.UnlockWalletConfigFile()
+	require.NoError(tb, err)
 }

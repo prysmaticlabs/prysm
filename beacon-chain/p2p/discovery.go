@@ -142,6 +142,19 @@ func (s *Service) createListener(
 			localNode.SetStaticIP(hostIP)
 		}
 	}
+	if s.cfg.HostDNS != "" {
+		host := s.cfg.HostDNS
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not resolve host address")
+		}
+		if len(ips) > 0 {
+			// Use first IP returned from the
+			// resolver.
+			firstIP := ips[0]
+			localNode.SetFallbackIP(firstIP)
+		}
+	}
 	dv5Cfg := discover.Config{
 		PrivateKey: privKey,
 	}

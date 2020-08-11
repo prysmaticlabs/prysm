@@ -3,15 +3,12 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"os/user"
-	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
@@ -19,23 +16,10 @@ import (
 )
 
 const (
-	importKeysDirPromptText      = "Enter the directory or filepath where your keystores to import are located"
-	exportDirPromptText          = "Enter a file location to write the exported account(s) to"
-	walletDirPromptText          = "Enter a wallet directory"
-	newWalletPasswordPromptText  = "New wallet password"
-	confirmPasswordPromptText    = "Confirm password"
-	walletPasswordPromptText     = "Wallet password"
-	newAccountPasswordPromptText = "New account password"
-	passwordForAccountPromptText = "Enter password for account with public key %#x"
-)
-
-type passwordConfirm int
-
-const (
-	// An enum to indicate to the prompt that confirming the password is not needed.
-	noConfirmPass passwordConfirm = iota
-	// An enum to indicate to the prompt to confirm the password entered.
-	confirmPass
+	importKeysDirPromptText        = "Enter the directory or filepath where your keystores to import are located"
+	walletDirPromptText            = "Enter a wallet directory"
+	selectAccountsDeletePromptText = "Select the account(s) you would like to delete"
+	deleteAccountConfirmationText  = "Are you sure you want to delete %s accounts?"
 )
 
 var au = aurora.NewAurora(true)
@@ -43,11 +27,11 @@ var au = aurora.NewAurora(true)
 func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return expandPath(directory)
+		return fileutil.ExpandPath(directory)
 	}
 	// Append and log the appropriate directory name depending on the flag used.
 	if flag.Name == flags.WalletDirFlag.Name {
-		ok, err := hasDir(directory)
+		ok, err := fileutil.HasDir(directory)
 		if err != nil {
 			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 		}
@@ -64,62 +48,13 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	if inputtedDir == directory {
 		return directory, nil
 	}
-	return expandPath(inputtedDir)
-}
-
-func inputPassword(
-	cliCtx *cli.Context,
-	passwordFileFlag *cli.StringFlag,
-	promptText string,
-	confirmPassword passwordConfirm,
-	passwordValidator func(input string) error,
-) (string, error) {
-	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := expandPath(passwordFilePathInput)
-		if err != nil {
-			return "", errors.Wrap(err, "could not determine absolute path of password file")
-		}
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return "", errors.Wrap(err, "could not read password file")
-		}
-		enteredPassword := strings.TrimRight(string(data), "\r\n")
-		if err := passwordValidator(enteredPassword); err != nil {
-			return "", errors.Wrap(err, "password did not pass validation")
-		}
-		return enteredPassword, nil
-	}
-	var hasValidPassword bool
-	var walletPassword string
-	var err error
-	for !hasValidPassword {
-		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
-		if err != nil {
-			return "", fmt.Errorf("could not read account password: %v", err)
-		}
-
-		if confirmPassword == confirmPass {
-			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
-			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
-			}
-			if walletPassword != passwordConfirmation {
-				log.Error("Passwords do not match")
-				continue
-			}
-			hasValidPassword = true
-		} else {
-			return walletPassword, nil
-		}
-	}
-	return walletPassword, nil
+	return fileutil.ExpandPath(inputtedDir)
 }
 
 func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := expandPath(passwordFilePathInput)
+		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
@@ -167,15 +102,15 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 			return nil, err
 		}
 	}
-	crtPath, err := expandPath(strings.TrimRight(crt, "\r\n"))
+	crtPath, err := fileutil.ExpandPath(strings.TrimRight(crt, "\r\n"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	keyPath, err := expandPath(strings.TrimRight(key, "\r\n"))
+	keyPath, err := fileutil.ExpandPath(strings.TrimRight(key, "\r\n"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	caPath, err := expandPath(strings.TrimRight(ca, "\r\n"))
+	caPath, err := fileutil.ExpandPath(strings.TrimRight(ca, "\r\n"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
@@ -198,7 +133,7 @@ func validateCertPath(input string) error {
 	if !promptutil.IsValidUnicode(input) {
 		return errors.New("not valid unicode")
 	}
-	if !fileExists(input) {
+	if !fileutil.FileExists(input) {
 		return fmt.Errorf("no crt found at path: %s", input)
 	}
 	return nil
@@ -215,28 +150,4 @@ func formatPromptError(err error) error {
 	default:
 		return err
 	}
-}
-
-// Expands a file path
-// 1. replace tilde with users home dir
-// 2. expands embedded environment variables
-// 3. cleans the path, e.g. /a/b/../c -> /a/c
-// Note, it has limitations, e.g. ~someuser/tmp will not be expanded
-func expandPath(p string) (string, error) {
-	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
-		if home := homeDir(); home != "" {
-			p = home + p[1:]
-		}
-	}
-	return filepath.Abs(path.Clean(os.ExpandEnv(p)))
-}
-
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
-	return ""
 }

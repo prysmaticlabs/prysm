@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -25,7 +26,10 @@ func CreateAccount(cliCtx *cli.Context) error {
 		return err
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	keymanager, err := wallet.InitializeKeymanager(ctx, skipMnemonicConfirm)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, skipMnemonicConfirm)
+	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+		return errors.New("wrong wallet password entered")
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
