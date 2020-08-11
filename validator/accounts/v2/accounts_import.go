@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,13 +12,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var derivationPathRegex = regexp.MustCompile("m_12381_3600_([0-9]+)_([0-9]+)_([0-9]+)")
@@ -63,6 +68,7 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 // asks the users for account passwords.
 func ImportAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
+	au := aurora.NewAurora(true)
 	wallet, err := createOrOpenWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		w, err := NewWallet(cliCtx, v2keymanager.Direct)
 		if err != nil && !errors.Is(err, ErrWalletExists) {
@@ -96,17 +102,26 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet")
+	}
+
+	// Check if the user wishes to import a one-off, private key directly
+	// as an account into the Prysm validator.
+	if cliCtx.IsSet(flags.ImportPrivateKeyFileFlag.Name) {
+		return importPrivateKeyAsAccount(cliCtx, wallet, km)
+	}
+
 	keysDir, err := inputDirectory(cliCtx, importKeysDirPromptText, flags.KeysDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
-
-	keystoresImported := make([]*v2keymanager.Keystore, 0)
 	// Consider that the keysDir might be a path to a specific file and handle accordingly.
 	isDir, err := fileutil.HasDir(keysDir)
 	if err != nil {
 		return errors.Wrap(err, "could not determine if path is a directory")
 	}
+	keystoresImported := make([]*v2keymanager.Keystore, 0)
 	if isDir {
 		files, err := ioutil.ReadDir(keysDir)
 		if err != nil {
@@ -143,13 +158,63 @@ func ImportAccount(cliCtx *cli.Context) error {
 		keystoresImported = append(keystoresImported, keystore)
 	}
 
-	au := aurora.NewAurora(true)
-	if err := km.ImportKeystores(cliCtx, keystoresImported); err != nil {
-		return errors.Wrap(err, "could not import all keystores")
+	if err := km.ImportKeystores(
+		cliCtx,
+		keystoresImported,
+		false, /* do not use wallet password, but instead password provided by user */
+	); err != nil {
+		return errors.Wrap(err, "could not import keystores")
 	}
 	fmt.Printf(
 		"Successfully imported %s accounts, view all of them by running accounts-v2 list\n",
 		au.BrightMagenta(strconv.Itoa(len(keystoresImported))),
+	)
+	return nil
+}
+
+// Imports a one-off file containing a private key as a hex string into
+// the Prysm validator's accounts.
+func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet, km *direct.Keymanager) error {
+	privKeyFile := cliCtx.String(flags.ImportPrivateKeyFileFlag.Name)
+	fullPath, err := fileutil.ExpandPath(privKeyFile)
+	if err != nil {
+		return errors.Wrapf(err, "could not expand file path for %s", privKeyFile)
+	}
+	if !fileutil.FileExists(fullPath) {
+		return fmt.Errorf("file %s does not exist", fullPath)
+	}
+	privKeyHex, err := ioutil.ReadFile(fullPath)
+	if err != nil {
+		return errors.Wrapf(err, "could not read private key file at path %s", fullPath)
+	}
+	privKeyString := string(privKeyHex)
+	if len(privKeyString) > 2 && strings.Contains(privKeyString, "0x") {
+		privKeyString = privKeyString[2:] // Strip the 0x prefix, if any.
+	}
+	privKeyBytes, err := hex.DecodeString(strings.TrimRight(privKeyString, "\r\n"))
+	if err != nil {
+		return errors.Wrap(
+			err, "could not decode file as hex string, does the file contain a valid hex string?",
+		)
+	}
+	privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
+	if err != nil {
+		return errors.Wrap(err, "not a valid BLS private key")
+	}
+	keystore, err := createKeystoreFromPrivateKey(privKey, km)
+	if err != nil {
+		return errors.Wrap(err, "could not encrypt private key into a keystore file")
+	}
+	if err := km.ImportKeystores(
+		cliCtx,
+		[]*v2keymanager.Keystore{keystore},
+		true, /* use the wallet password import the one-off private key */
+	); err != nil {
+		return errors.Wrap(err, "could not import keystore into wallet")
+	}
+	fmt.Printf(
+		"Imported account with public key %#x, view all accounts by running accounts-v2 list\n",
+		au.BrightMagenta(bytesutil.Trunc(privKey.PublicKey().Marshal())),
 	)
 	return nil
 }
@@ -164,6 +229,29 @@ func readKeystoreFile(ctx context.Context, keystoreFilePath string) (*v2keymanag
 		return nil, errors.Wrap(err, "could not decode keystore json")
 	}
 	return keystoreFile, nil
+}
+
+func createKeystoreFromPrivateKey(privKey bls.SecretKey, km *direct.Keymanager) (*v2keymanager.Keystore, error) {
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), km.AccountsPassword())
+	if err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"could not encrypt private key with public key %#x",
+			privKey.PublicKey().Marshal(),
+		)
+	}
+	return &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Pubkey:  fmt.Sprintf("%x", privKey.PublicKey().Marshal()),
+		Name:    encryptor.Name(),
+	}, nil
 }
 
 // Extracts the account index, j, from a derivation path in a file name
