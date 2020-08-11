@@ -122,7 +122,7 @@ func InputPassword(
 	passwordFileFlag *cli.StringFlag,
 	promptText string,
 	confirmText string,
-	confirmPassword PasswordConfirm,
+	shouldConfirmPassword PasswordConfirm,
 	passwordValidator func(input string) error,
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
@@ -149,8 +149,7 @@ func InputPassword(
 		if err != nil {
 			return "", fmt.Errorf("could not read password: %v", err)
 		}
-
-		if confirmPassword == confirmPassword {
+		if shouldConfirmPassword == ConfirmPass {
 			passwordConfirmation, err := PasswordPrompt(confirmText, passwordValidator)
 			if err != nil {
 				return "", fmt.Errorf("could not read password confirmation: %v", err)
