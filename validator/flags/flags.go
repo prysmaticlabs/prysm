@@ -159,11 +159,6 @@ var (
 		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
 		Value: false,
 	}
-	// AccountsFlag for non-interactive usage of accounts exporting, sets a list of account names or all to be exported.
-	AccountsFlag = &cli.StringSliceFlag{
-		Name:  "accounts",
-		Usage: "List of account names to export, or \"all\" to backup all accounts",
-	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
 	NumAccountsFlag = &cli.Int64Flag{
 		Name:  "num-accounts",

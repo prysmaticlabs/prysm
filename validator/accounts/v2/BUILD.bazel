@@ -49,6 +49,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "accounts_backup_test.go",
         "accounts_create_test.go",
         "accounts_import_test.go",
         "accounts_list_test.go",
@@ -62,6 +63,7 @@ go_test(
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/roughtime:go_default_library",

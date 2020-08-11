@@ -56,14 +56,13 @@ this command outputs a deposit data string which is required to become a validat
 		},
 		{
 			Name: "backup",
-			Description: "backup accounts into EIP-2335 compliant keystore.json files zipped into a backup.zip file" +
-				"at a desired output directory. Accounts to backup can also" +
-				"be specified programmatically via a --backup-for-public-keys flag which specifies a comma-separated" +
+			Description: "backup accounts into EIP-2335 compliant keystore.json files zipped into a backup.zip file " +
+				"at a desired output directory. Accounts to backup can also " +
+				"be specified programmatically via a --backup-for-public-keys flag which specifies a comma-separated " +
 				"list of hex string public keys",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.BackupDirFlag,
-				flags.AccountsFlag,
 				flags.BackupForPublicKeysFlag,
 				flags.BackupsPasswordFile,
 				featureconfig.AltonaTestnet,
