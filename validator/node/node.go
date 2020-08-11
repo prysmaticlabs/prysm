@@ -14,8 +14,10 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -30,8 +32,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -106,19 +106,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 
-	pubKeys, err := ExtractPublicKeysFromKeymanager(cliCtx, keyManagerV1, keyManagerV2)
-	if err != nil {
-		return nil, err
-	}
-	if len(pubKeys) == 0 {
-		log.Error("No keys found. Please verify `--keystore-path` is the correct path")
-	} else {
-		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
-		for _, key := range pubKeys {
-			log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:]))).Info("Validating for public key")
-		}
-	}
-
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
@@ -133,7 +120,16 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			}
 
 		}
-		if err := clearDB(dataDir, pubKeys, forceClearFlag); err != nil {
+		var validatingKeys [][48]byte
+		if featureconfig.Get().EnableAccountsV2 {
+			validatingKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
+		} else {
+			validatingKeys, err = keyManagerV1.FetchValidatingKeys()
+		}
+		if err != nil {
+			return nil, err
+		}
+		if err := clearDB(dataDir, validatingKeys, forceClearFlag); err != nil {
 			return nil, err
 		}
 	}
@@ -147,7 +143,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
-	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2, pubKeys); err != nil {
+	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2); err != nil {
 		return nil, err
 	}
 
@@ -213,7 +209,6 @@ func (s *ValidatorClient) registerPrometheusService() error {
 func (s *ValidatorClient) registerClientService(
 	keyManager v1.KeyManager,
 	keyManagerV2 v2.IKeymanager,
-	validatingPubKeys [][48]byte,
 ) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
@@ -238,7 +233,6 @@ func (s *ValidatorClient) registerClientService(
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
 		GraffitiFlag:               graffiti,
-		ValidatingPubKeys:          validatingPubKeys,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
@@ -370,18 +364,4 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	return nil
-}
-
-// ExtractPublicKeysFromKeymanager extracts only the public keys from the specified key manager.
-func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV1 v1.KeyManager, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
-	var pubKeys [][48]byte
-	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		pubKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to obtain public keys for validation")
-		}
-		return pubKeys, nil
-	}
-	return keyManagerV1.FetchValidatingKeys()
 }

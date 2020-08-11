@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -49,7 +50,6 @@ type ValidatorService struct {
 	logValidatorBalances bool
 	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
-	validatingPubKeys    [][48]byte
 	grpcRetries          uint
 	grpcRetryDelay       time.Duration
 	grpcHeaders          []string
@@ -62,7 +62,6 @@ type Config struct {
 	DataDir                    string
 	CertFlag                   string
 	GraffitiFlag               string
-	ValidatingPubKeys          [][48]byte
 	KeyManager                 keymanager.KeyManager
 	KeyManagerV2               v2.IKeymanager
 	LogValidatorBalances       bool
@@ -87,7 +86,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
 		keyManagerV2:         cfg.KeyManagerV2,
-		validatingPubKeys:    cfg.ValidatingPubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -126,7 +124,30 @@ func (v *ValidatorService) Start() {
 		log.Info("Established secure gRPC connection")
 	}
 
-	valDB, err := kv.NewKVStore(v.dataDir, v.validatingPubKeys)
+	var validatingKeys [][48]byte
+	if featureconfig.Get().EnableAccountsV2 {
+		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(v.ctx)
+	} else {
+		validatingKeys, err = v.keyManager.FetchValidatingKeys()
+	}
+	if err != nil {
+		log.WithError(err).Error("Could not fetch validating keys")
+		return
+	}
+
+	if len(validatingKeys) == 0 {
+		log.Error("No keys found to validate with")
+	} else {
+		log.WithField("validators", len(validatingKeys)).Debug("Found validator keys")
+		for _, key := range validatingKeys {
+			log.WithField(
+				"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
+			).Info("Validating for public key")
+		}
+	}
+
+	// TODO: This needs to be refreshed if we have new validating keys.
+	valDB, err := kv.NewKVStore(v.dataDir, validatingKeys)
 	if err != nil {
 		log.Errorf("Could not initialize db: %v", err)
 		return
