@@ -520,8 +520,9 @@ var (
 		Hidden: true,
 	}
 	deprectedForceMaxCoverAttestationAggregation = &cli.BoolFlag{
-		Name:  "attestation-aggregation-force-maxcover",
-		Usage: deprecatedUsage,
+		Name:   "attestation-aggregation-force-maxcover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 )
 
