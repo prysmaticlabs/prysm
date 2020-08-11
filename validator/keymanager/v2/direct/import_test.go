@@ -136,7 +136,7 @@ func TestDirectKeymanager_ImportKeystores(t *testing.T) {
 		keystores[i] = createRandomKeystore(t, password)
 	}
 	cliCtx := setupCli(t, passwordFilePath)
-	require.NoError(t, dr.ImportKeystores(cliCtx, keystores))
+	require.NoError(t, dr.ImportKeystores(cliCtx, keystores, false /* do not use wallet pass */))
 
 	// Ensure the single, all-encompassing accounts keystore was written
 	// to the wallet and ensure we can decrypt it using the EIP-2335 standard.
