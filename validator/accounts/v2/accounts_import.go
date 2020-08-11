@@ -16,6 +16,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -211,8 +212,9 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet, km *direct.K
 	); err != nil {
 		return errors.Wrap(err, "could not import keystore into wallet")
 	}
-	fmt.Println(
-		"Successfully imported account from private key, view all accounts by running accounts-v2 list",
+	fmt.Printf(
+		"Imported account with public key %#x, view all accounts by running accounts-v2 list\n",
+		au.BrightMagenta(bytesutil.Trunc(privKey.PublicKey().Marshal())),
 	)
 	return nil
 }

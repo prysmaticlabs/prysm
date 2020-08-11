@@ -391,6 +391,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
+	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -421,6 +422,7 @@ func (dr *Keymanager) createAccountsKeystore(
 			_, privKeyExists := existingPrivKeys[string(sk)]
 			_, pubKeyExists := existingPubKeys[string(pk)]
 			if privKeyExists || pubKeyExists {
+				fmt.Printf("Public key %#x already exists\n", au.BrightMagenta(bytesutil.Trunc(pk)))
 				continue
 			}
 			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
