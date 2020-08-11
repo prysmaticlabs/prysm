@@ -24,6 +24,7 @@ go_library(
         "//validator/accounts/v2/iface:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
+        "@com_github_fsnotify_fsnotify//:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_k0kubun_go_ansi//:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",

@@ -21,7 +21,6 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",

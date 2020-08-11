@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -32,8 +33,6 @@ import (
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
-	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore-*.json"
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// AccountsPath where all direct keymanager keystores are kept.
@@ -136,7 +135,11 @@ func NewKeymanager(cliCtx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keym
 	// a goroutine to listen for file changes at the specified directory and dynamically load
 	// keys from valid keystore.json files observed into our validator client.
 	if cliCtx.IsSet(flags.RescanKeystoresFromDirectory.Name) {
-		hasDir, err := fileutil.HasDir(cliCtx.String(flags.RescanKeystoresFromDirectory.Name))
+		dirToRescan, err := fileutil.ExpandPath(cliCtx.String(flags.RescanKeystoresFromDirectory.Name))
+		if err != nil {
+			return nil, err
+		}
+		hasDir, err := fileutil.HasDir(dirToRescan)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if rescan keystores directory exists")
 		}
@@ -144,6 +147,7 @@ func NewKeymanager(cliCtx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keym
 			return nil, errors.Wrap(err, "directory to rescan keystores does not exist")
 		}
 		// Begin listening for changes...
+		go rescanDirectoryForKeystores(cliCtx.Context, dirToRescan)
 	}
 	return k, nil
 }
@@ -369,7 +373,7 @@ func (dr *Keymanager) initializeSecretKeysCache(cliCtx *cli.Context) error {
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		enc, dr.accountsPassword, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
+		enc, dr.accountsPassword, err = askUntilPasswordConfirms(decryptor, keystoreFile)
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
@@ -459,7 +463,33 @@ func (dr *Keymanager) createAccountsKeystore(
 	}, nil
 }
 
-func (dr *Keymanager) askUntilPasswordConfirms(
+func rescanDirectoryForKeystores(ctx context.Context, directory string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	if err := watcher.Add(directory); err != nil {
+		panic(err)
+	}
+	for {
+		select {
+		// Watch for events...
+		case event := <-watcher.Events:
+			fmt.Printf("EVENT! %#v\n", event)
+		case err := <-watcher.Errors:
+			fmt.Println("ERROR", err)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func askUntilPasswordConfirms(
 	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore,
 ) ([]byte, string, error) {
 	au := aurora.NewAurora(true)
