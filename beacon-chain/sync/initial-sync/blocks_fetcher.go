@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 	"sync"
 	"time"
 
@@ -18,13 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	scorers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -268,7 +264,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 
 	var blocks []*eth.SignedBeaconBlock
 	var err error
-	peers, err = f.filterPeers(ctx, peers, peersPercentagePerRequest)
+	peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
 	if err != nil {
 		return blocks, "", err
 	}
@@ -349,211 +345,4 @@ func (f *blocksFetcher) requestBlocks(
 	}
 
 	return resp, nil
-}
-
-// getPeerLock returns peer lock for a given peer. If lock is not found, it is created.
-func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
-	f.Lock()
-	defer f.Unlock()
-	if lock, ok := f.peerLocks[pid]; ok {
-		lock.accessed = roughtime.Now()
-		return lock
-	}
-	f.peerLocks[pid] = &peerLock{
-		Mutex:    sync.Mutex{},
-		accessed: roughtime.Now(),
-	}
-	return f.peerLocks[pid]
-}
-
-// removeStalePeerLocks is a cleanup procedure which removes stale locks.
-func (f *blocksFetcher) removeStalePeerLocks(age time.Duration) {
-	f.Lock()
-	defer f.Unlock()
-	for peerID, lock := range f.peerLocks {
-		if time.Since(lock.accessed) >= age {
-			lock.Lock()
-			delete(f.peerLocks, peerID)
-			lock.Unlock()
-		}
-	}
-}
-
-// selectFailOverPeer randomly selects fail over peer from the list of available peers.
-func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
-	if len(peers) == 0 {
-		return "", errNoPeersAvailable
-	}
-	if len(peers) == 1 && peers[0] == excludedPID {
-		return "", errNoPeersAvailable
-	}
-
-	ind := f.rand.Int() % len(peers)
-	if peers[ind] == excludedPID {
-		return f.selectFailOverPeer(excludedPID, append(peers[:ind], peers[ind+1:]...))
-	}
-	return peers[ind], nil
-}
-
-// waitForMinimumPeers spins and waits up until enough peers are available.
-func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, error) {
-	required := params.BeaconConfig().MaxPeersToSync
-	if flags.Get().MinimumSyncPeers < required {
-		required = flags.Get().MinimumSyncPeers
-	}
-	for {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-		_, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-		if len(peers) >= required {
-			return peers, nil
-		}
-		log.WithFields(logrus.Fields{
-			"suitable": len(peers),
-			"required": required}).Info("Waiting for enough suitable peers before syncing")
-		time.Sleep(handshakePollingInterval)
-	}
-}
-
-// filterPeers returns transformed list of peers,
-// weight ordered or randomized, constrained if necessary.
-func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, ratio float64) ([]peer.ID, error) {
-	ctx, span := trace.StartSpan(ctx, "initialsync.filterPeers")
-	defer span.End()
-
-	if len(peers) == 0 {
-		return peers, nil
-	}
-
-	// Sort peers using both block provider score and, custom, capacity based score (see
-	// peerFilterCapacityWeight if you want to give different weights to provider's and capacity
-	// scores).
-	// Scores produced are used as weights, so peers are ordered probabilistically i.e. peer with
-	// a higher score has higher chance to end up higher in the list.
-	scorer := f.p2p.Peers().Scorers().BlockProviderScorer()
-	peers = scorer.WeightSorted(f.rand, peers, func(peerID peer.ID, blockProviderScore float64) float64 {
-		remaining, capacity := float64(f.rateLimiter.Remaining(peerID.String())), float64(f.rateLimiter.Capacity())
-		// When no capacity for a good peer left, allow less performant peer to take a chance.
-		if remaining < float64(f.blocksPerSecond) {
-			return 0.0
-		}
-		capScore := remaining / capacity
-		overallScore := blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
-		return math.Round(overallScore*scorers.ScoreRoundingFactor) / scorers.ScoreRoundingFactor
-	})
-
-	// Weak/slow peers will be pushed down the list and trimmed since only percentage of peers is selected.
-	limit := uint64(math.Round(float64(len(peers)) * ratio))
-	limit = mathutil.Max(limit, uint64(flags.Get().MinimumSyncPeers))
-	limit = mathutil.Min(limit, uint64(len(peers)))
-	peers = peers[:limit]
-
-	return peers, nil
-}
-
-// nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
-// For efficiency only one random slot is checked per epoch, so returned slot might not be the first
-// non-skipped slot. This shouldn't be a problem, as in case of adversary peer, we might get incorrect
-// data anyway, so code that relies on this function must be robust enough to re-request, if no progress
-// is possible with a returned value.
-func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "initialsync.nonSkippedSlotAfter")
-	defer span.End()
-
-	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	log.WithFields(logrus.Fields{
-		"start":          slot,
-		"headEpoch":      headEpoch,
-		"finalizedEpoch": finalizedEpoch,
-	}).Debug("Searching for non-skipped slot")
-	// Exit early, if no peers with high enough finalized epoch are found.
-	if finalizedEpoch <= headEpoch {
-		return 0, errSlotIsTooHigh
-	}
-	var err error
-	peers, err = f.filterPeers(ctx, peers, peersPercentagePerRequest)
-	if err != nil {
-		return 0, err
-	}
-	if len(peers) == 0 {
-		return 0, errNoPeersAvailable
-	}
-
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	pidInd := 0
-
-	fetch := func(pid peer.ID, start, count, step uint64) (uint64, error) {
-		req := &p2ppb.BeaconBlocksByRangeRequest{
-			StartSlot: start,
-			Count:     count,
-			Step:      step,
-		}
-		blocks, err := f.requestBlocks(ctx, req, pid)
-		if err != nil {
-			return 0, err
-		}
-		if len(blocks) > 0 {
-			for _, block := range blocks {
-				if block.Block.Slot > slot {
-					return block.Block.Slot, nil
-				}
-			}
-		}
-		return 0, nil
-	}
-
-	// Start by checking several epochs fully, w/o resorting to random sampling.
-	start := slot + 1
-	end := start + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
-	for ind := start; ind < end; ind += slotsPerEpoch {
-		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, slotsPerEpoch, 1)
-		if err != nil {
-			return 0, err
-		}
-		if nextSlot > slot {
-			return nextSlot, nil
-		}
-		pidInd++
-	}
-
-	// Quickly find the close enough epoch where a non-empty slot definitely exists.
-	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
-	slot = slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
-	upperBoundSlot := helpers.StartSlot(finalizedEpoch + 1)
-	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind + uint64(f.rand.Intn(int(slotsPerEpoch)))
-		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch/2, slotsPerEpoch)
-		if err != nil {
-			return 0, err
-		}
-		pidInd++
-		if nextSlot > slot && upperBoundSlot >= nextSlot {
-			upperBoundSlot = nextSlot
-			break
-		}
-	}
-
-	// Epoch with non-empty slot is located. Check all slots within two nearby epochs.
-	if upperBoundSlot > slotsPerEpoch {
-		upperBoundSlot -= slotsPerEpoch
-	}
-	upperBoundSlot = helpers.StartSlot(helpers.SlotToEpoch(upperBoundSlot))
-	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch*2, 1)
-	if err != nil {
-		return 0, err
-	}
-	if nextSlot < slot || helpers.StartSlot(finalizedEpoch+1) < nextSlot {
-		return 0, errors.New("invalid range for non-skipped slot")
-	}
-	return nextSlot, nil
-}
-
-// bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
-func (f *blocksFetcher) bestFinalizedSlot() uint64 {
-	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	finalizedEpoch, _ := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	return helpers.StartSlot(finalizedEpoch)
 }

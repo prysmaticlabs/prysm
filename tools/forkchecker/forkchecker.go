@@ -54,11 +54,14 @@ func main() {
 
 	ticker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	go func() {
-		for range ticker.C {
-			if *compare {
-				compareHeads(clients)
-			} else {
-				displayHeads(clients)
+		for {
+			select {
+			case <-ticker.C:
+				if *compare {
+					compareHeads(clients)
+				} else {
+					displayHeads(clients)
+				}
 			}
 		}
 	}()
