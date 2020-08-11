@@ -284,3 +284,39 @@ func TestVerifySlotTime(t *testing.T) {
 		})
 	}
 }
+
+func TestGenesisTime(t *testing.T) {
+	type args struct {
+		configTime uint64
+		stateTime  uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want uint64
+	}{
+		{
+			name: "Use config genesis time",
+			args: args{configTime: 1, stateTime: 2},
+			want: 1,
+		},
+		{
+			name: "Use state genesis time",
+			args: args{configTime: 0, stateTime: 2},
+			want: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := params.BeaconConfig()
+			c.GenesisTime = tt.args.configTime
+			params.OverrideBeaconConfig(c)
+			s := &pb.BeaconState{GenesisTime: tt.args.stateTime}
+			state, err := beaconstate.InitializeFromProto(s)
+			require.NoError(t, err)
+			if got := GenesisTime(state); got != tt.want {
+				t.Errorf("GenesisTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
