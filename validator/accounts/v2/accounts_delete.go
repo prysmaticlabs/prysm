@@ -50,7 +50,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 
 	formattedPubKeys := make([]string, len(accounts))
 	for i, pubKey := range accounts {
-		keyBytes, err := hex.DecodeString(pubKey)
+		keyBytes, err := hex.DecodeString(pubKey[2:])
 		if err != nil {
 			return errors.Wrap(err, "could not decode hex string")
 		}
@@ -85,10 +85,10 @@ func DeleteAccount(cliCtx *cli.Context) error {
 			return errors.New("not a direct keymanager")
 		}
 		// Delete the requested account's keystore.
-		for _, account := range accounts {
-			pubKeyBytes, err := hex.DecodeString(account[2:])
+		for _, pubKey := range accounts {
+			pubKeyBytes, err := hex.DecodeString(pubKey[2:])
 			if err != nil {
-				return errors.Wrapf(err, "could not decode public key %s", account)
+				return errors.Wrapf(err, "could not decode public key %s", pubKey)
 			}
 			if err := km.DeleteAccount(ctx, pubKeyBytes); err != nil {
 				return errors.Wrap(err, "could not create account in wallet")
