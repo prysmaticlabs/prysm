@@ -98,6 +98,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.KeysDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
+				flags.ImportPrivateKeyFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				flags.DeprecatedPasswordsDirFlag,

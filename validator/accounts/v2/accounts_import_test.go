@@ -15,6 +15,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -187,6 +189,63 @@ func TestImport_SortByDerivationPath(t *testing.T) {
 			assert.DeepEqual(t, tt.want, tt.input)
 		})
 	}
+}
+
+func Test_importPrivateKeyAsAccount(t *testing.T) {
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	privKeyDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "privKeys")
+	require.NoError(t, os.MkdirAll(privKeyDir, os.ModePerm))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(privKeyDir), "Failed to remove directory")
+	})
+	privKeyFileName := filepath.Join(privKeyDir, "privatekey.txt")
+
+	// We create a new private key and save it to a file on disk.
+	privKey := bls.RandKey()
+	privKeyHex := fmt.Sprintf("%x", privKey.Marshal())
+	require.NoError(
+		t,
+		ioutil.WriteFile(privKeyFileName, []byte(privKeyHex), params.BeaconIoConfig().ReadWritePermissions),
+	)
+
+	// We instantiate a new wallet from a cli context.
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: passwordFilePath,
+		privateKeyFile:     privKeyFileName,
+	})
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
+
+	// We create a new direct keymanager for the wallet.
+	ctx := context.Background()
+	keymanagerCfg := direct.DefaultConfig()
+	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
+	require.NoError(t, err)
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	keymanager, err := direct.NewKeymanager(
+		cliCtx,
+		wallet,
+		keymanagerCfg,
+	)
+	require.NoError(t, err)
+	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
+
+	// We re-instantiate the keymanager and check we now have 1 public key.
+	keymanager, err = direct.NewKeymanager(
+		cliCtx,
+		wallet,
+		keymanagerCfg,
+	)
+	require.NoError(t, err)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pubKeys))
+	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
 }
 
 // Returns the fullPath to the newly created keystore file.
