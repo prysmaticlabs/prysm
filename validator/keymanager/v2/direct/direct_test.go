@@ -64,7 +64,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
 }
 
-func TestDirectKeymanager_RemoveAccount(t *testing.T) {
+func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
@@ -89,7 +89,7 @@ func TestDirectKeymanager_RemoveAccount(t *testing.T) {
 	accountToRemove := uint64(2)
 	accountPubKey := accounts[accountToRemove]
 	// Remove an account from the keystore.
-	require.NoError(t, dr.DeleteAccount(ctx, accountPubKey[:]))
+	require.NoError(t, dr.DeleteAccounts(ctx, [][]byte{accountPubKey[:]}))
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
 	var encodedKeystore []byte

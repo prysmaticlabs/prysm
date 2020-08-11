@@ -248,45 +248,47 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	return accountName, nil
 }
 
-// DeleteAccount takes in a public key and removes the account entirely. This includes its disk keystore and cached keystore.
-func (dr *Keymanager) DeleteAccount(ctx context.Context, publicKey []byte) error {
+// DeleteAccounts takes in a public key and removes the account entirely. This includes its disk keystore and cached keystore.
+func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
 	var index int
 	var found bool
-	for i, pubKey := range dr.accountsStore.PublicKeys {
-		if bytes.Equal(pubKey, publicKey) {
-			index = i
-			found = true
-			break
+	for _, publicKey := range publicKeys {
+		for i, pubKey := range dr.accountsStore.PublicKeys {
+			if bytes.Equal(pubKey, publicKey) {
+				index = i
+				found = true
+				break
+			}
 		}
-	}
-	if !found {
-		return fmt.Errorf("could not find public key %#x", publicKey)
-	}
-	deletedPublicKey := dr.accountsStore.PublicKeys[index]
-	accountName := petnames.DeterministicName(deletedPublicKey, "-")
-	dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
-	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
-	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
-	if err != nil {
-		return errors.Wrap(err, "could not rewrite accounts keystore")
-	}
+		if !found {
+			return fmt.Errorf("could not find public key %#x", publicKey)
+		}
+		deletedPublicKey := dr.accountsStore.PublicKeys[index]
+		accountName := petnames.DeterministicName(deletedPublicKey, "-")
+		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
+		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
+		newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+		if err != nil {
+			return errors.Wrap(err, "could not rewrite accounts keystore")
+		}
 
-	// Write the encoded keystore.
-	encoded, err := json.MarshalIndent(newStore, "", "\t")
-	if err != nil {
-		return err
-	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
-		return errors.Wrap(err, "could not write keystore file for accounts")
-	}
+		// Write the encoded keystore.
+		encoded, err := json.MarshalIndent(newStore, "", "\t")
+		if err != nil {
+			return err
+		}
+		if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+			return errors.Wrap(err, "could not write keystore file for accounts")
+		}
 
-	log.WithFields(logrus.Fields{
-		"name":      accountName,
-		"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
-	}).Info("Successfully deleted validator account")
-	dr.lock.Lock()
-	delete(dr.keysCache, bytesutil.ToBytes48(deletedPublicKey))
-	dr.lock.Unlock()
+		log.WithFields(logrus.Fields{
+			"name":      accountName,
+			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
+		}).Info("Successfully deleted validator account")
+		dr.lock.Lock()
+		delete(dr.keysCache, bytesutil.ToBytes48(deletedPublicKey))
+		dr.lock.Unlock()
+	}
 	return nil
 }
 

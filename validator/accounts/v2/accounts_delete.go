@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
+// DeleteAccounts deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
@@ -89,16 +89,19 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		// Delete the requested account's keystore.
-		for _, pubKey := range accounts {
+		// Delete the requested account's keystores.
+		publicKeys := make([][]byte, len(accounts))
+		for i, pubKey := range accounts {
 			pubKeyBytes, err := hex.DecodeString(pubKey[2:])
 			if err != nil {
 				return errors.Wrapf(err, "could not decode public key %s", pubKey)
 			}
-			if err := km.DeleteAccount(ctx, pubKeyBytes); err != nil {
-				return errors.Wrap(err, "could not create account in wallet")
-			}
+			publicKeys[i] = pubKeyBytes
 		}
+		if err := km.DeleteAccounts(ctx, publicKeys); err != nil {
+			return errors.Wrap(err, "could not delete accounts")
+		}
+
 	case v2keymanager.Derived:
 		return errors.New("cannot delete accounts for a derived keymanager")
 	default:
