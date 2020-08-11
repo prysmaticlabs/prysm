@@ -253,6 +253,12 @@ func zipKeystoresToOutputDir(keystoresToBackup []*v2keymanager.Keystore, outputD
 	// Using this zip file, we create a new zip writer which we write
 	// files to directly from our marshaled keystores.
 	writer := zip.NewWriter(zipfile)
+	defer func() {
+		// We close the zip writer when done.
+		if err := writer.Close(); err != nil {
+			log.WithError(err).Error("Could not close zip file after writing")
+		}
+	}()
 	for i, k := range keystoresToBackup {
 		encodedFile, err := json.MarshalIndent(k, "", "\t")
 		if err != nil {
@@ -265,10 +271,6 @@ func zipKeystoresToOutputDir(keystoresToBackup []*v2keymanager.Keystore, outputD
 		if _, err = f.Write(encodedFile); err != nil {
 			return errors.Wrap(err, "could not write keystore file contents")
 		}
-	}
-	// We close the zip writer when done.
-	if err := writer.Close(); err != nil {
-		return errors.Wrap(err, "could not close zip file after writing")
 	}
 	log.WithField(
 		"backup-path", archivePath,
