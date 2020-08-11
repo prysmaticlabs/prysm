@@ -64,12 +64,12 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 	fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 }
 
-// ImportAccount uses the archived account made from ExportAccount to import an account and
-// asks the users for account passwords.
-func ImportAccount(cliCtx *cli.Context) error {
+// ImportAccounts can import external, EIP-2335 compliant keystore.json files as
+// new accounts into the Prysm validator wallet.
+func ImportAccounts(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	au := aurora.NewAurora(true)
-	wallet, err := createOrOpenWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		w, err := NewWallet(cliCtx, v2keymanager.Direct)
 		if err != nil && !errors.Is(err, ErrWalletExists) {
 			return nil, errors.Wrap(err, "could not create new wallet")
