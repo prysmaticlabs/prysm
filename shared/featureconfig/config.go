@@ -229,15 +229,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
+	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
 
 	cfg.NewBeaconStateLocks = true
 	if ctx.Bool(disableNewBeaconStateLocks.Name) {
 		log.Warn("Disabling new beacon state locks")
 		cfg.NewBeaconStateLocks = false
-	}
-	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
-		log.Warn("Forcing max_cover strategy on attestation aggregation")
-		cfg.AttestationAggregationStrategy = "max_cover"
 	}
 	if ctx.Bool(batchBlockVerify.Name) {
 		log.Warn("Performing batch block verification when syncing.")

@@ -1,7 +1,9 @@
 package direct
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -233,7 +235,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 ===================================================================`, tx.Data())
 	fmt.Println("")
 
-	// Write the encoded keystore to disk with the timestamp appended
+	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
 		return "", err
@@ -249,6 +251,50 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	dr.keysCache[bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())] = validatingKey
 	dr.lock.Unlock()
 	return accountName, nil
+}
+
+// DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
+func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
+	var index int
+	var found bool
+	for _, publicKey := range publicKeys {
+		for i, pubKey := range dr.accountsStore.PublicKeys {
+			if bytes.Equal(pubKey, publicKey) {
+				index = i
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("could not find public key %#x", publicKey)
+		}
+		deletedPublicKey := dr.accountsStore.PublicKeys[index]
+		accountName := petnames.DeterministicName(deletedPublicKey, "-")
+		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
+		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
+		newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+		if err != nil {
+			return errors.Wrap(err, "could not rewrite accounts keystore")
+		}
+
+		// Write the encoded keystore.
+		encoded, err := json.MarshalIndent(newStore, "", "\t")
+		if err != nil {
+			return err
+		}
+		if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+			return errors.Wrap(err, "could not write keystore file for accounts")
+		}
+
+		log.WithFields(logrus.Fields{
+			"name":      accountName,
+			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
+		}).Info("Successfully deleted validator account")
+		dr.lock.Lock()
+		delete(dr.keysCache, bytesutil.ToBytes48(deletedPublicKey))
+		dr.lock.Unlock()
+	}
+	return nil
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
@@ -345,7 +391,6 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
-	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -376,7 +421,6 @@ func (dr *Keymanager) createAccountsKeystore(
 			_, privKeyExists := existingPrivKeys[string(sk)]
 			_, pubKeyExists := existingPubKeys[string(pk)]
 			if privKeyExists || pubKeyExists {
-				fmt.Printf("Pubkey %#x has already been imported\n", au.BrightRed(bytesutil.Trunc(pk)))
 				continue
 			}
 			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
@@ -407,16 +451,22 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 	var secretKey []byte
 	var password string
 	var err error
+	publicKey, err := hex.DecodeString(keystore.Pubkey)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "could not decode public key")
+	}
+	formattedPublicKey := fmt.Sprintf("%#x", bytesutil.Trunc(publicKey))
 	for {
 		password, err = promptutil.PasswordPrompt(
-			"Wrong password entered, try again", promptutil.NotEmpty,
+			fmt.Sprintf("\nPlease try again, could not use password to import account %s", au.BrightGreen(formattedPublicKey)),
+			promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, "", fmt.Errorf("could not read account password: %v", err)
 		}
 		secretKey, err = decryptor.Decrypt(keystore.Crypto, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Println(au.Red("Incorrect password entered, please try again"))
+			fmt.Print(au.Red("Incorrect password entered, please try again"))
 			continue
 		}
 		if err != nil {
