@@ -119,7 +119,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 		eth1BlocktimesMutex: &sync.RWMutex{},
 		currentEpoch:        headState.Slot() / params.BeaconConfig().SlotsPerEpoch,
 		stream:              stream,
-		genesisTime:         headState.GenesisTime(),
+		genesisTime:         helpers.GenesisTime(headState),
 	}
 	defer infostream.stateSub.Unsubscribe()
 
