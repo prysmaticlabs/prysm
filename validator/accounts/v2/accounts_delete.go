@@ -56,7 +56,9 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	allAccountStr := strings.Join(formattedPubKeys, ", ")
 	if len(filteredPubKeys) == 1 {
 		promptText := "Are you sure you want to delete 1 account? (%s) Y/N"
-		resp, err := promptutil.ValidatePrompt(fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateConfirmation)
+		resp, err := promptutil.ValidatePrompt(
+			fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+		)
 		if err != nil {
 			return err
 		}
