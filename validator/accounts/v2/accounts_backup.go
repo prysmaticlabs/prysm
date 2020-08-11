@@ -80,7 +80,7 @@ func BackupAccounts(cliCtx *cli.Context) error {
 	// Ask the user for their desired password for their backed up accounts.
 	backupsPassword, err := promptutil.InputPassword(
 		cliCtx,
-		flags.BackupsPasswordFile,
+		flags.BackupPasswordFile,
 		"Enter a new password for your backed up accounts",
 		"Confirm new password",
 		promptutil.ConfirmPass,

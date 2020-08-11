@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/urfave/cli/v2"
 )
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
@@ -56,21 +55,27 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	}
 	allAccountStr := strings.Join(formattedPubKeys, ", ")
 	if len(filteredPubKeys) == 1 {
-		promptText := "Are you sure you want to delete 1 account? (%s) Y/y"
-		_, err = promptutil.ValidatePrompt(fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateConfirmation)
+		promptText := "Are you sure you want to delete 1 account? (%s) Y/N"
+		resp, err := promptutil.ValidatePrompt(fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateConfirmation)
 		if err != nil {
 			return err
 		}
+		if strings.ToLower(resp) == "n" {
+			return nil
+		}
 	} else {
-		promptText := "Are you sure you want to delete %d accounts? (%s) Y/y"
+		promptText := "Are you sure you want to delete %d accounts? (%s) Y/N"
 		if len(filteredPubKeys) == len(validatingPublicKeys) {
-			promptText = fmt.Sprintf("Are you sure you want to delete all accounts? (%s)", au.BrightGreen(allAccountStr))
+			promptText = fmt.Sprintf("Are you sure you want to delete all accounts? Y/N (%s)", au.BrightGreen(allAccountStr))
 		} else {
 			promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
 		}
-		_, err = promptutil.ValidatePrompt(promptText, promptutil.ValidateConfirmation)
+		resp, err := promptutil.ValidatePrompt(promptText, promptutil.ValidateYesOrNo)
 		if err != nil {
 			return err
+		}
+		if strings.ToLower(resp) == "n" {
+			return nil
 		}
 	}
 	switch wallet.KeymanagerKind() {

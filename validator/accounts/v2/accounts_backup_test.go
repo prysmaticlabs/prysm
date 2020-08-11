@@ -49,9 +49,9 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 	backupPublicKeys := strings.Join(generatedPubKeys, ",")
 
 	// Write a password for the accounts we wish to backup to a file.
-	backupsPasswordFile := filepath.Join(backupDir, "backuppass.txt")
+	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
 	err = ioutil.WriteFile(
-		backupsPasswordFile,
+		backupPasswordFile,
 		[]byte("Passw0rdz4938%%"),
 		params.BeaconIoConfig().ReadWritePermissions,
 	)
@@ -68,7 +68,7 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 		keysDir: keysDir,
 		// Flags required for BackupAccounts to work.
 		backupPublicKeys:   backupPublicKeys,
-		backupPasswordFile: backupsPasswordFile,
+		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)

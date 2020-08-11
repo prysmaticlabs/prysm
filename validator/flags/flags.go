@@ -179,9 +179,9 @@ var (
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
 		Value: "",
 	}
-	// BackupsPasswordFile for encrypting accounts a user wishes to back up.
-	BackupsPasswordFile = &cli.StringFlag{
-		Name:  "backups-password-file",
+	// BackupPasswordFile for encrypting accounts a user wishes to back up.
+	BackupPasswordFile = &cli.StringFlag{
+		Name:  "backup-password-file",
 		Usage: "Path to a plain-text, .txt file containing the desired password for your backed up accounts",
 		Value: "",
 	}

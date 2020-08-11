@@ -83,7 +83,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletDirFlag,
 				flags.BackupDirFlag,
 				flags.BackupPublicKeysFlag,
-				flags.BackupsPasswordFile,
+				flags.BackupPasswordFile,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 			},
