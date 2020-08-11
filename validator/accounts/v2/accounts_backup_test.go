@@ -46,7 +46,7 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 	time.Sleep(time.Second)
 	k2, _ := createKeystore(t, keysDir)
 	generatedPubKeys := []string{k1.Pubkey, k2.Pubkey}
-	backupForPublicKeys := strings.Join(generatedPubKeys, ",")
+	backupPublicKeys := strings.Join(generatedPubKeys, ",")
 
 	// Write a password for the accounts we wish to backup to a file.
 	backupsPasswordFile := filepath.Join(backupDir, "backuppass.txt")
@@ -67,9 +67,9 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 		// Flags required for ImportAccounts to work.
 		keysDir: keysDir,
 		// Flags required for BackupAccounts to work.
-		backupForPublicKeys: backupForPublicKeys,
-		backupPasswordFile:  backupsPasswordFile,
-		backupDir:           backupDir,
+		backupPublicKeys:   backupPublicKeys,
+		backupPasswordFile: backupsPasswordFile,
+		backupDir:          backupDir,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)

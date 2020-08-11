@@ -66,8 +66,13 @@ func BackupAccounts(cliCtx *cli.Context) error {
 	}
 
 	// Allow the user to interactively select the accounts to backup or optionally
-	// provide them via cli flags.
-	filteredPubKeys, err := determinePublicKeysForBackup(cliCtx, pubKeys)
+	// provide them via cli flags as a string of comma-separated, hex strings.
+	filteredPubKeys, err := filterPublicKeysFromUserInput(
+		cliCtx,
+		flags.BackupPublicKeysFlag,
+		pubKeys,
+		selectAccountsBackupPromptText,
+	)
 	if err != nil {
 		return errors.Wrap(err, "could not filter public keys for backup")
 	}
@@ -109,14 +114,19 @@ func BackupAccounts(cliCtx *cli.Context) error {
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
 
-func determinePublicKeysForBackup(cliCtx *cli.Context, validatingPublicKeys [][48]byte) ([]bls.PublicKey, error) {
+func filterPublicKeysFromUserInput(
+	cliCtx *cli.Context,
+	publicKeysFlag *cli.StringFlag,
+	validatingPublicKeys [][48]byte,
+	selectionPrompt string,
+) ([]bls.PublicKey, error) {
 	var filteredPubKeys []bls.PublicKey
-	if cliCtx.IsSet(flags.BackupForPublicKeysFlag.Name) {
-		pubKeyStrings := strings.Split(cliCtx.String(flags.BackupForPublicKeysFlag.Name), ",")
+	if cliCtx.IsSet(publicKeysFlag.Name) {
+		pubKeyStrings := strings.Split(cliCtx.String(publicKeysFlag.Name), ",")
 		if len(pubKeyStrings) == 0 {
 			return nil, fmt.Errorf(
 				"could not parse %s. It must be a string of comma-separated hex strings",
-				flags.BackupForPublicKeysFlag.Name,
+				publicKeysFlag.Name,
 			)
 		}
 		for _, str := range pubKeyStrings {
@@ -136,11 +146,11 @@ func determinePublicKeysForBackup(cliCtx *cli.Context, validatingPublicKeys [][4
 		}
 		return filteredPubKeys, nil
 	}
-	return selectAccounts(cliCtx, validatingPublicKeys)
+	return selectAccounts(selectionPrompt, validatingPublicKeys)
 }
 
 // Ask user to select accounts via an interactive prompt.
-func selectAccounts(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
+func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey, error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")
@@ -164,7 +174,7 @@ func selectAccounts(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, e
 	au := aurora.NewAurora(true)
 	for result != exit {
 		prompt := promptui.Select{
-			Label:        "Select accounts to backup",
+			Label:        selectionPrompt,
 			HideSelected: true,
 			Items:        append([]string{exit, allAccountsText}, pubKeyStrings...),
 			Templates:    templates,
@@ -203,7 +213,7 @@ func selectAccounts(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, e
 		}
 	}
 
-	// Filter the public keys for backup based on user input.
+	// Filter the public keys based on user input.
 	filteredPubKeys := make([]bls.PublicKey, 0)
 	for selectedIndex := range seen {
 		pk, err := bls.PublicKeyFromBytes(pubKeys[selectedIndex][:])

@@ -165,10 +165,17 @@ var (
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,
 	}
-	// BackupForPublicKeysFlag defines a comma-separated list of hex string public keys
+	// DeletePublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to delete from their wallet.
+	DeletePublicKeysFlag = &cli.StringFlag{
+		Name:  "delete-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to delete",
+		Value: "",
+	}
+	// BackupPublicKeysFlag defines a comma-separated list of hex string public keys
 	// for accounts which a user desires to backup from their wallet.
-	BackupForPublicKeysFlag = &cli.StringFlag{
-		Name:  "backup-for-public-keys",
+	BackupPublicKeysFlag = &cli.StringFlag{
+		Name:  "backup-public-keys",
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
 		Value: "",
 	}
