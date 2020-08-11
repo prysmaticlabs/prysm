@@ -319,12 +319,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
-	} else {
 		// Only check if historical states were deleted and needed to recompute when
 		// user doesn't want to skip.
-		if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
-			return err
-		}
+	} else if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
+		return err
 	}
 
 	if err := d.RunMigrations(b.ctx); err != nil {

@@ -313,14 +313,12 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *TestP2P) FindPeersWithSubnet(index uint64) (bool, error) {
+func (p *TestP2P) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
 	return false, nil
 }
 
 // RefreshENR mocks the p2p func.
-func (p *TestP2P) RefreshENR() {
-	return
-}
+func (p *TestP2P) RefreshENR() {}
 
 // ForkDigest mocks the p2p func.
 func (p *TestP2P) ForkDigest() ([4]byte, error) {

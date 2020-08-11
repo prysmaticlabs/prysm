@@ -1,7 +1,9 @@
 package direct
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,11 +18,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -31,13 +36,22 @@ const (
 	KeystoreFileName = "keystore-*.json"
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
-	// PasswordFileSuffix for passwords persisted as text to disk.
-	PasswordFileSuffix = ".pass"
 	// AccountsPath where all direct keymanager keystores are kept.
-	AccountsPath                   = "accounts"
-	accountsKeystoreFileName       = "all-accounts.keystore.json"
-	accountsKeystoreFileNameFormat = "all-accounts.keystore.json"
-	eipVersion                     = "EIP-2335"
+	AccountsPath                = "accounts"
+	accountsKeystoreFileName    = "all-accounts.keystore.json"
+	eipVersion                  = "EIP-2335"
+	newWalletPasswordPromptText = "New wallet password"
+	walletPasswordPromptText    = "Wallet password"
+	confirmPasswordPromptText   = "Confirm password"
+)
+
+type passwordConfirm int
+
+const (
+	// An enum to indicate to the prompt that confirming the password is not needed.
+	noConfirmPass passwordConfirm = iota
+	// An enum to indicate to the prompt to confirm the password entered.
+	confirmPass
 )
 
 // Config for a direct keymanager.
@@ -47,11 +61,12 @@ type Config struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet        iface.Wallet
-	cfg           *Config
-	keysCache     map[[48]byte]bls.SecretKey
-	accountsStore *AccountStore
-	lock          sync.RWMutex
+	wallet           iface.Wallet
+	cfg              *Config
+	keysCache        map[[48]byte]bls.SecretKey
+	accountsStore    *AccountStore
+	lock             sync.RWMutex
+	accountsPassword string
 }
 
 // AccountStore --
@@ -68,13 +83,46 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:        wallet,
 		cfg:           cfg,
 		keysCache:     make(map[[48]byte]bls.SecretKey),
 		accountsStore: &AccountStore{},
 	}
+
+	walletFiles, err := wallet.ListDirs()
+	if err != nil {
+		return nil, err
+	}
+	var accountsPassword string
+	if len(walletFiles) == 0 {
+		accountsPassword, err = inputPassword(
+			ctx,
+			flags.WalletPasswordFileFlag,
+			newWalletPasswordPromptText,
+			confirmPass,
+			promptutil.ValidatePasswordInput,
+		)
+	} else {
+		validateExistingPass := func(input string) error {
+			if input == "" {
+				return errors.New("password input cannot be empty")
+			}
+			return nil
+		}
+		accountsPassword, err = inputPassword(
+			ctx,
+			flags.WalletPasswordFileFlag,
+			walletPasswordPromptText,
+			noConfirmPass,
+			validateExistingPass,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	k.accountsPassword = accountsPassword
 
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys
@@ -182,7 +230,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 ===================================================================`, tx.Data())
 	fmt.Println("")
 
-	// Write the encoded keystore to disk with the timestamp appended
+	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
 		return "", err
@@ -198,6 +246,50 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	dr.keysCache[bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())] = validatingKey
 	dr.lock.Unlock()
 	return accountName, nil
+}
+
+// DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
+func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
+	var index int
+	var found bool
+	for _, publicKey := range publicKeys {
+		for i, pubKey := range dr.accountsStore.PublicKeys {
+			if bytes.Equal(pubKey, publicKey) {
+				index = i
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("could not find public key %#x", publicKey)
+		}
+		deletedPublicKey := dr.accountsStore.PublicKeys[index]
+		accountName := petnames.DeterministicName(deletedPublicKey, "-")
+		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
+		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
+		newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+		if err != nil {
+			return errors.Wrap(err, "could not rewrite accounts keystore")
+		}
+
+		// Write the encoded keystore.
+		encoded, err := json.MarshalIndent(newStore, "", "\t")
+		if err != nil {
+			return err
+		}
+		if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+			return errors.Wrap(err, "could not write keystore file for accounts")
+		}
+
+		log.WithFields(logrus.Fields{
+			"name":      accountName,
+			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
+		}).Info("Successfully deleted validator account")
+		dr.lock.Lock()
+		delete(dr.keysCache, bytesutil.ToBytes48(deletedPublicKey))
+		dr.lock.Unlock()
+	}
+	return nil
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
@@ -238,8 +330,8 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
-func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+func (dr *Keymanager) initializeSecretKeysCache(cliCtx *cli.Context) error {
+	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.
 		return nil
@@ -254,11 +346,11 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
+	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.accountsPassword)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		enc, _, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
+		enc, dr.accountsPassword, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
@@ -294,7 +386,6 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
-	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -325,7 +416,6 @@ func (dr *Keymanager) createAccountsKeystore(
 			_, privKeyExists := existingPrivKeys[string(sk)]
 			_, pubKeyExists := existingPubKeys[string(pk)]
 			if privKeyExists || pubKeyExists {
-				fmt.Printf("Pubkey %#x has already been imported\n", au.BrightRed(bytesutil.Trunc(pk)))
 				continue
 			}
 			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
@@ -336,7 +426,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, err
 	}
-	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
+	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.accountsPassword)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}
@@ -356,16 +446,22 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 	var secretKey []byte
 	var password string
 	var err error
+	publicKey, err := hex.DecodeString(keystore.Pubkey)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "could not decode public key")
+	}
+	formattedPublicKey := fmt.Sprintf("%#x", bytesutil.Trunc(publicKey))
 	for {
 		password, err = promptutil.PasswordPrompt(
-			"Wrong password entered, try again", promptutil.NotEmpty,
+			fmt.Sprintf("\nPlease try again, could not use password to import account %s", au.BrightGreen(formattedPublicKey)),
+			promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, "", fmt.Errorf("could not read account password: %v", err)
 		}
 		secretKey, err = decryptor.Decrypt(keystore.Crypto, password)
 		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Println(au.Red("Incorrect password entered, please try again"))
+			fmt.Print(au.Red("Incorrect password entered, please try again"))
 			continue
 		}
 		if err != nil {
@@ -374,4 +470,53 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 		break
 	}
 	return secretKey, password, nil
+}
+
+func inputPassword(
+	cliCtx *cli.Context,
+	passwordFileFlag *cli.StringFlag,
+	promptText string,
+	confirmPassword passwordConfirm,
+	passwordValidator func(input string) error,
+) (string, error) {
+	if cliCtx.IsSet(passwordFileFlag.Name) {
+		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
+		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
+		if err != nil {
+			return "", errors.Wrap(err, "could not determine absolute path of password file")
+		}
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return "", errors.Wrap(err, "could not read password file")
+		}
+		enteredPassword := strings.TrimRight(string(data), "\r\n")
+		if err := passwordValidator(enteredPassword); err != nil {
+			return "", errors.Wrap(err, "password did not pass validation")
+		}
+		return enteredPassword, nil
+	}
+	var hasValidPassword bool
+	var walletPassword string
+	var err error
+	for !hasValidPassword {
+		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
+		if err != nil {
+			return "", fmt.Errorf("could not read account password: %v", err)
+		}
+
+		if confirmPassword == confirmPass {
+			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
+			if err != nil {
+				return "", fmt.Errorf("could not read password confirmation: %v", err)
+			}
+			if walletPassword != passwordConfirmation {
+				log.Error("Passwords do not match")
+				continue
+			}
+			hasValidPassword = true
+		} else {
+			return walletPassword, nil
+		}
+	}
+	return walletPassword, nil
 }

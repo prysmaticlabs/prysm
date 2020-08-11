@@ -1,7 +1,6 @@
 package validators
 
 import (
-	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -9,6 +8,8 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestHasVoted_OK(t *testing.T) {
@@ -18,9 +19,7 @@ func TestHasVoted_OK(t *testing.T) {
 	}
 
 	for i := uint64(0); i < pendingAttestation.AggregationBits.Len(); i++ {
-		if !pendingAttestation.AggregationBits.BitAt(i) {
-			t.Error("validator voted but received didn't vote")
-		}
+		assert.Equal(t, true, pendingAttestation.AggregationBits.BitAt(i), "Validator voted but received didn't vote")
 	}
 
 	// Setting bit field to 10101010.
@@ -45,21 +44,12 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 		ExitEpoch: exitEpoch},
 	}}
 	state, err := beaconstate.InitializeFromProto(base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	newState, err := InitiateValidatorExit(state, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	v, err := newState.ValidatorAtIndex(0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v.ExitEpoch != exitEpoch {
-		t.Errorf("Already exited, wanted exit epoch %d, got %d",
-			exitEpoch, v.ExitEpoch)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, exitEpoch, v.ExitEpoch, "Already exited")
 }
 
 func TestInitiateValidatorExit_ProperExit(t *testing.T) {
@@ -72,21 +62,12 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 	}}
 	state, err := beaconstate.InitializeFromProto(base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	newState, err := InitiateValidatorExit(state, idx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	v, err := newState.ValidatorAtIndex(idx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v.ExitEpoch != exitedEpoch+2 {
-		t.Errorf("Exit epoch was not the highest, wanted exit epoch %d, got %d",
-			exitedEpoch+2, v.ExitEpoch)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, exitedEpoch+2, v.ExitEpoch, "Exit epoch was not the highest")
 }
 
 func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
@@ -100,30 +81,19 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 	}}
 	state, err := beaconstate.InitializeFromProto(base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	newState, err := InitiateValidatorExit(state, idx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Because of exit queue overflow,
 	// validator who init exited has to wait one more epoch.
 	v, err := newState.ValidatorAtIndex(0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wantedEpoch := v.ExitEpoch + 1
 
 	v, err = newState.ValidatorAtIndex(idx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v.ExitEpoch != wantedEpoch {
-		t.Errorf("Exit epoch did not cover overflow case, wanted exit epoch %d, got %d",
-			wantedEpoch, v.ExitEpoch)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, wantedEpoch, v.ExitEpoch, "Exit epoch did not cover overflow case")
 }
 
 func TestSlashValidator_OK(t *testing.T) {
@@ -146,65 +116,36 @@ func TestSlashValidator_OK(t *testing.T) {
 		Balances:    balances,
 	}
 	state, err := beaconstate.InitializeFromProto(base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	slashedIdx := uint64(2)
 
 	proposer, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Errorf("Could not get proposer %v", err)
-	}
+	require.NoError(t, err, "Could not get proposer")
 	proposerBal, err := state.BalanceAtIndex(proposer)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	state, err = SlashValidator(state, slashedIdx)
-	if err != nil {
-		t.Fatalf("Could not slash validator %v", err)
-	}
+	require.NoError(t, err, "Could not slash validator")
 
 	v, err := state.ValidatorAtIndex(slashedIdx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !v.Slashed {
-		t.Errorf("Validator not slashed despite supposed to being slashed")
-	}
-
-	if v.WithdrawableEpoch != helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector {
-		t.Errorf("Withdrawable epoch not the expected value %d", v.WithdrawableEpoch)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, v.Slashed, "Validator not slashed despite supposed to being slashed")
+	assert.Equal(t, helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
 
 	maxBalance := params.BeaconConfig().MaxEffectiveBalance
 	slashedBalance := state.Slashings()[state.Slot()%params.BeaconConfig().EpochsPerSlashingsVector]
-	if slashedBalance != maxBalance {
-		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, maxBalance)
-	}
+	assert.Equal(t, maxBalance, slashedBalance, "Slashed balance isnt the expected amount")
 
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	bal, err := state.BalanceAtIndex(proposer)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// The proposer is the whistleblower in phase 0.
-	if bal != proposerBal+whistleblowerReward {
-		t.Errorf("Did not get expected balance for proposer: prev %d, new %d", bal, proposerBal+whistleblowerReward)
-	}
+	assert.Equal(t, proposerBal+whistleblowerReward, bal, "Did not get expected balance for proposer")
 	bal, err = state.BalanceAtIndex(slashedIdx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	v, err = state.ValidatorAtIndex(slashedIdx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bal != maxBalance-(v.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient) {
-		t.Errorf("Did not get expected balance for slashed validator, wanted %d but got %d",
-			v.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient, bal)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, maxBalance-(v.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient), bal, "Did not get expected balance for slashed validator")
 }
 
 func TestActivatedValidatorIndices(t *testing.T) {
@@ -261,13 +202,9 @@ func TestActivatedValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		s, err := beaconstate.InitializeFromProto(tt.state)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		activatedIndices := ActivatedValidatorIndices(helpers.CurrentEpoch(s), tt.state.Validators)
-		if !reflect.DeepEqual(tt.wanted, activatedIndices) {
-			t.Errorf("Wanted %v, received %v", tt.wanted, activatedIndices)
-		}
+		assert.DeepEqual(t, tt.wanted, activatedIndices)
 	}
 }
 
@@ -322,13 +259,9 @@ func TestSlashedValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		s, err := beaconstate.InitializeFromProto(tt.state)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		slashedIndices := SlashedValidatorIndices(helpers.CurrentEpoch(s), tt.state.Validators)
-		if !reflect.DeepEqual(tt.wanted, slashedIndices) {
-			t.Errorf("Wanted %v, received %v", tt.wanted, slashedIndices)
-		}
+		assert.DeepEqual(t, tt.wanted, slashedIndices)
 	}
 }
 
@@ -389,19 +322,11 @@ func TestExitedValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		s, err := beaconstate.InitializeFromProto(tt.state)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		activeCount, err := helpers.ActiveValidatorCount(s, helpers.PrevEpoch(s))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(tt.wanted, exitedIndices) {
-			t.Errorf("Wanted %v, received %v", tt.wanted, exitedIndices)
-		}
+		require.NoError(t, err)
+		assert.DeepEqual(t, tt.wanted, exitedIndices)
 	}
 }

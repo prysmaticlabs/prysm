@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestComputeCommittee_WithoutCache(t *testing.T) {
@@ -40,49 +41,31 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 		StateRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	epoch := CurrentEpoch(state)
 	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	committees, err := ComputeCommittee(indices, seed, 0, 1 /* Total committee*/)
-	if err != nil {
-		t.Errorf("could not compute committee: %v", err)
-	}
+	assert.NoError(t, err, "Could not compute committee")
 
 	// Test shuffled indices are correct for index 5 committee
 	index := uint64(5)
 	committee5, err := ComputeCommittee(indices, seed, index, committeeCount)
-	if err != nil {
-		t.Errorf("could not compute committee: %v", err)
-	}
+	assert.NoError(t, err, "Could not compute committee")
 	start := sliceutil.SplitOffset(validatorCount, committeeCount, index)
 	end := sliceutil.SplitOffset(validatorCount, committeeCount, index+1)
-
-	if !reflect.DeepEqual(committees[start:end], committee5) {
-		t.Error("committee has different shuffled indices")
-	}
+	assert.DeepEqual(t, committee5, committees[start:end], "Committee has different shuffled indices")
 
 	// Test shuffled indices are correct for index 9 committee
 	index = uint64(9)
 	committee9, err := ComputeCommittee(indices, seed, index, committeeCount)
-	if err != nil {
-		t.Errorf("could not compute committee: %v", err)
-	}
+	assert.NoError(t, err, "Could not compute committee")
 	start = sliceutil.SplitOffset(validatorCount, committeeCount, index)
 	end = sliceutil.SplitOffset(validatorCount, committeeCount, index+1)
-
-	if !reflect.DeepEqual(committees[start:end], committee9) {
-		t.Error("committee has different shuffled indices")
-	}
+	assert.DeepEqual(t, committee9, committees[start:end], "Committee has different shuffled indices")
 }
 
 func TestComputeCommittee_RegressionTest(t *testing.T) {
@@ -90,23 +73,18 @@ func TestComputeCommittee_RegressionTest(t *testing.T) {
 	seed := [32]byte{68, 110, 161, 250, 98, 230, 161, 172, 227, 226, 99, 11, 138, 124, 201, 134, 38, 197, 0, 120, 6, 165, 122, 34, 19, 216, 43, 226, 210, 114, 165, 183}
 	index := uint64(215)
 	count := uint64(32)
-	if _, err := ComputeCommittee(indices, seed, index, count); err == nil {
-		t.Fatal("expected an error")
-	}
+	_, err := ComputeCommittee(indices, seed, index, count)
+	require.ErrorContains(t, "index out of range", err)
 }
 
 func TestVerifyBitfieldLength_OK(t *testing.T) {
 	bf := bitfield.Bitlist{0xFF, 0x01}
 	committeeSize := uint64(8)
-	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
-		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
-	}
+	assert.NoError(t, VerifyBitfieldLength(bf, committeeSize), "Bitfield is not validated when it was supposed to be")
 
 	bf = bitfield.Bitlist{0xFF, 0x07}
 	committeeSize = 10
-	if err := VerifyBitfieldLength(bf, committeeSize); err != nil {
-		t.Errorf("bitfield is not validated when it was supposed to be: %v", err)
-	}
+	assert.NoError(t, VerifyBitfieldLength(bf, committeeSize), "Bitfield is not validated when it was supposed to be")
 }
 
 func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
@@ -115,16 +93,9 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Slot: 0, // Epoch 0.
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, _, err = CommitteeAssignments(state, epoch+1)
-	if err == nil {
-		t.Fatal("Expected error, received nil")
-	}
-	if !strings.Contains(err.Error(), "can't be greater than next epoch") {
-		t.Errorf("Expected unable to get greater than next epoch, received %v", err)
-	}
+	assert.ErrorContains(t, "can't be greater than next epoch", err)
 }
 
 func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
@@ -144,19 +115,13 @@ func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ClearCache()
 	_, proposerIndexToSlots, err := CommitteeAssignments(state, 0)
-	if err != nil {
-		t.Fatalf("failed to determine CommitteeAssignments: %v", err)
-	}
+	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 	for _, slots := range proposerIndexToSlots {
 		for _, s := range slots {
-			if s == 0 {
-				t.Error("No proposer should be assigned to slot 0")
-			}
+			assert.NotEqual(t, uint64(0), s, "No proposer should be assigned to slot 0")
 		}
 	}
 }
@@ -181,9 +146,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		index          uint64
@@ -227,26 +190,15 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearCache()
 			validatorIndexToCommittee, proposerIndexToSlots, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
-			if err != nil {
-				t.Fatalf("failed to determine CommitteeAssignments: %v", err)
-			}
+			require.NoError(t, err, "Failed to determine CommitteeAssignments")
 			cac := validatorIndexToCommittee[tt.index]
-			if cac.CommitteeIndex != tt.committeeIndex {
-				t.Errorf("wanted committeeIndex %d, got committeeIndex %d for validator index %d",
-					tt.committeeIndex, cac.CommitteeIndex, tt.index)
-			}
-			if cac.AttesterSlot != tt.slot {
-				t.Errorf("wanted slot %d, got slot %d for validator index %d",
-					tt.slot, cac.AttesterSlot, tt.index)
-			}
+			assert.Equal(t, tt.committeeIndex, cac.CommitteeIndex, "Unexpected committeeIndex for validator index %d", tt.index)
+			assert.Equal(t, tt.slot, cac.AttesterSlot, "Unexpected slot for validator index %d", tt.index)
 			if len(proposerIndexToSlots[tt.index]) > 0 && proposerIndexToSlots[tt.index][0] != tt.proposerSlot {
 				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
 					tt.proposerSlot, proposerIndexToSlots[tt.index][0], tt.index)
 			}
-			if !reflect.DeepEqual(cac.Committee, tt.committee) {
-				t.Errorf("wanted committee %v, got committee %v for validator index %d",
-					tt.committee, cac.Committee, tt.index)
-			}
+			assert.DeepEqual(t, tt.committee, cac.Committee, "Unexpected committee for validator index %d", tt.index)
 		})
 	}
 }
@@ -265,15 +217,11 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ClearCache()
 	epoch := uint64(1)
 	_, proposerIndexToSlots, err := CommitteeAssignments(state, epoch)
-	if err != nil {
-		t.Fatalf("failed to determine CommitteeAssignments: %v", err)
-	}
+	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 
 	slotsWithProposers := make(map[uint64]bool)
 	for _, proposerSlots := range proposerIndexToSlots {
@@ -281,20 +229,12 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 			slotsWithProposers[slot] = true
 		}
 	}
-	if uint64(len(slotsWithProposers)) != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf(
-			"Expected %d slots with proposers, received %d",
-			params.BeaconConfig().SlotsPerEpoch,
-			len(slotsWithProposers),
-		)
-	}
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, uint64(len(slotsWithProposers)), "Unexpected slots")
 	startSlot := StartSlot(epoch)
 	endSlot := StartSlot(epoch + 1)
 	for i := startSlot; i < endSlot; i++ {
 		hasProposer := slotsWithProposers[i]
-		if !hasProposer {
-			t.Errorf("Expected every slot in epoch 1 to have a proposer, slot %d did not", i)
-		}
+		assert.Equal(t, true, hasProposer, "Expected every slot in epoch 1 to have a proposer, slot %d did not", i)
 	}
 }
 
@@ -311,9 +251,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: activeRoots,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		attestation         *ethpb.Attestation
@@ -387,9 +325,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 
 	for i, tt := range tests {
 		ClearCache()
-		if err := state.SetSlot(tt.stateSlot); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, state.SetSlot(tt.stateSlot))
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
 			if err == nil {
@@ -418,31 +354,19 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// Test for current epoch
 	shuffledIndices, err := ShuffledIndices(state, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(shuffledIndices) != valiatorCount {
-		t.Errorf("Incorrect shuffled indices count, wanted: %d, got: %d",
-			valiatorCount, len(shuffledIndices))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, valiatorCount, len(shuffledIndices), "Incorrect shuffled indices count")
 	if reflect.DeepEqual(indices, shuffledIndices) {
 		t.Error("Shuffling did not happen")
 	}
 
 	// Test for next epoch
 	shuffledIndices, err = ShuffledIndices(state, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(shuffledIndices) != valiatorCount {
-		t.Errorf("Incorrect shuffled indices count, wanted: %d, got: %d",
-			valiatorCount, len(shuffledIndices))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, valiatorCount, len(shuffledIndices), "Incorrect shuffled indices count")
 	if reflect.DeepEqual(indices, shuffledIndices) {
 		t.Error("Shuffling did not happen")
 	}
@@ -463,28 +387,17 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, UpdateCommitteeCache(state, CurrentEpoch(state)))
 
 	epoch := uint64(1)
 	idx := uint64(1)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	indices, err = committeeCache.Committee(StartSlot(epoch), seed, idx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if uint64(len(indices)) != params.BeaconConfig().TargetCommitteeSize {
-		t.Errorf("Did not save correct indices lengths, got %d wanted %d", len(indices), params.BeaconConfig().TargetCommitteeSize)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
 }
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
@@ -498,19 +411,13 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	epoch := CurrentEpoch(state)
 	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	index := uint64(3)
 	_, err = ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
@@ -538,19 +445,13 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	epoch := CurrentEpoch(state)
 	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	index := uint64(3)
 	_, err = ComputeCommittee(indices, seed, index, params.BeaconConfig().MaxCommitteesPerSlot)
@@ -578,19 +479,13 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	epoch := CurrentEpoch(state)
 	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	i := uint64(0)
 	index := uint64(0)
@@ -619,19 +514,13 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	epoch := CurrentEpoch(state)
 	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	i := uint64(0)
 	index := uint64(0)
@@ -660,19 +549,13 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	epoch := CurrentEpoch(state)
 	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	i := uint64(0)
 	index := uint64(0)
@@ -704,26 +587,16 @@ func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := BeaconCommitteeFromState(state, 1 /* previous epoch */, 0); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	_, err = BeaconCommitteeFromState(state, 1 /* previous epoch */, 0)
+	require.NoError(t, err)
 
 	// Verify previous epoch is cached
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	activeIndices, err := committeeCache.ActiveIndices(seed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if activeIndices == nil {
-		t.Error("did not cache active indices")
-	}
+	require.NoError(t, err)
+	assert.NotNil(t, activeIndices, "Did not cache active indices")
 }
 
 func TestPrecomputeProposerIndices_Ok(t *testing.T) {
@@ -738,36 +611,23 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	indices, err := ActiveValidatorIndices(state, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	proposerIndices, err := precomputeProposerIndices(state, indices)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var wantedProposerIndices []uint64
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		wantedProposerIndices = append(wantedProposerIndices, index)
 	}
-
-	if !reflect.DeepEqual(wantedProposerIndices, proposerIndices) {
-		t.Error("Did not precompute proposer indices correctly")
-	}
+	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Did not precompute proposer indices correctly")
 }

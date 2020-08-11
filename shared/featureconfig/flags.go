@@ -166,12 +166,17 @@ var (
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
+	enableAttBroadcastDiscoveryAttempts = &cli.BoolFlag{
+		Name:  "enable-att-broadcast-discovery-attempts",
+		Usage: "Enable experimental attestation subnet discovery before broadcasting.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	forceMaxCoverAttestationAggregation,
 	batchBlockVerify,
+	enableAttBroadcastDiscoveryAttempts,
 }
 
 // Deprecated flags list.
@@ -648,6 +653,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
+	enableAttBroadcastDiscoveryAttempts,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

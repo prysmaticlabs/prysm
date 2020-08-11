@@ -58,7 +58,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error)
 		if len(layers[i])%2 == 1 {
 			layers[i] = append(layers[i], ZeroHashes[i][:])
 		}
-		updatedValues := make([][]byte, 0, 0)
+		updatedValues := make([][]byte, 0)
 		for j := 0; j < len(layers[i]); j += 2 {
 			concat := hashutil.Hash(append(layers[i][j], layers[i][j+1]...))
 			updatedValues = append(updatedValues, concat[:])

@@ -50,7 +50,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
-		ctx,
+		cliCtx,
 		wallet,
 		direct.DefaultConfig(),
 	)
@@ -70,7 +70,7 @@ func TestImport_Noninteractive(t *testing.T) {
 
 	wallet, err = OpenWallet(cliCtx)
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(ctx, true)
+	km, err := wallet.InitializeKeymanager(cliCtx, true)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
-		ctx,
+		cliCtx,
 		wallet,
 		keymanagerCfg,
 	)
@@ -120,7 +120,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 
 	wallet, err = OpenWallet(cliCtx)
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(ctx, true)
+	km, err := wallet.InitializeKeymanager(cliCtx, true)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)

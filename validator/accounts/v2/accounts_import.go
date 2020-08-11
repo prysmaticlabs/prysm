@@ -13,6 +13,7 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -68,7 +69,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 			return nil, errors.Wrap(err, "could not create new wallet")
 		}
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet")
+			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", w.walletDir).Info(
 			"Successfully created new wallet",
@@ -91,7 +92,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	km, err := direct.NewKeymanager(ctx, wallet, directCfg)
+	km, err := direct.NewKeymanager(cliCtx, wallet, directCfg)
 	if err != nil {
 		return err
 	}
@@ -99,16 +100,13 @@ func ImportAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
-	if err := wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet")
-	}
-	isDir, err := hasDir(keysDir)
-	if err != nil {
-		return errors.Wrap(err, "could not determine if path is a directory")
-	}
 
 	keystoresImported := make([]*v2keymanager.Keystore, 0)
 	// Consider that the keysDir might be a path to a specific file and handle accordingly.
+	isDir, err := fileutil.HasDir(keysDir)
+	if err != nil {
+		return errors.Wrap(err, "could not determine if path is a directory")
+	}
 	if isDir {
 		files, err := ioutil.ReadDir(keysDir)
 		if err != nil {
@@ -131,14 +129,14 @@ func ImportAccount(cliCtx *cli.Context) error {
 		// specify this value in their filename.
 		sort.Sort(byDerivationPath(keystoreFileNames))
 		for _, name := range keystoreFileNames {
-			keystore, err := wallet.readKeystoreFile(ctx, filepath.Join(keysDir, name))
+			keystore, err := readKeystoreFile(ctx, filepath.Join(keysDir, name))
 			if err != nil {
 				return errors.Wrapf(err, "could not import keystore at path: %s", name)
 			}
 			keystoresImported = append(keystoresImported, keystore)
 		}
 	} else {
-		keystore, err := wallet.readKeystoreFile(ctx, keysDir)
+		keystore, err := readKeystoreFile(ctx, keysDir)
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}
@@ -156,7 +154,7 @@ func ImportAccount(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (w *Wallet) readKeystoreFile(ctx context.Context, keystoreFilePath string) (*v2keymanager.Keystore, error) {
+func readKeystoreFile(ctx context.Context, keystoreFilePath string) (*v2keymanager.Keystore, error) {
 	keystoreBytes, err := ioutil.ReadFile(keystoreFilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keystore file")
