@@ -59,13 +59,13 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	allAccountStr := strings.Join(formattedPubKeys, ", ")
 
 	if len(accounts) == 1 {
-		promptText := "Are you sure you want to delete 1 account? (%s)"
+		promptText := "Are you sure you want to delete 1 account? (%s) Y/y"
 		_, err = promptutil.ValidatePrompt(fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateConfirmation)
 		if err != nil {
 			return err
 		}
 	} else {
-		promptText := "Are you sure you want to delete %d accounts? (%s)"
+		promptText := "Are you sure you want to delete %d accounts? (%s) Y/y"
 		if len(accounts) == len(allAccounts) {
 			promptText = fmt.Sprintf("Are you sure you want to delete all accounts? (%s)", au.BrightGreen(allAccountStr))
 		} else {
@@ -83,6 +83,11 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
 			return errors.New("not a direct keymanager")
+		}
+		if len(accounts) == 1 {
+			log.Info("Deleting account...")
+		} else {
+			log.Info("Deleting accounts...")
 		}
 		// Delete the requested account's keystore.
 		for _, pubKey := range accounts {
