@@ -13,6 +13,4 @@ func (m *MockTicker) C() <-chan uint64 {
 }
 
 // Done --
-func (m *MockTicker) Done() {
-	return
-}
+func (m *MockTicker) Done() {}

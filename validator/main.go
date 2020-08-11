@@ -71,7 +71,7 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
-	flags.WalletPasswordsDirFlag,
+	flags.DeprecatedPasswordsDirFlag,
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	cmd.MinimalConfigFlag,
@@ -301,6 +301,7 @@ contract in order to activate the validator client`,
 				return err
 			}
 		}
+		flags.ComplainOnDeprecatedFlags(ctx)
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {

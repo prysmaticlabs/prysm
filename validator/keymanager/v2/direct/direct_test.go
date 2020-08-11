@@ -22,13 +22,13 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files:          make(map[string]map[string][]byte),
-		WalletPassword: password,
+		Files: make(map[string]map[string][]byte),
 	}
 	dr := &Keymanager{
-		keysCache:     make(map[[48]byte]bls.SecretKey),
-		wallet:        wallet,
-		accountsStore: &AccountStore{},
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
 	}
 	ctx := context.Background()
 	accountName, err := dr.CreateAccount(ctx)
@@ -66,13 +66,13 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files:          make(map[string]map[string][]byte),
-		WalletPassword: password,
+		Files: make(map[string]map[string][]byte),
 	}
 	dr := &Keymanager{
-		wallet:        wallet,
-		keysCache:     make(map[[48]byte]bls.SecretKey),
-		accountsStore: &AccountStore{},
+		wallet:           wallet,
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -107,12 +107,12 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   password,
 	}
 	dr := &Keymanager{
-		wallet:        wallet,
-		accountsStore: &AccountStore{},
-		keysCache:     make(map[[48]byte]bls.SecretKey),
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		accountsPassword: password,
 	}
 
 	// First, generate accounts and their keystore.json files.
@@ -136,7 +136,7 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
+	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.accountsPassword)
 	require.NoError(t, err)
 	store := &AccountStore{}
 	require.NoError(t, json.Unmarshal(enc, store))

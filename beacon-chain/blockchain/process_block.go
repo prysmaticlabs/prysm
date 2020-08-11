@@ -372,10 +372,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.Si
 	defer span.End()
 	if initSync {
 		s.saveInitSyncBlock(r, b)
-	} else {
-		if err := s.beaconDB.SaveBlock(ctx, b); err != nil {
-			return errors.Wrapf(err, "could not save block from slot %d", b.Block.Slot)
-		}
+	} else if err := s.beaconDB.SaveBlock(ctx, b); err != nil {
+		return errors.Wrapf(err, "could not save block from slot %d", b.Block.Slot)
 	}
 	if err := s.stateGen.SaveState(ctx, r, state); err != nil {
 		return errors.Wrap(err, "could not save state")

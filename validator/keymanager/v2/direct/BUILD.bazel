@@ -7,7 +7,6 @@ go_library(
         "direct.go",
         "doc.go",
         "import.go",
-        "migrate.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct",
     visibility = [
@@ -19,6 +18,7 @@ go_library(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
         "//validator/accounts/v2/iface:go_default_library",
@@ -40,14 +40,12 @@ go_test(
     srcs = [
         "direct_test.go",
         "import_test.go",
-        "migrate_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/petnames:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

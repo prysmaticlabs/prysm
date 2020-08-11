@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"bytes"
 	"encoding/binary"
 	"testing"
 
@@ -9,6 +8,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestRandaoMix_OK(t *testing.T) {
@@ -19,9 +20,7 @@ func TestRandaoMix_OK(t *testing.T) {
 		randaoMixes[i] = intInBytes
 	}
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -40,17 +39,10 @@ func TestRandaoMix_OK(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if err := state.SetSlot((test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, state.SetSlot((test.epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 		mix, err := RandaoMix(state, test.epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(test.randaoMix, mix) {
-			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
-				test.randaoMix, mix)
-		}
+		require.NoError(t, err)
+		assert.DeepEqual(t, test.randaoMix, mix, "Incorrect randao mix")
 	}
 }
 
@@ -62,9 +54,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		randaoMixes[i] = intInBytes
 	}
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -83,22 +73,15 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if err := state.SetSlot((test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, state.SetSlot((test.epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 		mix, err := RandaoMix(state, test.epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
 		binary.LittleEndian.PutUint64(mix, uniqueNumber)
 
 		for _, mx := range randaoMixes {
 			mxNum := bytesutil.FromBytes8(mx)
-			if mxNum == uniqueNumber {
-				t.Fatalf("two distinct slices which have different representations in memory still contain"+
-					"the same value: %d", mxNum)
-			}
+			assert.NotEqual(t, uniqueNumber, mxNum, "two distinct slices which have different representations in memory still contain the same value: %d", mxNum)
 		}
 	}
 }
@@ -115,19 +98,12 @@ func TestGenerateSeed_OK(t *testing.T) {
 		RandaoMixes: randaoMixes,
 		Slot:        slot,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	got, err := Seed(state, 10, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wanted := [32]byte{102, 82, 23, 40, 226, 79, 171, 11, 203, 23, 175, 7, 88, 202, 80,
 		103, 68, 126, 195, 143, 190, 249, 210, 85, 138, 196, 158, 208, 11, 18, 136, 23}
-	if got != wanted {
-		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
-			got, wanted)
-	}
+	assert.Equal(t, wanted, got, "Incorrect generated seeds")
 }

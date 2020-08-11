@@ -74,6 +74,14 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
+	has, err := p.HasAggregatedAttestation(att)
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
+
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")

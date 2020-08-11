@@ -57,6 +57,9 @@ var (
 // time to wait before trying to reconnect with the eth1 node.
 var backOffPeriod = 6 * time.Second
 
+// Amount of times before we log the status of the eth1 dial attempt.
+var logThreshold = 20
+
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
@@ -411,18 +414,28 @@ func (s *Service) waitForConnection() {
 	if errConnect != nil {
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 	}
+	// Use a custom logger to only log errors
+	// once in  a while.
+	logCounter := 0
+	errorLogger := func(err error, msg string) {
+		if logCounter > logThreshold {
+			log.WithError(err).Error(msg)
+			logCounter = 0
+		}
+		logCounter++
+	}
 	ticker := time.NewTicker(backOffPeriod)
 	for {
 		select {
 		case <-ticker.C:
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
-				log.WithError(errConnect).Error("Could not connect to powchain endpoint")
+				errorLogger(errConnect, "Could not connect to powchain endpoint")
 				continue
 			}
 			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
-				log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+				errorLogger(errSynced, "Could not check sync status of eth1 chain")
 				continue
 			}
 			if synced {
@@ -476,7 +489,7 @@ func (s *Service) initDataFromContract() error {
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
-	if ctrs == nil || len(ctrs) == 0 {
+	if len(ctrs) == 0 {
 		return nil
 	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)

@@ -46,7 +46,7 @@ func (h *HasherFunc) Combi(a [32]byte, b [32]byte) [32]byte {
 // MixIn works like Combi, but using an integer as the second input.
 func (h *HasherFunc) MixIn(a [32]byte, i uint64) [32]byte {
 	copy(h.b[:32], a[:])
-	copy(h.b[32:], make([]byte, 32, 32))
+	copy(h.b[32:], make([]byte, 32))
 	binary.LittleEndian.PutUint64(h.b[32:], i)
 	return h.Hash(h.b[:])
 }

@@ -15,7 +15,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -191,6 +190,7 @@ func (v *ValidatorService) Status() error {
 }
 
 // signObject signs a generic object, with protection if available.
+// This should only be used for accounts v1.
 func (v *validator) signObject(
 	ctx context.Context,
 	pubKey [48]byte,
@@ -198,15 +198,9 @@ func (v *validator) signObject(
 	domain []byte,
 ) (bls.Signature, error) {
 	if featureconfig.Get().EnableAccountsV2 {
-		root, err := helpers.ComputeSigningRoot(object, domain)
-		if err != nil {
-			return nil, err
-		}
-		return v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
-			PublicKey:   pubKey[:],
-			SigningRoot: root[:],
-		})
+		return nil, errors.New("signObject not supported for accounts v2")
 	}
+
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 		root, err := ssz.HashTreeRoot(object)
 		if err != nil {
@@ -285,9 +279,6 @@ func ConstructDialOptions(
 		),
 	}
 
-	for _, opt := range extraOpts {
-		dialOpts = append(dialOpts, opt)
-	}
-
+	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
 }
