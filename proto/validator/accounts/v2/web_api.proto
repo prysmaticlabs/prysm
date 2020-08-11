@@ -40,17 +40,17 @@ service Accounts {
 service Health {
     rpc ListBalances(AccountRequest) returns (ListBalancesResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/balances"
+            get: "/v2/validator/balances"
         };
     }
     rpc ListStatuses(AccountRequest) returns (ListStatusesResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/statuses"
+            get: "/v2/validator/statuses"
         };
     }
     rpc ListPerformance(AccountRequest) returns (ListPerformanceResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/performances"
+            get: "/v2/validator/performances"
         };
     }
 }
@@ -123,7 +123,7 @@ message AccountRequest {
     // A list of validator public keys.
     repeated bytes public_keys = 1;
     // A list of validator indices.
-    repeated int64 indices = 2;
+    repeated uint64 indices = 2;
 }
 
 message ListBalancesResponse {
