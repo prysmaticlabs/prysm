@@ -143,6 +143,11 @@ var (
 		Name:  "wallet-password-file",
 		Usage: "Path to a plain-text, .txt file containing your wallet password",
 	}
+	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
+	ImportPrivateKeyFileFlag = &cli.StringFlag{
+		Name:  "import-private-key-file",
+		Usage: "Path to a plain-text, .txt file containing a hex string representation of a private key to import",
+	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{
 		Name:  "mnemonic-file",

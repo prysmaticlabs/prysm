@@ -47,6 +47,7 @@ type testWalletConfig struct {
 	backupPasswordFile  string
 	walletPasswordFile  string
 	accountPasswordFile string
+	privateKeyFile      string
 	numAccounts         int64
 	keymanagerKind      v2keymanager.Kind
 }
@@ -68,6 +69,10 @@ func setupWalletCtx(
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	if cfg.privateKeyFile != "" {
+		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
+		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
+	}
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
 	assert.NoError(tb, set.Set(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir))
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
