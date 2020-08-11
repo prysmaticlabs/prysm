@@ -7,7 +7,6 @@ go_library(
         "accounts_backup.go",
         "accounts_create.go",
         "accounts_delete.go",
-        "accounts_export.go",
         "accounts_import.go",
         "accounts_list.go",
         "cmd_accounts.go",
