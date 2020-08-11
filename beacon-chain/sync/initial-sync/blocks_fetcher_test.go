@@ -780,7 +780,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			if tt.update != nil {
 				tt.update(fetcher.p2p.Peers().Scorers().BlockProviderScorer())
 			}
-			got, err := fetcher.filterPeers(context.Background(), peerIDs, tt.args.peersPercentage)
+			got, err := fetcher.filterScoredPeers(context.Background(), peerIDs, tt.args.peersPercentage)
 			require.NoError(t, err)
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of

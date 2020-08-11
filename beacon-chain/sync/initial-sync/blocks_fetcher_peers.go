@@ -124,7 +124,7 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([
 // filterScoredPeers returns transformed list of peers,
 // weight sorted by scores and capacity remaining.
 func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, ratio float64) ([]peer.ID, error) {
-	ctx, span := trace.StartSpan(ctx, "initialsync.filterPeers")
+	ctx, span := trace.StartSpan(ctx, "initialsync.filterScoredPeers")
 	defer span.End()
 
 	if len(peers) == 0 {
