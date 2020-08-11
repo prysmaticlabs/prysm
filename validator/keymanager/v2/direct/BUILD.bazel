@@ -39,6 +39,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "backup_test.go",
         "direct_test.go",
         "import_test.go",
     ],

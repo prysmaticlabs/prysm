@@ -3,6 +3,7 @@ package v2
 import (
 	"archive/zip"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -64,10 +65,11 @@ func BackupAccounts(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
 
-	// Allow the user to interactively select the accounts to backup.
-	filteredPubKeys, err := selectAccountsToBackup(cliCtx, pubKeys)
+	// Allow the user to interactively select the accounts to backup or optionally
+	// provide them via cli flags.
+	filteredPubKeys, err := determinePublicKeysForBackup(cliCtx, pubKeys)
 	if err != nil {
-		return errors.Wrap(err, "could not select accounts to backup")
+		return errors.Wrap(err, "could not filter public keys for backup")
 	}
 
 	// Ask the user for their desired password for their backed up accounts.
@@ -107,8 +109,38 @@ func BackupAccounts(cliCtx *cli.Context) error {
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
 
-// Ask user for which accounts they wish to backup via an interactive prompt.
-func selectAccountsToBackup(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
+func determinePublicKeysForBackup(cliCtx *cli.Context, validatingPublicKeys [][48]byte) ([]bls.PublicKey, error) {
+	var filteredPubKeys []bls.PublicKey
+	if cliCtx.IsSet(flags.BackupForPublicKeysFlag.Name) {
+		pubKeyStrings := strings.Split(cliCtx.String(flags.BackupForPublicKeysFlag.Name), ",")
+		if len(pubKeyStrings) == 0 {
+			return nil, fmt.Errorf(
+				"could not parse %s. It must be a string of comma-separated hex strings",
+				flags.BackupForPublicKeysFlag.Name,
+			)
+		}
+		for _, str := range pubKeyStrings {
+			pkString := str
+			if strings.Contains(pkString, "0x") {
+				pkString = pkString[2:]
+			}
+			pubKeyBytes, err := hex.DecodeString(pkString)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode string %s as hex", pkString)
+			}
+			blsPublicKey, err := bls.PublicKeyFromBytes(pubKeyBytes)
+			if err != nil {
+				return nil, errors.Wrapf(err, "%#x is not a valid BLS public key", pubKeyBytes)
+			}
+			filteredPubKeys = append(filteredPubKeys, blsPublicKey)
+		}
+		return filteredPubKeys, nil
+	}
+	return selectAccounts(cliCtx, validatingPublicKeys)
+}
+
+// Ask user to select accounts via an interactive prompt.
+func selectAccounts(cliCtx *cli.Context, pubKeys [][48]byte) ([]bls.PublicKey, error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")

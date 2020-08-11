@@ -43,7 +43,8 @@ type testWalletConfig struct {
 	passwordsDir        string
 	backupDir           string
 	keysDir             string
-	accountsToBackup    string
+	backupForPublicKeys string
+	backupPasswordFile  string
 	walletPasswordFile  string
 	accountPasswordFile string
 	numAccounts         int64
@@ -61,7 +62,8 @@ func setupWalletCtx(
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
-	set.String(flags.AccountsFlag.Name, cfg.accountsToBackup, "")
+	set.String(flags.BackupsPasswordFile.Name, cfg.backupPasswordFile, "")
+	set.String(flags.BackupForPublicKeysFlag.Name, cfg.backupForPublicKeys, "")
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
@@ -71,7 +73,8 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
-	assert.NoError(tb, set.Set(flags.AccountsFlag.Name, cfg.accountsToBackup))
+	assert.NoError(tb, set.Set(flags.BackupForPublicKeysFlag.Name, cfg.backupForPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupsPasswordFile.Name, cfg.backupPasswordFile))
 	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
 	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
 	assert.NoError(tb, set.Set(flags.SkipMnemonicConfirmFlag.Name, "true"))

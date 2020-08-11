@@ -88,10 +88,11 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
 	})
 
+	_, keystorePath := createKeystore(t, keysDir)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
-		keysDir:             createKeystore(t, keysDir), // Using direct filepath to the new keystore.
+		keysDir:             keystorePath,
 		keymanagerKind:      v2keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
@@ -190,7 +191,7 @@ func TestImport_SortByDerivationPath(t *testing.T) {
 }
 
 // Returns the fullPath to the newly created keystore file.
-func createKeystore(t *testing.T, path string) string {
+func createKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) {
 	validatingKey := bls.RandKey()
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
@@ -210,5 +211,5 @@ func createKeystore(t *testing.T, path string) string {
 	createdAt := roughtime.Now().Unix()
 	fullPath := filepath.Join(path, fmt.Sprintf(direct.KeystoreFileNameFormat, createdAt))
 	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
-	return fullPath
+	return keystoreFile, fullPath
 }
