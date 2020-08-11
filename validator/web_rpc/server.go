@@ -1,4 +1,4 @@
-package web_rpc
+package webrpc
 
 import (
 	"context"
