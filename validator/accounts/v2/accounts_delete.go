@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// DeleteAccounts deletes the accounts that the user requests to be deleted from the wallet.
+// DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
