@@ -1,0 +1,100 @@
+syntax = "proto3";
+package ethereum.validator.accounts.v2;
+
+import "eth/v1alpha1/attestation.proto";
+import "eth/v1alpha1/beacon_block.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+service Wallet {
+    rpc CreateWallet(CreateWalletRequest) returns (WalletResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/create"
+        };
+    }
+    rpc EditConfig(EditWalletConfigRequest) returns (WalletResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/config/edit"
+        };
+    }
+    rpc WalletConfig(google.protobuf.Empty) returns (WalletResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/wallet/config"
+        };
+    }
+}
+
+service Accounts {
+    rpc CreateAccount(google.protobuf.Empty) returns (CreateAccountResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/accounts/create"
+        };
+    }
+    rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/accounts"
+        };
+    }
+}
+
+message CreateWalletRequest {
+    // Path on disk where the wallet will be stored.
+    string wallet_path = 1;
+    // Type of key manager for the wallet, either direct, derived, or remote.
+    enum KeyManagerKind {
+        UNKNOWN = 0;
+        direct = 1;
+        derived = 2;
+        remote = 3;
+    }
+    KeyManagerKind key_manager = 2;
+    // Password for the wallet.
+    string wallet_password = 3;
+    // Remote address such as host.example.com:4000 for a gRPC remote signer server.
+    string remote_addr = 4;
+    // Path to client.crt for secure TLS connections to a remote signer server.
+    string remote_crt_path = 5;
+    // Path to client.key for secure TLS connections to a remote signer server.
+    string remote_key_path = 6;
+    // Path to ca.crt for secure TLS connections to a remote signer server.
+    string remote_ca_crt_path = 7;
+}
+
+message WalletResponse {
+    string wallet_path = 1;
+
+    // Key manager configs, this is meant to be some what generic.
+    // It'll later be encoded with json to represent in front end UI.
+    message KeyManagerConfigs {
+        map<string, string> configs = 1;
+    }
+    KeyManagerConfigs key_manager_configs = 2;
+}
+
+message EditWalletConfigRequest {
+    string remote_addr = 1;
+    string remote_crt_path = 2;
+    string remote_key_path = 3;
+    string remote_ca_crt_path = 4;
+}
+
+message CreateAccountResponse {
+    // Account configs, this is meant to be some what generic.
+    // It'll later be encoded with json to represent in front end UI.
+    message AccountConfigs {
+        map<string, string> configs = 1;
+    }
+    AccountConfigs account_configs = 2;
+}
+
+message ListAccountsRequest {
+    // Whether or not to return the raw RLP deposit tx data.
+    bool get_deposit_tx = 1;
+}
+
+message ListAccountsResponse {
+    // List of human readable account names.
+    repeated string account_names = 1;
+    // List of public validating keys.
+    repeated bytes validating_public_keys = 2;
+}
