@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -20,8 +19,10 @@ import (
 func DeleteAccount(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
-	if err != nil {
-		return err
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
+	} else if err != nil {
+		return errors.Wrap(err, "could not open wallet")
 	}
 	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	keymanager, err := wallet.InitializeKeymanager(cliCtx, skipMnemonicConfirm)
@@ -32,18 +33,28 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	var allAccountStrs []string
-	for _, account := range allAccounts {
-		allAccountStrs = append(allAccountStrs, fmt.Sprintf("%#x", bytesutil.FromBytes48(account)))
+	if len(allAccounts) == 0 {
+		return errors.New("wallet is empty, no accounts to delete")
+	}
+	allAccountStrs := make([]string, len(allAccounts))
+	for i, account := range allAccounts {
+		allAccountStrs[i] = fmt.Sprintf("%#x", bytesutil.FromBytes48(account))
 	}
 	accounts, err := selectAccounts(cliCtx, selectAccountsDeletePromptText, allAccountStrs)
 	if err != nil {
 		return err
 	}
+	if len(accounts) == 0 {
+		return errors.New("no accounts selected to delete")
+	}
 
 	formattedPubKeys := make([]string, len(accounts))
-	for i, account := range accounts {
-		formattedPubKeys[i] = account[:14]
+	for i, pubKey := range accounts {
+		keyBytes, err := hex.DecodeString(pubKey)
+		if err != nil {
+			return errors.Wrap(err, "could not decode hex string")
+		}
+		formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(keyBytes))
 	}
 	allAccountStr := strings.Join(formattedPubKeys, ", ")
 
@@ -53,7 +64,6 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Deleting account...")
 	} else {
 		promptText := "Are you sure you want to delete %d accounts? (%s)"
 		if len(accounts) == len(allAccounts) {
@@ -65,11 +75,10 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Deleting accounts...")
 	}
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
-		return errors.New("cannot create a new account for a remote keymanager")
+		return errors.New("cannot delete accounts for a remote keymanager")
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
@@ -86,7 +95,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 			}
 		}
 	case v2keymanager.Derived:
-		return errors.New("cannot create a new account for a derived keymanager")
+		return errors.New("cannot delete accounts for a derived keymanager")
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
 	}
