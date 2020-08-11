@@ -279,23 +279,28 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				defer cancel()
 				var unionRespBlocks []*eth.SignedBeaconBlock
 
-				for resp := range fetcher.requestResponses() {
-					if resp.err != nil {
-						log.WithError(resp.err).Debug("Block fetcher returned error")
-					} else {
-						unionRespBlocks = append(unionRespBlocks, resp.blocks...)
-						if len(resp.blocks) == 0 {
-							log.WithFields(logrus.Fields{
-								"start": resp.start,
-								"count": resp.count,
-							}).Debug("Received empty slot")
+				for {
+					select {
+					case resp, ok := <-fetcher.requestResponses():
+						if !ok { // channel closed, aggregate
+							return unionRespBlocks, nil
 						}
+
+						if resp.err != nil {
+							log.WithError(resp.err).Debug("Block fetcher returned error")
+						} else {
+							unionRespBlocks = append(unionRespBlocks, resp.blocks...)
+							if len(resp.blocks) == 0 {
+								log.WithFields(logrus.Fields{
+									"start": resp.start,
+									"count": resp.count,
+								}).Debug("Received empty slot")
+							}
+						}
+
+						wg.Done()
 					}
-
-					wg.Done()
 				}
-
-				return unionRespBlocks, nil
 			}
 
 			maxExpectedBlocks := uint64(0)
