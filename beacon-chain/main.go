@@ -67,6 +67,7 @@ var appFlags = []cli.Flag{
 	cmd.P2PMaxPeers,
 	cmd.P2PPrivKey,
 	cmd.P2PMetadata,
+	cmd.P2PEnr,
 	cmd.P2PAllowList,
 	cmd.P2PDenyList,
 	cmd.DataDirFlag,
