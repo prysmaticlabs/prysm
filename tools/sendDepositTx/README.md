@@ -1,6 +1,6 @@
 ## Utility to Deploy Deposit Contract
 
-This is a utility to help users deploy deposit contract for running their own beacon chain node in a local containerized set up. To run the utility, it assumes there is a running geth node as a separate process attached to proof-of-work main chain. The utility will deploy the validator registration contract and print out the contract address. Users will pass the contract address to the beacon chain node to monitor when they have been conducted to become an active validator.
+This is a utility to help users deploy deposit contract for running their own beacon chain node in a local containerized set up. The utility will deploy the validator registration contract and print out the contract address. Users will pass the contract address to the beacon chain node to monitor when they have been conducted to become an active validator.
 
 ### Usage
 
