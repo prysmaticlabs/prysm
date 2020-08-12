@@ -14,12 +14,6 @@ import (
 
 	joonix "github.com/joonix/log"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"github.com/urfave/cli/v2/altsrc"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"google.golang.org/grpc"
-
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -32,6 +26,11 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"google.golang.org/grpc"
 )
 
 // connTimeout defines a period after which connection to beacon node is cancelled.
