@@ -31,7 +31,7 @@ This is a utility to help users deploy deposit contract for running their own be
 To use private key with default RPC:
 
 ```
-bazel run //tools/sendDepositTx -- --httpPath=https://goerli.prylabs.net --keystoreUTCPath /path/to/keystore --passwordFile /path/to/password --depositDelay 2  --depositContract 0x767E9ef9610Abb992099b0994D5e0c164C0813Ab
+bazel run //tools/sendDepositTx -- --httpPath=https://goerli.prylabs.net --keystoreUTCPath /path/to/keystore --passwordFile /path/to/password --depositDelay 2  --depositContract 0x07b39f4fde4a38bace212b546dac87c58dfe3fdc
 
 ```
 
