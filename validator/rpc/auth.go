@@ -21,7 +21,8 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-// Signup --
+// Signup to authenticate access to the validator RPC API using bcrypt and
+// a sufficiently strong password check.
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	// Salt and hash the password using the bcrypt algorithm
 	// The second argument is the cost of hashing, which we arbitrarily set as 8
@@ -35,7 +36,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	return s.sendAuthResponse()
 }
 
-// Login --
+// Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	// Compare the stored hashed password, with the hashed version of the password that was received.
 	if err := bcrypt.CompareHashAndPassword(s.hashedPassword, []byte(req.Password)); err != nil {
@@ -44,6 +45,7 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 	return s.sendAuthResponse()
 }
 
+// Sends an auth response via gRPC containing a new JWT token.
 func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 	// If everything is fine here, construct the auth token.
 	tokenString, expirationTime, err := s.createTokenString()
@@ -56,6 +58,7 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 	}, nil
 }
 
+// Creates a JWT token string using the JWT key with an expiration timestamp.
 func (s *Server) createTokenString() (string, uint64, error) {
 	expirationTime := time.Now().Add(tokenExpiryLength)
 	claims := &Claims{

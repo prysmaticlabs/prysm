@@ -21,7 +21,7 @@ func TestServer_ServerUnaryInterceptor_Verify(t *testing.T) {
 	unaryHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, nil
 	}
-	token, err := s.createTokenString()
+	token, _, err := s.createTokenString()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestServer_ServerUnaryInterceptor_BadToken(t *testing.T) {
 	badServer := Server{
 		jwtKey: []byte("badTestKey"),
 	}
-	token, err := badServer.createTokenString()
+	token, _, err := badServer.createTokenString()
 	if err != nil {
 		t.Fatal(err)
 	}
