@@ -253,10 +253,11 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 
 // DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
 func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
-	var index int
-	var found bool
 	for _, publicKey := range publicKeys {
+		var index int
+		var found bool
 		for i, pubKey := range dr.accountsStore.PublicKeys {
+			fmt.Printf("%#x and %#x", pubKey, publicKey)
 			if bytes.Equal(pubKey, publicKey) {
 				index = i
 				found = true
@@ -270,6 +271,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 		accountName := petnames.DeterministicName(deletedPublicKey, "-")
 		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
 		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
+
 		newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
 		if err != nil {
 			return errors.Wrap(err, "could not rewrite accounts keystore")
