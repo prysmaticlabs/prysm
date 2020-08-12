@@ -122,3 +122,11 @@ func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64,
 func (fv *fakeValidator) LogAttestationsSubmitted() {}
 
 func (fv *fakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}
+
+func (fv *fakeValidator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
+	return make(map[[48]byte]uint64)
+}
+
+func (fv *fakeValidator) PubKeysToIndices(ctx context.Context) map[uint64][48]byte {
+	return make(map[uint64][48]byte)
+}
