@@ -48,6 +48,8 @@ func main() {
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
 
+	params.UseMedallaConfig()
+
 	app := cli.App{}
 	app.Name = "sendDepositTx"
 	app.Usage = "this is a util to send deposit transactions"
