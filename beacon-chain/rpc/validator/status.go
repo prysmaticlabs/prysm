@@ -264,7 +264,7 @@ func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.B
 	votingPeriod := time.Duration(period*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclusion := eth1UnixTime.Add(votingPeriod)
 
-	eth2Genesis := time.Unix(int64(beaconState.GenesisTime()), 0)
+	eth2Genesis := time.Unix(int64(helpers.GenesisTime(beaconState)), 0)
 
 	if eth2Genesis.After(timeToInclusion) {
 		depositBlockSlot = 0

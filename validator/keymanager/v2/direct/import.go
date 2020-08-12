@@ -20,26 +20,34 @@ import (
 )
 
 // ImportKeystores into the direct keymanager from an external source.
-func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keymanager.Keystore) error {
+func (dr *Keymanager) ImportKeystores(
+	cliCtx *cli.Context,
+	keystores []*v2keymanager.Keystore,
+	useAccountsPassword bool,
+) error {
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(keystores))
 	pubKeys := make([][]byte, len(keystores))
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	var password string
 	var err error
-	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return err
-		}
-		password = string(data)
+	if useAccountsPassword {
+		password = dr.accountsPassword
 	} else {
-		password, err = promptutil.PasswordPrompt(
-			"Enter the password for your imported accounts", promptutil.NotEmpty,
-		)
-		if err != nil {
-			return fmt.Errorf("could not read account password: %v", err)
+		if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
+			passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
+			data, err := ioutil.ReadFile(passwordFilePath)
+			if err != nil {
+				return err
+			}
+			password = string(data)
+		} else {
+			password, err = promptutil.PasswordPrompt(
+				"Enter the password for your imported accounts", promptutil.NotEmpty,
+			)
+			if err != nil {
+				return fmt.Errorf("could not read account password: %v", err)
+			}
 		}
 	}
 	fmt.Println("Importing accounts, this may take a while...")
