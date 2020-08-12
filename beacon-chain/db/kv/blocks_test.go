@@ -226,6 +226,28 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	}
 }
 
+func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
+	ctx := context.Background()
+	db := setupDB(t)
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	r1, err := stateutil.BlockRoot(b1.Block)
+	require.NoError(t, err)
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	r2, err := stateutil.BlockRoot(b2.Block)
+	require.NoError(t, err)
+
+	require.NoError(t, db.SaveBlock(ctx, b1))
+	require.NoError(t, db.SaveBlock(ctx, b2))
+
+	filter := filters.NewFilter().SetStartSlot(b1.Block.Slot).SetEndSlot(b2.Block.Slot)
+	roots, err := db.BlockRoots(ctx, filter)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, [][32]byte{r1, r2}, roots)
+}
+
 func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, 500)
