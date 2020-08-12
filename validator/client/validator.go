@@ -556,18 +556,21 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 	}
 }
 
+// BalancesByPubkeys returns the validator balances keyed by validator public keys.
 func (v *validator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
 	v.prevBalanceLock.RLock()
 	defer v.prevBalanceLock.RUnlock()
 	return v.prevBalance
 }
 
+// IndicesToPubkeys returns the validator indices keyed by validator public keys.
 func (v *validator) IndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
 	v.indicesLock.RLock()
 	defer v.indicesLock.RUnlock()
 	return v.indexToPubkey
 }
 
+// PubkeysToIndices returns the validator public keys keyed by validator indices.
 func (v *validator) PubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
 	v.indicesLock.RLock()
 	defer v.indicesLock.RUnlock()
