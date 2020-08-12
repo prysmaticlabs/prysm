@@ -150,7 +150,7 @@ func TestPeerScorer_BlockProvider_WeightSorted(t *testing.T) {
 	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		ScorerParams: &peers.PeerScorerConfig{
 			BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
-				ProcessedBatchWeight: 1,
+				ProcessedBatchWeight: 0.01,
 			},
 		},
 	})

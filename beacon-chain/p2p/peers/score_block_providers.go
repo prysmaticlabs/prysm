@@ -209,14 +209,15 @@ func (s *BlockProviderScorer) WeightSorted(
 	nextPID := func(weights map[peer.ID]float64) peer.ID {
 		totalWeight := 0
 		for _, w := range weights {
-			totalWeight += int(w)
+			// Factor by 100, to allow weights in (0; 1) range.
+			totalWeight += int(w * 100)
 		}
 		if totalWeight <= 0 {
 			return ""
 		}
 		rnd := r.Intn(totalWeight)
 		for pid, w := range weights {
-			rnd -= int(w)
+			rnd -= int(w * 100)
 			if rnd < 0 {
 				return pid
 			}
