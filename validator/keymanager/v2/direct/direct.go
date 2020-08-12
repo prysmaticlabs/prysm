@@ -532,10 +532,10 @@ func (dr *Keymanager) loadNewKeystore(keystore *v2keymanager.Keystore) error {
 		log.WithField(
 			"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
 		).Info("Attempted to load validator key which already exists")
+		dr.lock.Unlock()
 		return nil
-	} else {
-		dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
 	}
+	dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
 	dr.lock.Unlock()
 
 	// Modify the struct containing all validator accounts.
