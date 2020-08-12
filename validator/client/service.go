@@ -34,6 +34,11 @@ import (
 
 var log = logrus.WithField("prefix", "validator")
 
+// Every minute, we recheck if new validator keys
+// have been added to the validator client and if so,
+// create a new bucket in the database for slashing protection.
+const recheckKeysInterval = 1 * time.Minute
+
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
@@ -146,7 +151,6 @@ func (v *ValidatorService) Start() {
 		}
 	}
 
-	// TODO: This needs to be refreshed if we have new validating keys.
 	valDB, err := kv.NewKVStore(v.dataDir, validatingKeys)
 	if err != nil {
 		log.Errorf("Could not initialize db: %v", err)
@@ -188,6 +192,9 @@ func (v *ValidatorService) Start() {
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 	}
 	go run(v.ctx, v.validator)
+	if featureconfig.Get().EnableAccountsV2 {
+		go recheckValidatingKeysBucket(v.ctx, valDB, v.keyManagerV2)
+	}
 }
 
 // Stop the validator service.
@@ -302,4 +309,24 @@ func ConstructDialOptions(
 
 	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
+}
+
+func recheckValidatingKeysBucket(ctx context.Context, valDB *kv.Store, km v2.IKeymanager) {
+	ticker := time.NewTicker(recheckKeysInterval)
+	for {
+		select {
+		case <-ticker.C:
+			pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+			if err != nil {
+				log.WithError(err).Debug("Could not re-fetch validating public keys")
+				continue
+			}
+			if err := valDB.UpdatePublicKeysBuckets(pubKeys); err != nil {
+				log.WithError(err).Debug("Could not update public keys buckets")
+				continue
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

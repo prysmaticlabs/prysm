@@ -146,8 +146,9 @@ func NewKeymanager(cliCtx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keym
 		if !hasDir {
 			return nil, errors.Wrap(err, "directory to rescan keystores does not exist")
 		}
-		// Begin listening for changes...
-		go rescanDirectoryForKeystores(cliCtx.Context, dirToRescan)
+		// Begin listening for file changes and loading in new keystores
+		// if observed via a filesystem watcher.
+		go k.rescanDirectoryForKeystores(cliCtx.Context, dirToRescan)
 	}
 	return k, nil
 }
@@ -463,30 +464,102 @@ func (dr *Keymanager) createAccountsKeystore(
 	}, nil
 }
 
-func rescanDirectoryForKeystores(ctx context.Context, directory string) {
+func (dr *Keymanager) rescanDirectoryForKeystores(ctx context.Context, directory string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		panic(err)
+		log.WithError(err).Error("Could not initialize file watcher")
+		return
 	}
 	defer func() {
 		if err := watcher.Close(); err != nil {
-			panic(err)
+			log.WithError(err).Error("Could not close file watcher")
+			return
 		}
 	}()
 	if err := watcher.Add(directory); err != nil {
-		panic(err)
+		log.WithError(err).Errorf("Could not add directory %s to file watcher", directory)
+		return
 	}
 	for {
 		select {
-		// Watch for events...
 		case event := <-watcher.Events:
-			fmt.Printf("EVENT! %#v\n", event)
+			// If a file was modified or created, we then attempt
+			// to read that file and parse it into a keystore.json.
+			if event.Op&fsnotify.Write == fsnotify.Write ||
+				event.Op&fsnotify.Create == fsnotify.Create {
+				fileBytes, err := ioutil.ReadFile(event.Name)
+				if err != nil {
+					log.WithError(err).Errorf("Could not read file at path: %s", event.Name)
+					continue
+				}
+				keystore := &v2keymanager.Keystore{}
+				if err := json.Unmarshal(fileBytes, keystore); err != nil {
+					log.WithError(
+						err,
+					).Errorf("Could not read valid, EIP-2335 keystore json file at path: %s", event.Name)
+					continue
+				}
+				if err := dr.loadNewKeystore(keystore); err != nil {
+					log.WithError(
+						err,
+					).Errorf("Could not load new keystore with public key %s", keystore.Pubkey)
+				}
+			}
 		case err := <-watcher.Errors:
-			fmt.Println("ERROR", err)
+			log.WithError(err).Errorf("Could not watch for file changes in directory: %s", directory)
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+// Loads a new keystore file into the keymanager, even while the
+// validator client is running.
+func (dr *Keymanager) loadNewKeystore(keystore *v2keymanager.Keystore) error {
+	decryptor := keystorev4.New()
+	privKeyBytes, err := decryptor.Decrypt(keystore.Crypto, dr.accountsPassword)
+	if err != nil {
+		return errors.Wrapf(err, "could not decrypt keystore file with public key %s", keystore.Pubkey)
+	}
+	privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize private key")
+	}
+	pubKeyBytes := privKey.PublicKey().Marshal()
+	// Add the private key to the keys cache.
+	dr.lock.Lock()
+	if _, alreadyExists := dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)]; alreadyExists {
+		log.WithField(
+			"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
+		).Info("Attempted to load validator key which already exists")
+		return nil
+	} else {
+		dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
+	}
+	dr.lock.Unlock()
+
+	// Modify the struct containing all validator accounts.
+	ctx := context.Background()
+	accountsKeystore, err := dr.createAccountsKeystore(
+		ctx,
+		[][]byte{privKeyBytes},
+		[][]byte{privKey.PublicKey().Marshal()},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "could not create accounts keystore")
+	}
+	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
+	if err != nil {
+		return errors.Wrapf(err, "could not JSON marshal keystore")
+	}
+	// Write the accounts to disk into a single keystore.
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts); err != nil {
+		return errors.Wrap(err, "could not write accounts keystore to wallet")
+	}
+	log.WithField(
+		"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
+	).Info("Loaded-in new validator key")
+	return nil
 }
 
 func askUntilPasswordConfirms(
