@@ -49,7 +49,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 	}
 
 	// Verify block slot time is not from the future.
-	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := helpers.VerifySlotTime(helpers.GenesisTime(preState), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 

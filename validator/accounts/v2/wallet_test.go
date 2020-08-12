@@ -41,11 +41,13 @@ func init() {
 type testWalletConfig struct {
 	walletDir           string
 	passwordsDir        string
-	exportDir           string
+	backupDir           string
 	keysDir             string
-	accountsToExport    string
+	backupPublicKeys    string
+	backupPasswordFile  string
 	walletPasswordFile  string
 	accountPasswordFile string
+	privateKeyFile      string
 	numAccounts         int64
 	keymanagerKind      v2keymanager.Kind
 }
@@ -60,18 +62,24 @@ func setupWalletCtx(
 	set.String(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir, "")
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
-	set.String(flags.BackupDirFlag.Name, cfg.exportDir, "")
-	set.String(flags.AccountsFlag.Name, cfg.accountsToExport, "")
+	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
+	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
+	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	if cfg.privateKeyFile != "" {
+		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
+		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
+	}
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
 	assert.NoError(tb, set.Set(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir))
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
-	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.exportDir))
-	assert.NoError(tb, set.Set(flags.AccountsFlag.Name, cfg.accountsToExport))
+	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
+	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))
 	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
 	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
 	assert.NoError(tb, set.Set(flags.SkipMnemonicConfirmFlag.Name, "true"))

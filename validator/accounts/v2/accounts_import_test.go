@@ -15,6 +15,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -66,7 +68,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	time.Sleep(time.Second)
 	createKeystore(t, keysDir)
 
-	require.NoError(t, ImportAccount(cliCtx))
+	require.NoError(t, ImportAccounts(cliCtx))
 
 	wallet, err = OpenWallet(cliCtx)
 	require.NoError(t, err)
@@ -88,10 +90,11 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
 	})
 
+	_, keystorePath := createKeystore(t, keysDir)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
-		keysDir:             createKeystore(t, keysDir), // Using direct filepath to the new keystore.
+		keysDir:             keystorePath,
 		keymanagerKind:      v2keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
@@ -116,7 +119,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(accounts), 0)
 
-	require.NoError(t, ImportAccount(cliCtx))
+	require.NoError(t, ImportAccounts(cliCtx))
 
 	wallet, err = OpenWallet(cliCtx)
 	require.NoError(t, err)
@@ -189,8 +192,65 @@ func TestImport_SortByDerivationPath(t *testing.T) {
 	}
 }
 
+func Test_importPrivateKeyAsAccount(t *testing.T) {
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	privKeyDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "privKeys")
+	require.NoError(t, os.MkdirAll(privKeyDir, os.ModePerm))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(privKeyDir), "Failed to remove directory")
+	})
+	privKeyFileName := filepath.Join(privKeyDir, "privatekey.txt")
+
+	// We create a new private key and save it to a file on disk.
+	privKey := bls.RandKey()
+	privKeyHex := fmt.Sprintf("%x", privKey.Marshal())
+	require.NoError(
+		t,
+		ioutil.WriteFile(privKeyFileName, []byte(privKeyHex), params.BeaconIoConfig().ReadWritePermissions),
+	)
+
+	// We instantiate a new wallet from a cli context.
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: passwordFilePath,
+		privateKeyFile:     privKeyFileName,
+	})
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
+
+	// We create a new direct keymanager for the wallet.
+	ctx := context.Background()
+	keymanagerCfg := direct.DefaultConfig()
+	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
+	require.NoError(t, err)
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	keymanager, err := direct.NewKeymanager(
+		cliCtx,
+		wallet,
+		keymanagerCfg,
+	)
+	require.NoError(t, err)
+	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
+
+	// We re-instantiate the keymanager and check we now have 1 public key.
+	keymanager, err = direct.NewKeymanager(
+		cliCtx,
+		wallet,
+		keymanagerCfg,
+	)
+	require.NoError(t, err)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pubKeys))
+	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
+}
+
 // Returns the fullPath to the newly created keystore file.
-func createKeystore(t *testing.T, path string) string {
+func createKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) {
 	validatingKey := bls.RandKey()
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
@@ -210,5 +270,5 @@ func createKeystore(t *testing.T, path string) string {
 	createdAt := roughtime.Now().Unix()
 	fullPath := filepath.Join(path, fmt.Sprintf(direct.KeystoreFileNameFormat, createdAt))
 	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
-	return fullPath
+	return keystoreFile, fullPath
 }

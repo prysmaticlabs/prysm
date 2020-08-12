@@ -5,7 +5,10 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 # gazelle:ignore
 proto_library(
     name = "ethereum_validator_accounts_v2_proto",
-    srcs = ["keymanager.proto"],
+    srcs = [
+        "keymanager.proto",
+        "web_api.proto",
+        ],
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
