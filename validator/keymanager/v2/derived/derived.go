@@ -371,7 +371,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create validating key for account %d", i)
 		}
-		publicKeys = append(publicKeys, bytesutil.ToBytes48(validatingKey.PublicKey().Marshal()))
+		publicKeys[i] = bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())
 	}
 	return publicKeys, nil
 }
