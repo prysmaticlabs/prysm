@@ -31,15 +31,22 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not generate hashed password")
 	}
-	// Keep the hashed password in-memory for now.
-	s.hashedPassword = hashedPassword
+	// We store the hashed password to disk.
+	if err := s.valDB.SaveHashedPasswordForAPI(ctx, hashedPassword); err != nil {
+		return nil, status.Error(codes.Internal, "Could not save hashed password to database")
+	}
 	return s.sendAuthResponse()
 }
 
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+	// We retrieve the hashed password for the validator API from disk.
+	hashedPassword, err := s.valDB.HashedPasswordForAPI(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from database")
+	}
 	// Compare the stored hashed password, with the hashed version of the password that was received.
-	if err := bcrypt.CompareHashAndPassword(s.hashedPassword, []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
 		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
 	}
 	return s.sendAuthResponse()

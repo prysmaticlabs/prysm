@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/validator/db/iface"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -24,10 +25,12 @@ type Config struct {
 	Port     string
 	CertFlag string
 	KeyFlag  string
+	ValDB    iface.ValidatorDB
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
+	valDB           iface.ValidatorDB
 	ctx             context.Context
 	cancel          context.CancelFunc
 	host            string
@@ -38,7 +41,6 @@ type Server struct {
 	credentialError error
 	grpcServer      *grpc.Server
 	jwtKey          []byte
-	hashedPassword  []byte
 }
 
 // NewServer instantiates a new gRPC server.
@@ -51,6 +53,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		port:     cfg.Port,
 		withCert: cfg.CertFlag,
 		withKey:  cfg.KeyFlag,
+		valDB:    cfg.ValDB,
 	}
 }
 

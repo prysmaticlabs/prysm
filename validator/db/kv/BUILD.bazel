@@ -9,6 +9,7 @@ go_library(
         "manage.go",
         "proposal_history.go",
         "schema.go",
+        "web_api.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
     visibility = ["//validator:__subpackages__"],
