@@ -37,7 +37,7 @@ var log = logrus.WithField("prefix", "validator")
 // Every minute, we recheck if new validator keys
 // have been added to the validator client and if so,
 // create a new bucket in the database for slashing protection.
-const recheckKeysInterval = 1 * time.Minute
+const recheckKeysInterval = 3 * time.Minute
 
 // ValidatorService represents a service to manage the validator client
 // routine.
