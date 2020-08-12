@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ListBalances
+// ListBalances lists the validator balances.
 func (s *Server) ListBalances(ctx context.Context, req *pb.AccountRequest) (*pb.ListBalancesResponse, error) {
 	filtered := map[[48]byte]bool{}
 	for _, p := range req.PublicKeys {
@@ -31,7 +31,7 @@ func (s *Server) ListBalances(ctx context.Context, req *pb.AccountRequest) (*pb.
 	returnedKeys := make([][]byte, 0, len(filtered))
 	returnedIndices := make([]uint64, 0, len(filtered))
 	returnedBalances := make([]uint64, 0, len(filtered))
-	for k, _ := range filtered {
+	for k := range filtered {
 		b, ok := balances[k]
 		if ok {
 			returnedKeys = append(returnedKeys, k[:])
@@ -49,12 +49,12 @@ func (s *Server) ListBalances(ctx context.Context, req *pb.AccountRequest) (*pb.
 	}, nil
 }
 
-// ListStatuses
+// ListStatuses lists the validator current statuses.
 func (s *Server) ListStatuses(ctx context.Context, req *pb.AccountRequest) (*pb.ListStatusesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
-// ListPerformance
+// ListPerformance lists the validator current performances.
 func (s *Server) ListPerformance(ctx context.Context, req *pb.AccountRequest) (*pb.ListPerformanceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }

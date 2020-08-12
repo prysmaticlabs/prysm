@@ -552,7 +552,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 	}
 }
 
-func (v *validator) Balances(ctx context.Context) map[[48]byte]uint64 {
+func (v *validator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
 	v.prevBalanceLock.RLock()
 	defer v.prevBalanceLock.RUnlock()
 	return v.prevBalance
