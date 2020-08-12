@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 var log logrus.FieldLogger
@@ -36,6 +38,8 @@ type Server struct {
 	withKey         string
 	credentialError error
 	grpcServer      *grpc.Server
+	jwtKey          []byte
+	hashedPassword  []byte
 }
 
 // NewServer instantiates a new gRPC server.
@@ -75,6 +79,18 @@ func (s *Server) Start() {
 		}).Info("Loaded TLS certificates")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
+
+	// We create a new, random JWT key upon validator startup.
+	r := rand.NewGenerator()
+	jwtKey := make([]byte, 32)
+	n, err := r.Read(jwtKey)
+	if err != nil {
+		log.WithError(err).Fatal("Could not initialize validator jwt key")
+	}
+	if n != len(jwtKey) {
+		log.WithError(err).Fatal("Could not create random jwt key for validator")
+	}
+	s.jwtKey = jwtKey
 
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
