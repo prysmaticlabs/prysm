@@ -77,7 +77,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 
 	accountNames, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.ValidatingPublicKeys()
 	require.NoError(t, err)
 
 	for i := 0; i < numAccounts; i++ {
@@ -147,7 +147,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	accountNames, err := keymanager.ValidatingAccountNames(ctx)
 	require.NoError(t, err)
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.ValidatingPublicKeys()
 	require.NoError(t, err)
 
 	for i := 0; i < numAccounts; i++ {
