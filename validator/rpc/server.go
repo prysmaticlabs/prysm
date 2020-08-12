@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/prysmaticlabs/prysm/validator/db/iface"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -32,12 +32,12 @@ type Config struct {
 	Port     string
 	CertFlag string
 	KeyFlag  string
-	ValDB    iface.ValidatorDB
+	ValDB    db.Database
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	valDB           iface.ValidatorDB
+	valDB           db.Database
 	ctx             context.Context
 	cancel          context.CancelFunc
 	host            string

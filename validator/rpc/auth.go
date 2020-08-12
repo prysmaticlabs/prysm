@@ -21,6 +21,15 @@ var (
 // Signup to authenticate access to the validator RPC API using bcrypt and
 // a sufficiently strong password check.
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+	// First, we check if the validator already has a password. In this case,
+	// the user should NOT be able to signup and the function will return an error.
+	existingPassword, err := s.valDB.HashedPasswordForAPI(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from database")
+	}
+	if len(existingPassword) != 0 {
+		return nil, status.Error(codes.PermissionDenied, "Validator already has a password set, cannot signup")
+	}
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
