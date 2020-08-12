@@ -8,6 +8,7 @@ import (
 )
 
 var _ = Validator(&FakeValidator{})
+var Roles = map[[48]byte][]ValidatorRole{}
 
 // FakeValidator for mocking.
 type FakeValidator struct {
@@ -34,7 +35,7 @@ type FakeValidator struct {
 	NextSlotRet                      <-chan uint64
 	PublicKey                        string
 	UpdateDutiesRet                  error
-	RolesAtRet                       []validatorRole
+	RolesAtRet                       []ValidatorRole
 	Balances                         map[[48]byte]uint64
 	IndexToPubkeyMap                 map[uint64][48]byte
 	PubkeyToIndexMap                 map[[48]byte]uint64
@@ -119,10 +120,10 @@ func (fv *FakeValidator) SaveProtections(_ context.Context) error {
 }
 
 // RolesAt for mocking.
-func (fv *FakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
+func (fv *FakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[[48]byte][]validatorRole)
+	vr := make(map[[48]byte][]ValidatorRole)
 	vr[[48]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }
