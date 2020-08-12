@@ -41,11 +41,11 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		)
 		return w, err
 	}
-	createdWallet, err := createOrOpenWallet(cliCtx, createDirectWallet)
+	createdWallet, err := openOrCreateWallet(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	testutil.AssertLogsContain(t, hook, "Successfully created new wallet")
 
-	openedWallet, err := createOrOpenWallet(cliCtx, createDirectWallet)
+	openedWallet, err := openOrCreateWallet(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())

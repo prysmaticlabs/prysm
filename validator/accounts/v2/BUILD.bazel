@@ -4,9 +4,9 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "accounts_backup.go",
         "accounts_create.go",
         "accounts_delete.go",
-        "accounts_export.go",
         "accounts_import.go",
         "accounts_list.go",
         "cmd_accounts.go",
@@ -52,6 +52,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "accounts_backup_test.go",
         "accounts_create_test.go",
         "accounts_import_test.go",
         "accounts_list_test.go",
@@ -65,6 +66,7 @@ go_test(
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/roughtime:go_default_library",
