@@ -7,6 +7,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,13 +18,14 @@ var (
 	hashCost          = 8
 )
 
-type Claims struct {
-	jwt.StandardClaims
-}
-
 // Signup to authenticate access to the validator RPC API using bcrypt and
 // a sufficiently strong password check.
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+	// We check the strength of the password to ensure it is high-entropy,
+	// has the required character count, and contains only unicode characters.
+	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Could not validator password input")
+	}
 	// Salt and hash the password using the bcrypt algorithm
 	// The second argument is the cost of hashing, which we arbitrarily set as 8
 	// (this value can be more or less, depending on the computing power you wish to utilize)
@@ -68,11 +70,9 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 // Creates a JWT token string using the JWT key with an expiration timestamp.
 func (s *Server) createTokenString() (string, uint64, error) {
 	expirationTime := time.Now().Add(tokenExpiryLength)
-	claims := &Claims{
-		StandardClaims: jwt.StandardClaims{
-			// In JWT, the expiry time is expressed as unix milliseconds.
-			ExpiresAt: expirationTime.Unix(),
-		},
+	claims := &jwt.StandardClaims{
+		// In JWT, the expiry time is expressed as unix milliseconds.
+		ExpiresAt: expirationTime.Unix(),
 	}
 	// Declare the token with the algorithm used for signing, and the claims.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -80,5 +80,5 @@ func (s *Server) createTokenString() (string, uint64, error) {
 	if err != nil {
 		return "", 0, errors.Wrap(err, "could not sign token")
 	}
-	return tokenString, uint64(claims.StandardClaims.ExpiresAt), nil
+	return tokenString, uint64(claims.ExpiresAt), nil
 }
