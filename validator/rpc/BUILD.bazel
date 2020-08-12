@@ -28,7 +28,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
-        "//shared/params:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//validator/client:go_default_library",
     ],
