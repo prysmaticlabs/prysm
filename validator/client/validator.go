@@ -34,7 +34,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type validatorRole int8
+type ValidatorRole int8
 
 const (
 	roleUnknown = iota
@@ -441,11 +441,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid validatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
-	rolesAt := make(map[[48]byte][]validatorRole)
+// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
+	rolesAt := make(map[[48]byte][]ValidatorRole)
 	for _, duty := range v.duties.Duties {
-		var roles []validatorRole
+		var roles []ValidatorRole
 
 		if duty == nil {
 			continue

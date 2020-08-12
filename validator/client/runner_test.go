@@ -124,7 +124,7 @@ func TestAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []validatorRole{roleAttester}
+	v.RolesAtRet = []ValidatorRole{roleAttester}
 	go func() {
 		ticker <- slot
 
@@ -144,7 +144,7 @@ func TestProposes_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []validatorRole{roleProposer}
+	v.RolesAtRet = []ValidatorRole{roleProposer}
 	go func() {
 		ticker <- slot
 
@@ -164,7 +164,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []validatorRole{roleAttester, roleProposer}
+	v.RolesAtRet = []ValidatorRole{roleAttester, roleProposer}
 	go func() {
 		ticker <- slot
 
