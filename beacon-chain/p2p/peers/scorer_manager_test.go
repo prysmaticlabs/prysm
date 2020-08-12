@@ -109,8 +109,7 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 					Threshold: 5,
 				},
 				BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
-					ProcessedBatchWeight: 0.05,
-					Decay:                64,
+					Decay: 64,
 				},
 			},
 		})
@@ -156,6 +155,7 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 		s, pids := setupScorer()
 		s1 := s.BlockProviderScorer()
 		zeroScore := s.BlockProviderScorer().MaxScore()
+		batchWeight := s1.Params().ProcessedBatchWeight
 
 		// Partial batch.
 		s1.IncrementProcessedBlocks("peer1", batchSize/4)
@@ -163,26 +163,26 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 
 		// Single batch.
 		s1.IncrementProcessedBlocks("peer1", batchSize)
-		assert.DeepEqual(t, pack(s, 0.05, zeroScore, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, zeroScore, zeroScore), peerScores(s, pids), "Unexpected scores")
 
 		// Multiple batches.
 		s1.IncrementProcessedBlocks("peer2", batchSize*4)
-		assert.DeepEqual(t, pack(s, 0.05, 0.05*4, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, zeroScore), peerScores(s, pids), "Unexpected scores")
 
 		// Partial batch.
 		s1.IncrementProcessedBlocks("peer3", batchSize/2)
-		assert.DeepEqual(t, pack(s, 0.05, 0.05*4, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
 
 		// See effect of decaying.
 		assert.Equal(t, batchSize+batchSize/4, s1.ProcessedBlocks("peer1"))
 		assert.Equal(t, batchSize*4, s1.ProcessedBlocks("peer2"))
 		assert.Equal(t, batchSize/2, s1.ProcessedBlocks("peer3"))
-		assert.DeepEqual(t, pack(s, 0.05, 0.05*4, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
 		s1.Decay()
 		assert.Equal(t, batchSize/4, s1.ProcessedBlocks("peer1"))
 		assert.Equal(t, batchSize*3, s1.ProcessedBlocks("peer2"))
 		assert.Equal(t, uint64(0), s1.ProcessedBlocks("peer3"))
-		assert.DeepEqual(t, pack(s, 0, 0.05*3, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, 0, batchWeight*3, 0), peerScores(s, pids), "Unexpected scores")
 	})
 
 	t.Run("overall score", func(t *testing.T) {
@@ -190,20 +190,21 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 		s, _ := setupScorer()
 		s1 := s.BlockProviderScorer()
 		s2 := s.BadResponsesScorer()
+		batchWeight := s1.Params().ProcessedBatchWeight
 
-		s1.IncrementProcessedBlocks("peer1", batchSize*10)
-		assert.Equal(t, roundScore(0.05*10), s1.Score("peer1"))
+		s1.IncrementProcessedBlocks("peer1", batchSize*5)
+		assert.Equal(t, roundScore(batchWeight*5), s1.Score("peer1"))
 		// Now, adjust score by introducing penalty for bad responses.
 		s2.Increment("peer1")
 		s2.Increment("peer1")
 		assert.Equal(t, -0.4, s2.Score("peer1"), "Unexpected bad responses score")
-		assert.Equal(t, roundScore(0.05*10), s1.Score("peer1"), "Unexpected block provider score")
-		assert.Equal(t, roundScore(0.05*10-0.4), s.Score("peer1"), "Unexpected overall score")
+		assert.Equal(t, roundScore(batchWeight*5), s1.Score("peer1"), "Unexpected block provider score")
+		assert.Equal(t, roundScore(batchWeight*5-0.4), s.Score("peer1"), "Unexpected overall score")
 		// If peer continues to misbehave, score becomes negative.
 		s2.Increment("peer1")
 		assert.Equal(t, -0.6, s2.Score("peer1"), "Unexpected bad responses score")
-		assert.Equal(t, roundScore(0.05*10), s1.Score("peer1"), "Unexpected block provider score")
-		assert.Equal(t, -0.1, s.Score("peer1"), "Unexpected overall score")
+		assert.Equal(t, roundScore(batchWeight*5), s1.Score("peer1"), "Unexpected block provider score")
+		assert.Equal(t, roundScore(batchWeight*5-0.6), s.Score("peer1"), "Unexpected overall score")
 	})
 }
 

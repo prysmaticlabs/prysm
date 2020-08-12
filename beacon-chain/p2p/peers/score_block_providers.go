@@ -16,7 +16,7 @@ import (
 
 const (
 	// DefaultBlockProviderProcessedBatchWeight is a default reward weight of a processed batch of blocks.
-	DefaultBlockProviderProcessedBatchWeight = float64(0.05)
+	DefaultBlockProviderProcessedBatchWeight = float64(0.1)
 	// DefaultBlockProviderProcessedBlocksCap defines default value for processed blocks cap.
 	// e.g. 20 * 64 := 20 batches of size 64 (with 0.05 per batch reward, 20 batches result in score of 1.0).
 	DefaultBlockProviderProcessedBlocksCap = uint64(10 * 64)
@@ -109,7 +109,6 @@ func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 	peerData, ok := s.store.peers[pid]
 	// Boost score of new peers or peers that haven't been accessed for too long.
 	if !ok || time.Since(peerData.blockProviderUpdated) >= s.config.StalePeerRefreshInterval {
-		s.touch(pid)
 		return s.maxScore
 	}
 	batchSize := uint64(flags.Get().BlockBatchLimit)
