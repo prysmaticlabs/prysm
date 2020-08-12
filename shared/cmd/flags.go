@@ -134,6 +134,7 @@ var (
 		Usage: "The file containing the metadata to communicate with other peers.",
 		Value: "",
 	}
+	// P2PEnr defines a flag from which you can define the peer's enr.
 	P2PEnr = &cli.StringFlag{
 		Name:  "p2p-enr",
 		Usage: "The file containing the last saved enr of the local peer",
