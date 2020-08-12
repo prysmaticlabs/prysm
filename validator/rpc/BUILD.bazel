@@ -14,6 +14,7 @@ go_library(
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/promptutil:go_default_library",
         "//shared/rand:go_default_library",
+        "//shared/roughtime:go_default_library",
         "//shared/traceutil:go_default_library",
         "//validator/db:go_default_library",
         "@com_github_dgrijalva_jwt_go//:go_default_library",

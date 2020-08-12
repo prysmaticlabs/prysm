@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -78,7 +79,7 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 
 // Creates a JWT token string using the JWT key with an expiration timestamp.
 func (s *Server) createTokenString() (string, uint64, error) {
-	expirationTime := time.Now().Add(tokenExpiryLength)
+	expirationTime := roughtime.Now().Add(tokenExpiryLength)
 	claims := &jwt.StandardClaims{
 		// In JWT, the expiry time is expressed as unix milliseconds.
 		ExpiresAt: expirationTime.Unix(),
