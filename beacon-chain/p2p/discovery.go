@@ -133,6 +133,16 @@ func (s *Service) createListener(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create local node")
 	}
+	// Retrieve previous enr from config.
+	rec, err := enrFromConfig(s.cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve saved enr")
+	}
+	if rec != nil {
+		if err := processENR(rec, localNode); err != nil {
+			return nil, errors.Wrap(err, "could not process enr")
+		}
+	}
 	if s.cfg.HostAddress != "" {
 		hostIP := net.ParseIP(s.cfg.HostAddress)
 		if hostIP.To4() == nil && hostIP.To16() == nil {

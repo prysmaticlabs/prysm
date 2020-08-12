@@ -14,11 +14,13 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -42,9 +44,13 @@ func SerializeENR(record *enr.Record) (string, error) {
 }
 
 func deserializeENR(raw []byte) (*enr.Record, error) {
+	decodedBytes, err := base64.URLEncoding.DecodeString(string(raw))
+	if err != nil {
+		return nil, err
+	}
 	record := &enr.Record{}
-	rlpStream := rlp.NewStream(bytes.NewBuffer(raw), enr.SizeLimit)
-	err := record.DecodeRLP(rlpStream)
+	rlpStream := rlp.NewStream(bytes.NewBuffer(decodedBytes), enr.SizeLimit)
+	err = record.DecodeRLP(rlpStream)
 	return record, err
 }
 
@@ -121,14 +127,14 @@ func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 // from the p2p service.
 func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
-	metaDataPath := cfg.MetaDataDir
+	mdPath := cfg.MetaDataDir
 
 	_, err := os.Stat(defaultKeyPath)
 	defaultMetadataExist := !os.IsNotExist(err)
 	if err != nil && defaultMetadataExist {
 		return nil, err
 	}
-	if metaDataPath == "" && !defaultMetadataExist {
+	if mdPath == "" && !defaultMetadataExist {
 		metaData := &pbp2p.MetaData{
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
@@ -142,10 +148,10 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		}
 		return metaData, nil
 	}
-	if defaultMetadataExist && metaDataPath == "" {
-		metaDataPath = defaultKeyPath
+	if defaultMetadataExist && mdPath == "" {
+		mdPath = defaultKeyPath
 	}
-	src, err := ioutil.ReadFile(metaDataPath)
+	src, err := ioutil.ReadFile(mdPath)
 	if err != nil {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
@@ -154,29 +160,81 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 	if err := metaData.Unmarshal(src); err != nil {
 		return nil, err
 	}
+	// Reset Bitfield and increment sequence number
+	metaData.Attnets = bitfield.NewBitvector64()
+	metaData.SeqNumber = metaData.SeqNumber + 1
 	return metaData, nil
 }
 
 func enrFromConfig(cfg *Config) (*enr.Record, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, enrPath)
-	enrPath := cfg.ENRDir
+	ePath := cfg.ENRDir
 	_, err := os.Stat(defaultKeyPath)
 	defaultEnrExist := !os.IsNotExist(err)
 	if err != nil && defaultEnrExist {
 		return nil, err
 	}
-	if enrPath == "" && !defaultEnrExist {
+	if ePath == "" && !defaultEnrExist {
 		return nil, nil
 	}
-	if defaultEnrExist && enrPath == "" {
-		enrPath = defaultKeyPath
+	if defaultEnrExist && ePath == "" {
+		ePath = defaultKeyPath
 	}
-	src, err := ioutil.ReadFile(enrPath)
+	src, err := ioutil.ReadFile(ePath)
 	if err != nil {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
 	}
 	return deserializeENR(src)
+}
+
+func metadataPathFromCfg(cfg *Config) string {
+	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
+	mdPath := cfg.MetaDataDir
+
+	if mdPath == "" {
+		return defaultKeyPath
+	}
+	return mdPath
+}
+
+func enrPathFromCfg(cfg *Config) string {
+	defaultKeyPath := path.Join(cfg.DataDir, enrPath)
+	ePath := cfg.ENRDir
+
+	if ePath == "" {
+		return defaultKeyPath
+	}
+	return ePath
+}
+
+// Processes the previously saved enr and makes sure that they have the same
+// pubkey and fork digest before setting the sequence number.
+func processENR(prevRecord *enr.Record, node *enode.LocalNode) error {
+	nodeKey := &enode.Secp256k1{}
+	if err := prevRecord.Load(enr.WithEntry(nodeKey.ENRKey(), nodeKey)); err != nil {
+		return err
+	}
+	pubkey := node.Node().Pubkey()
+
+	// Return if saved ENR has a different pubkey.
+	if !(pubkey.X == nodeKey.X && pubkey.Y == nodeKey.Y && pubkey.Curve == nodeKey.Curve) {
+		return nil
+	}
+	firstEntry, err := retrieveForkEntry(prevRecord)
+	if err != nil {
+		return err
+	}
+	secondEntry, err := retrieveForkEntry(node.Node().Record())
+	if err != nil {
+		return err
+	}
+	if !ssz.DeepEqual(firstEntry, secondEntry) {
+		return nil
+	}
+	// Set ENR sequence to previous entry
+	node.Node().Record().SetSeq(prevRecord.Seq() + 1)
+	return nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.

@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -33,4 +37,47 @@ func TestVerifyConnectivity(t *testing.T) {
 				}
 			})
 	}
+}
+
+func TestRoundtripSerialization(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	db, err := enode.OpenDB("")
+	require.NoError(t, err, "could not open node's peer database")
+
+	defer db.Close()
+	lNode := enode.NewLocalNode(db, key)
+	rec := lNode.Node().Record()
+
+	raw, err := SerializeENR(rec)
+	require.NoError(t, err)
+	nRec, err := deserializeENR([]byte(raw))
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, rec.Signature(), nRec.Signature())
+}
+
+func TestProcessENR(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	db, err := enode.OpenDB("")
+	require.NoError(t, err, "could not open node's peer database")
+
+	defer db.Close()
+	lNode := enode.NewLocalNode(db, key)
+
+	key2, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	db2, err := enode.OpenDB("")
+	require.NoError(t, err, "could not open node's peer database")
+
+	defer db2.Close()
+	lNode2 := enode.NewLocalNode(db2, key2)
+
+	// Set a different sequence number
+	lNode.Node().Record().SetSeq(2)
+	err = processENR(lNode.Node().Record(), lNode2)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, lNode.Seq(), lNode2.Seq(), "ENRs sequence number was updated")
 }

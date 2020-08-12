@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"io/ioutil"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -93,6 +94,24 @@ func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	s.metaData = &pb.MetaData{
 		SeqNumber: s.metaData.SeqNumber + 1,
 		Attnets:   bitV,
+	}
+	dst, err := s.metaData.Marshal()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if err := ioutil.WriteFile(metadataPathFromCfg(s.cfg), dst, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		log.Errorf("Failed to write metadata: %v", err)
+		return
+	}
+	rawENR, err := SerializeENR(s.dv5Listener.LocalNode().Node().Record())
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if err := ioutil.WriteFile(enrPathFromCfg(s.cfg), []byte(rawENR), params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		log.Errorf("Failed to write enr: %v", err)
+		return
 	}
 }
 
