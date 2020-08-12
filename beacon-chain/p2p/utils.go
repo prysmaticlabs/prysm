@@ -15,6 +15,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -26,6 +27,7 @@ import (
 
 const keyPath = "network-keys"
 const metaDataPath = "metaData"
+const enrPath = "peer.enr"
 
 const dialTimeout = 1 * time.Second
 
@@ -37,6 +39,13 @@ func SerializeENR(record *enr.Record) (string, error) {
 	}
 	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
 	return enrString, nil
+}
+
+func deserializeENR(raw []byte) (*enr.Record, error) {
+	record := &enr.Record{}
+	rlpStream := rlp.NewStream(bytes.NewBuffer(raw), enr.SizeLimit)
+	err := record.DecodeRLP(rlpStream)
+	return record, err
 }
 
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
@@ -146,6 +155,28 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		return nil, err
 	}
 	return metaData, nil
+}
+
+func enrFromConfig(cfg *Config) (*enr.Record, error) {
+	defaultKeyPath := path.Join(cfg.DataDir, enrPath)
+	enrPath := cfg.ENRDir
+	_, err := os.Stat(defaultKeyPath)
+	defaultEnrExist := !os.IsNotExist(err)
+	if err != nil && defaultEnrExist {
+		return nil, err
+	}
+	if enrPath == "" && !defaultEnrExist {
+		return nil, nil
+	}
+	if defaultEnrExist && enrPath == "" {
+		enrPath = defaultKeyPath
+	}
+	src, err := ioutil.ReadFile(enrPath)
+	if err != nil {
+		log.WithError(err).Error("Error reading metadata from file")
+		return nil, err
+	}
+	return deserializeENR(src)
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.

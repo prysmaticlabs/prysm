@@ -20,6 +20,7 @@ type Config struct {
 	PrivateKey          string
 	DataDir             string
 	MetaDataDir         string
+	ENRDir              string
 	TCPPort             uint
 	UDPPort             uint
 	MaxPeers            uint

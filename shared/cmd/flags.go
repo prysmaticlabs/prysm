@@ -134,6 +134,11 @@ var (
 		Usage: "The file containing the metadata to communicate with other peers.",
 		Value: "",
 	}
+	P2PEnr = &cli.StringFlag{
+		Name:  "p2p-enr",
+		Usage: "The file containing the last saved enr of the local peer",
+		Value: "",
+	}
 	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
 	P2PMaxPeers = &cli.IntFlag{
 		Name:  "p2p-max-peers",
