@@ -10,6 +10,26 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
+func TestServer_Signup_PasswordAlreadyExists(t *testing.T) {
+	valDB := dbtest.SetupDB(t, [][48]byte{})
+	ctx := context.Background()
+	ss := &Server{
+		valDB: valDB,
+	}
+
+	// Save a hash password pre-emptively to the database.
+	hashedPassword := []byte("2093402934902839489238492")
+	require.NoError(t, valDB.SaveHashedPasswordForAPI(ctx, hashedPassword))
+
+	// Attempt to signup despite already having a hashed password in the DB
+	// which should immediately fail.
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	_, err := ss.Signup(ctx, &pb.AuthRequest{
+		Password: strongPass,
+	})
+	require.ErrorContains(t, "Validator already has a password set, cannot signup", err)
+}
+
 func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	valDB := dbtest.SetupDB(t, [][48]byte{})
 	ctx := context.Background()

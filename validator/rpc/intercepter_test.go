@@ -9,11 +9,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func TestServer_ServerUnaryInterceptor_Verify(t *testing.T) {
+func TestServer_JWTInterceptor_Verify(t *testing.T) {
 	s := Server{
 		jwtKey: []byte("testKey"),
 	}
-	interceptor := s.ServerUnaryInterceptor()
+	interceptor := s.JWTInterceptor()
 
 	unaryInfo := &grpc.UnaryServerInfo{
 		FullMethod: "Proto.CreateWallet",
@@ -36,11 +36,11 @@ func TestServer_ServerUnaryInterceptor_Verify(t *testing.T) {
 	}
 }
 
-func TestServer_ServerUnaryInterceptor_BadToken(t *testing.T) {
+func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 	s := Server{
 		jwtKey: []byte("testKey"),
 	}
-	interceptor := s.ServerUnaryInterceptor()
+	interceptor := s.JWTInterceptor()
 
 	unaryInfo := &grpc.UnaryServerInfo{
 		FullMethod: "Proto.CreateWallet",
