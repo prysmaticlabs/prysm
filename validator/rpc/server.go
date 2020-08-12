@@ -1,4 +1,4 @@
-package webrpc
+package rpc
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 var log logrus.FieldLogger
 
 func init() {
-	log = logrus.WithField("prefix", "web-rpc")
+	log = logrus.WithField("prefix", "rpc")
 }
 
 // Config options for the gRPC server.
@@ -69,13 +69,11 @@ func (s *Server) Start() {
 			s.credentialError = err
 		}
 		opts = append(opts, grpc.Creds(creds))
-	} else {
-		log.Fatal("Cannot use an insecure gRPC connection. Provide a certificate and key to connect securely")
+		log.WithFields(logrus.Fields{
+			"crt-path": s.withCert,
+			"key-path": s.withKey,
+		}).Info("Loaded TLS certificates")
 	}
-	log.WithFields(logrus.Fields{
-		"crt-path": s.withCert,
-		"key-path": s.withKey,
-	}).Info("Loaded TLS certificates")
 	s.grpcServer = grpc.NewServer(opts...)
 
 	// Register services available for the gRPC server.
