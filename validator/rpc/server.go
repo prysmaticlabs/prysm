@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -19,35 +20,38 @@ func init() {
 
 // Config options for the gRPC server.
 type Config struct {
-	Host     string
-	Port     string
-	CertFlag string
-	KeyFlag  string
+	Host             string
+	Port             string
+	CertFlag         string
+	KeyFlag          string
+	ValidatorService *client.ValidatorService
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
-	host            string
-	port            string
-	listener        net.Listener
-	withCert        string
-	withKey         string
-	credentialError error
-	grpcServer      *grpc.Server
+	ctx              context.Context
+	cancel           context.CancelFunc
+	host             string
+	port             string
+	listener         net.Listener
+	withCert         string
+	withKey          string
+	credentialError  error
+	grpcServer       *grpc.Server
+	validatorService *client.ValidatorService
 }
 
 // NewServer instantiates a new gRPC server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Server{
-		ctx:      ctx,
-		cancel:   cancel,
-		host:     cfg.Host,
-		port:     cfg.Port,
-		withCert: cfg.CertFlag,
-		withKey:  cfg.KeyFlag,
+		ctx:              ctx,
+		cancel:           cancel,
+		host:             cfg.Host,
+		port:             cfg.Port,
+		withCert:         cfg.CertFlag,
+		withKey:          cfg.KeyFlag,
+		validatorService: cfg.ValidatorService,
 	}
 }
 
