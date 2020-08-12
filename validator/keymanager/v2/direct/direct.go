@@ -187,6 +187,15 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 	return names, nil
 }
 
+// ValidatingPublicKeys for the direct keymanager.
+func (dr *Keymanager) ValidatingPublicKeys() ([][48]byte, error) {
+	keys := make([][48]byte, len(dr.accountsStore.PublicKeys))
+	for i, pubKey := range dr.accountsStore.PublicKeys {
+		keys[i] = bytesutil.ToBytes48(pubKey)
+	}
+	return keys, nil
+}
+
 // CreateAccount for a direct keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It
 // stores the generated keystore.json file in the wallet and additionally

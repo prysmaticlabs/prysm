@@ -258,6 +258,20 @@ func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, err
 	return names, nil
 }
 
+// ValidatingPublicKeys for the derived keymanager.
+func (dr *Keymanager) ValidatingPublicKeys() ([][48]byte, error) {
+	keys := make([][48]byte, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not derive validating key")
+		}
+		keys = append(keys, bytesutil.ToBytes48(validatingKey.PublicKey().Marshal()))
+	}
+	return keys, nil
+}
+
 // CreateAccount for a derived keymanager implementation. This utilizes
 // the EIP-2335 keystore standard for BLS12-381 keystores. It uses the EIP-2333 and EIP-2334
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for

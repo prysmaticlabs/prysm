@@ -89,8 +89,7 @@ func listDirectKeymanagerAccounts(
 			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
 
-	ctx := context.Background()
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.ValidatingPublicKeys()
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -121,7 +120,7 @@ func listDerivedKeymanagerAccounts(
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.Config().DerivedPathStructure).Bold())
 	ctx := context.Background()
-	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	validatingPubKeys, err := keymanager.ValidatingPublicKeys()
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
