@@ -176,7 +176,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 	}
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
-	v.prevBalanceLock.RLock()
+	v.prevBalanceLock.Lock()
 	for i, pubKey := range resp.PublicKeys {
 		pubKeyBytes := bytesutil.ToBytes48(pubKey)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
