@@ -178,6 +178,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	err = genState.SetEth1Data(&ethpb.Eth1Data{
 		DepositRoot:  hashTreeRoot[:],
 		DepositCount: uint64(len(deposits)),
+		BlockHash: make([]byte, 32),
 	})
 	genState, err = b.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)

@@ -205,20 +205,17 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 
-	block := &ethpb.BeaconBlock{
-		Slot: 10000,
-	}
-	epochBoundaryBlock := &ethpb.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000)),
-	}
-	justifiedBlock := &ethpb.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
-	}
-	blockRoot, err := stateutil.BlockRoot(block)
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 10000
+	epochBoundaryBlock := testutil.NewBeaconBlock()
+	epochBoundaryBlock.Block.Slot = helpers.StartSlot(helpers.SlotToEpoch(10000))
+	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock.Block.Slot = helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2 // Imagine two skip block
+	blockRoot, err := stateutil.BlockRoot(block.Block)
 	require.NoError(t, err, "Could not hash beacon block")
-	justifiedBlockRoot, err := stateutil.BlockRoot(justifiedBlock)
+	justifiedBlockRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
 	require.NoError(t, err, "Could not hash justified block")
-	epochBoundaryRoot, err := stateutil.BlockRoot(epochBoundaryBlock)
+	epochBoundaryRoot, err := stateutil.BlockRoot(epochBoundaryBlock.Block)
 	require.NoError(t, err, "Could not hash justified block")
 	slot := uint64(10000)
 
@@ -250,7 +247,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		StateNotifier:      chainService.StateNotifier(),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveBlock(ctx, block))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{

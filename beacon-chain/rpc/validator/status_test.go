@@ -73,7 +73,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 	deposit := &ethpb.Deposit{
 		Data: depData,
@@ -134,6 +134,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 			PublicKey:         pubKey,
+			WithdrawalCredentials: make([]byte, 32),
 		},
 	})
 	require.NoError(t, err)
@@ -143,7 +144,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -190,7 +191,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -281,7 +282,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -341,7 +342,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -398,13 +399,14 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	require.NoError(t, state.SetSlot(slot))
 	err = state.SetValidators([]*ethpb.Validator{{
 		PublicKey:         pubKey,
-		WithdrawableEpoch: epoch + 1},
+		WithdrawableEpoch: epoch + 1,
+		WithdrawalCredentials: make([]byte, 32)},
 	})
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -621,7 +623,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		depData := &ethpb.Deposit_Data{
 			PublicKey:             pubKey(uint64(i)),
 			Signature:             bytesutil.PadTo([]byte("hi"), 96),
-			WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+			WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 		}
 
 		deposit := &ethpb.Deposit{
@@ -663,7 +665,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -726,7 +728,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 96),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 	}
 
 	deposit := &ethpb.Deposit{
