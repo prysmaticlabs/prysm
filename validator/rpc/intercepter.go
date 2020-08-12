@@ -17,7 +17,9 @@ var noAuthPaths = map[string]bool{
 	"/proto/Signup": true,
 }
 
-func (s *Server) ServerUnaryInterceptor() grpc.UnaryServerInterceptor {
+// JWTInterceptor is a gRPC unary interceptor to authorize incoming requests
+// for methods that are NOT in the noAuthPaths configuration map.
+func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
@@ -37,7 +39,7 @@ func (s *Server) ServerUnaryInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-// Authorize verifies the token received is valid.
+// Authorize the token received is valid.
 func (s *Server) authorize(ctx context.Context) error {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {

@@ -5,9 +5,16 @@ import (
 	"fmt"
 	"net"
 
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/db/iface"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
@@ -67,7 +74,28 @@ func (s *Server) Start() {
 	}
 	s.listener = lis
 
-	opts := make([]grpc.ServerOption, 0)
+	// Register interceptors for metrics gathering as well as our
+	// own, custom JWT unary interceptor.
+	opts := []grpc.ServerOption{
+		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
+		grpc.StreamInterceptor(middleware.ChainStreamServer(
+			recovery.StreamServerInterceptor(
+				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+			),
+			grpc_prometheus.StreamServerInterceptor,
+			grpc_opentracing.StreamServerInterceptor(),
+		)),
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+			recovery.UnaryServerInterceptor(
+				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+			),
+			grpc_prometheus.UnaryServerInterceptor,
+			grpc_opentracing.UnaryServerInterceptor(),
+			s.JWTInterceptor(),
+		)),
+	}
+	grpc_prometheus.EnableHandlingTimeHistogram()
+
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -96,6 +124,7 @@ func (s *Server) Start() {
 
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
+	pb.RegisterAuthServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {
