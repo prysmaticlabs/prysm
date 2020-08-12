@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
-
-	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 var log logrus.FieldLogger
