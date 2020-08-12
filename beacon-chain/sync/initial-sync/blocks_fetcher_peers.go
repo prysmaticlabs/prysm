@@ -144,7 +144,7 @@ func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, 
 			return 0.0
 		}
 		capScore := remaining / capacity
-		overallScore := blockProviderScore*(1.0-peerFilterCapacityWeight) + capScore*peerFilterCapacityWeight
+		overallScore := blockProviderScore*(1.0-f.capacityWeight) + capScore*f.capacityWeight
 		return math.Round(overallScore*scorers.ScoreRoundingFactor) / scorers.ScoreRoundingFactor
 	})
 

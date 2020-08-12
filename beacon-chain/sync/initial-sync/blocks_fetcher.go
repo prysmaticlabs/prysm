@@ -52,8 +52,9 @@ var (
 
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
-	headFetcher blockchain.HeadFetcher
-	p2p         p2p.P2P
+	headFetcher              blockchain.HeadFetcher
+	p2p                      p2p.P2P
+	peerFilterCapacityWeight float64
 }
 
 // blocksFetcher is a service to fetch chain data from peers.
@@ -71,6 +72,7 @@ type blocksFetcher struct {
 	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
 	fetchResponses  chan *fetchRequestResponse
+	capacityWeight  float64       // how remaining capacity affects peer selection
 	quit            chan struct{} // termination notifier
 }
 
@@ -105,6 +107,11 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		float64(blocksPerSecond), int64(allowedBlocksBurst-blocksPerSecond),
 		false /* deleteEmptyBuckets */)
 
+	capacityWeight := cfg.peerFilterCapacityWeight
+	if capacityWeight == 0 || capacityWeight > 1 {
+		capacityWeight = peerFilterCapacityWeight
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &blocksFetcher{
 		ctx:             ctx,
@@ -117,6 +124,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		peerLocks:       make(map[peer.ID]*peerLock),
 		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
 		fetchResponses:  make(chan *fetchRequestResponse, maxPendingRequests),
+		capacityWeight:  capacityWeight,
 		quit:            make(chan struct{}),
 	}
 }

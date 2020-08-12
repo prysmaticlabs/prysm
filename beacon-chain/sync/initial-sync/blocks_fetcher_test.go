@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"testing"
@@ -666,13 +667,11 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 		peers           []weightedPeer
 		peersPercentage float64
 	}
-
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
 	tests := []struct {
-		name   string
-		args   args
-		update func(s *peers.BlockProviderScorer)
-		want   []peer.ID
+		name string
+		args args
+		want []peer.ID
 	}{
 		{
 			name: "no peers available",
@@ -718,23 +717,126 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			},
 			want: []peer.ID{"ghi", "def", "abc", "xyz", "jkl"},
 		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Non-leaking bucket, with initial capacity of 100.
+			fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 100, false)
+			pids := make([]peer.ID, 0)
+			for _, pid := range tt.args.peers {
+				pids = append(pids, pid.ID)
+				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
+			}
+			got, err := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			require.NoError(t, err)
+			// Re-arrange peers with the same remaining capacity, deterministically .
+			// They are deliberately shuffled - so that on the same capacity any of
+			// such peers can be selected. That's why they are sorted here.
+			sort.SliceStable(got, func(i, j int) bool {
+				cap1 := fetcher.rateLimiter.Remaining(pids[i].String())
+				cap2 := fetcher.rateLimiter.Remaining(pids[j].String())
+				if cap1 == cap2 {
+					return pids[i].String() < pids[j].String()
+				}
+				return i < j
+			})
+			assert.DeepEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
+	type weightedPeer struct {
+		peer.ID
+		usedCapacity int64
+	}
+	type args struct {
+		peers           []weightedPeer
+		peersPercentage float64
+		capacityWeight  float64
+	}
+
+	batchSize := uint64(flags.Get().BlockBatchLimit)
+	tests := []struct {
+		name   string
+		args   args
+		update func(s *peers.BlockProviderScorer)
+		want   []peer.ID
+	}{
+		{
+			name: "no peers available",
+			args: args{
+				peers:           []weightedPeer{},
+				peersPercentage: 1.0,
+				capacityWeight:  0.2,
+			},
+			want: []peer.ID{},
+		},
+		{
+			name: "single peer",
+			args: args{
+				peers: []weightedPeer{
+					{"abc", 1200},
+				},
+				peersPercentage: 1.0,
+				capacityWeight:  0.2,
+			},
+			want: []peer.ID{"abc"},
+		},
+		{
+			name: "multiple peers same capacity",
+			args: args{
+				peers: []weightedPeer{
+					{"abc", 2400},
+					{"def", 2400},
+					{"xyz", 2400},
+				},
+				peersPercentage: 1.0,
+				capacityWeight:  0.2,
+			},
+			want: []peer.ID{"abc", "def", "xyz"},
+		},
+		{
+			name: "multiple peers capacity as tie-breaker",
+			args: args{
+				peers: []weightedPeer{
+					{"abc", 6000},
+					{"def", 3000},
+					{"ghi", 0},
+					{"jkl", 9000},
+					{"xyz", 6000},
+				},
+				peersPercentage: 1.0,
+				capacityWeight:  0.2,
+			},
+			update: func(s *peers.BlockProviderScorer) {
+				s.IncrementProcessedBlocks("abc", batchSize*2)
+				s.IncrementProcessedBlocks("def", batchSize*2)
+				s.IncrementProcessedBlocks("ghi", batchSize*2)
+				s.IncrementProcessedBlocks("jkl", batchSize*2)
+				s.IncrementProcessedBlocks("xyz", batchSize*2)
+			},
+			want: []peer.ID{"ghi", "def", "abc", "xyz", "jkl"},
+		},
 		{
 			name: "multiple peers same capacity different scores",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 10},
-					{"def", 10},
-					{"ghi", 10},
-					{"jkl", 10},
-					{"xyz", 10},
+					{"abc", 9000},
+					{"def", 9000},
+					{"ghi", 9000},
+					{"jkl", 9000},
+					{"xyz", 9000},
 				},
 				peersPercentage: 0.8,
+				capacityWeight:  0.2,
 			},
 			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("xyz", batchSize*5)
-				s.IncrementProcessedBlocks("def", batchSize*4)
-				s.IncrementProcessedBlocks("ghi", batchSize*2)
-				s.IncrementProcessedBlocks("abc", batchSize+1)
+				s.IncrementProcessedBlocks("xyz", s.Params().ProcessedBlocksCap)
+				s.IncrementProcessedBlocks("def", s.Params().ProcessedBlocksCap/2)
+				s.IncrementProcessedBlocks("ghi", s.Params().ProcessedBlocksCap/4)
+				s.IncrementProcessedBlocks("abc", s.Params().ProcessedBlocksCap/8)
+				s.IncrementProcessedBlocks("jkl", 0)
 			},
 			want: []peer.ID{"xyz", "def", "ghi", "abc"},
 		},
@@ -742,18 +844,19 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			name: "multiple peers different capacities and scores",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 20},
-					{"def", 15},
-					{"ghi", 10},
-					{"jkl", 90},
-					{"xyz", 20},
+					{"abc", 6500},
+					{"def", 2500},
+					{"ghi", 1000},
+					{"jkl", 9000},
+					{"xyz", 6500},
 				},
 				peersPercentage: 0.8,
+				capacityWeight:  0.2,
 			},
 			update: func(s *peers.BlockProviderScorer) {
 				// Make sure that score takes priority over capacity.
-				s.IncrementProcessedBlocks("ghi", batchSize*4)
-				s.IncrementProcessedBlocks("def", batchSize*5)
+				s.IncrementProcessedBlocks("ghi", batchSize*5)
+				s.IncrementProcessedBlocks("def", batchSize*15)
 				// Break tie using capacity as a tie-breaker (abc and ghi have the same score).
 				s.IncrementProcessedBlocks("abc", batchSize*3)
 				s.IncrementProcessedBlocks("xyz", batchSize*3)
@@ -767,11 +870,12 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 			fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
-				headFetcher: mc,
-				p2p:         p2p,
+				headFetcher:              mc,
+				p2p:                      p2p,
+				peerFilterCapacityWeight: tt.args.capacityWeight,
 			})
-			// Non-leaking bucket, with initial capacity of 100.
-			fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 100, false)
+			// Non-leaking bucket, with initial capacity of 10000.
+			fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 10000, false)
 			peerIDs := make([]peer.ID, 0)
 			for _, pid := range tt.args.peers {
 				peerIDs = append(peerIDs, pid.ID)
@@ -780,24 +884,57 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			if tt.update != nil {
 				tt.update(fetcher.p2p.Peers().Scorers().BlockProviderScorer())
 			}
-			got, err := fetcher.filterScoredPeers(context.Background(), peerIDs, tt.args.peersPercentage)
-			require.NoError(t, err)
+			// Since peer selection is probabilistic (weighted, with high scorers having higher
+			// chance of being selected), we need multiple rounds of filtering to test the order:
+			// over multiple attempts, high scorers should be picked on high posstions more often.
+			peerStats := make(map[peer.ID]int, len(tt.want))
+			var filteredPIDs []peer.ID
+			var err error
+			for i := 0; i < 1000; i++ {
+				filteredPIDs, err = fetcher.filterScoredPeers(context.Background(), peerIDs, tt.args.peersPercentage)
+				if len(filteredPIDs) <= 1 {
+					break
+				}
+				require.NoError(t, err)
+				for j, pid := range filteredPIDs {
+					// The higher peer in the list, the more "points" will it get.
+					peerStats[pid] += len(tt.want) - j
+				}
+			}
+
+			// If percentage of peers was requested, rebuild combined filtered peers list.
+			if len(filteredPIDs) != len(peerStats) && len(peerStats) > 0 {
+				filteredPIDs = []peer.ID{}
+				for pid := range peerStats {
+					filteredPIDs = append(filteredPIDs, pid)
+				}
+			}
+
+			// Sort by frequency of appearance in high positions on filtering.
+			sort.Slice(filteredPIDs, func(i, j int) bool {
+				return peerStats[filteredPIDs[i]] > peerStats[filteredPIDs[j]]
+			})
+			if tt.args.peersPercentage < 1.0 {
+				limit := uint64(math.Round(float64(len(filteredPIDs)) * tt.args.peersPercentage))
+				filteredPIDs = filteredPIDs[:limit]
+			}
+
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
-			sort.SliceStable(got, func(i, j int) bool {
-				score1 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(got[i])
-				score2 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(got[j])
+			sort.SliceStable(filteredPIDs, func(i, j int) bool {
+				score1 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(filteredPIDs[i])
+				score2 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(filteredPIDs[j])
 				if score1 == score2 {
-					cap1 := fetcher.rateLimiter.Remaining(got[i].String())
-					cap2 := fetcher.rateLimiter.Remaining(got[j].String())
+					cap1 := fetcher.rateLimiter.Remaining(filteredPIDs[i].String())
+					cap2 := fetcher.rateLimiter.Remaining(filteredPIDs[j].String())
 					if cap1 == cap2 {
-						return got[i].String() < got[j].String()
+						return filteredPIDs[i].String() < filteredPIDs[j].String()
 					}
 				}
 				return i < j
 			})
-			assert.DeepEqual(t, tt.want, got)
+			assert.DeepEqual(t, tt.want, filteredPIDs)
 		})
 	}
 }
