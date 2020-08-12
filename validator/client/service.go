@@ -72,6 +72,7 @@ type Config struct {
 	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
 	Protector                  slashingprotection.Protector
+	Validator                  Validator
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -95,6 +96,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetryDelay:       cfg.GrpcRetryDelay,
 		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
 		protector:            cfg.Protector,
+		validator:            cfg.Validator,
 	}, nil
 }
 
@@ -161,6 +163,7 @@ func (v *ValidatorService) Start() {
 		startBalances:                  make(map[[48]byte]uint64),
 		prevBalance:                    make(map[[48]byte]uint64),
 		indexToPubkey:                  make(map[uint64][48]byte),
+		pubkeyToIndex:                  make(map[[48]byte]uint64),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -289,7 +292,12 @@ func (v *ValidatorService) ValidatorBalances(ctx context.Context) map[[48]byte]u
 	return v.validator.BalancesByPubkeys(ctx)
 }
 
-// ValidatorPubKeyToIndices returns the validator indices mapping keyed by public keys.
-func (v *ValidatorService) ValidatorPubKeyToIndices(ctx context.Context) map[uint64][48]byte {
-	return v.validator.PubKeysToIndices(ctx)
+// ValidatorIndicesToPubkeys returns the validator indices mapping keyed by public keys.
+func (v *ValidatorService) ValidatorIndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
+	return v.validator.IndicesToPubkeys(ctx)
+}
+
+// ValidatorPubkeysToIndices returns the validator public keys mapping keyed by indices.
+func (v *ValidatorService) ValidatorPubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
+	return v.validator.PubkeysToIndices(ctx)
 }

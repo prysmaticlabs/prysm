@@ -37,7 +37,8 @@ type Validator interface {
 	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64
-	PubKeysToIndices(ctx context.Context) map[uint64][48]byte
+	IndicesToPubkeys(ctx context.Context) map[uint64][48]byte
+	PubkeysToIndices(ctx context.Context) map[[48]byte]uint64
 }
 
 // Run the main validator routine. This routine exits if the context is

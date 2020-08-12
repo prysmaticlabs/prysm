@@ -20,13 +20,13 @@ func cancelledContext() context.Context {
 }
 
 func TestCancelledContext_CleansUpValidator(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
 }
 
 func TestCancelledContext_WaitsForChainStart(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
@@ -37,19 +37,19 @@ func TestCancelledContext_WaitsForSynced(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.WaitForSyncedCalled, "Expected WaitForSynced() to be called")
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 }
 
 func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	cfg := &featureconfig.Flags{
 		SlasherProtection: true,
 	}
@@ -60,7 +60,7 @@ func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
 }
 
 func TestUpdateDuties_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -80,7 +80,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 
 func TestUpdateDuties_HandlesError(t *testing.T) {
 	hook := logTest.NewGlobal()
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -99,7 +99,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 }
 
 func TestRoleAt_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -118,7 +118,7 @@ func TestRoleAt_NextSlot(t *testing.T) {
 }
 
 func TestAttests_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -138,7 +138,7 @@ func TestAttests_NextSlot(t *testing.T) {
 }
 
 func TestProposes_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -158,7 +158,7 @@ func TestProposes_NextSlot(t *testing.T) {
 }
 
 func TestBothProposesAndAttests_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
