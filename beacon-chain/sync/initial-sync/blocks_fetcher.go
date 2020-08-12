@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/sirupsen/logrus"
@@ -272,7 +273,11 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 
 	var blocks []*eth.SignedBeaconBlock
 	var err error
-	peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	if featureconfig.Get().EnablePeerScorer {
+		peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	} else {
+		peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	}
 	if err != nil {
 		return blocks, "", err
 	}

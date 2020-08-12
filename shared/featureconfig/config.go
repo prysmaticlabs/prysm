@@ -61,6 +61,7 @@ type Flags struct {
 	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
 	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
+	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -254,6 +255,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	}
 	if ctx.Bool(enableAttBroadcastDiscoveryAttempts.Name) {
 		cfg.EnableAttBroadcastDiscoveryAttempts = true
+	}
+	if ctx.Bool(enablePeerScorer.Name) {
+		log.Warn("Enabling peer scoring in P2P")
+		cfg.EnablePeerScorer = true
 	}
 	Init(cfg)
 }

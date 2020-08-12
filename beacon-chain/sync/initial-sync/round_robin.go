@@ -129,7 +129,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 func (s *Service) processFetchedData(
 	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
 	defer func() {
-		if data.pid == "" {
+		if !featureconfig.Get().EnablePeerScorer || data.pid == "" {
 			return
 		}
 		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()

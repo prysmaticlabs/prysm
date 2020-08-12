@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -33,7 +34,11 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		return 0, errSlotIsTooHigh
 	}
 	var err error
-	peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	if featureconfig.Get().EnablePeerScorer {
+		peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	} else {
+		peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	}
 	if err != nil {
 		return 0, err
 	}
