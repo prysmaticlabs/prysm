@@ -282,3 +282,11 @@ func ConstructDialOptions(
 	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
 }
+
+func (v *ValidatorService) ValidatorBalances(ctx context.Context) map[[48]byte]uint64 {
+	return v.validator.Balances(ctx)
+}
+
+func (v *ValidatorService) ValidatorPubKeyToIndices(ctx context.Context) map[uint64][48]byte {
+	return v.validator.PubKeysToIndices(ctx)
+}

@@ -55,7 +55,10 @@ type validator struct {
 	keyManager                         keymanager.KeyManager
 	keyManagerV2                       v2keymanager.IKeymanager
 	startBalances                      map[[48]byte]uint64
+	prevBalanceLock                    sync.RWMutex
 	prevBalance                        map[[48]byte]uint64
+	pubKeyToIndexLock                  sync.RWMutex
+	pubKeyToIndex                      map[uint64][48]byte
 	voteStats                          voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
@@ -362,6 +365,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range v.duties.Duties {
+		pk := bytesutil.ToBytes48(duty.PublicKey)
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
@@ -371,7 +375,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, pk)
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -383,6 +387,12 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
+
+		v.pubKeyToIndexLock.Lock()
+		if _, ok := v.pubKeyToIndex[duty.ValidatorIndex]; !ok {
+			v.pubKeyToIndex[duty.ValidatorIndex] = pk
+		}
+		v.pubKeyToIndexLock.Unlock()
 	}
 
 	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
@@ -540,6 +550,18 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
+}
+
+func (v *validator) Balances(ctx context.Context) map[[48]byte]uint64 {
+	v.prevBalanceLock.RLock()
+	defer v.prevBalanceLock.RUnlock()
+	return v.prevBalance
+}
+
+func (v *validator) PubKeysToIndices(ctx context.Context) map[uint64][48]byte {
+	v.pubKeyToIndexLock.RLock()
+	defer v.pubKeyToIndexLock.RUnlock()
+	return v.pubKeyToIndex
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

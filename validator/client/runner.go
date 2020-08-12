@@ -36,6 +36,8 @@ type Validator interface {
 	LogAttestationsSubmitted()
 	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
+	Balances(ctx context.Context) map[[48]byte]uint64
+	PubKeysToIndices(ctx context.Context) map[uint64][48]byte
 }
 
 // Run the main validator routine. This routine exits if the context is
