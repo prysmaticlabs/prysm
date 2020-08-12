@@ -8,7 +8,6 @@ import (
 )
 
 var _ = Validator(&FakeValidator{})
-var Roles = map[[48]byte][]ValidatorRole{}
 
 // FakeValidator for mocking.
 type FakeValidator struct {

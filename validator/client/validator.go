@@ -34,6 +34,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ValidatorRole defines the validator role.
 type ValidatorRole int8
 
 const (
