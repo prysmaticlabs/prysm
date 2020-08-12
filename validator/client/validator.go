@@ -57,8 +57,8 @@ type validator struct {
 	startBalances                      map[[48]byte]uint64
 	prevBalanceLock                    sync.RWMutex
 	prevBalance                        map[[48]byte]uint64
-	pubKeyToIndexLock                  sync.RWMutex
-	pubKeyToIndex                      map[uint64][48]byte
+	indexToPubkeyLock                  sync.RWMutex
+	indexToPubkey                      map[uint64][48]byte
 	voteStats                          voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
@@ -388,11 +388,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
 
-		v.pubKeyToIndexLock.Lock()
-		if _, ok := v.pubKeyToIndex[duty.ValidatorIndex]; !ok {
-			v.pubKeyToIndex[duty.ValidatorIndex] = pk
+		v.indexToPubkeyLock.Lock()
+		if _, ok := v.indexToPubkey[duty.ValidatorIndex]; !ok {
+			v.indexToPubkey[duty.ValidatorIndex] = pk
 		}
-		v.pubKeyToIndexLock.Unlock()
+		v.indexToPubkeyLock.Unlock()
 	}
 
 	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
@@ -559,9 +559,9 @@ func (v *validator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
 }
 
 func (v *validator) PubKeysToIndices(ctx context.Context) map[uint64][48]byte {
-	v.pubKeyToIndexLock.RLock()
-	defer v.pubKeyToIndexLock.RUnlock()
-	return v.pubKeyToIndex
+	v.indexToPubkeyLock.RLock()
+	defer v.indexToPubkeyLock.RUnlock()
+	return v.indexToPubkey
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

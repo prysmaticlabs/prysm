@@ -214,7 +214,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
 	}
-	v.prevBalanceLock.RUnlock()
+	v.prevBalanceLock.Unlock()
 
 	v.UpdateLogAggregateStats(resp, slot)
 	return nil
