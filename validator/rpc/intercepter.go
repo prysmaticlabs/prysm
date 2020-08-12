@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"sync"
 
 	"github.com/dgrijalva/jwt-go"
 	"google.golang.org/grpc"
@@ -12,10 +13,13 @@ import (
 
 // noAuthPaths keeps track of the paths which do not require
 // authentication from our API.
-var noAuthPaths = map[string]bool{
-	"/proto/Login":  true,
-	"/proto/Signup": true,
-}
+var (
+	noAuthPaths = map[string]bool{
+		"/proto/Login":  true,
+		"/proto/Signup": true,
+	}
+	authLock sync.RWMutex
+)
 
 // JWTInterceptor is a gRPC unary interceptor to authorize incoming requests
 // for methods that are NOT in the noAuthPaths configuration map.
@@ -27,7 +31,10 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 		// Skip authorize when the path doesn't require auth.
-		if !noAuthPaths[info.FullMethod] {
+		authLock.RLock()
+		shouldAuthenticate := !noAuthPaths[info.FullMethod]
+		authLock.RUnlock()
+		if shouldAuthenticate {
 			if err := s.authorize(ctx); err != nil {
 				return nil, err
 			}
