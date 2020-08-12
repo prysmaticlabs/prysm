@@ -32,6 +32,7 @@ go_test(
         "db_test.go",
         "manage_test.go",
         "proposal_history_test.go",
+        "web_api_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

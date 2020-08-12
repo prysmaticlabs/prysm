@@ -26,7 +26,7 @@ func TestServer_ServerUnaryInterceptor_Verify(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctxMD := map[string][]string{
-		"authorization": []string{token},
+		"authorization": {token},
 	}
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)
@@ -57,7 +57,7 @@ func TestServer_ServerUnaryInterceptor_BadToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctxMD := map[string][]string{
-		"authorization": []string{token},
+		"authorization": {token},
 	}
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)
