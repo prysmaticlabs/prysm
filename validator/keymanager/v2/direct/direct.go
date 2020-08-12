@@ -277,6 +277,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 			return errors.Wrap(err, "could not rewrite accounts keystore")
 		}
 
+		fmt.Println("FCKK")
 		// Write the encoded keystore.
 		encoded, err := json.MarshalIndent(newStore, "", "\t")
 		if err != nil {

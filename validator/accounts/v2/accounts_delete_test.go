@@ -68,10 +68,10 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	for i, account := range accounts[:1] {
 		deletePublicKeysBytes[i] = account[:]
 	}
-	require.NoError(t, km.DeleteAccounts(ctx, deletePublicKeysBytes))
+	require.NoError(t, km.DeleteAccounts(ctx, deletePublicKeysBytes), "failed to delete")
 
 	newAccounts, err := km.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to get keys")
 
 	require.Equal(t, len(newAccounts), 1)
 	require.Equal(t, newAccounts[0], accounts[2])
