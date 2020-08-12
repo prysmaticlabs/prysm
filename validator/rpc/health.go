@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"sort"
 
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -17,29 +18,37 @@ func (s *Server) ListBalances(ctx context.Context, req *pb.AccountRequest) (*pb.
 		filtered[pb] = true
 	}
 
-	pubkeyToIndices := map[[48]byte]uint64{}
+	indices := s.validatorService.ValidatorIndicesToPubkeys(ctx)
 	for _, i := range req.Indices {
-		indices := s.validatorService.ValidatorPubKeyToIndices(ctx)
 		pb, ok := indices[i]
 		if ok {
 			filtered[pb] = true
-			pubkeyToIndices[pb] = i
 		}
 	}
 
+	pubkeys := s.validatorService.ValidatorPubkeysToIndices(ctx)
 	balances := s.validatorService.ValidatorBalances(ctx)
 	returnedKeys := make([][]byte, 0, len(filtered))
 	returnedIndices := make([]uint64, 0, len(filtered))
 	returnedBalances := make([]uint64, 0, len(filtered))
+
+	filteredIndices := make([]uint64, 0, len(filtered))
 	for k := range filtered {
-		b, ok := balances[k]
+		i, ok := pubkeys[k]
 		if ok {
-			returnedKeys = append(returnedKeys, k[:])
-			returnedBalances = append(returnedBalances, b)
-			if _, ok := pubkeyToIndices[k]; ok {
-				returnedIndices = append(returnedIndices, pubkeyToIndices[k])
-			}
+			filteredIndices = append(filteredIndices, i)
 		}
+	}
+	sort.Slice(filteredIndices, func(i int, j int) bool {
+		return filteredIndices[i] < filteredIndices[j]
+	})
+
+	for _, i := range filteredIndices {
+		k := indices[i]
+		returnedKeys = append(returnedKeys, k[:])
+		b := balances[k]
+		returnedBalances = append(returnedBalances, b)
+		returnedIndices = append(returnedIndices, i)
 	}
 
 	return &pb.ListBalancesResponse{
