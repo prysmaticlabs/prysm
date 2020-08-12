@@ -24,7 +24,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Could not validator password input")
+		return nil, status.Error(codes.InvalidArgument, "Could not validate password input")
 	}
 	// Salt and hash the password using the bcrypt algorithm
 	// The second argument is the cost of hashing, which we arbitrarily set as 8
