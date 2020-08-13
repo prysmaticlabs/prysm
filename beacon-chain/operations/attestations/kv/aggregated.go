@@ -3,6 +3,7 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -87,6 +88,18 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
+	// Don't save the attestation if the bitfield has been contained in previous blocks.
+	p.seenAggregatedAttLock.RLock()
+	seenBits, ok := p.seenAggregatedAtt[r]
+	p.seenAggregatedAttLock.RUnlock()
+	if ok {
+		for _, bit := range seenBits {
+			if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
+				return nil
+			}
+		}
+	}
+
 	copiedAtt := stateTrie.CopyAttestation(att)
 	p.aggregatedAttLock.Lock()
 	defer p.aggregatedAttLock.Unlock()
@@ -159,6 +172,15 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
 
+	p.seenAggregatedAttLock.Lock()
+	_, ok := p.seenAggregatedAtt[r]
+	if ok {
+		p.seenAggregatedAtt[r] = append(p.seenAggregatedAtt[r], att.AggregationBits)
+	} else {
+		p.seenAggregatedAtt[r] = []bitfield.Bitlist{att.AggregationBits}
+	}
+	p.seenAggregatedAttLock.Unlock()
+
 	p.aggregatedAttLock.Lock()
 	defer p.aggregatedAttLock.Unlock()
 	attList, ok := p.aggregatedAtt[r]
@@ -219,4 +241,11 @@ func (p *AttCaches) AggregatedAttestationCount() int {
 	p.aggregatedAttLock.RLock()
 	defer p.aggregatedAttLock.RUnlock()
 	return len(p.aggregatedAtt)
+}
+
+// ClearSeenAtts clears the seen attestations cache.
+func (p *AttCaches) ClearSeenAtts() {
+	p.seenAggregatedAttLock.Lock()
+	defer p.seenAggregatedAttLock.Unlock()
+	p.seenAggregatedAtt = make(map[[32]byte][]bitfield.Bitlist)
 }
