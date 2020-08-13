@@ -20,13 +20,3 @@ go_test(
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
-
-go_test(
-    name = "go_default_test",
-    srcs = ["assertions_test.go"],
-    embed = [":go_default_library"],
-    deps = [
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
-    ],
-)
