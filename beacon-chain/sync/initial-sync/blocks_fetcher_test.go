@@ -886,7 +886,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 			}
 			// Since peer selection is probabilistic (weighted, with high scorers having higher
 			// chance of being selected), we need multiple rounds of filtering to test the order:
-			// over multiple attempts, high scorers should be picked on high posstions more often.
+			// over multiple attempts, top scorers should be picked on high positions more often.
 			peerStats := make(map[peer.ID]int, len(tt.want))
 			var filteredPIDs []peer.ID
 			var err error
