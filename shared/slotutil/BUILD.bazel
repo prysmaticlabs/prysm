@@ -29,7 +29,7 @@ go_test(
     deps = [
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
-        "//shared/testutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )

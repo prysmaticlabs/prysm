@@ -10,7 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -83,7 +83,7 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 	if !reflect.DeepEqual(res, wanted) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	testutil.AssertLogsContain(t, hook, "Retrieved 100/1000 indexed attestations for epoch 0")
-	testutil.AssertLogsContain(t, hook, "Retrieved 500/1000 indexed attestations for epoch 0")
-	testutil.AssertLogsContain(t, hook, "Retrieved 1000/1000 indexed attestations for epoch 0")
+	require.LogsContain(t, hook, "Retrieved 100/1000 indexed attestations for epoch 0")
+	require.LogsContain(t, hook, "Retrieved 500/1000 indexed attestations for epoch 0")
+	require.LogsContain(t, hook, "Retrieved 1000/1000 indexed attestations for epoch 0")
 }

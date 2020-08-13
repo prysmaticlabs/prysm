@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -25,6 +25,6 @@ func TestCountdownToGenesis(t *testing.T) {
 		roughtime.Now().Add(2*time.Second),
 		params.BeaconConfig().MinGenesisActiveValidatorCount,
 	)
-	testutil.AssertLogsContain(t, hook, firstStringResult)
-	testutil.AssertLogsContain(t, hook, genesisReached)
+	require.LogsContain(t, hook, firstStringResult)
+	require.LogsContain(t, hook, genesisReached)
 }
