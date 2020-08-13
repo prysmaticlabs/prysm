@@ -7,12 +7,14 @@ import "google/protobuf/empty.proto";
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (WalletResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/wallet/create"
+            post: "/v2/validator/wallet/create",
+            body: "*"
         };
     }
     rpc EditConfig(EditWalletConfigRequest) returns (WalletResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/wallet/config/edit"
+            post: "/v2/validator/wallet/config/edit",
+            body: "*"
         };
     }
     rpc WalletConfig(google.protobuf.Empty) returns (WalletResponse) {
@@ -25,7 +27,8 @@ service Wallet {
 service Accounts {
     rpc CreateAccount(google.protobuf.Empty) returns (CreateAccountResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/accounts/create"
+            post: "/v2/validator/accounts/create",
+            body: "*"
         };
     }
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
@@ -49,6 +52,21 @@ service Health {
     rpc ListPerformance(AccountRequest) returns (ListPerformanceResponse) {
         option (google.api.http) = {
             get: "/v2/validator/performances"
+        };
+    }
+}
+
+service Auth {
+    rpc Login(AuthRequest) returns (AuthResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/login",
+            body: "*"
+        };
+    }
+    rpc Signup(AuthRequest) returns (AuthResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/signup",
+            body: "*"
         };
     }
 }
@@ -165,3 +183,12 @@ message ListPerformanceResponse {
     repeated Submission submissions = 3;
 }
 
+message AuthRequest {
+    string password = 1;
+}
+
+message AuthResponse {
+    bytes token = 1;
+
+    uint64 token_expiration = 2;
+}
