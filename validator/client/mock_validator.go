@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
@@ -38,6 +39,7 @@ type FakeValidator struct {
 	Balances                         map[[48]byte]uint64
 	IndexToPubkeyMap                 map[uint64][48]byte
 	PubkeyToIndexMap                 map[[48]byte]uint64
+	PubkeysToStatusesMap             map[[48]byte]ethpb.ValidatorStatus
 }
 
 // Done for mocking.
@@ -161,4 +163,9 @@ func (fv *FakeValidator) IndicesToPubkeys(ctx context.Context) map[uint64][48]by
 // PubkeysToIndices for mocking.
 func (fv *FakeValidator) PubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
 	return fv.PubkeyToIndexMap
+}
+
+// PubkeysToStatuses for mocking.
+func (fv *FakeValidator) PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+	return fv.PubkeysToStatusesMap
 }
