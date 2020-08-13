@@ -398,7 +398,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		batch := []*eth.SignedBeaconBlock{}
+		var batch []*eth.SignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
 		for i := 1; i < 10; i++ {
 			parentRoot := currBlockRoot
@@ -416,7 +416,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		batch2 := []*eth.SignedBeaconBlock{}
+		var batch2 []*eth.SignedBeaconBlock
 		for i := 10; i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := &eth.SignedBeaconBlock{
