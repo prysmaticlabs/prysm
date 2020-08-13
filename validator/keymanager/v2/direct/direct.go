@@ -488,7 +488,7 @@ func (dr *Keymanager) listenForFileChanges(ctx context.Context, filePath string)
 					).Errorf("Could not read valid, EIP-2335 keystore json file at path: %s", event.Name)
 					continue
 				}
-				if err := dr.replaceAccountsStore(accountsKeystore); err != nil {
+				if err := dr.reloadAccountsFromKeystore(accountsKeystore); err != nil {
 					log.WithError(
 						err,
 					).Error("Could not replace the accounts store from keystore file")
@@ -502,52 +502,31 @@ func (dr *Keymanager) listenForFileChanges(ctx context.Context, filePath string)
 	}
 }
 
-// Loads a new keystore file into the keymanager, even while the
-// validator client is running.
-func (dr *Keymanager) loadNewKeystore(keystore *v2keymanager.Keystore) error {
+// Replaces the accounts store struct in the direct keymanager with
+// the contents of a keystore file by decrypting it with the accounts password.
+func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore) error {
 	decryptor := keystorev4.New()
 	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.accountsPassword)
 	if err != nil {
 		return errors.Wrapf(err, "could not decrypt keystore file with public key %s", keystore.Pubkey)
 	}
-	//encodedAccounts, err := bls.SecretKeyFromBytes(privKeyBytes)
-	//if err != nil {
-	//	return errors.Wrap(err, "could not initialize private key")
-	//}
-	//pubKeyBytes := privKey.PublicKey().Marshal()
-	//// Add the private key to the keys cache.
-	//dr.lock.Lock()
-	//if _, alreadyExists := dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)]; alreadyExists {
-	//	log.WithField(
-	//		"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
-	//	).Info("Attempted to load validator key which already exists")
-	//	dr.lock.Unlock()
-	//	return nil
-	//}
-	//dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
-	//dr.lock.Unlock()
-	//
-	//// Modify the struct containing all validator accounts.
-	//ctx := context.Background()
-	//accountsKeystore, err := dr.createAccountsKeystore(
-	//	ctx,
-	//	[][]byte{privKeyBytes},
-	//	[][]byte{privKey.PublicKey().Marshal()},
-	//)
-	//if err != nil {
-	//	return errors.Wrapf(err, "could not create accounts keystore")
-	//}
-	//encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
-	//if err != nil {
-	//	return errors.Wrapf(err, "could not JSON marshal keystore")
-	//}
-	//// Write the accounts to disk into a single keystore.
-	//if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts); err != nil {
-	//	return errors.Wrap(err, "could not write accounts keystore to wallet")
-	//}
-	//log.WithField(
-	//	"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
-	//).Info("Loaded-in new validator key")
+	newAccountsStore := &AccountStore{}
+	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
+		return err
+	}
+	dr.lock.Lock()
+	dr.keysCache = make(map[[48]byte]bls.SecretKey)
+	dr.accountsStore = newAccountsStore
+	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
+		privKey, err := bls.SecretKeyFromBytes(dr.accountsStore.PrivateKeys[i])
+		if err != nil {
+			return errors.Wrap(err, "could not initialize private key")
+		}
+		pubKeyBytes := privKey.PublicKey().Marshal()
+		dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
+	}
+	dr.lock.Unlock()
+	log.Info("Loaded-in new validator keys into keymanager")
 	return nil
 }
 
