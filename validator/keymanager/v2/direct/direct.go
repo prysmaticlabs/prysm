@@ -256,8 +256,8 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 	for _, publicKey := range publicKeys {
 		var index int
 		var found bool
+		fmt.Println("FUC K STARTING")
 		for i, pubKey := range dr.accountsStore.PublicKeys {
-			fmt.Printf("%#x and %#x", pubKey, publicKey)
 			if bytes.Equal(pubKey, publicKey) {
 				index = i
 				found = true
@@ -277,7 +277,6 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 			return errors.Wrap(err, "could not rewrite accounts keystore")
 		}
 
-		fmt.Println("FCKK")
 		// Write the encoded keystore.
 		encoded, err := json.MarshalIndent(newStore, "", "\t")
 		if err != nil {
