@@ -10,7 +10,7 @@ go_library(
     cgo = True,
     copts = [
         "-D__BLST_CGO__",
-        "-march=native",
+        "-D__ADX__",
         "-Ibindings",
         "-Isrc",
     ] + select({
@@ -70,7 +70,7 @@ cc_library(
         "build/assembly.S",
     ],
     copts = [
-        "-march=native",
+        "-D__ADX__",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",
