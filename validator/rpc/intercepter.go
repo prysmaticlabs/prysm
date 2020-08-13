@@ -15,8 +15,8 @@ import (
 // authentication from our API.
 var (
 	noAuthPaths = map[string]bool{
-		"/proto/Login":  true,
-		"/proto/Signup": true,
+		"/ethereum.validator.accounts.v2.Auth/Signup": true,
+		"/ethereum.validator.accounts.v2.Auth/Login":  true,
 	}
 	authLock sync.RWMutex
 )

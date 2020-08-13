@@ -298,8 +298,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
 	}
-	rpcHost := cliCtx.String(cmd.RPCHost.Name)
-	rpcPort := cliCtx.Int(cmd.RPCPort.Name)
+	rpcHost := cliCtx.String(flags.RPCHost.Name)
+	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	server := rpc.NewServer(context.Background(), &rpc.Config{
 		ValDB:            s.db,
 		Host:             rpcHost,
@@ -310,10 +310,10 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
-	gatewayHost := cliCtx.String(cmd.GRPCGatewayHost.Name)
-	gatewayPort := cliCtx.Int(cmd.GRPCGatewayPort.Name)
-	rpcHost := cliCtx.String(cmd.RPCHost.Name)
-	rpcPort := cliCtx.Int(cmd.RPCPort.Name)
+	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
+	rpcHost := cliCtx.String(flags.RPCHost.Name)
+	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := []string{"localhost"}
