@@ -16,11 +16,27 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.New("attestation is aggregated")
 	}
 
-	r, err := hashFn(att)
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
+	// Don't save the attestation if the bitfield has been contained in previous blocks.
+	p.seenAggregatedAttLock.RLock()
+	seenBits, ok := p.seenAggregatedAtt[r]
+	p.seenAggregatedAttLock.RUnlock()
+	if ok {
+		for _, bit := range seenBits {
+			if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
+				return nil
+			}
+		}
+	}
+
+	r, err = hashFn(att)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash attestation")
+	}
 	p.unAggregateAttLock.Lock()
 	defer p.unAggregateAttLock.Unlock()
 	p.unAggregatedAtt[r] = stateTrie.CopyAttestation(att) // Copied.

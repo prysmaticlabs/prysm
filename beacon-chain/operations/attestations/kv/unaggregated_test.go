@@ -6,6 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
@@ -15,34 +16,49 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 		count         int
 		wantErrString string
 	}{
+		//{
+		//	name: "nil attestation",
+		//	att:  nil,
+		//},
+		//{
+		//	name:          "already aggregated",
+		//	att:           &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}},
+		//	wantErrString: "attestation is aggregated",
+		//},
+		//{
+		//	name: "invalid hash",
+		//	att: &ethpb.Attestation{
+		//		Data: &ethpb.AttestationData{
+		//			BeaconBlockRoot: []byte{0b0},
+		//		},
+		//	},
+		//	wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
+		//},
+		//{
+		//	name:  "normal save",
+		//	att:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}},
+		//	count: 1,
+		//},
 		{
-			name: "nil attestation",
-			att:  nil,
-		},
-		{
-			name:          "already aggregated",
-			att:           &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}},
-			wantErrString: "attestation is aggregated",
-		},
-		{
-			name: "invalid hash",
+			name: "already seen",
 			att: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: []byte{0b0},
+					Slot: 100,
 				},
+				AggregationBits: bitfield.Bitlist{0b10000001},
 			},
-			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
-		},
-		{
-			name:  "normal save",
-			att:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}},
-			count: 1,
+			count: 0,
 		},
 	}
+	r, err := hashFn(&ethpb.AttestationData{
+		Slot: 100,
+	})
+	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
+			cache.seenAggregatedAtt[r] = []bitfield.Bitlist{{0xff}}
 			if len(cache.unAggregatedAtt) != 0 {
 				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 			}
