@@ -54,30 +54,32 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
 	}
 	allAccountStr := strings.Join(formattedPubKeys, ", ")
-	if len(filteredPubKeys) == 1 {
-		promptText := "Are you sure you want to delete 1 account? (%s) Y/N"
-		resp, err := promptutil.ValidatePrompt(
-			fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
-		)
-		if err != nil {
-			return err
-		}
-		if strings.ToLower(resp) == "n" {
-			return nil
-		}
-	} else {
-		promptText := "Are you sure you want to delete %d accounts? (%s) Y/N"
-		if len(filteredPubKeys) == len(validatingPublicKeys) {
-			promptText = fmt.Sprintf("Are you sure you want to delete all accounts? Y/N (%s)", au.BrightGreen(allAccountStr))
+	if !cliCtx.IsSet(flags.DeletePublicKeysFlag.Name) {
+		if len(filteredPubKeys) == 1 {
+			promptText := "Are you sure you want to delete 1 account? (%s) Y/N"
+			resp, err := promptutil.ValidatePrompt(
+				fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+			)
+			if err != nil {
+				return err
+			}
+			if strings.ToLower(resp) == "n" {
+				return nil
+			}
 		} else {
-			promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
-		}
-		resp, err := promptutil.ValidatePrompt(promptText, promptutil.ValidateYesOrNo)
-		if err != nil {
-			return err
-		}
-		if strings.ToLower(resp) == "n" {
-			return nil
+			promptText := "Are you sure you want to delete %d accounts? (%s) Y/N"
+			if len(filteredPubKeys) == len(validatingPublicKeys) {
+				promptText = fmt.Sprintf("Are you sure you want to delete all accounts? Y/N (%s)", au.BrightGreen(allAccountStr))
+			} else {
+				promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
+			}
+			resp, err := promptutil.ValidatePrompt(promptText, promptutil.ValidateYesOrNo)
+			if err != nil {
+				return err
+			}
+			if strings.ToLower(resp) == "n" {
+				return nil
+			}
 		}
 	}
 	switch wallet.KeymanagerKind() {
