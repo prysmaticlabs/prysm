@@ -4,6 +4,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "backup.go",
         "direct.go",
         "doc.go",
         "import.go",
@@ -39,6 +40,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "backup_test.go",
         "direct_test.go",
         "import_test.go",
     ],
