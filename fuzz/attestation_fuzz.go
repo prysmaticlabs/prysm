@@ -24,7 +24,7 @@ func BeaconFuzzAttestation(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessAttestationNoVerify(context.Background(), st, input.Attestation)
+	post, err := blocks.ProcessAttestationNoVerifySignature(context.Background(), st, input.Attestation)
 	if err != nil {
 		return fail(err)
 	}

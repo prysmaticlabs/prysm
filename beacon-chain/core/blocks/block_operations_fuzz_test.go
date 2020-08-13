@@ -25,7 +25,7 @@ func TestFuzzProcessAttestationNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(att)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		_, err = ProcessAttestationNoVerify(ctx, s, att)
+		_, err = ProcessAttestationNoVerifySignature(ctx, s, att)
 		_ = err
 	}
 }
@@ -263,7 +263,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(blockBody)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		r, err := ProcessAttestationsNoVerify(ctx, s, blockBody)
+		r, err := ProcessAttestationsNoVerifySignature(ctx, s, blockBody)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, blockBody)
 		}
@@ -309,7 +309,7 @@ func TestFuzzVerifyAttestation_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(attestation)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		err = VerifyAttestation(ctx, s, attestation)
+		err = VerifyAttestationSignature(ctx, s, attestation)
 		_ = err
 	}
 }
@@ -400,7 +400,7 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(blockBody)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		r, err := ProcessVoluntaryExitsNoVerify(s, blockBody)
+		r, err := ProcessVoluntaryExits(context.Background(), s, blockBody)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, blockBody)
 		}

@@ -1,6 +1,8 @@
 package fuzz
 
 import (
+	"context"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -23,7 +25,8 @@ func BeaconFuzzVoluntaryExit(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessVoluntaryExitsNoVerify(st, &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.SignedVoluntaryExit{{Exit: input.VoluntaryExit}}})
+	post, err := blocks.ProcessVoluntaryExits(context.Background(),
+		st, &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.SignedVoluntaryExit{{Exit: input.VoluntaryExit}}})
 	if err != nil {
 		return fail(err)
 	}

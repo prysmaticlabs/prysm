@@ -388,7 +388,7 @@ func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
 		},
 	}
 	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)
-	_, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
+	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -419,7 +419,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	_, err = blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
+	_, err = blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.NoError(t, err)
 }
 
@@ -444,7 +444,7 @@ func TestProcessAttestationsNoVerify_BadAttIdx(t *testing.T) {
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
-	_, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
+	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
 }
 
@@ -711,7 +711,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	require.NoError(t, blocks.VerifyAttestations(ctx, st, []*ethpb.Attestation{att1, att2}))
+	require.NoError(t, blocks.VerifyAttestationsSignatures(ctx, st, []*ethpb.Attestation{att1, att2}))
 }
 
 func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
@@ -782,7 +782,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	require.NoError(t, blocks.VerifyAttestations(ctx, st, []*ethpb.Attestation{att1, att2}))
+	require.NoError(t, blocks.VerifyAttestationsSignatures(ctx, st, []*ethpb.Attestation{att1, att2}))
 }
 
 func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing.T) {

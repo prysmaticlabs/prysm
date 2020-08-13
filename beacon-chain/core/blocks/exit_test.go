@@ -41,10 +41,6 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 	want := "non-active validator cannot exit"
 	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
 	assert.ErrorContains(t, want, err)
-
-	// Check conformance of no verify method.
-	_, err = blocks.ProcessVoluntaryExitsNoVerify(state, block.Body)
-	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
@@ -74,11 +70,6 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 	want := "expected current epoch >= exit epoch"
 	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
 	assert.ErrorContains(t, want, err)
-
-	// Check conformance of no verify method.
-	_, err = blocks.ProcessVoluntaryExitsNoVerify(state, block.Body)
-	assert.ErrorContains(t, want, err)
-
 }
 
 func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
@@ -152,7 +143,6 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	stateCopy := state.Copy()
 	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
 	require.NoError(t, err, "Could not process exits")
 	newRegistry := newState.Validators()
@@ -160,14 +150,4 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
-
-	// Check conformance with NoVerify Exit Method.
-	newState, err = blocks.ProcessVoluntaryExitsNoVerify(stateCopy, block.Body)
-	require.NoError(t, err, "Could not process exits")
-	newRegistry = newState.Validators()
-	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(stateCopy.Slot()/params.BeaconConfig().SlotsPerEpoch) {
-		t.Errorf("Expected validator exit epoch to be %d, got %d",
-			helpers.ActivationExitEpoch(stateCopy.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
-	}
-
 }

@@ -130,7 +130,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	// Verify aggregated attestation has a valid signature.
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestation(ctx, bs, signed.Message.Aggregate); err != nil {
+		if err := blocks.VerifyAttestationSignature(ctx, bs, signed.Message.Aggregate); err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
