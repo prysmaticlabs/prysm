@@ -10,7 +10,6 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
@@ -60,8 +59,8 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 	pubKey := privKey.PublicKey().Marshal()
 	assert.DeepEqual(t, pubKey, store.PublicKeys[0])
-	testutil.AssertLogsContain(t, hook, accountName)
-	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
+	require.LogsContain(t, hook, accountName)
+	require.LogsContain(t, hook, "Successfully created new validator account")
 }
 
 func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
@@ -111,8 +110,8 @@ func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
 
 	require.Equal(t, numAccounts-1, len(store.PublicKeys))
 	require.Equal(t, numAccounts-1, len(store.PrivateKeys))
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
-	testutil.AssertLogsContain(t, hook, "Successfully deleted validator account")
+	require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
+	require.LogsContain(t, hook, "Successfully deleted validator account")
 }
 
 func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {

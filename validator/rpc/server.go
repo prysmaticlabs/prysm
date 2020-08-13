@@ -5,8 +5,17 @@ import (
 	"fmt"
 	"net"
 
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
@@ -24,11 +33,13 @@ type Config struct {
 	Port             string
 	CertFlag         string
 	KeyFlag          string
+	ValDB            db.Database
 	ValidatorService *client.ValidatorService
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
+	valDB            db.Database
 	ctx              context.Context
 	cancel           context.CancelFunc
 	host             string
@@ -38,6 +49,7 @@ type Server struct {
 	withKey          string
 	credentialError  error
 	grpcServer       *grpc.Server
+	jwtKey           []byte
 	validatorService *client.ValidatorService
 }
 
@@ -51,6 +63,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		port:             cfg.Port,
 		withCert:         cfg.CertFlag,
 		withKey:          cfg.KeyFlag,
+		valDB:            cfg.ValDB,
 		validatorService: cfg.ValidatorService,
 	}
 }
@@ -65,7 +78,21 @@ func (s *Server) Start() {
 	}
 	s.listener = lis
 
-	opts := make([]grpc.ServerOption, 0)
+	// Register interceptors for metrics gathering as well as our
+	// own, custom JWT unary interceptor.
+	opts := []grpc.ServerOption{
+		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+			recovery.UnaryServerInterceptor(
+				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+			),
+			grpc_prometheus.UnaryServerInterceptor,
+			grpc_opentracing.UnaryServerInterceptor(),
+			s.JWTInterceptor(),
+		)),
+	}
+	grpc_prometheus.EnableHandlingTimeHistogram()
+
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -80,8 +107,21 @@ func (s *Server) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
+	// We create a new, random JWT key upon validator startup.
+	r := rand.NewGenerator()
+	jwtKey := make([]byte, 32)
+	n, err := r.Read(jwtKey)
+	if err != nil {
+		log.WithError(err).Fatal("Could not initialize validator jwt key")
+	}
+	if n != len(jwtKey) {
+		log.WithError(err).Fatal("Could not create random jwt key for validator")
+	}
+	s.jwtKey = jwtKey
+
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
+	pb.RegisterAuthServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {

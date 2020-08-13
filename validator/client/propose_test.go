@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -59,7 +58,7 @@ func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 	defer finish()
 	validator.ProposeBlock(context.Background(), 0, validatorPubKey)
 
-	testutil.AssertLogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
+	require.LogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
 }
 
 func TestProposeBlock_DomainDataFailed(t *testing.T) {
@@ -73,7 +72,7 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Failed to sign randao reveal")
+	require.LogsContain(t, hook, "Failed to sign randao reveal")
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
@@ -92,7 +91,7 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Failed to request block from beacon node")
+	require.LogsContain(t, hook, "Failed to request block from beacon node")
 }
 
 func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
@@ -121,7 +120,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Failed to propose block")
+	require.LogsContain(t, hook, "Failed to propose block")
 }
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
@@ -156,10 +155,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
@@ -194,10 +193,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 
 	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
@@ -235,7 +234,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farAhead, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
 	m.validatorClient.EXPECT().GetBlock(
@@ -246,7 +245,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{},
 	}, nil /*err*/)
 	validator.ProposeBlock(context.Background(), past, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
@@ -285,7 +284,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 
 	pubKey := validatorPubKey
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -296,7 +295,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	}, nil /*err*/)
 
 	validator.ProposeBlock(context.Background(), farAhead-4, pubKey)
-	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {

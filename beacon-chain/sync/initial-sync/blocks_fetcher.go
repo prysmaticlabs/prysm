@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/sirupsen/logrus"
@@ -39,6 +40,9 @@ const (
 	// nonSkippedSlotsFullSearchEpochs how many epochs to check in full, before resorting to random
 	// sampling of slots once per epoch
 	nonSkippedSlotsFullSearchEpochs = 10
+	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
+	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
+	peerFilterCapacityWeight = 0.2
 )
 
 var (
@@ -49,8 +53,9 @@ var (
 
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
-	headFetcher blockchain.HeadFetcher
-	p2p         p2p.P2P
+	headFetcher              blockchain.HeadFetcher
+	p2p                      p2p.P2P
+	peerFilterCapacityWeight float64
 }
 
 // blocksFetcher is a service to fetch chain data from peers.
@@ -68,6 +73,7 @@ type blocksFetcher struct {
 	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
 	fetchResponses  chan *fetchRequestResponse
+	capacityWeight  float64       // how remaining capacity affects peer selection
 	quit            chan struct{} // termination notifier
 }
 
@@ -102,6 +108,11 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		float64(blocksPerSecond), int64(allowedBlocksBurst-blocksPerSecond),
 		false /* deleteEmptyBuckets */)
 
+	capacityWeight := cfg.peerFilterCapacityWeight
+	if capacityWeight >= 1 {
+		capacityWeight = peerFilterCapacityWeight
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &blocksFetcher{
 		ctx:             ctx,
@@ -114,6 +125,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		peerLocks:       make(map[peer.ID]*peerLock),
 		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
 		fetchResponses:  make(chan *fetchRequestResponse, maxPendingRequests),
+		capacityWeight:  capacityWeight,
 		quit:            make(chan struct{}),
 	}
 }
@@ -261,7 +273,11 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 
 	var blocks []*eth.SignedBeaconBlock
 	var err error
-	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	if featureconfig.Get().EnablePeerScorer {
+		peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	} else {
+		peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	}
 	if err != nil {
 		return blocks, "", err
 	}
@@ -272,6 +288,9 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	}
 	for i := 0; i < len(peers); i++ {
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
+			if featureconfig.Get().EnablePeerScorer {
+				f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+			}
 			return blocks, peers[i], err
 		}
 	}
@@ -298,6 +317,7 @@ func (f *blocksFetcher) requestBlocks(
 		"count":    req.Count,
 		"step":     req.Step,
 		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")

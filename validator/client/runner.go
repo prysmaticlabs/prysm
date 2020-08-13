@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -39,6 +40,7 @@ type Validator interface {
 	BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64
 	IndicesToPubkeys(ctx context.Context) map[uint64][48]byte
 	PubkeysToIndices(ctx context.Context) map[[48]byte]uint64
+	PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus
 }
 
 // Run the main validator routine. This routine exits if the context is

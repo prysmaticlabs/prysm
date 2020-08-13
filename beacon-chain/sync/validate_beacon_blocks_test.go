@@ -521,7 +521,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	}
 
 	r.validateBeaconBlockPubSub(context.Background(), "", m)
-	testutil.AssertLogsContain(t, hook, "Block slot older/equal than last finalized epoch start slot, rejecting it")
+	require.LogsContain(t, hook, "Block slot older/equal than last finalized epoch start slot, rejecting it")
 
 	hook.Reset()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
@@ -538,7 +538,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	}
 
 	r.validateBeaconBlockPubSub(context.Background(), "", m)
-	testutil.AssertLogsDoNotContain(t, hook, "Block slot older/equal than last finalized epoch start slot, rejecting itt")
+	require.LogsDoNotContain(t, hook, "Block slot older/equal than last finalized epoch start slot, rejecting itt")
 }
 
 func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
@@ -609,7 +609,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		},
 	}
 	assert.Equal(t, pubsub.ValidationReject, r.validateBeaconBlockPubSub(ctx, "", m), "Wrong validation result returned")
-	testutil.AssertLogsContain(t, hook, "not part of finalized chain")
+	require.LogsContain(t, hook, "not part of finalized chain")
 }
 
 func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
