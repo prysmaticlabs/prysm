@@ -469,20 +469,20 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 			p2p:         p2p,
 		})
 
-	_, peers := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
+	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: 1,
 		Step:      1,
 		Count:     blockBatchLimit,
 	}
-	blocks, err := fetcher.requestBlocks(ctx, req, peers[0])
+	blocks, err := fetcher.requestBlocks(ctx, req, peerIDs[0])
 	assert.NoError(t, err)
 	assert.Equal(t, blockBatchLimit, uint64(len(blocks)), "Incorrect number of blocks returned")
 
 	// Test context cancellation.
 	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
-	blocks, err = fetcher.requestBlocks(ctx, req, peers[0])
+	blocks, err = fetcher.requestBlocks(ctx, req, peerIDs[0])
 	assert.ErrorContains(t, "context canceled", err)
 }
 
@@ -583,15 +583,15 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		blocks = append(blocks, makeSequence(51200, 51264)...)
 		blocks = append(blocks, 55000)
 		blocks = append(blocks, makeSequence(57000, 57256)...)
-		var peers []*peerData
+		var peersData []*peerData
 		for i := 0; i < size; i++ {
-			peers = append(peers, &peerData{
+			peersData = append(peersData, &peerData{
 				blocks:         blocks,
 				finalizedEpoch: 1800,
 				headSlot:       57000,
 			})
 		}
-		return peers
+		return peersData
 	}
 	chainConfig := struct {
 		peers []*peerData
