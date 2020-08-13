@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["gateway.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/rpc/gateway",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/validator/accounts/v2:ethereum_validator_account_gateway_proto",
         "@com_github_grpc_ecosystem_grpc_gateway//runtime:go_default_library",
