@@ -78,13 +78,6 @@ func (s *Server) Start() {
 	// own, custom JWT unary interceptor.
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
-		grpc.StreamInterceptor(middleware.ChainStreamServer(
-			recovery.StreamServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
-			),
-			grpc_prometheus.StreamServerInterceptor,
-			grpc_opentracing.StreamServerInterceptor(),
-		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
 				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
