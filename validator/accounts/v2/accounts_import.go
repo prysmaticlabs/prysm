@@ -147,10 +147,6 @@ func ImportAccounts(cliCtx *cli.Context) error {
 			} else if err != nil {
 				return errors.Wrapf(err, "could not import keystore at path: %s", name)
 			}
-			fmt.Printf("file name %s\n", name)
-			fmt.Printf("pubkey %s\n", keystore.Pubkey)
-			fmt.Printf("name %s\n", keystore.Name)
-			fmt.Printf("id %s\n", keystore.ID)
 			keystoresImported = append(keystoresImported, keystore)
 		}
 	} else {
