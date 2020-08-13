@@ -99,7 +99,7 @@ var (
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
-		Value: 7500,
+		Value: 7777,
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
