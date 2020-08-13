@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/rpc"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -266,6 +267,16 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 		return errors.Wrap(err, "could not initialize client service")
 	}
 	return s.services.RegisterService(sp)
+}
+
+func (s *ValidatorClient) registerRPCService() error {
+	var vs *client.ValidatorService
+	if err := s.services.FetchService(&vs); err != nil {
+		return err
+	}
+
+	server := rpc.NewServer(context.Background(), &rpc.Config{ValidatorService: vs})
+	return s.services.RegisterService(server)
 }
 
 // Selects the key manager depending on the options provided by the user.

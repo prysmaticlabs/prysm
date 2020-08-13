@@ -34,7 +34,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type validatorRole int8
+// ValidatorRole defines the validator role.
+type ValidatorRole int8
 
 const (
 	roleUnknown = iota
@@ -55,7 +56,12 @@ type validator struct {
 	keyManager                         keymanager.KeyManager
 	keyManagerV2                       v2keymanager.IKeymanager
 	startBalances                      map[[48]byte]uint64
+	prevBalanceLock                    sync.RWMutex
 	prevBalance                        map[[48]byte]uint64
+	indicesLock                        sync.RWMutex
+	indexToPubkey                      map[uint64][48]byte
+	pubkeyToIndex                      map[[48]byte]uint64
+	pubkeyToStatus                     map[[48]byte]ethpb.ValidatorStatus
 	voteStats                          voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
@@ -362,6 +368,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range v.duties.Duties {
+		pk := bytesutil.ToBytes48(duty.PublicKey)
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
@@ -371,7 +378,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, pk)
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -383,6 +390,18 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
+
+		v.indicesLock.Lock()
+		if _, ok := v.indexToPubkey[duty.ValidatorIndex]; !ok {
+			v.indexToPubkey[duty.ValidatorIndex] = pk
+		}
+		if _, ok := v.pubkeyToIndex[pk]; !ok {
+			v.pubkeyToIndex[pk] = duty.ValidatorIndex
+		}
+		if _, ok := v.pubkeyToStatus[pk]; !ok {
+			v.pubkeyToStatus[pk] = duty.Status
+		}
+		v.indicesLock.Unlock()
 	}
 
 	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
@@ -427,11 +446,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid validatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
-	rolesAt := make(map[[48]byte][]validatorRole)
+// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
+	rolesAt := make(map[[48]byte][]ValidatorRole)
 	for _, duty := range v.duties.Duties {
-		var roles []validatorRole
+		var roles []ValidatorRole
 
 		if duty == nil {
 			continue
@@ -540,6 +559,34 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
+}
+
+// BalancesByPubkeys returns the validator balances keyed by validator public keys.
+func (v *validator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
+	v.prevBalanceLock.RLock()
+	defer v.prevBalanceLock.RUnlock()
+	return v.prevBalance
+}
+
+// IndicesToPubkeys returns the validator public keys keyed by validator indices.
+func (v *validator) IndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
+	v.indicesLock.RLock()
+	defer v.indicesLock.RUnlock()
+	return v.indexToPubkey
+}
+
+// PubkeysToIndices returns the validator indices keyed by validator public keys.
+func (v *validator) PubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
+	v.indicesLock.RLock()
+	defer v.indicesLock.RUnlock()
+	return v.pubkeyToIndex
+}
+
+// PubkeysToStatuses returns the validator statues keyed by validator public keys.
+func (v *validator) PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+	v.indicesLock.RLock()
+	defer v.indicesLock.RUnlock()
+	return v.pubkeyToStatus
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {
