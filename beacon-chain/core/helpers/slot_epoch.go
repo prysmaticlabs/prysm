@@ -119,6 +119,15 @@ func SlotsSince(time time.Time) uint64 {
 	return uint64(roughtime.Since(time).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }
 
+// GenesisTime prioritizes to return the genesis time in config unless the config
+// genesis time is 0. Then it returns the genesis time in state.
+func GenesisTime(state *stateTrie.BeaconState) uint64 {
+	if params.BeaconConfig().GenesisTime == 0 {
+		return state.GenesisTime()
+	}
+	return params.BeaconConfig().GenesisTime
+}
+
 // RoundUpToNearestEpoch rounds up the provided slot value to the nearest epoch.
 func RoundUpToNearestEpoch(slot uint64) uint64 {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
