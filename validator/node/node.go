@@ -42,6 +42,7 @@ var log = logrus.WithField("prefix", "node")
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
 	cliCtx   *cli.Context
+	db       *kv.Store
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
 	wallet   *accountsv2.Wallet
@@ -140,6 +141,12 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
+
+	valDB, err := kv.NewKVStore(dataDir, pubKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize db")
+	}
+	ValidatorClient.db = valDB
 
 	if err := ValidatorClient.registerPrometheusService(); err != nil {
 		return nil, err
@@ -254,6 +261,7 @@ func (s *ValidatorClient) registerClientService(
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
+		ValDB:                      s.db,
 	})
 
 	if err != nil {
@@ -293,6 +301,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	rpcHost := cliCtx.String(cmd.RPCHost.Name)
 	rpcPort := cliCtx.Int(cmd.RPCPort.Name)
 	server := rpc.NewServer(context.Background(), &rpc.Config{
+		ValDB:            s.db,
 		Host:             rpcHost,
 		Port:             fmt.Sprintf("%d", rpcPort),
 		ValidatorService: vs,

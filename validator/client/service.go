@@ -14,21 +14,22 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/plugin/ocgrpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
 
 var log = logrus.WithField("prefix", "validator")
@@ -36,6 +37,7 @@ var log = logrus.WithField("prefix", "validator")
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
+	db                   db.Database
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	validator            Validator
@@ -72,6 +74,7 @@ type Config struct {
 	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
 	Protector                  slashingprotection.Protector
+	ValDB                      db.Database
 	Validator                  Validator
 }
 
@@ -97,6 +100,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
 		protector:            cfg.Protector,
 		validator:            cfg.Validator,
+		db:                   cfg.ValDB,
 	}, nil
 }
 
@@ -128,12 +132,6 @@ func (v *ValidatorService) Start() {
 		log.Info("Established secure gRPC connection")
 	}
 
-	valDB, err := kv.NewKVStore(v.dataDir, v.validatingPubKeys)
-	if err != nil {
-		log.Errorf("Could not initialize db: %v", err)
-		return
-	}
-
 	v.conn = conn
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1920, // number of keys to track.
@@ -151,7 +149,7 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.validator = &validator{
-		db:                             valDB,
+		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
