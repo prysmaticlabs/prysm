@@ -130,24 +130,27 @@ func ImportAccounts(cliCtx *cli.Context) error {
 		if len(files) == 0 {
 			return fmt.Errorf("directory %s has no files, cannot import from it", keysDir)
 		}
-		keystoreFileNames := make([]string, 0)
+		filesInDir := make([]string, 0)
 		for i := 0; i < len(files); i++ {
 			if files[i].IsDir() {
 				continue
 			}
-			if !strings.HasPrefix(files[i].Name(), "keystore") {
-				continue
-			}
-			keystoreFileNames = append(keystoreFileNames, files[i].Name())
+			filesInDir = append(filesInDir, files[i].Name())
 		}
 		// Sort the imported keystores by derivation path if they
 		// specify this value in their filename.
-		sort.Sort(byDerivationPath(keystoreFileNames))
-		for _, name := range keystoreFileNames {
+		sort.Sort(byDerivationPath(filesInDir))
+		for _, name := range filesInDir {
 			keystore, err := readKeystoreFile(ctx, filepath.Join(keysDir, name))
-			if err != nil {
+			if err != nil && strings.Contains(err.Error(), "could not decode keystore json") {
+				continue
+			} else if err != nil {
 				return errors.Wrapf(err, "could not import keystore at path: %s", name)
 			}
+			fmt.Printf("file name %s\n", name)
+			fmt.Printf("pubkey %s\n", keystore.Pubkey)
+			fmt.Printf("name %s\n", keystore.Name)
+			fmt.Printf("id %s\n", keystore.ID)
 			keystoresImported = append(keystoresImported, keystore)
 		}
 	} else {
@@ -227,6 +230,9 @@ func readKeystoreFile(ctx context.Context, keystoreFilePath string) (*v2keymanag
 	keystoreFile := &v2keymanager.Keystore{}
 	if err := json.Unmarshal(keystoreBytes, keystoreFile); err != nil {
 		return nil, errors.Wrap(err, "could not decode keystore json")
+	}
+	if keystoreFile.Pubkey == "" {
+		return nil, errors.New("could not decode keystore json")
 	}
 	return keystoreFile, nil
 }
