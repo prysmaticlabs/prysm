@@ -199,60 +199,6 @@ func ProcessAttestationNoVerify(
 	return beaconState, nil
 }
 
-// VerifyIndexedAttestation determines the validity of an indexed attestation.
-//
-// Spec pseudocode definition:
-//  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
-//    """
-//    Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
-//    """
-//    # Verify indices are sorted and unique
-//    indices = indexed_attestation.attesting_indices
-//    if len(indices) == 0 or not indices == sorted(set(indices)):
-//        return False
-//    # Verify aggregate signature
-//    pubkeys = [state.validators[i].pubkey for i in indices]
-//    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
-//    signing_root = compute_signing_root(indexed_attestation.data, domain)
-//    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
-	defer span.End()
-
-	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
-		return err
-	}
-	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		return err
-	}
-	indices := indexedAtt.AttestingIndices
-	pubkeys := []bls.PublicKey{}
-	for i := 0; i < len(indices); i++ {
-		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
-		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-		if err != nil {
-			return errors.Wrap(err, "could not deserialize validator public key")
-		}
-		pubkeys = append(pubkeys, pk)
-	}
-	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
-}
-
-// VerifyAttestation converts and attestation into an indexed attestation and verifies
-// the signature in that attestation.
-func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
-	if att == nil || att.Data == nil {
-		return fmt.Errorf("nil or missing attestation data: %v", att)
-	}
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
-	if err != nil {
-		return err
-	}
-	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
-	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
-}
-
 // VerifyAttestations will verify the signatures of the provided attestations. This method performs
 // a single BLS verification call to verify the signatures of all of the provided attestations. All
 // of the provided attestations must have valid signatures or this method will return an error.
@@ -304,6 +250,60 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 	}
 
 	return verifyAttestationsWithDomain(ctx, beaconState, postForkAtts, currDomain)
+}
+
+// VerifyAttestation converts and attestation into an indexed attestation and verifies
+// the signature in that attestation.
+func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
+	if att == nil || att.Data == nil {
+		return fmt.Errorf("nil or missing attestation data: %v", att)
+	}
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
+}
+
+// VerifyIndexedAttestation determines the validity of an indexed attestation.
+//
+// Spec pseudocode definition:
+//  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//    """
+//    Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
+//    """
+//    # Verify indices are sorted and unique
+//    indices = indexed_attestation.attesting_indices
+//    if len(indices) == 0 or not indices == sorted(set(indices)):
+//        return False
+//    # Verify aggregate signature
+//    pubkeys = [state.validators[i].pubkey for i in indices]
+//    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
+//    signing_root = compute_signing_root(indexed_attestation.data, domain)
+//    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
+	defer span.End()
+
+	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+		return err
+	}
+	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	indices := indexedAtt.AttestingIndices
+	pubkeys := []bls.PublicKey{}
+	for i := 0; i < len(indices); i++ {
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+		if err != nil {
+			return errors.Wrap(err, "could not deserialize validator public key")
+		}
+		pubkeys = append(pubkeys, pk)
+	}
+	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
 }
 
 // Inner method to verify attestations. This abstraction allows for the domain to be provided as an
