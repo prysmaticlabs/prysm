@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestAssert_Equal(t *testing.T) {
@@ -70,7 +72,9 @@ func TestAssert_Equal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			Equal(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
 		})
@@ -128,7 +132,9 @@ func TestAssert_NotEqual(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			NotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
 		})
@@ -188,7 +194,9 @@ func TestAssert_DeepEqual(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			DeepEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
 		})
@@ -242,7 +250,9 @@ func TestAssert_NoError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			NoError(tt.args.tb, tt.args.err, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
 		})
@@ -331,7 +341,9 @@ func TestAssert_ErrorContains(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ErrorContains(tt.args.tb, tt.args.want, tt.args.err, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
 		})
@@ -384,7 +396,127 @@ func TestAssert_NotNil(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			NotNil(tt.args.tb, tt.args.obj, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			}
+		})
+	}
+}
+
+func TestAssert_LogsContainDoNotContain(t *testing.T) {
+	type args struct {
+		tb   *assertions.TBMock
+		want string
+		flag bool
+		msgs []interface{}
+	}
+	tests := []struct {
+		name        string
+		args        args
+		updateLogs  func(log *logrus.Logger)
+		expectedErr string
+	}{
+		{
+			name: "should contain not found",
+			args: args{
+				tb:   &assertions.TBMock{},
+				want: "here goes some expected log string",
+				flag: true,
+			},
+			expectedErr: "Expected log not found: here goes some expected log string",
+		},
+		{
+			name: "should contain found",
+			args: args{
+				tb:   &assertions.TBMock{},
+				want: "here goes some expected log string",
+				flag: true,
+			},
+			updateLogs: func(log *logrus.Logger) {
+				log.Info("here goes some expected log string")
+			},
+			expectedErr: "",
+		},
+		{
+			name: "should contain not found custom message",
+			args: args{
+				tb:   &assertions.TBMock{},
+				msgs: []interface{}{"Waited for logs"},
+				want: "here goes some expected log string",
+				flag: true,
+			},
+			expectedErr: "Waited for logs: here goes some expected log string",
+		},
+		{
+			name: "should contain not found custom message with params",
+			args: args{
+				tb:   &assertions.TBMock{},
+				msgs: []interface{}{"Waited for %d logs", 10},
+				want: "here goes some expected log string",
+				flag: true,
+			},
+			expectedErr: "Waited for 10 logs: here goes some expected log string",
+		},
+		{
+			name: "should not contain and not found",
+			args: args{
+				tb:   &assertions.TBMock{},
+				want: "here goes some unexpected log string",
+			},
+			expectedErr: "",
+		},
+		{
+			name: "should not contain but found",
+			args: args{
+				tb:   &assertions.TBMock{},
+				want: "here goes some unexpected log string",
+			},
+			updateLogs: func(log *logrus.Logger) {
+				log.Info("here goes some unexpected log string")
+			},
+			expectedErr: "Unexpected log found: here goes some unexpected log string",
+		},
+		{
+			name: "should not contain but found custom message",
+			args: args{
+				tb:   &assertions.TBMock{},
+				msgs: []interface{}{"Dit not expect logs"},
+				want: "here goes some unexpected log string",
+			},
+			updateLogs: func(log *logrus.Logger) {
+				log.Info("here goes some unexpected log string")
+			},
+			expectedErr: "Dit not expect logs: here goes some unexpected log string",
+		},
+		{
+			name: "should not contain but found custom message with params",
+			args: args{
+				tb:   &assertions.TBMock{},
+				msgs: []interface{}{"Dit not expect %d logs", 10},
+				want: "here goes some unexpected log string",
+			},
+			updateLogs: func(log *logrus.Logger) {
+				log.Info("here goes some unexpected log string")
+			},
+			expectedErr: "Dit not expect 10 logs: here goes some unexpected log string",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			log, hook := test.NewNullLogger()
+			if tt.updateLogs != nil {
+				tt.updateLogs(log)
+			}
+			if tt.args.flag {
+				LogsContain(tt.args.tb, hook, tt.args.want, tt.args.msgs...)
+			} else {
+				LogsDoNotContain(tt.args.tb, hook, tt.args.want, tt.args.msgs...)
+			}
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
 		})
