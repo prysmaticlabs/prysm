@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -219,10 +220,17 @@ func TestService_BroadcastAttestation(t *testing.T) {
 }
 
 func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
+	dir, err := testutil.RandDir()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := os.RemoveAll(dir)
+		assert.NoError(t, err)
+	})
 	// Setup bootnode.
 	cfg := &Config{}
 	port := 2000
 	cfg.UDPPort = uint(port)
+	cfg.DataDir = dir
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
 	genesisTime := time.Now()
@@ -253,6 +261,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
+		DataDir:             dir,
 	}
 	// Setup 2 different hosts
 	for i := 1; i <= 2; i++ {
@@ -311,11 +320,13 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	require.NoError(t, err)
 
 	p := &Service{
-		host:                  hosts[0],
-		pubsub:                ps1,
-		dv5Listener:           listeners[0],
-		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
+		host:         hosts[0],
+		pubsub:       ps1,
+		dv5Listener:  listeners[0],
+		joinedTopics: map[string]*pubsub.Topic{},
+		cfg: &Config{
+			DataDir: dir,
+		},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
@@ -326,11 +337,13 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	}
 
 	p2 := &Service{
-		host:                  hosts[1],
-		pubsub:                ps2,
-		dv5Listener:           listeners[1],
-		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
+		host:         hosts[1],
+		pubsub:       ps2,
+		dv5Listener:  listeners[1],
+		joinedTopics: map[string]*pubsub.Topic{},
+		cfg: &Config{
+			DataDir: dir,
+		},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
 		subnetsLock:           make(map[uint64]*sync.RWMutex),

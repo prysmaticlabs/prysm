@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -20,10 +22,16 @@ import (
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
+	dir, err := testutil.RandDir()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := os.RemoveAll(dir)
+		assert.NoError(t, err)
+	})
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port), DataDir: dir},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -47,6 +55,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 			Discv5BootStrapAddr: []string{bootNode.String()},
 			MaxPeers:            30,
 			UDPPort:             uint(port),
+			DataDir:             dir,
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
@@ -77,6 +86,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
 		UDPPort:             uint(port),
+		DataDir:             dir,
 	}
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	s, err = NewService(cfg)
@@ -116,6 +126,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	testService := &Service{
 		dv5Listener: listeners[0],
 		metaData:    &pb.MetaData{},
+		cfg:         cfg,
 	}
 	cache.SubnetIDs.AddAttesterSubnetID(0, 10)
 	testService.RefreshENR()
