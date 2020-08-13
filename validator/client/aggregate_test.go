@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -24,7 +23,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
 
-	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
+	require.LogsContain(t, hook, "Could not fetch validator assignment")
 }
 
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {

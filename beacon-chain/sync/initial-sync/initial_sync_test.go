@@ -57,6 +57,7 @@ func TestMain(m *testing.M) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 		NewStateMgmt:     true,
 		BatchBlockVerify: true,
+		EnablePeerScorer: true,
 	})
 	defer resetCfg()
 
