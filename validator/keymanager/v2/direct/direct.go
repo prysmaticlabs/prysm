@@ -256,7 +256,6 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 	for _, publicKey := range publicKeys {
 		var index int
 		var found bool
-		fmt.Println("FUC K STARTING")
 		for i, pubKey := range dr.accountsStore.PublicKeys {
 			if bytes.Equal(pubKey, publicKey) {
 				index = i
