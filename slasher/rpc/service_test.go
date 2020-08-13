@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -27,7 +27,7 @@ func TestLifecycle_OK(t *testing.T) {
 
 	rpcService.Start()
 
-	testutil.AssertLogsContain(t, hook, "listening on port")
+	require.LogsContain(t, hook, "listening on port")
 
 	if err := rpcService.Stop(); err != nil {
 		t.Error(err)
@@ -51,7 +51,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 
 	rpcService.Start()
 
-	testutil.AssertLogsContain(t, hook, fmt.Sprint("listening on port"))
+	require.LogsContain(t, hook, fmt.Sprint("listening on port"))
 
 	if err := rpcService.Stop(); err != nil {
 		t.Error(err)
