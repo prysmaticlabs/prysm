@@ -676,6 +676,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 0,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -697,6 +698,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 1,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -744,6 +746,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 0,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -765,6 +768,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex: 1,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -812,6 +816,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 0,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -833,6 +838,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 1,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
