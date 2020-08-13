@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -46,7 +47,6 @@ func New(
 // Start the gateway service. This serves the HTTP JSON traffic.
 func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
-	_ = ctx
 	g.cancel = cancel
 
 	gwmux := gwruntime.NewServeMux(
@@ -56,10 +56,9 @@ func (g *Gateway) Start() {
 		),
 	)
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	_ = opts
-	//if err := pb.RegisterAuthServerFromEndpoint(ctx, gwmux, g.remoteAddr, opts); err != nil {
-	//	log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
-	//}
+	if err := pb.RegisterAuthHandlerFromEndpoint(ctx, gwmux, g.remoteAddr, opts); err != nil {
+		log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
+	}
 	g.mux.Handle("/", g.corsMiddleware(gwmux))
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
