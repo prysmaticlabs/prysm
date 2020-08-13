@@ -164,6 +164,7 @@ func (v *ValidatorService) Start() {
 		prevBalance:                    make(map[[48]byte]uint64),
 		indexToPubkey:                  make(map[uint64][48]byte),
 		pubkeyToIndex:                  make(map[[48]byte]uint64),
+		pubkeyToStatus:                 make(map[[48]byte]ethpb.ValidatorStatus),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -300,4 +301,9 @@ func (v *ValidatorService) ValidatorIndicesToPubkeys(ctx context.Context) map[ui
 // ValidatorPubkeysToIndices returns the validator public keys mapping keyed by indices.
 func (v *ValidatorService) ValidatorPubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
 	return v.validator.PubkeysToIndices(ctx)
+}
+
+// ValidatorPubkeysToStatuses returns the validator statuses mapping keyed by public keys.
+func (v *ValidatorService) ValidatorPubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+	return v.validator.PubkeysToStatuses(ctx)
 }

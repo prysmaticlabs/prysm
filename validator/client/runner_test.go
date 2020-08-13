@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -95,7 +94,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 
 	run(ctx, v)
 
-	testutil.AssertLogsContain(t, hook, "Failed to update assignments")
+	require.LogsContain(t, hook, "Failed to update assignments")
 }
 
 func TestRoleAt_NextSlot(t *testing.T) {

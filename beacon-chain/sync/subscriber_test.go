@@ -222,7 +222,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	require.NoError(t, err)
 
 	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
-	testutil.AssertLogsDoNotContain(t, hook, "Failed to unregister topic validator")
+	require.LogsDoNotContain(t, hook, "Failed to unregister topic validator")
 }
 
 func TestStaticSubnets(t *testing.T) {
