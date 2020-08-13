@@ -579,6 +579,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		validatorClient: client,
 		indexToPubkey:   make(map[uint64][48]byte),
 		pubkeyToIndex:   make(map[[48]byte]uint64),
+		pubkeyToStatus:  make(map[[48]byte]ethpb.ValidatorStatus),
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),

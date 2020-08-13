@@ -61,6 +61,7 @@ type validator struct {
 	indicesLock                        sync.RWMutex
 	indexToPubkey                      map[uint64][48]byte
 	pubkeyToIndex                      map[[48]byte]uint64
+	pubkeyToStatus                     map[[48]byte]ethpb.ValidatorStatus
 	voteStats                          voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
@@ -397,6 +398,9 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		if _, ok := v.pubkeyToIndex[pk]; !ok {
 			v.pubkeyToIndex[pk] = duty.ValidatorIndex
 		}
+		if _, ok := v.pubkeyToStatus[pk]; !ok {
+			v.pubkeyToStatus[pk] = duty.Status
+		}
 		v.indicesLock.Unlock()
 	}
 
@@ -564,18 +568,25 @@ func (v *validator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
 	return v.prevBalance
 }
 
-// IndicesToPubkeys returns the validator indices keyed by validator public keys.
+// IndicesToPubkeys returns the validator public keys keyed by validator indices.
 func (v *validator) IndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
 	v.indicesLock.RLock()
 	defer v.indicesLock.RUnlock()
 	return v.indexToPubkey
 }
 
-// PubkeysToIndices returns the validator public keys keyed by validator indices.
+// PubkeysToIndices returns the validator indices keyed by validator public keys.
 func (v *validator) PubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
 	v.indicesLock.RLock()
 	defer v.indicesLock.RUnlock()
 	return v.pubkeyToIndex
+}
+
+// PubkeysToStatuses returns the validator statues keyed by validator public keys.
+func (v *validator) PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+	v.indicesLock.RLock()
+	defer v.indicesLock.RUnlock()
+	return v.pubkeyToStatus
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

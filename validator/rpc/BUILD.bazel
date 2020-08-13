@@ -54,6 +54,7 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "//validator/client:go_default_library",
         "//validator/db/testing:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
     ],
