@@ -231,6 +231,8 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		return errors.Wrap(err, "could not migrate to cold")
 	}
 
+	s.attPool.ClearSeenAtts()
+
 	return s.beaconDB.SaveFinalizedCheckpoint(ctx, cp)
 }
 
