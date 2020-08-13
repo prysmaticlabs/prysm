@@ -80,7 +80,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	assert.Equal(t, 2, len(keys))
 }
 
-func TestImport_Noninteractive_Filepath(t *testing.T) {
+func TestImport_Noninteractive_RandomName(t *testing.T) {
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -90,11 +90,10 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
 	})
 
-	_, keystorePath := createKeystore(t, keysDir)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
-		keysDir:             keystorePath,
+		keysDir:             keysDir,
 		keymanagerKind:      v2keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
@@ -103,14 +102,13 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
-	keymanagerCfg := direct.DefaultConfig()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
+	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx,
 		wallet,
-		keymanagerCfg,
+		direct.DefaultConfig(),
 	)
 	require.NoError(t, err)
 
@@ -118,6 +116,11 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	accounts, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
 	assert.Equal(t, len(accounts), 0)
+
+	// Create 2 keys.
+	createRandomNameKeystore(t, keysDir)
+	time.Sleep(time.Second)
+	createRandomNameKeystore(t, keysDir)
 
 	require.NoError(t, ImportAccounts(cliCtx))
 
@@ -128,7 +131,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	keys, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, len(keys))
+	assert.Equal(t, 2, len(keys))
 }
 
 func TestImport_SortByDerivationPath(t *testing.T) {
@@ -249,6 +252,63 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
 }
 
+func Test_importPrivateKeyAsAccount_RandomName(t *testing.T) {
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	privKeyDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "privKeys")
+	require.NoError(t, os.MkdirAll(privKeyDir, os.ModePerm))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(privKeyDir), "Failed to remove directory")
+	})
+	privKeyFileName := filepath.Join(privKeyDir, "privatekey.txt")
+
+	// We create a new private key and save it to a file on disk.
+	privKey := bls.RandKey()
+	privKeyHex := fmt.Sprintf("%x", privKey.Marshal())
+	require.NoError(
+		t,
+		ioutil.WriteFile(privKeyFileName, []byte(privKeyHex), params.BeaconIoConfig().ReadWritePermissions),
+	)
+
+	// We instantiate a new wallet from a cli context.
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: passwordFilePath,
+		privateKeyFile:     privKeyFileName,
+	})
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	require.NoError(t, err)
+	require.NoError(t, wallet.SaveWallet())
+
+	// We create a new direct keymanager for the wallet.
+	ctx := context.Background()
+	keymanagerCfg := direct.DefaultConfig()
+	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
+	require.NoError(t, err)
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	keymanager, err := direct.NewKeymanager(
+		cliCtx,
+		wallet,
+		keymanagerCfg,
+	)
+	require.NoError(t, err)
+	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
+
+	// We re-instantiate the keymanager and check we now have 1 public key.
+	keymanager, err = direct.NewKeymanager(
+		cliCtx,
+		wallet,
+		keymanagerCfg,
+	)
+	require.NoError(t, err)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pubKeys))
+	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
+}
+
 // Returns the fullPath to the newly created keystore file.
 func createKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) {
 	validatingKey := bls.RandKey()
@@ -269,6 +329,31 @@ func createKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) 
 	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := roughtime.Now().Unix()
 	fullPath := filepath.Join(path, fmt.Sprintf(direct.KeystoreFileNameFormat, createdAt))
+	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
+	return keystoreFile, fullPath
+}
+
+// Returns the fullPath to the newly created keystore file.
+func createRandomNameKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) {
+	validatingKey := bls.RandKey()
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
+	require.NoError(t, err)
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	keystoreFile := &v2keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
+	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
+	require.NoError(t, err)
+	// Write the encoded keystore to disk with the timestamp appended
+	random, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err)
+	fullPath := filepath.Join(path, fmt.Sprintf("test-%d-keystore", random.Int64()))
 	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
 	return keystoreFile, fullPath
 }
