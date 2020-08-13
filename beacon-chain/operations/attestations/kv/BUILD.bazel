@@ -19,8 +19,6 @@ go_library(
         "//shared/aggregation/attestations:go_default_library",
         "//shared/hashutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
