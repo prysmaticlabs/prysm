@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -27,9 +27,9 @@ func TestVerifyConnectivity(t *testing.T) {
 				verifyConnectivity(tc.address, tc.port, "tcp")
 				logMessage := "IP address is not accessible"
 				if tc.expectedConnectivity {
-					testutil.AssertLogsDoNotContain(t, hook, logMessage)
+					require.LogsDoNotContain(t, hook, logMessage)
 				} else {
-					testutil.AssertLogsContain(t, hook, logMessage)
+					require.LogsContain(t, hook, logMessage)
 				}
 			})
 	}

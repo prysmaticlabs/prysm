@@ -36,7 +36,7 @@ func TestSaveHotState_AlreadyHas(t *testing.T) {
 	// Should not save the state and state summary.
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
 	assert.Equal(t, false, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")
-	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 }
 
 func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
@@ -76,7 +76,7 @@ func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
 	// Should only save state summary.
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
 	assert.Equal(t, true, service.stateSummaryCache.Has(r), "Should have saved the state summary")
-	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 }
 
 func TestLoadHoteStateByRoot_Cached(t *testing.T) {
