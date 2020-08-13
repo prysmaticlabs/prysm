@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -43,6 +44,7 @@ type stateMachine struct {
 	smm     *stateMachineManager
 	start   uint64
 	state   stateID
+	pid     peer.ID
 	blocks  []*eth.SignedBeaconBlock
 	updated time.Time
 }
