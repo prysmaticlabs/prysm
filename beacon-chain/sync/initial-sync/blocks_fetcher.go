@@ -109,7 +109,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		false /* deleteEmptyBuckets */)
 
 	capacityWeight := cfg.peerFilterCapacityWeight
-	if capacityWeight == 0 || capacityWeight > 1 {
+	if capacityWeight  >= 1 {
 		capacityWeight = peerFilterCapacityWeight
 	}
 
