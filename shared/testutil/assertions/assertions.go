@@ -39,7 +39,7 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 	errMsg := parseMsg("Values are not equal", msg...)
 	if !reflect.DeepEqual(expected, actual) {
 		_, file, line, _ := runtime.Caller(2)
-		loggerFn("%s:%d %s, want: %v, got: %v", filepath.Base(file), line, errMsg, expected, actual)
+		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
 	}
 }
 

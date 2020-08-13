@@ -15,20 +15,20 @@ import (
 
 const (
 	// DefaultBlockProviderProcessedBatchWeight is a default reward weight of a processed batch of blocks.
-	DefaultBlockProviderProcessedBatchWeight = float64(0.05)
+	DefaultBlockProviderProcessedBatchWeight = float64(0.1)
 	// DefaultBlockProviderProcessedBlocksCap defines default value for processed blocks cap.
 	// e.g. 20 * 64 := 20 batches of size 64 (with 0.05 per batch reward, 20 batches result in score of 1.0).
-	DefaultBlockProviderProcessedBlocksCap = uint64(20 * 64)
+	DefaultBlockProviderProcessedBlocksCap = uint64(10 * 64)
 	// DefaultBlockProviderDecayInterval defines how often the decaying routine is called.
 	DefaultBlockProviderDecayInterval = 30 * time.Second
 	// DefaultBlockProviderDecay defines default blocks that are to be subtracted from stats on each
 	// decay interval. Effectively, this param provides minimum expected performance for a peer to remain
 	// high scorer.
-	DefaultBlockProviderDecay = uint64(5 * 64)
+	DefaultBlockProviderDecay = uint64(1 * 64)
 	// DefaultBlockProviderStalePeerRefreshInterval defines default interval at which peers should be given
 	// opportunity to provide blocks (their score gets boosted, up until they are selected for
 	// fetching).
-	DefaultBlockProviderStalePeerRefreshInterval = 1 * time.Minute
+	DefaultBlockProviderStalePeerRefreshInterval = 5 * time.Minute
 )
 
 // BlockProviderScorer represents block provider scoring service.
@@ -209,14 +209,15 @@ func (s *BlockProviderScorer) WeightSorted(
 	nextPID := func(weights map[peer.ID]float64) peer.ID {
 		totalWeight := 0
 		for _, w := range weights {
-			totalWeight += int(w)
+			// Factor by 100, to allow weights in (0; 1) range.
+			totalWeight += int(w * 100)
 		}
 		if totalWeight <= 0 {
 			return ""
 		}
 		rnd := r.Intn(totalWeight)
 		for pid, w := range weights {
-			rnd -= int(w)
+			rnd -= int(w * 100)
 			if rnd < 0 {
 				return pid
 			}
