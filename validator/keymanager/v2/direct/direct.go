@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -134,22 +135,10 @@ func NewKeymanager(cliCtx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keym
 	// If the user desires and sets the --rescan-keystores-from-dir flag, we begin
 	// a goroutine to listen for file changes at the specified directory and dynamically load
 	// keys from valid keystore.json files observed into our validator client.
-	if cliCtx.IsSet(flags.RescanKeystoresFromDirectory.Name) {
-		dirToRescan, err := fileutil.ExpandPath(cliCtx.String(flags.RescanKeystoresFromDirectory.Name))
-		if err != nil {
-			return nil, err
-		}
-		hasDir, err := fileutil.HasDir(dirToRescan)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not check if rescan keystores directory exists")
-		}
-		if !hasDir {
-			return nil, errors.Wrap(err, "directory to rescan keystores does not exist")
-		}
-		// Begin listening for file changes and loading in new keystores
-		// if observed via a filesystem watcher.
-		go k.rescanDirectoryForKeystores(cliCtx.Context, dirToRescan)
-	}
+	//// Begin listening for file changes and loading in new keystores
+	//// if observed via a filesystem watcher.
+	accountsFilePath := filepath.Join(k.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
+	go k.listenForFileChanges(cliCtx.Context, accountsFilePath)
 	return k, nil
 }
 
@@ -465,7 +454,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	}, nil
 }
 
-func (dr *Keymanager) rescanDirectoryForKeystores(ctx context.Context, directory string) {
+func (dr *Keymanager) listenForFileChanges(ctx context.Context, filePath string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.WithError(err).Error("Could not initialize file watcher")
@@ -477,37 +466,36 @@ func (dr *Keymanager) rescanDirectoryForKeystores(ctx context.Context, directory
 			return
 		}
 	}()
-	if err := watcher.Add(directory); err != nil {
-		log.WithError(err).Errorf("Could not add directory %s to file watcher", directory)
+	if err := watcher.Add(filePath); err != nil {
+		log.WithError(err).Errorf("Could not add file %s to file watcher", filePath)
 		return
 	}
 	for {
 		select {
 		case event := <-watcher.Events:
-			// If a file was modified or created, we then attempt
-			// to read that file and parse it into a keystore.json.
-			if event.Op&fsnotify.Write == fsnotify.Write ||
-				event.Op&fsnotify.Create == fsnotify.Create {
+			// If a file was modified, we attempt to
+			// read that file and parse it into our accounts store.
+			if event.Op&fsnotify.Write == fsnotify.Write {
 				fileBytes, err := ioutil.ReadFile(event.Name)
 				if err != nil {
 					log.WithError(err).Errorf("Could not read file at path: %s", event.Name)
 					continue
 				}
-				keystore := &v2keymanager.Keystore{}
-				if err := json.Unmarshal(fileBytes, keystore); err != nil {
+				accountsKeystore := &v2keymanager.Keystore{}
+				if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
 					log.WithError(
 						err,
 					).Errorf("Could not read valid, EIP-2335 keystore json file at path: %s", event.Name)
 					continue
 				}
-				if err := dr.loadNewKeystore(keystore); err != nil {
+				if err := dr.replaceAccountsStore(accountsKeystore); err != nil {
 					log.WithError(
 						err,
-					).Errorf("Could not load new keystore with public key %s", keystore.Pubkey)
+					).Error("Could not replace the accounts store from keystore file")
 				}
 			}
 		case err := <-watcher.Errors:
-			log.WithError(err).Errorf("Could not watch for file changes in directory: %s", directory)
+			log.WithError(err).Errorf("Could not watch for file changes for: %s", filePath)
 		case <-ctx.Done():
 			return
 		}
@@ -518,48 +506,48 @@ func (dr *Keymanager) rescanDirectoryForKeystores(ctx context.Context, directory
 // validator client is running.
 func (dr *Keymanager) loadNewKeystore(keystore *v2keymanager.Keystore) error {
 	decryptor := keystorev4.New()
-	privKeyBytes, err := decryptor.Decrypt(keystore.Crypto, dr.accountsPassword)
+	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.accountsPassword)
 	if err != nil {
 		return errors.Wrapf(err, "could not decrypt keystore file with public key %s", keystore.Pubkey)
 	}
-	privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize private key")
-	}
-	pubKeyBytes := privKey.PublicKey().Marshal()
-	// Add the private key to the keys cache.
-	dr.lock.Lock()
-	if _, alreadyExists := dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)]; alreadyExists {
-		log.WithField(
-			"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
-		).Info("Attempted to load validator key which already exists")
-		dr.lock.Unlock()
-		return nil
-	}
-	dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
-	dr.lock.Unlock()
-
-	// Modify the struct containing all validator accounts.
-	ctx := context.Background()
-	accountsKeystore, err := dr.createAccountsKeystore(
-		ctx,
-		[][]byte{privKeyBytes},
-		[][]byte{privKey.PublicKey().Marshal()},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "could not create accounts keystore")
-	}
-	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
-	if err != nil {
-		return errors.Wrapf(err, "could not JSON marshal keystore")
-	}
-	// Write the accounts to disk into a single keystore.
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts); err != nil {
-		return errors.Wrap(err, "could not write accounts keystore to wallet")
-	}
-	log.WithField(
-		"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
-	).Info("Loaded-in new validator key")
+	//encodedAccounts, err := bls.SecretKeyFromBytes(privKeyBytes)
+	//if err != nil {
+	//	return errors.Wrap(err, "could not initialize private key")
+	//}
+	//pubKeyBytes := privKey.PublicKey().Marshal()
+	//// Add the private key to the keys cache.
+	//dr.lock.Lock()
+	//if _, alreadyExists := dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)]; alreadyExists {
+	//	log.WithField(
+	//		"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
+	//	).Info("Attempted to load validator key which already exists")
+	//	dr.lock.Unlock()
+	//	return nil
+	//}
+	//dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
+	//dr.lock.Unlock()
+	//
+	//// Modify the struct containing all validator accounts.
+	//ctx := context.Background()
+	//accountsKeystore, err := dr.createAccountsKeystore(
+	//	ctx,
+	//	[][]byte{privKeyBytes},
+	//	[][]byte{privKey.PublicKey().Marshal()},
+	//)
+	//if err != nil {
+	//	return errors.Wrapf(err, "could not create accounts keystore")
+	//}
+	//encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
+	//if err != nil {
+	//	return errors.Wrapf(err, "could not JSON marshal keystore")
+	//}
+	//// Write the accounts to disk into a single keystore.
+	//if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts); err != nil {
+	//	return errors.Wrap(err, "could not write accounts keystore to wallet")
+	//}
+	//log.WithField(
+	//	"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes)),
+	//).Info("Loaded-in new validator key")
 	return nil
 }
 
