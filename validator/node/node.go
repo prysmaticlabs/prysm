@@ -30,6 +30,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
+	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -149,6 +150,14 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2, pubKeys); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatorClient.registerRPCService(cliCtx); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatorClient.registerRPCGatewayService(cliCtx); err != nil {
 		return nil, err
 	}
 
@@ -276,14 +285,36 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	return s.services.RegisterService(sp)
 }
 
-func (s *ValidatorClient) registerRPCService() error {
+func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	var vs *client.ValidatorService
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
 	}
-
-	server := rpc.NewServer(context.Background(), &rpc.Config{ValidatorService: vs})
+	rpcHost := cliCtx.String(cmd.RPCHost.Name)
+	rpcPort := cliCtx.Int(cmd.RPCPort.Name)
+	server := rpc.NewServer(context.Background(), &rpc.Config{
+		Host:             rpcHost,
+		Port:             fmt.Sprintf("%d", rpcPort),
+		ValidatorService: vs,
+	})
 	return s.services.RegisterService(server)
+}
+
+func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
+	gatewayHost := cliCtx.String(cmd.GRPCGatewayHost.Name)
+	gatewayPort := cliCtx.Int(cmd.GRPCGatewayPort.Name)
+	rpcHost := cliCtx.String(cmd.RPCHost.Name)
+	rpcPort := cliCtx.Int(cmd.RPCPort.Name)
+	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
+	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	allowedOrigins := []string{"localhost"}
+	gatewaySrv := gateway.New(
+		context.Background(),
+		rpcAddr,
+		gatewayAddress,
+		allowedOrigins,
+	)
+	return s.services.RegisterService(gatewaySrv)
 }
 
 // Selects the key manager depending on the options provided by the user.

@@ -19,18 +19,6 @@ var (
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
 		Value: "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", // Medalla deposit contract address.
 	}
-	// RPCHost defines the host on which the RPC server should listen.
-	RPCHost = &cli.StringFlag{
-		Name:  "rpc-host",
-		Usage: "Host on which the RPC server should listen",
-		Value: "127.0.0.1",
-	}
-	// RPCPort defines a beacon node RPC port to open.
-	RPCPort = &cli.IntFlag{
-		Name:  "rpc-port",
-		Usage: "RPC port exposed by a beacon node",
-		Value: 4000,
-	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
@@ -46,29 +34,6 @@ var (
 	KeyFlag = &cli.StringFlag{
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
-	}
-	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
-	DisableGRPCGateway = &cli.BoolFlag{
-		Name:  "disable-grpc-gateway",
-		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
-	}
-	// GRPCGatewayHost specifies a gRPC gateway host for Prysm.
-	GRPCGatewayHost = &cli.StringFlag{
-		Name:  "grpc-gateway-host",
-		Usage: "The host on which the gateway server runs on",
-		Value: "127.0.0.1",
-	}
-	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
-	GRPCGatewayPort = &cli.IntFlag{
-		Name:  "grpc-gateway-port",
-		Usage: "Enable gRPC gateway for JSON requests",
-		Value: 3500,
-	}
-	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
-	GPRCGatewayCorsDomain = &cli.StringFlag{
-		Name: "grpc-gateway-corsdomain",
-		Usage: "Comma separated list of domains from which to accept cross origin requests " +
-			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
