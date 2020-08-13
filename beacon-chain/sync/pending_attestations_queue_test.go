@@ -52,7 +52,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
 	r.blkRootToPendingAtts[[32]byte{'A'}] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
-	testutil.AssertLogsContain(t, hook, "Requesting block for pending attestation")
+	require.LogsContain(t, hook, "Requesting block for pending attestation")
 }
 
 func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
@@ -91,7 +91,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	assert.Equal(t, 1, len(r.attPool.UnaggregatedAttestations()), "Did not save unaggregated att")
 	assert.DeepEqual(t, a.Aggregate, r.attPool.UnaggregatedAttestations()[0], "Incorrect saved att")
 	assert.Equal(t, 0, len(r.attPool.AggregatedAttestations()), "Did save aggregated att")
-	testutil.AssertLogsContain(t, hook, "Verified and saved pending attestations to pool")
+	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
 
 func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
@@ -174,7 +174,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	assert.Equal(t, 1, len(r.attPool.AggregatedAttestations()), "Did not save aggregated att")
 	assert.DeepEqual(t, att, r.attPool.AggregatedAttestations()[0], "Incorrect saved att")
 	assert.Equal(t, 0, len(r.attPool.UnaggregatedAttestations()), "Did save unaggregated att")
-	testutil.AssertLogsContain(t, hook, "Verified and saved pending attestations to pool")
+	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
 
 func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {

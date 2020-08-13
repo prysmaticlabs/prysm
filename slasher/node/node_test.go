@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -34,7 +35,7 @@ func TestNodeClose_OK(t *testing.T) {
 
 	node.Close()
 
-	testutil.AssertLogsContain(t, hook, "Stopping hash slinging slasher")
+	require.LogsContain(t, hook, "Stopping hash slinging slasher")
 
 	if err := os.RemoveAll(tmp); err != nil {
 		t.Fatal(err)
