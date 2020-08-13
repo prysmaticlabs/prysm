@@ -92,18 +92,6 @@ var (
 			"relay node and advertise their address via the relay node to other peers",
 		Value: "",
 	}
-	// RPCHost defines the host on which the RPC server should listen.
-	RPCHost = &cli.StringFlag{
-		Name:  "rpc-host",
-		Usage: "Host on which the RPC server should listen",
-		Value: "127.0.0.1",
-	}
-	// RPCPort defines an RPC port to open.
-	RPCPort = &cli.IntFlag{
-		Name:  "rpc-port",
-		Usage: "RPC port exposed by a server",
-		Value: 4000,
-	}
 	// P2PUDPPort defines the port to be used by discv5.
 	P2PUDPPort = &cli.IntFlag{
 		Name:  "p2p-udp-port",
@@ -213,28 +201,5 @@ var (
 		Name:  "grpc-max-msg-size",
 		Usage: "Integer to define max recieve message call size (default: 4194304 (for 4MB))",
 		Value: 1 << 22,
-	}
-	// DisableGRPCGateway for JSON-HTTP requests.
-	DisableGRPCGateway = &cli.BoolFlag{
-		Name:  "disable-grpc-gateway",
-		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
-	}
-	// GRPCGatewayHost specifies a gRPC gateway host.
-	GRPCGatewayHost = &cli.StringFlag{
-		Name:  "grpc-gateway-host",
-		Usage: "The host on which the gateway server runs on",
-		Value: "127.0.0.1",
-	}
-	// GRPCGatewayPort enables a gRPC gateway to be exposed.
-	GRPCGatewayPort = &cli.IntFlag{
-		Name:  "grpc-gateway-port",
-		Usage: "Enable gRPC gateway for JSON requests",
-		Value: 3500,
-	}
-	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
-	GPRCGatewayCorsDomain = &cli.StringFlag{
-		Name: "grpc-gateway-corsdomain",
-		Usage: "Comma separated list of domains from which to accept cross origin requests " +
-			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
 	}
 )

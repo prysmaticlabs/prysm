@@ -586,8 +586,8 @@ func (b *BeaconNode) registerRPCService() error {
 		chainStartFetcher = web3Service
 	}
 
-	host := b.cliCtx.String(cmd.RPCHost.Name)
-	port := b.cliCtx.String(cmd.RPCPort.Name)
+	host := b.cliCtx.String(flags.RPCHost.Name)
+	port := b.cliCtx.String(flags.RPCPort.Name)
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
 	slasherCert := b.cliCtx.String(flags.SlasherCertFlag.Name)
@@ -662,15 +662,15 @@ func (b *BeaconNode) registerPrometheusService() error {
 }
 
 func (b *BeaconNode) registerGRPCGateway() error {
-	if b.cliCtx.Bool(cmd.DisableGRPCGateway.Name) {
+	if b.cliCtx.Bool(flags.DisableGRPCGateway.Name) {
 		return nil
 	}
-	gatewayPort := b.cliCtx.Int(cmd.GRPCGatewayPort.Name)
-	gatewayHost := b.cliCtx.String(cmd.GRPCGatewayHost.Name)
-	rpcHost := b.cliCtx.String(cmd.RPCHost.Name)
-	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(cmd.RPCPort.Name))
+	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
+	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
+	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
+	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	allowedOrigins := strings.Split(b.cliCtx.String(cmd.GPRCGatewayCorsDomain.Name), ",")
+	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	return b.services.RegisterService(
 		gateway.New(
