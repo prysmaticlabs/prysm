@@ -255,7 +255,7 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
-	if att == nil || att.Data == nil {
+	if att == nil || att.Data == nil || att.AggregationBits.Count() == 0 {
 		return fmt.Errorf("nil or missing attestation data: %v", att)
 	}
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
