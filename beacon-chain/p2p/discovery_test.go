@@ -149,9 +149,9 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 	defer listener.Close()
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
-	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
-	testutil.AssertLogsDoNotContain(t, hook, "Invalid port, the tcp port of the node is a reserved port")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not get multiaddr")
+	require.LogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
+	require.LogsDoNotContain(t, hook, "Invalid port, the tcp port of the node is a reserved port")
+	require.LogsDoNotContain(t, hook, "Could not get multiaddr")
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
