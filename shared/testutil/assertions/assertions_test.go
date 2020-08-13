@@ -1,14 +1,17 @@
-package assert
+package assertions_test
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestAssert_Equal(t *testing.T) {
+func Test_Equal(t *testing.T) {
 	type args struct {
 		tb       *assertions.TBMock
 		expected interface{}
@@ -68,16 +71,25 @@ func TestAssert_Equal(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			Equal(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.Equal(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.Equal(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
 		})
 	}
 }
 
-func TestAssert_NotEqual(t *testing.T) {
+func Test_NotEqual(t *testing.T) {
 	type args struct {
 		tb       *assertions.TBMock
 		expected interface{}
@@ -126,11 +138,20 @@ func TestAssert_NotEqual(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			NotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.NotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.NotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
 		})
 	}
 }
@@ -186,11 +207,20 @@ func TestAssert_DeepEqual(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			DeepEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.DeepEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.DeepEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
 		})
 	}
 }
@@ -240,11 +270,20 @@ func TestAssert_NoError(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			NoError(tt.args.tb, tt.args.err, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.NoError(tt.args.tb, tt.args.err, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.NoError(tt.args.tb, tt.args.err, tt.args.msgs...)
+			verify()
 		})
 	}
 }
@@ -329,16 +368,25 @@ func TestAssert_ErrorContains(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ErrorContains(tt.args.tb, tt.args.want, tt.args.err, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.ErrorContains(tt.args.tb, tt.args.want, tt.args.err, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.ErrorContains(tt.args.tb, tt.args.want, tt.args.err, tt.args.msgs...)
+			verify()
 		})
 	}
 }
 
-func TestAssert_NotNil(t *testing.T) {
+func Test_NotNil(t *testing.T) {
 	type args struct {
 		tb   *assertions.TBMock
 		obj  interface{}
@@ -382,11 +430,20 @@ func TestAssert_NotNil(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			NotNil(tt.args.tb, tt.args.obj, tt.args.msgs...)
-			if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.NotNil(tt.args.tb, tt.args.obj, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.NotNil(tt.args.tb, tt.args.obj, tt.args.msgs...)
+			verify()
 		})
 	}
 }
