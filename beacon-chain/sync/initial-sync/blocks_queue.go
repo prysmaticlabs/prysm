@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -50,8 +51,14 @@ type blocksQueue struct {
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	highestExpectedSlot uint64
-	fetchedBlocks       chan []*eth.SignedBeaconBlock // output channel for ready blocks
-	quit                chan struct{}                 // termination notifier
+	fetchedData         chan *blocksQueueFetchedData // output channel for ready blocks
+	quit                chan struct{}                // termination notifier
+}
+
+// blocksQueueFetchedData is a data container that is returned from a queue on each step.
+type blocksQueueFetchedData struct {
+	pid    peer.ID
+	blocks []*eth.SignedBeaconBlock
 }
 
 // newBlocksQueue creates initialized priority queue.
@@ -76,7 +83,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		highestExpectedSlot: highestExpectedSlot,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
-		fetchedBlocks:       make(chan []*eth.SignedBeaconBlock, 1),
+		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
 	}
 
@@ -119,7 +126,7 @@ func (q *blocksQueue) loop() {
 
 	defer func() {
 		q.blocksFetcher.stop()
-		close(q.fetchedBlocks)
+		close(q.fetchedData)
 	}()
 
 	if err := q.blocksFetcher.start(); err != nil {
@@ -246,6 +253,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			}
 			return m.state, response.err
 		}
+		m.pid = response.pid
 		m.blocks = response.blocks
 		return stateDataParsed, nil
 	}
@@ -266,10 +274,14 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 		}
 
 		send := func() (stateID, error) {
+			data := &blocksQueueFetchedData{
+				pid:    m.pid,
+				blocks: m.blocks,
+			}
 			select {
 			case <-ctx.Done():
 				return m.state, ctx.Err()
-			case q.fetchedBlocks <- m.blocks:
+			case q.fetchedData <- data:
 			}
 			return stateSent, nil
 		}
