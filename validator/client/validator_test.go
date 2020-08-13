@@ -577,6 +577,8 @@ func TestUpdateDuties_OK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
+		indexToPubkey:   make(map[uint64][48]byte),
+		pubkeyToIndex:   make(map[[48]byte]uint64),
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
@@ -749,12 +751,12 @@ func TestRolesAt_OK(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
-	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1])
-	assert.Equal(t, validatorRole(roleAggregator), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1])
+	assert.Equal(t, ValidatorRole(roleAggregator), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
@@ -797,9 +799,9 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)
 
-	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {

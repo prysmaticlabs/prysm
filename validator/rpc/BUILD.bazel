@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "auth.go",
+        "health.go",
         "intercepter.go",
         "server.go",
     ],
@@ -12,10 +13,12 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/promptutil:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/traceutil:go_default_library",
+        "//validator/client:go_default_library",
         "//validator/db:go_default_library",
         "@com_github_dgrijalva_jwt_go//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
@@ -39,14 +42,17 @@ go_test(
     name = "go_default_test",
     srcs = [
         "auth_test.go",
+        "health_test.go",
         "intercepter_test.go",
         "server_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "//validator/client:go_default_library",
         "//validator/db/testing:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",

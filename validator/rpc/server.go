@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -28,39 +29,42 @@ func init() {
 
 // Config options for the gRPC server.
 type Config struct {
-	Host     string
-	Port     string
-	CertFlag string
-	KeyFlag  string
-	ValDB    db.Database
+	Host             string
+	Port             string
+	CertFlag         string
+	KeyFlag          string
+	ValDB            db.Database
+	ValidatorService *client.ValidatorService
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	valDB           db.Database
-	ctx             context.Context
-	cancel          context.CancelFunc
-	host            string
-	port            string
-	listener        net.Listener
-	withCert        string
-	withKey         string
-	credentialError error
-	grpcServer      *grpc.Server
-	jwtKey          []byte
+	valDB            db.Database
+	ctx              context.Context
+	cancel           context.CancelFunc
+	host             string
+	port             string
+	listener         net.Listener
+	withCert         string
+	withKey          string
+	credentialError  error
+	grpcServer       *grpc.Server
+	jwtKey           []byte
+	validatorService *client.ValidatorService
 }
 
 // NewServer instantiates a new gRPC server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Server{
-		ctx:      ctx,
-		cancel:   cancel,
-		host:     cfg.Host,
-		port:     cfg.Port,
-		withCert: cfg.CertFlag,
-		withKey:  cfg.KeyFlag,
-		valDB:    cfg.ValDB,
+		ctx:              ctx,
+		cancel:           cancel,
+		host:             cfg.Host,
+		port:             cfg.Port,
+		withCert:         cfg.CertFlag,
+		withKey:          cfg.KeyFlag,
+		valDB:            cfg.ValDB,
+		validatorService: cfg.ValidatorService,
 	}
 }
 
