@@ -16,6 +16,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/roughtime:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",

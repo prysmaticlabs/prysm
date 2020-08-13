@@ -9,6 +9,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
@@ -281,6 +282,9 @@ func (s *BlockProviderScorer) mapScoresAndPeers(
 func (s *BlockProviderScorer) FormatScorePretty(pid peer.ID) string {
 	s.store.RLock()
 	defer s.store.RUnlock()
+	if !featureconfig.Get().EnablePeerScorer {
+		return "disabled"
+	}
 	score := s.score(pid)
 	return fmt.Sprintf("[%0.1f%%, raw: %0.2f,  blocks: %d/%d]",
 		(score/s.MaxScore())*100, score, s.processedBlocks(pid), s.config.ProcessedBlocksCap)
