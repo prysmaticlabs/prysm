@@ -137,6 +137,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 		},
 		AggregationBits: aggregationBitfield,
+		Signature: make([]byte, 96),
 	}
 
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})
@@ -192,7 +193,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-	).Return(&ethpb.AttestResponse{}, nil /* error */)
+	).Return(&ethpb.AttestResponse{AttestationDataRoot: make([]byte, 32)}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
