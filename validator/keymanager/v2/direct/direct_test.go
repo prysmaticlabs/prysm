@@ -247,7 +247,7 @@ func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	assert.ErrorContains(t, "no signing key found in keys cache", err)
 }
 
-func TestDirectKeymanager_loadNewKeystore(t *testing.T) {
+func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "Passw03rdz293**%#2"
 	wallet := &mock.Wallet{
@@ -260,9 +260,12 @@ func TestDirectKeymanager_loadNewKeystore(t *testing.T) {
 		accountsPassword: password,
 	}
 
+	numAccounts := 20
+	privKeys := make([][]byte, numAccounts)
+
 	// Completely new keystore loaded in.
 	keystore := createRandomKeystore(t, password)
-	require.NoError(t, dr.loadNewKeystore(keystore))
+	require.NoError(t, dr.reloadAccountsFromKeystore(keystore))
 
 	// Check the key was added to the keys cache.
 	pubKeyBytes, err := hex.DecodeString(keystore.Pubkey)
@@ -275,10 +278,4 @@ func TestDirectKeymanager_loadNewKeystore(t *testing.T) {
 	require.Equal(t, 1, len(dr.accountsStore.PublicKeys))
 	require.Equal(t, 1, len(dr.accountsStore.PrivateKeys))
 	assert.DeepEqual(t, dr.accountsStore.PublicKeys[0], pubKeyBytes)
-
-	// Try to load in the key again and observe a different log.
-	require.NoError(t, dr.loadNewKeystore(keystore))
-	testutil.AssertLogsContain(t, hook, "Attempted to load validator key which already exists")
-	require.Equal(t, 1, len(dr.accountsStore.PublicKeys))
-	require.Equal(t, 1, len(dr.accountsStore.PrivateKeys))
 }
