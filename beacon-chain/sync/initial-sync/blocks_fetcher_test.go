@@ -503,7 +503,7 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 		{
 			name: "No peers provided",
 			args: args{
-				excludedPID: "abc",
+				excludedPID: "a",
 				peers:       []peer.ID{},
 			},
 			want:    "",
@@ -512,9 +512,9 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 		{
 			name: "Single peer which needs to be excluded",
 			args: args{
-				excludedPID: "abc",
+				excludedPID: "a",
 				peers: []peer.ID{
-					"abc",
+					"a",
 				},
 			},
 			want:    "",
@@ -523,7 +523,7 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 		{
 			name: "Single peer available",
 			args: args{
-				excludedPID: "abc",
+				excludedPID: "a",
 				peers: []peer.ID{
 					"cde",
 				},
@@ -534,9 +534,9 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 		{
 			name: "Two peers available, excluded first",
 			args: args{
-				excludedPID: "abc",
+				excludedPID: "a",
 				peers: []peer.ID{
-					"abc", "cde",
+					"a", "cde",
 				},
 			},
 			want:    "cde",
@@ -545,9 +545,9 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 		{
 			name: "Two peers available, excluded second",
 			args: args{
-				excludedPID: "abc",
+				excludedPID: "a",
 				peers: []peer.ID{
-					"cde", "abc",
+					"cde", "a",
 				},
 			},
 			want:    "cde",
@@ -556,9 +556,9 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 		{
 			name: "Multiple peers available",
 			args: args{
-				excludedPID: "abc",
+				excludedPID: "a",
 				peers: []peer.ID{
-					"abc", "cde", "cde", "cde",
+					"a", "cde", "cde", "cde",
 				},
 			},
 			want:    "cde",
@@ -685,37 +685,37 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			name: "single peer",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 10},
+					{"a", 10},
 				},
 				peersPercentage: 1.0,
 			},
-			want: []peer.ID{"abc"},
+			want: []peer.ID{"a"},
 		},
 		{
 			name: "multiple peers same capacity",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 10},
-					{"def", 10},
-					{"xyz", 10},
+					{"a", 10},
+					{"b", 10},
+					{"c", 10},
 				},
 				peersPercentage: 1.0,
 			},
-			want: []peer.ID{"abc", "def", "xyz"},
+			want: []peer.ID{"a", "b", "c"},
 		},
 		{
 			name: "multiple peers different capacity",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 20},
-					{"def", 15},
-					{"ghi", 10},
-					{"jkl", 90},
-					{"xyz", 20},
+					{"a", 20},
+					{"b", 15},
+					{"c", 10},
+					{"d", 90},
+					{"e", 20},
 				},
 				peersPercentage: 1.0,
 			},
-			want: []peer.ID{"ghi", "def", "abc", "xyz", "jkl"},
+			want: []peer.ID{"c", "b", "a", "e", "d"},
 		},
 	}
 	for _, tt := range tests {
@@ -776,94 +776,94 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 			name: "single peer",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 1200},
+					{"a", 1200},
 				},
 				peersPercentage: 1.0,
 				capacityWeight:  0.2,
 			},
-			want: []peer.ID{"abc"},
+			want: []peer.ID{"a"},
 		},
 		{
 			name: "multiple peers same capacity",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 2400},
-					{"def", 2400},
-					{"xyz", 2400},
+					{"a", 2400},
+					{"b", 2400},
+					{"c", 2400},
 				},
 				peersPercentage: 1.0,
 				capacityWeight:  0.2,
 			},
-			want: []peer.ID{"abc", "def", "xyz"},
+			want: []peer.ID{"a", "b", "c"},
 		},
 		{
 			name: "multiple peers capacity as tie-breaker",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 6000},
-					{"def", 3000},
-					{"ghi", 0},
-					{"jkl", 9000},
-					{"xyz", 6000},
+					{"a", 6000},
+					{"b", 3000},
+					{"c", 0},
+					{"d", 9000},
+					{"e", 6000},
 				},
 				peersPercentage: 1.0,
 				capacityWeight:  0.2,
 			},
 			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("abc", batchSize*2)
-				s.IncrementProcessedBlocks("def", batchSize*2)
-				s.IncrementProcessedBlocks("ghi", batchSize*2)
-				s.IncrementProcessedBlocks("jkl", batchSize*2)
-				s.IncrementProcessedBlocks("xyz", batchSize*2)
+				s.IncrementProcessedBlocks("a", batchSize*2)
+				s.IncrementProcessedBlocks("b", batchSize*2)
+				s.IncrementProcessedBlocks("c", batchSize*2)
+				s.IncrementProcessedBlocks("d", batchSize*2)
+				s.IncrementProcessedBlocks("e", batchSize*2)
 			},
-			want: []peer.ID{"ghi", "def", "abc", "xyz", "jkl"},
+			want: []peer.ID{"c", "b", "a", "e", "d"},
 		},
 		{
 			name: "multiple peers same capacity different scores",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 9000},
-					{"def", 9000},
-					{"ghi", 9000},
-					{"jkl", 9000},
-					{"xyz", 9000},
+					{"a", 9000},
+					{"b", 9000},
+					{"c", 9000},
+					{"d", 9000},
+					{"e", 9000},
 				},
 				peersPercentage: 0.8,
 				capacityWeight:  0.2,
 			},
 			update: func(s *peers.BlockProviderScorer) {
-				s.IncrementProcessedBlocks("xyz", s.Params().ProcessedBlocksCap)
-				s.IncrementProcessedBlocks("def", s.Params().ProcessedBlocksCap/2)
-				s.IncrementProcessedBlocks("ghi", s.Params().ProcessedBlocksCap/4)
-				s.IncrementProcessedBlocks("abc", s.Params().ProcessedBlocksCap/8)
-				s.IncrementProcessedBlocks("jkl", 0)
+				s.IncrementProcessedBlocks("e", s.Params().ProcessedBlocksCap)
+				s.IncrementProcessedBlocks("b", s.Params().ProcessedBlocksCap/2)
+				s.IncrementProcessedBlocks("c", s.Params().ProcessedBlocksCap/4)
+				s.IncrementProcessedBlocks("a", s.Params().ProcessedBlocksCap/8)
+				s.IncrementProcessedBlocks("d", 0)
 			},
-			want: []peer.ID{"xyz", "def", "ghi", "abc"},
+			want: []peer.ID{"e", "b", "c", "a"},
 		},
 		{
 			name: "multiple peers different capacities and scores",
 			args: args{
 				peers: []weightedPeer{
-					{"abc", 6500},
-					{"def", 2500},
-					{"ghi", 1000},
-					{"jkl", 9000},
-					{"xyz", 6500},
+					{"a", 6500},
+					{"b", 2500},
+					{"c", 1000},
+					{"d", 9000},
+					{"e", 6500},
 				},
 				peersPercentage: 0.8,
 				capacityWeight:  0.2,
 			},
 			update: func(s *peers.BlockProviderScorer) {
 				// Make sure that score takes priority over capacity.
-				s.IncrementProcessedBlocks("ghi", batchSize*5)
-				s.IncrementProcessedBlocks("def", batchSize*15)
-				// Break tie using capacity as a tie-breaker (abc and ghi have the same score).
-				s.IncrementProcessedBlocks("abc", batchSize*3)
-				s.IncrementProcessedBlocks("xyz", batchSize*3)
+				s.IncrementProcessedBlocks("c", batchSize*5)
+				s.IncrementProcessedBlocks("b", batchSize*15)
+				// Break tie using capacity as a tie-breaker (a and ghi have the same score).
+				s.IncrementProcessedBlocks("a", batchSize*3)
+				s.IncrementProcessedBlocks("e", batchSize*3)
 				// Exclude peer (peers percentage is 80%).
-				s.IncrementProcessedBlocks("jkl", batchSize)
+				s.IncrementProcessedBlocks("d", batchSize)
 			},
-			want: []peer.ID{"def", "ghi", "abc", "xyz"},
+			want: []peer.ID{"b", "c", "a", "e"},
 		},
 	}
 	for _, tt := range tests {
@@ -1027,29 +1027,29 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			age:  peerLockMaxAge,
 			peersIn: []peerData{
 				{
-					peerID:   "abc",
+					peerID:   "a",
 					accessed: roughtime.Now(),
 				},
 				{
-					peerID:   "def",
+					peerID:   "b",
 					accessed: roughtime.Now(),
 				},
 				{
-					peerID:   "ghi",
+					peerID:   "c",
 					accessed: roughtime.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
-					peerID:   "abc",
+					peerID:   "a",
 					accessed: roughtime.Now(),
 				},
 				{
-					peerID:   "def",
+					peerID:   "b",
 					accessed: roughtime.Now(),
 				},
 				{
-					peerID:   "ghi",
+					peerID:   "c",
 					accessed: roughtime.Now(),
 				},
 			},
@@ -1059,25 +1059,25 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			age:  peerLockMaxAge,
 			peersIn: []peerData{
 				{
-					peerID:   "abc",
+					peerID:   "a",
 					accessed: roughtime.Now(),
 				},
 				{
-					peerID:   "def",
+					peerID:   "b",
 					accessed: roughtime.Now().Add(-peerLockMaxAge),
 				},
 				{
-					peerID:   "ghi",
+					peerID:   "c",
 					accessed: roughtime.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
-					peerID:   "abc",
+					peerID:   "a",
 					accessed: roughtime.Now(),
 				},
 				{
-					peerID:   "ghi",
+					peerID:   "c",
 					accessed: roughtime.Now(),
 				},
 			},
@@ -1087,15 +1087,15 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			age:  peerLockMaxAge,
 			peersIn: []peerData{
 				{
-					peerID:   "abc",
+					peerID:   "a",
 					accessed: roughtime.Now().Add(-peerLockMaxAge),
 				},
 				{
-					peerID:   "def",
+					peerID:   "b",
 					accessed: roughtime.Now().Add(-peerLockMaxAge),
 				},
 				{
-					peerID:   "ghi",
+					peerID:   "c",
 					accessed: roughtime.Now().Add(-peerLockMaxAge),
 				},
 			},
