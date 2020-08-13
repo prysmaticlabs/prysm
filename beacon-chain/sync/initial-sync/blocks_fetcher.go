@@ -87,6 +87,7 @@ type fetchRequestParams struct {
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
+	pid          peer.ID
 	start, count uint64
 	blocks       []*eth.SignedBeaconBlock
 	err          error
@@ -245,7 +246,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 		return response
 	}
 
-	response.blocks, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
+	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
 	return response
 }
 
@@ -254,18 +255,15 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
 	start, count uint64,
 	peers []peer.ID,
-) ([]*eth.SignedBeaconBlock, error) {
+) ([]*eth.SignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
-	blocks := []*eth.SignedBeaconBlock{}
+	var blocks []*eth.SignedBeaconBlock
 	var err error
 	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
 	if err != nil {
-		return blocks, err
-	}
-	if len(peers) == 0 {
-		return blocks, errNoPeersAvailable
+		return blocks, "", err
 	}
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: start,
@@ -274,10 +272,10 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	}
 	for i := 0; i < len(peers); i++ {
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
-			return blocks, err
+			return blocks, peers[i], err
 		}
 	}
-	return blocks, nil
+	return blocks, "", errNoPeersAvailable
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.

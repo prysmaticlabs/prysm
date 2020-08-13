@@ -43,6 +43,7 @@ type testWalletConfig struct {
 	passwordsDir        string
 	backupDir           string
 	keysDir             string
+	deletePublicKeys    string
 	backupPublicKeys    string
 	backupPasswordFile  string
 	walletPasswordFile  string
@@ -62,6 +63,7 @@ func setupWalletCtx(
 	set.String(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir, "")
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
+	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
 	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
 	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
 	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
@@ -77,6 +79,7 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir))
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
+	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
 	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
 	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -54,7 +55,8 @@ func TestMain(m *testing.M) {
 	logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		NewStateMgmt: true,
+		NewStateMgmt:     true,
+		BatchBlockVerify: true,
 	})
 	defer resetCfg()
 
@@ -153,84 +155,86 @@ func TestMakeSequence(t *testing.T) {
 // Connect peers with local host. This method sets up peer statuses and the appropriate handlers
 // for each test peer.
 func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus *peers.Status) {
-	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy"
-
 	for _, d := range data {
-		peer := p2pt.NewTestP2P(t)
-
-		// Copy pointer for callback scope.
-		var datum = d
-
-		peer.SetStreamHandler(topic, func(stream network.Stream) {
-			defer func() {
-				if err := stream.Close(); err != nil {
-					t.Log(err)
-				}
-			}()
-
-			req := &p2ppb.BeaconBlocksByRangeRequest{}
-			assert.NoError(t, peer.Encoding().DecodeWithMaxLength(stream, req))
-
-			requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+(req.Count*req.Step))
-
-			// Expected failure range
-			if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
-				if _, err := stream.Write([]byte{0x01}); err != nil {
-					t.Error(err)
-				}
-				if _, err := peer.Encoding().EncodeWithMaxLength(stream, "bad"); err != nil {
-					t.Error(err)
-				}
-				return
-			}
-
-			// Determine the correct subset of blocks to return as dictated by the test scenario.
-			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
-
-			ret := make([]*eth.SignedBeaconBlock, 0)
-			for _, slot := range blocks {
-				if (slot-req.StartSlot)%req.Step != 0 {
-					continue
-				}
-				cache.RLock()
-				parentRoot := cache.rootCache[cache.parentSlotCache[slot]]
-				cache.RUnlock()
-				blk := &eth.SignedBeaconBlock{
-					Block: &eth.BeaconBlock{
-						Slot:       slot,
-						ParentRoot: parentRoot[:],
-					},
-				}
-				// If forked peer, give a different parent root.
-				if datum.forkedPeer {
-					newRoot := hashutil.Hash(parentRoot[:])
-					blk.Block.ParentRoot = newRoot[:]
-				}
-				ret = append(ret, blk)
-				currRoot, err := stateutil.BlockRoot(blk.Block)
-				require.NoError(t, err)
-				logrus.Tracef("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
-			}
-
-			if uint64(len(ret)) > req.Count {
-				ret = ret[:req.Count]
-			}
-
-			for i := 0; i < len(ret); i++ {
-				assert.NoError(t, beaconsync.WriteChunk(stream, peer.Encoding(), ret[i]))
-			}
-		})
-
-		peer.Connect(host)
-
-		peerStatus.Add(new(enr.Record), peer.PeerID(), nil, network.DirOutbound)
-		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
-		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
-			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
-			FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
-			FinalizedEpoch: datum.finalizedEpoch,
-			HeadRoot:       []byte("head_root"),
-			HeadSlot:       datum.headSlot,
-		})
+		connectPeer(t, host, d, peerStatus)
 	}
+}
+
+// connectPeer connects a peer to a local host.
+func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *peers.Status) peer.ID {
+	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy"
+	p := p2pt.NewTestP2P(t)
+	p.SetStreamHandler(topic, func(stream network.Stream) {
+		defer func() {
+			if err := stream.Close(); err != nil {
+				t.Log(err)
+			}
+		}()
+
+		req := &p2ppb.BeaconBlocksByRangeRequest{}
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+
+		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+(req.Count*req.Step))
+
+		// Expected failure range
+		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
+			if _, err := stream.Write([]byte{0x01}); err != nil {
+				t.Error(err)
+			}
+			if _, err := p.Encoding().EncodeWithMaxLength(stream, "bad"); err != nil {
+				t.Error(err)
+			}
+			return
+		}
+
+		// Determine the correct subset of blocks to return as dictated by the test scenario.
+		blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
+
+		ret := make([]*eth.SignedBeaconBlock, 0)
+		for _, slot := range blocks {
+			if (slot-req.StartSlot)%req.Step != 0 {
+				continue
+			}
+			cache.RLock()
+			parentRoot := cache.rootCache[cache.parentSlotCache[slot]]
+			cache.RUnlock()
+			blk := &eth.SignedBeaconBlock{
+				Block: &eth.BeaconBlock{
+					Slot:       slot,
+					ParentRoot: parentRoot[:],
+				},
+			}
+			// If forked peer, give a different parent root.
+			if datum.forkedPeer {
+				newRoot := hashutil.Hash(parentRoot[:])
+				blk.Block.ParentRoot = newRoot[:]
+			}
+			ret = append(ret, blk)
+			currRoot, err := stateutil.BlockRoot(blk.Block)
+			require.NoError(t, err)
+			logrus.Tracef("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
+		}
+
+		if uint64(len(ret)) > req.Count {
+			ret = ret[:req.Count]
+		}
+
+		for i := 0; i < len(ret); i++ {
+			assert.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), ret[i]))
+		}
+	})
+
+	p.Connect(host)
+
+	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
+	peerStatus.SetConnectionState(p.PeerID(), peers.PeerConnected)
+	peerStatus.SetChainState(p.PeerID(), &p2ppb.Status{
+		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
+		FinalizedEpoch: datum.finalizedEpoch,
+		HeadRoot:       []byte("head_root"),
+		HeadSlot:       datum.headSlot,
+	})
+
+	return p.PeerID()
 }
