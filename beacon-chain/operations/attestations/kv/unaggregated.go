@@ -57,10 +57,9 @@ func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) erro
 
 // UnaggregatedAttestations returns all the unaggregated attestations in cache.
 func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
-	p.unAggregateAttLock.RLock()
+	p.unAggregateAttLock.Lock()
+	defer p.unAggregateAttLock.Unlock()
 	unAggregatedAtts := p.unAggregatedAtt
-	p.unAggregateAttLock.RUnlock()
-
 	atts := make([]*ethpb.Attestation, 0, len(unAggregatedAtts))
 	for _, att := range unAggregatedAtts {
 		r, err := hashFn(att.Data)
@@ -73,9 +72,7 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 		if ok {
 			for _, bit := range seenBits {
 				if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
-					if err := p.DeleteUnaggregatedAttestation(att); err != nil {
-						return nil, err
-					}
+					delete(p.unAggregatedAtt, r)
 					continue
 				}
 			}
@@ -93,8 +90,9 @@ func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIn
 	atts := make([]*ethpb.Attestation, 0)
 
 	p.unAggregateAttLock.RLock()
-	unAggregatedAtts := p.unAggregatedAtt
 	defer p.unAggregateAttLock.RUnlock()
+
+	unAggregatedAtts := p.unAggregatedAtt
 	for _, a := range unAggregatedAtts {
 		if slot == a.Data.Slot && committeeIndex == a.Data.CommitteeIndex {
 			atts = append(atts, a)
