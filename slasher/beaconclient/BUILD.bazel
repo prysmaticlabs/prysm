@@ -55,10 +55,13 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/flags:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//slasher/cache:go_default_library",
         "//slasher/db/testing:go_default_library",
