@@ -99,7 +99,7 @@ func TestLifecycle(t *testing.T) {
 	}
 	validatorService.Start()
 	require.NoError(t, validatorService.Stop(), "Could not stop service")
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	require.LogsContain(t, hook, "Stopping service")
 }
 
 func TestLifecycle_Insecure(t *testing.T) {
@@ -114,9 +114,9 @@ func TestLifecycle_Insecure(t *testing.T) {
 		keyManager: keymanager.NewDirect(nil),
 	}
 	validatorService.Start()
-	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
+	require.LogsContain(t, hook, "You are using an insecure gRPC connection")
 	require.NoError(t, validatorService.Stop(), "Could not stop service")
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	require.LogsContain(t, hook, "Stopping service")
 }
 
 func TestStatus_NoConnectionError(t *testing.T) {

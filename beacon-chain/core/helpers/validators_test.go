@@ -1,12 +1,12 @@
 package helpers
 
 import (
-	"bytes"
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -28,10 +28,7 @@ func TestIsActiveValidator_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		validator := &ethpb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
-		if IsActiveValidator(validator, test.a) != test.b {
-			t.Errorf("IsActiveValidator(%d) = %v, want = %v",
-				test.a, IsActiveValidator(validator, test.a), test.b)
-		}
+		assert.Equal(t, test.b, IsActiveValidator(validator, test.a), "IsActiveValidator(%d)", test.a)
 	}
 }
 
@@ -48,18 +45,11 @@ func TestIsActiveValidatorUsingTrie_OK(t *testing.T) {
 	}
 	val := &ethpb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
 	beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{val}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for _, test := range tests {
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if IsActiveValidatorUsingTrie(readOnlyVal, test.a) != test.b {
-			t.Errorf("IsActiveValidatorUsingTrie(%d) = %v, want = %v",
-				test.a, IsActiveValidatorUsingTrie(readOnlyVal, test.a), test.b)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, test.b, IsActiveValidatorUsingTrie(readOnlyVal, test.a), "IsActiveValidatorUsingTrie(%d)", test.a)
 	}
 }
 
@@ -139,9 +129,7 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			slashableValidator := IsSlashableValidator(test.validator, test.epoch)
-			if test.slashable != slashableValidator {
-				t.Errorf("Expected active validator slashable to be %t, received %t", test.slashable, slashableValidator)
-			}
+			assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
 		})
 	}
 }
@@ -221,18 +209,12 @@ func TestIsSlashableValidatorUsingTrie_OK(t *testing.T) {
 
 	for _, test := range tests {
 		beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		t.Run(test.name, func(t *testing.T) {
 			slashableValidator := IsSlashableValidatorUsingTrie(readOnlyVal, test.epoch)
-			if test.slashable != slashableValidator {
-				t.Errorf("Expected active validator slashable to be %t, received %t", test.slashable, slashableValidator)
-			}
+			assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
 		})
 	}
 }
@@ -255,9 +237,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		slot  uint64
@@ -287,21 +267,10 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	for _, tt := range tests {
 		ClearCache()
-		if err := state.SetSlot(tt.slot); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, state.SetSlot(tt.slot))
 		result, err := BeaconProposerIndex(state)
-		if err != nil {
-			t.Errorf("Failed to get shard and committees at slot: %v", err)
-		}
-
-		if result != tt.index {
-			t.Errorf(
-				"Result index was an unexpected value. Wanted %d, got %d",
-				tt.index,
-				result,
-			)
-		}
+		require.NoError(t, err, "Failed to get shard and committees at slot")
+		assert.Equal(t, tt.index, result, "Result index was an unexpected value")
 	}
 }
 
@@ -317,57 +286,39 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	indices, err := ActiveValidatorIndices(state, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var proposerIndices []uint64
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		proposerIndices = append(proposerIndices, index)
 	}
 
 	var wantedProposerIndices []uint64
 	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		wantedProposerIndices = append(wantedProposerIndices, index)
 	}
-
-	if !reflect.DeepEqual(wantedProposerIndices, proposerIndices) {
-		t.Error("Wanted proposer indices from ComputeProposerIndexWithValidators does not match")
-	}
+	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Wanted proposer indices from ComputeProposerIndexWithValidators does not match")
 }
 
 func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
-	got := ActivationExitEpoch(epoch)
 	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookahead
-	if wanted != got {
-		t.Errorf("Wanted: %d, received: %d", wanted, got)
-	}
+	assert.Equal(t, wanted, ActivationExitEpoch(epoch))
 }
 
 func TestActiveValidatorCount_Genesis(t *testing.T) {
@@ -383,25 +334,15 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Preset cache to a bad count.
 	seed, err := Seed(beaconState, 0, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{Seed: seed, ShuffledIndices: []uint64{1, 2, 3}}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, committeeCache.AddCommitteeShuffledList(&cache.Committees{Seed: seed, ShuffledIndices: []uint64{1, 2, 3}}))
 	validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if validatorCount != uint64(c) {
-		t.Error("Did not get the correct validator count")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(c), validatorCount, "Did not get the correct validator count")
 }
 
 func TestChurnLimit_OK(t *testing.T) {
@@ -429,21 +370,12 @@ func TestChurnLimit_OK(t *testing.T) {
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		resultChurn, err := ValidatorChurnLimit(validatorCount)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resultChurn != test.wantedChurn {
-			t.Errorf("ValidatorChurnLimit(%d) = %d, want = %d",
-				test.validatorCount, resultChurn, test.wantedChurn)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, test.wantedChurn, resultChurn, "ValidatorChurnLimit(%d)", test.validatorCount)
 	}
 }
 
@@ -468,12 +400,8 @@ func TestDomain_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		domain, err := Domain(state.Fork, tt.epoch, tt.domainType, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(domain[:8], tt.result[:8]) {
-			t.Errorf("wanted domain version: %d, got: %d", tt.result, domain)
-		}
+		require.NoError(t, err)
+		assert.DeepEqual(t, tt.result[:8], domain[:8], "Unexpected domain version")
 	}
 }
 
@@ -627,17 +555,13 @@ func TestActiveValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := beaconstate.InitializeFromProto(tt.args.state)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			got, err := ActiveValidatorIndices(s, tt.args.epoch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ActiveValidatorIndices() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ActiveValidatorIndices() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, tt.want, got, "ActiveValidatorIndices()")
 			ClearCache()
 		})
 	}
@@ -765,9 +689,7 @@ func TestComputeProposerIndex(t *testing.T) {
 				t.Errorf("ComputeProposerIndex() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("ComputeProposerIndex() got = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
 		})
 	}
 }
@@ -790,9 +712,7 @@ func TestIsEligibleForActivationQueue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsEligibleForActivationQueue(tt.validator); got != tt.want {
-				t.Errorf("IsEligibleForActivationQueue() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, IsEligibleForActivationQueue(tt.validator), "IsEligibleForActivationQueue()")
 		})
 	}
 }
@@ -820,12 +740,8 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := beaconstate.InitializeFromProto(tt.state)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got := IsEligibleForActivation(s, tt.validator); got != tt.want {
-				t.Errorf("IsEligibleForActivation() = %v, want %v", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, IsEligibleForActivation(s, tt.validator), "IsEligibleForActivation()")
 		})
 	}
 }

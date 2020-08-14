@@ -31,7 +31,6 @@ type Listener interface {
 	Ping(*enode.Node) error
 	RequestENR(*enode.Node) (*enode.Node, error)
 	LocalNode() *enode.LocalNode
-	AllNodes() []*enode.Node
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
@@ -89,7 +88,7 @@ func (s *Service) listenForNewNodes() {
 			continue
 		}
 		go func(info *peer.AddrInfo) {
-			if err := s.connectWithPeer(*info); err != nil {
+			if err := s.connectWithPeer(s.ctx, *info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(peerInfo)
@@ -143,11 +142,22 @@ func (s *Service) createListener(
 			localNode.SetStaticIP(hostIP)
 		}
 	}
-	dv5Cfg := discover.Config{
-		PrivateKey:   privKey,
-		ValidSchemes: enode.ValidSchemes,
+	if s.cfg.HostDNS != "" {
+		host := s.cfg.HostDNS
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not resolve host address")
+		}
+		if len(ips) > 0 {
+			// Use first IP returned from the
+			// resolver.
+			firstIP := ips[0]
+			localNode.SetFallbackIP(firstIP)
+		}
 	}
-
+	dv5Cfg := discover.Config{
+		PrivateKey: privKey,
+	}
 	dv5Cfg.Bootnodes = []*enode.Node{}
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)

@@ -65,7 +65,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 	var statuses []serviceStatus
 	for k, v := range s.svcRegistry.Statuses() {
 		s := serviceStatus{
-			Name:   fmt.Sprintf("%s", k),
+			Name:   k.String(),
 			Status: true,
 		}
 		if v != nil {

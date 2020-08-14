@@ -3,19 +3,19 @@ package kv
 import (
 	"context"
 	"crypto/rand"
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
 )
 
 func Test_deleteValueForIndices(t *testing.T) {
 	db := setupDB(t)
 	blocks := make([]byte, 128)
-	if _, err := rand.Read(blocks); err != nil {
-		t.Fatal(err)
-	}
+	_, err := rand.Read(blocks)
+	require.NoError(t, err)
 	tests := []struct {
 		name          string
 		inputIndices  map[string][]byte
@@ -125,9 +125,7 @@ func Test_deleteValueForIndices(t *testing.T) {
 			err := db.db.Update(func(tx *bolt.Tx) error {
 				for k, idx := range tt.inputIndices {
 					bkt := tx.Bucket([]byte(k))
-					if err := bkt.Put(idx, tt.inputIndices[k]); err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, bkt.Put(idx, tt.inputIndices[k]))
 				}
 				if err := deleteValueForIndices(context.Background(), tt.inputIndices, tt.root, tx); (err != nil) != tt.wantErr {
 					t.Errorf("deleteValueForIndices() error = %v, wantErr %v", err, tt.wantErr)
@@ -136,15 +134,11 @@ func Test_deleteValueForIndices(t *testing.T) {
 				for k, idx := range tt.inputIndices {
 					bkt := tx.Bucket([]byte(k))
 					valuesAtIndex := bkt.Get(idx)
-					if !reflect.DeepEqual(valuesAtIndex, tt.outputIndices[k]) {
-						t.Errorf("unexpected output at %q, want: %#v, got: %#v", k, tt.outputIndices[k], valuesAtIndex)
-					}
+					assert.DeepEqual(t, tt.outputIndices[k], valuesAtIndex)
 				}
 				return nil
 			})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		})
 	}
 }

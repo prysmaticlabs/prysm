@@ -8,7 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -51,7 +51,7 @@ func TestService_SubscribeDetectedProposerSlashings(t *testing.T) {
 	slashingsChan <- slashing
 	cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Context canceled")
+	require.LogsContain(t, hook, "Context canceled")
 }
 
 func TestService_SubscribeDetectedAttesterSlashings(t *testing.T) {
@@ -94,5 +94,5 @@ func TestService_SubscribeDetectedAttesterSlashings(t *testing.T) {
 	slashingsChan <- slashing
 	cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Context canceled")
+	require.LogsContain(t, hook, "Context canceled")
 }

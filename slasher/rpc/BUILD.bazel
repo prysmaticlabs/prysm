@@ -54,6 +54,7 @@ go_test(
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db/testing:go_default_library",
         "//slasher/detection:go_default_library",

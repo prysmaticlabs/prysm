@@ -241,7 +241,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 
 		hook.Reset()
 		assert.NoError(t, sendRequest(p1, p2, r, req, true))
-		testutil.AssertLogsDoNotContain(t, hook, "Disconnecting bad peer")
+		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used, but no overflow.
@@ -274,7 +274,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			assert.ErrorContains(t, rateLimitedError, err)
 		}
 		// Make sure that we were blocked indeed.
-		testutil.AssertLogsContain(t, hook, "Disconnecting bad peer")
+		require.LogsContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used.
@@ -304,7 +304,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		for i := 0; i < flags.Get().BlockBatchLimitBurstFactor; i++ {
 			assert.NoError(t, sendRequest(p1, p2, r, req, true))
 		}
-		testutil.AssertLogsDoNotContain(t, hook, "Disconnecting bad peer")
+		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
 
 		// One more request should result in overflow.
 		hook.Reset()
@@ -312,7 +312,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			err := sendRequest(p1, p2, r, req, false)
 			assert.ErrorContains(t, rateLimitedError, err)
 		}
-		testutil.AssertLogsContain(t, hook, "Disconnecting bad peer")
+		require.LogsContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used.

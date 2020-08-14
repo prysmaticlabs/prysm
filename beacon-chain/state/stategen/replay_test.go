@@ -697,3 +697,26 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 
 	return [][32]byte{r0, r21, r22, r23, r24}, returnedBlocks, nil
 }
+
+func TestLoadFinalizedBlocks(t *testing.T) {
+	db, _ := testDB.SetupDB(t)
+	ctx := context.Background()
+	s := &State{
+		beaconDB: db,
+	}
+	gBlock := &ethpb.SignedBeaconBlock{}
+	gRoot, err := stateutil.BlockRoot(gBlock.Block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, gBlock))
+	roots, _, err := tree1(db, gRoot[:])
+	require.NoError(t, err)
+
+	filteredBlocks, err := s.loadFinalizedBlocks(ctx, 0, 8)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(filteredBlocks))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: roots[8][:]}))
+
+	require.NoError(t, s.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: roots[8][:]}))
+	filteredBlocks, err = s.loadFinalizedBlocks(ctx, 0, 8)
+	require.Equal(t, 10, len(filteredBlocks))
+}

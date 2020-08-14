@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -294,7 +295,10 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.markFieldAsDirty(validators)
 	b.rebuildTrie[validators] = true
-	b.valIdxMap = coreutils.ValidatorIndexMap(b.state.Validators)
+	b.valMapHandler = &validatorMapHandler{
+		valIdxMap: coreutils.ValidatorIndexMap(b.state.Validators),
+		mapRef:    &reference{refs: 1},
+	}
 	return nil
 }
 
@@ -367,14 +371,15 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 // SetValidatorIndexByPubkey updates the validator index mapping maintained internally to
 // a given input 48-byte, public key.
 func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
-	// Copy on write since this is a shared map.
-	m := b.validatorIndexMap()
-
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	m[pubKey] = validatorIdx
-	b.valIdxMap = m
+	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
+		valMap := b.valMapHandler.copy()
+		ref.MinusRef()
+		b.valMapHandler = valMap
+	}
+	b.valMapHandler.valIdxMap[pubKey] = validatorIdx
 }
 
 // SetBalances for the beacon state. Updates the entire
@@ -632,15 +637,20 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 
-	// append validator to slice and add
-	// it to the validator map
+	// append validator to slice
 	b.state.Validators = append(vals, val)
 	valIdx := uint64(len(b.state.Validators) - 1)
-	valMap := coreutils.ValidatorIndexMap(b.state.Validators)
+
+	// Copy if this is a shared validator map
+	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
+		valMap := b.valMapHandler.copy()
+		ref.MinusRef()
+		b.valMapHandler = valMap
+	}
+	b.valMapHandler.valIdxMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
 
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{valIdx})
-	b.valIdxMap = valMap
 	return nil
 }
 

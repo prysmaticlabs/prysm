@@ -41,7 +41,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	}
 }
 
-func TestKV_Aggregated_SaveUnaggregatedAttestation(t *testing.T) {
+func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 	tests := []struct {
 		name          string
 		att           *ethpb.Attestation
@@ -73,6 +73,16 @@ func TestKV_Aggregated_SaveUnaggregatedAttestation(t *testing.T) {
 			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
 		},
 		{
+			name: "already seen",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 100,
+				},
+				AggregationBits: bitfield.Bitlist{0b11101001},
+			},
+			count: 0,
+		},
+		{
 			name: "normal save",
 			att: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
@@ -83,10 +93,15 @@ func TestKV_Aggregated_SaveUnaggregatedAttestation(t *testing.T) {
 			count: 1,
 		},
 	}
+	r, err := hashFn(&ethpb.AttestationData{
+		Slot: 100,
+	})
+	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
+			cache.seenAggregatedAtt[r] = []bitfield.Bitlist{{0xff}}
 			if len(cache.unAggregatedAtt) != 0 {
 				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 			}
@@ -101,7 +116,47 @@ func TestKV_Aggregated_SaveUnaggregatedAttestation(t *testing.T) {
 				return
 			}
 			if len(cache.aggregatedAtt) != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.aggregatedAtt))
+			}
+			if cache.AggregatedAttestationCount() != tt.count {
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.AggregatedAttestationCount())
+			}
+		})
+	}
+}
+
+func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
+	tests := []struct {
+		name          string
+		atts          []*ethpb.Attestation
+		count         int
+		wantErrString string
+	}{
+		{
+			name: "no duplicates",
+			atts: []*ethpb.Attestation{
+				{Data: &ethpb.AttestationData{Slot: 1},
+					AggregationBits: bitfield.Bitlist{0b1101}},
+				{Data: &ethpb.AttestationData{Slot: 1},
+					AggregationBits: bitfield.Bitlist{0b1101}},
+			},
+			count: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewAttCaches()
+			if len(cache.aggregatedAtt) != 0 {
+				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
+			}
+			err := cache.SaveAggregatedAttestations(tt.atts)
+			if tt.wantErrString == "" && err != nil {
+				t.Error(err)
+				return
+			}
+			if len(cache.aggregatedAtt) != tt.count {
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.aggregatedAtt))
 			}
 			if cache.AggregatedAttestationCount() != tt.count {
 				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.AggregatedAttestationCount())

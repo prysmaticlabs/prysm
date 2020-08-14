@@ -11,25 +11,25 @@ import (
 func WrapFlags(flags []cli.Flag) []cli.Flag {
 	wrapped := make([]cli.Flag, 0, len(flags))
 	for _, f := range flags {
-		switch f.(type) {
+		switch t := f.(type) {
 		case *cli.BoolFlag:
-			f = altsrc.NewBoolFlag(f.(*cli.BoolFlag))
+			f = altsrc.NewBoolFlag(t)
 		case *cli.DurationFlag:
-			f = altsrc.NewDurationFlag(f.(*cli.DurationFlag))
+			f = altsrc.NewDurationFlag(t)
 		case *cli.GenericFlag:
-			f = altsrc.NewGenericFlag(f.(*cli.GenericFlag))
+			f = altsrc.NewGenericFlag(t)
 		case *cli.Float64Flag:
-			f = altsrc.NewFloat64Flag(f.(*cli.Float64Flag))
+			f = altsrc.NewFloat64Flag(t)
 		case *cli.IntFlag:
-			f = altsrc.NewIntFlag(f.(*cli.IntFlag))
+			f = altsrc.NewIntFlag(t)
 		case *cli.StringFlag:
-			f = altsrc.NewStringFlag(f.(*cli.StringFlag))
+			f = altsrc.NewStringFlag(t)
 		case *cli.StringSliceFlag:
-			f = altsrc.NewStringSliceFlag(f.(*cli.StringSliceFlag))
+			f = altsrc.NewStringSliceFlag(t)
 		case *cli.Uint64Flag:
-			f = altsrc.NewUint64Flag(f.(*cli.Uint64Flag))
+			f = altsrc.NewUint64Flag(t)
 		case *cli.UintFlag:
-			f = altsrc.NewUintFlag(f.(*cli.UintFlag))
+			f = altsrc.NewUintFlag(t)
 		case *cli.Int64Flag:
 			// Int64Flag does not work. See https://github.com/prysmaticlabs/prysm/issues/6478
 			panic(fmt.Sprintf("unsupported flag type type %T", f))

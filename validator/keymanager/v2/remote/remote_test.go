@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/urfave/cli/v2"
 )
 
 var validClientCert = `-----BEGIN CERTIFICATE-----
@@ -173,7 +174,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 					test.opts.RemoteCertificate.ClientKeyPath = clientKeyPath
 				}
 			}
-			_, err := NewKeymanager(context.Background(), 1, test.opts)
+			_, err := NewKeymanager(&cli.Context{}, 1, test.opts)
 			if test.err == "" {
 				require.NoError(t, err)
 			} else {

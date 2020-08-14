@@ -20,4 +20,7 @@ type ValidatorDB interface {
 	// Attester protection related methods.
 	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
 	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
+	// Validator RPC authentication methods.
+	SaveHashedPasswordForAPI(ctx context.Context, hashedPassword []byte) error
+	HashedPasswordForAPI(ctx context.Context) ([]byte, error)
 }

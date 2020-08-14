@@ -2,6 +2,7 @@ package require
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
+	"github.com/sirupsen/logrus/hooks/test"
 )
 
 // Equal compares values using comparison operator.
@@ -32,4 +33,14 @@ func ErrorContains(tb assertions.AssertionTestingTB, want string, err error, msg
 // NotNil asserts that passed value is not nil.
 func NotNil(tb assertions.AssertionTestingTB, obj interface{}, msg ...interface{}) {
 	assertions.NotNil(tb.Fatalf, obj, msg...)
+}
+
+// LogsContain checks that the desired string is a subset of the current log output.
+func LogsContain(tb assertions.AssertionTestingTB, hook *test.Hook, want string, msg ...interface{}) {
+	assertions.LogsContain(tb.Fatalf, hook, want, true, msg...)
+}
+
+// LogsDoNotContain is the inverse check of LogsContain.
+func LogsDoNotContain(tb assertions.AssertionTestingTB, hook *test.Hook, want string, msg ...interface{}) {
+	assertions.LogsContain(tb.Fatalf, hook, want, false, msg...)
 }

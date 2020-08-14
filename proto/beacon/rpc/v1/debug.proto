@@ -49,6 +49,21 @@ service Debug {
             get: "/eth/v1alpha1/debug/peer"
         };
     }
+    // Returns the inclusion slot of a given attester id and slot.
+    rpc GetInclusionSlot(InclusionSlotRequest) returns (InclusionSlotResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/inclusion"
+        };
+    }
+}
+
+message InclusionSlotRequest {
+    uint64 id = 1;
+    uint64 slot = 2;
+}
+
+message InclusionSlotResponse {
+    uint64 slot = 2;
 }
 
 message BeaconStateRequest {

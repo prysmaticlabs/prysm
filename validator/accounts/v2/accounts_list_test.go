@@ -45,7 +45,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 	keymanager, err := direct.NewKeymanager(
-		ctx,
+		cliCtx,
 		wallet,
 		direct.DefaultConfig(),
 	)
@@ -108,20 +108,11 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 
-	seedConfig, err := derived.InitializeWalletSeedFile(ctx, password, true /* skip confirm */)
-	require.NoError(t, err)
-
-	// Create a new wallet seed file and write it to disk.
-	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteFileAtPath(ctx, "", derived.EncryptedSeedFileName, seedConfigFile))
-
 	keymanager, err := derived.NewKeymanager(
-		ctx,
+		cliCtx,
 		wallet,
 		derived.DefaultConfig(),
 		true, /* skip confirm */
-		password,
 	)
 	require.NoError(t, err)
 

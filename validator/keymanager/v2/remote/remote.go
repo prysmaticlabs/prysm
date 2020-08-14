@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -54,7 +55,7 @@ type Keymanager struct {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, maxMessageSize int, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(cliCtx *cli.Context, maxMessageSize int, cfg *Config) (*Keymanager, error) {
 	// Load the client certificates.
 	if cfg.RemoteCertificate == nil {
 		return nil, errors.New("certificates are required")

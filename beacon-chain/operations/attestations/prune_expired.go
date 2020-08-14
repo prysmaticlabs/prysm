@@ -14,6 +14,7 @@ func (s *Service) pruneAttsPool() {
 		select {
 		case <-ticker.C:
 			s.pruneExpiredAtts()
+			s.updateMetrics()
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			ticker.Stop()
@@ -61,8 +62,5 @@ func (s *Service) expired(slot uint64) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
 	expirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(roughtime.Now().Unix())
-	if currentTime >= expirationTime {
-		return true
-	}
-	return false
+	return currentTime >= expirationTime
 }
