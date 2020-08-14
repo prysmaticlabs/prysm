@@ -16,29 +16,34 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 		count         int
 		wantErrString string
 	}{
-		//{
-		//	name: "nil attestation",
-		//	att:  nil,
-		//},
-		//{
-		//	name:          "already aggregated",
-		//	att:           &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}},
-		//	wantErrString: "attestation is aggregated",
-		//},
-		//{
-		//	name: "invalid hash",
-		//	att: &ethpb.Attestation{
-		//		Data: &ethpb.AttestationData{
-		//			BeaconBlockRoot: []byte{0b0},
-		//		},
-		//	},
-		//	wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
-		//},
-		//{
-		//	name:  "normal save",
-		//	att:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}},
-		//	count: 1,
-		//},
+		{
+			name: "nil attestation",
+			att:  nil,
+		},
+		{
+			name:          "already aggregated",
+			att:           &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}},
+			wantErrString: "attestation is aggregated",
+		},
+		{
+			name: "invalid hash",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: []byte{0b0},
+				},
+			},
+			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
+		},
+		{
+			name: "normal save",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 100,
+				},
+				AggregationBits: bitfield.Bitlist{0b0001},
+			},
+			count: 1,
+		},
 		{
 			name: "already seen",
 			att: &ethpb.Attestation{
