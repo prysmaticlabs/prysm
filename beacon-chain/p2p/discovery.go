@@ -69,6 +69,10 @@ func (s *Service) RefreshENR() {
 					log.Errorf("Could not retrieve bitfield: %v", err)
 					continue
 				}
+				// Exit early if already true.
+				if currentBitV.BitAt(netSub.Subnet) {
+					continue
+				}
 				currentBitV.SetBitAt(netSub.Subnet, true)
 				s.updateSubnetRecordWithMetadata(currentBitV)
 
@@ -82,6 +86,10 @@ func (s *Service) RefreshENR() {
 				currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
 				if err != nil {
 					log.Errorf("Could not retrieve bitfield: %v", err)
+					continue
+				}
+				// Exit early if already false.
+				if !currentBitV.BitAt(netSub.Subnet) {
 					continue
 				}
 				currentBitV.SetBitAt(netSub.Subnet, false)
