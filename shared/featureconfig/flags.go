@@ -170,6 +170,10 @@ var (
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
 	}
+	enableRoughtime = &cli.BoolFlag{
+		Name:  "enable-roughtime",
+		Usage: "Enables periodic roughtime syncs.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -660,6 +664,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
+	enableRoughtime,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
