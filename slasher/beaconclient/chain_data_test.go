@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -30,9 +29,7 @@ func TestService_ChainHead(t *testing.T) {
 	client.EXPECT().GetChainHead(gomock.Any(), gomock.Any()).Return(wanted, nil)
 	res, err := bs.ChainHead(context.Background())
 	require.NoError(t, err)
-	if !proto.Equal(res, wanted) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
+	require.DeepEqual(t, wanted, res)
 }
 
 func TestService_GenesisValidatorsRoot(t *testing.T) {
