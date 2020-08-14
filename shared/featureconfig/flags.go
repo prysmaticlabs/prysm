@@ -662,12 +662,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
-<<<<<<< HEAD
-	enableRoughtime,
-=======
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
->>>>>>> 3c776f4e76047df2de2d8600055b0dfdbfdd7f74
+	enableRoughtime,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
