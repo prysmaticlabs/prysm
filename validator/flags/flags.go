@@ -38,6 +38,18 @@ var (
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
+	// RPCHost defines the host on which the RPC server should listen.
+	RPCHost = &cli.StringFlag{
+		Name:  "rpc-host",
+		Usage: "Host on which the RPC server should listen",
+		Value: "127.0.0.1",
+	}
+	// RPCPort defines a validator client RPC port to open.
+	RPCPort = &cli.IntFlag{
+		Name:  "rpc-port",
+		Usage: "RPC port exposed by a validator client",
+		Value: 7000,
+	}
 	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
 	SlasherRPCProviderFlag = &cli.StringFlag{
 		Name:  "slasher-rpc-provider",
@@ -76,6 +88,18 @@ var (
 		Name: "grpc-headers",
 		Usage: "A comma separated list of key value pairs to pass as gRPC headers for all gRPC " +
 			"calls. Example: --grpc-headers=key=value",
+	}
+	// GRPCGatewayHost specifies a gRPC gateway host for the validator client.
+	GRPCGatewayHost = &cli.StringFlag{
+		Name:  "grpc-gateway-host",
+		Usage: "The host on which the gateway server runs on",
+		Value: "127.0.0.1",
+	}
+	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.
+	GRPCGatewayPort = &cli.IntFlag{
+		Name:  "grpc-gateway-port",
+		Usage: "Enable gRPC gateway for JSON requests",
+		Value: 7500,
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
