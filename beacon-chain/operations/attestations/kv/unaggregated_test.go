@@ -166,7 +166,8 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		returned := cache.UnaggregatedAttestations()
+		returned, err := cache.UnaggregatedAttestations()
+		require.NoError(t, err)
 		assert.DeepEqual(t, []*ethpb.Attestation{}, returned)
 	})
 }

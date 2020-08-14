@@ -56,16 +56,35 @@ func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) erro
 }
 
 // UnaggregatedAttestations returns all the unaggregated attestations in cache.
-func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
+func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 	p.unAggregateAttLock.RLock()
-	defer p.unAggregateAttLock.RUnlock()
+	unAggregatedAtts := p.unAggregatedAtt
+	p.unAggregateAttLock.RUnlock()
 
-	atts := make([]*ethpb.Attestation, 0, len(p.unAggregatedAtt))
-	for _, att := range p.unAggregatedAtt {
+	atts := make([]*ethpb.Attestation, 0, len(unAggregatedAtts))
+	for _, att := range unAggregatedAtts {
+		r, err := hashFn(att.Data)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not tree hash attestation")
+		}
+		p.seenAggregatedAttLock.RLock()
+		seenBits, ok := p.seenAggregatedAtt[r]
+		p.seenAggregatedAttLock.RUnlock()
+		if ok {
+			for _, bit := range seenBits {
+				if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
+					if err := p.DeleteUnaggregatedAttestation(att); err != nil {
+						return nil, err
+					}
+					continue
+				}
+			}
+		}
+
 		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 	}
 
-	return atts
+	return atts, nil
 }
 
 // UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
@@ -74,8 +93,9 @@ func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIn
 	atts := make([]*ethpb.Attestation, 0)
 
 	p.unAggregateAttLock.RLock()
+	unAggregatedAtts := p.unAggregatedAtt
 	defer p.unAggregateAttLock.RUnlock()
-	for _, a := range p.unAggregatedAtt {
+	for _, a := range unAggregatedAtts {
 		if slot == a.Data.Slot && committeeIndex == a.Data.CommitteeIndex {
 			atts = append(atts, a)
 		}
