@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -230,7 +232,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	fmt.Printf(`
 ======================Eth1 Deposit Transaction Data================
 %#x
-===================================================================`, tx.Data())
+======================For the %s network=======================`, tx.Data(), params.BeaconConfig().NetworkName)
 	fmt.Println("")
 
 	// Write the encoded keystore.

@@ -35,5 +35,6 @@ func AltonaConfig() *BeaconChainConfig {
 	altCfg.MinGenesisActiveValidatorCount = 640
 	altCfg.MinGenesisTime = 1593433800
 	altCfg.GenesisForkVersion = []byte{0x00, 0x00, 0x01, 0x21}
+	altCfg.NetworkName = "Altona"
 	return altCfg
 }

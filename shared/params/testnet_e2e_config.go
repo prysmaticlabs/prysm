@@ -28,5 +28,8 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
 
+	// Prysm constants.
+	e2eConfig.NetworkName = "End-to-end"
+
 	return e2eConfig
 }

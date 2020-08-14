@@ -11,6 +11,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -287,16 +290,23 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	}
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, _, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
+	tx, data, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
-
+	domain, err := helpers.ComputeDomain(
+		params.BeaconConfig().DomainDeposit,
+		nil, /*forkVersion*/
+		nil, /*genesisValidatorsRoot*/
+	)
+	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
+		return "", errors.Wrap(err, "failed to verify deposit signature")
+	}
 	// Log the deposit transaction data to the user.
 	fmt.Printf(`
 ======================Eth1 Deposit Transaction Data================
 %#x
-===================================================================`, tx.Data())
+======================For the %s network=======================`, tx.Data(), params.BeaconConfig().NetworkName)
 	fmt.Println("")
 
 	// Finally, write the account creation timestamps as a files.
