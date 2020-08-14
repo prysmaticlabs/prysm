@@ -629,14 +629,10 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
 			defer func() {
-				if err := db.ClearDB(); err != nil {
-					t.Log(err)
-				}
+				assert.NoError(t, db.ClearDB())
 			}()
 			defer func() {
-				if err := db.Close(); err != nil {
-					t.Log(err)
-				}
+				assert.NoError(t, db.Close())
 			}()
 
 			spanDetector := &SpanDetector{
@@ -792,14 +788,10 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
 			defer func() {
-				if err := db.ClearDB(); err != nil {
-					t.Log(err)
-				}
+				assert.NoError(t, db.ClearDB())
 			}()
 			defer func() {
-				if err := db.Close(); err != nil {
-					t.Log(err)
-				}
+				assert.NoError(t, db.Close())
 			}()
 
 			sd := &SpanDetector{
@@ -838,14 +830,10 @@ func TestSpanDetector_UpdateMinSpansCheckCacheSize(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, false)
 	ctx := context.Background()
 	defer func() {
-		if err := db.ClearDB(); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, db.ClearDB())
 	}()
 	defer func() {
-		if err := db.Close(); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, db.Close())
 	}()
 
 	sd := &SpanDetector{
