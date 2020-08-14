@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"net"
@@ -16,8 +15,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	syncFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/sync"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -41,23 +41,56 @@ func (s *Service) RefreshENR() {
 	if s.dv5Listener == nil {
 		return
 	}
-	bitV := bitfield.NewBitvector64()
-	committees := cache.SubnetIDs.GetAllSubnets()
-	for _, idx := range committees {
-		bitV.SetBitAt(idx, true)
+	syncChannel := make(chan *feed.Event, params.BeaconNetworkConfig().AttestationSubnetCount)
+	sub := s.syncNotifier.SyncFeed().Subscribe(syncChannel)
+	defer sub.Unsubscribe()
+
+	ticker := time.NewTicker(refreshRate)
+	defer ticker.Stop()
+
+	currSeqNum := s.metaData.SeqNumber
+	for {
+		select {
+		case <-ticker.C:
+			if currSeqNum < s.metaData.SeqNumber {
+				currSeqNum = s.metaData.SeqNumber
+				// ping all peers to inform them of new metadata
+				s.pingPeers()
+			}
+		case ev := <-syncChannel:
+			if ev.Type == syncFeed.SubscribedToSubnet {
+				netSub, ok := ev.Data.(*syncFeed.SubnetSubscribe)
+				// Invalid data received.
+				if !ok {
+					continue
+				}
+				currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+				if err != nil {
+					log.Errorf("Could not retrieve bitfield: %v", err)
+					continue
+				}
+				currentBitV.SetBitAt(netSub.Subnet, true)
+				s.updateSubnetRecordWithMetadata(currentBitV)
+
+			}
+			if ev.Type == syncFeed.UnSubscribeFromSubnet {
+				netSub, ok := ev.Data.(*syncFeed.SubnetUnsubscribe)
+				// Invalid data received.
+				if !ok {
+					continue
+				}
+				currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+				if err != nil {
+					log.Errorf("Could not retrieve bitfield: %v", err)
+					continue
+				}
+				currentBitV.SetBitAt(netSub.Subnet, false)
+				s.updateSubnetRecordWithMetadata(currentBitV)
+			}
+		case <-s.ctx.Done():
+			return
+		}
 	}
-	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
-	if err != nil {
-		log.Errorf("Could not retrieve bitfield: %v", err)
-		return
-	}
-	if bytes.Equal(bitV, currentBitV) {
-		// return early if bitfield hasn't changed
-		return
-	}
-	s.updateSubnetRecordWithMetadata(bitV)
-	// ping all peers to inform them of new metadata
-	s.pingPeers()
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.

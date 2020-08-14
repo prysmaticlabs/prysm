@@ -74,6 +74,7 @@ type BeaconNode struct {
 	stateFeed         *event.Feed
 	blockFeed         *event.Feed
 	opFeed            *event.Feed
+	syncFeed          *event.Feed
 	forkChoiceStore   forkchoice.ForkChoicer
 	stateGen          *stategen.State
 }
@@ -161,6 +162,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		stateFeed:         new(event.Feed),
 		blockFeed:         new(event.Feed),
 		opFeed:            new(event.Feed),
+		syncFeed:          new(event.Feed),
 		attestationPool:   attestations.NewPool(),
 		exitPool:          voluntaryexits.NewPool(),
 		slashingsPool:     slashings.NewPool(),
@@ -233,6 +235,11 @@ func (b *BeaconNode) BlockFeed() *event.Feed {
 // OperationFeed implements opfeed.Notifier.
 func (b *BeaconNode) OperationFeed() *event.Feed {
 	return b.opFeed
+}
+
+// SubnetFeed implements sync.Notifier
+func (b *BeaconNode) SyncFeed() *event.Feed {
+	return b.syncFeed
 }
 
 // Start the BeaconNode and kicks off every registered service.
@@ -403,6 +410,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		StateNotifier:     b,
+		SyncNotifier:      b,
 	})
 	if err != nil {
 		return err
@@ -527,6 +535,7 @@ func (b *BeaconNode) registerSyncService() error {
 		InitialSync:         initSync,
 		StateNotifier:       b,
 		BlockNotifier:       b,
+		SyncNotifier:        b,
 		AttestationNotifier: b,
 		AttPool:             b.attestationPool,
 		ExitPool:            b.exitPool,

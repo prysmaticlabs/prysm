@@ -140,6 +140,19 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 	return mon.feed
 }
 
+// MockSyncNotifier mocks the sync notifier.
+type MockSyncNotifier struct {
+	feed *event.Feed
+}
+
+// SyncFeed returns a sync feed.
+func (msn *MockSyncNotifier) SyncFeed() *event.Feed {
+	if msn.feed == nil {
+		msn.feed = new(event.Feed)
+	}
+	return msn.feed
+}
+
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
 func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	if ms.State == nil {

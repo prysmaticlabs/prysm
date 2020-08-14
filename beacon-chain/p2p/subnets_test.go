@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	syncFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -79,6 +80,8 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 	cfg.StateNotifier = &mock.MockStateNotifier{}
+	cfg.SyncNotifier = &mock.MockSyncNotifier{}
+
 	s, err = NewService(cfg)
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
@@ -112,13 +115,19 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		t.Fatal("Peer with subnet doesn't exist")
 	}
 
+	fd := &mock.MockSyncNotifier{}
 	// Update ENR of a peer.
 	testService := &Service{
-		dv5Listener: listeners[0],
-		metaData:    &pb.MetaData{},
+		dv5Listener:  listeners[0],
+		metaData:     &pb.MetaData{},
+		syncNotifier: fd,
+		ctx:          ctx,
 	}
 	cache.SubnetIDs.AddAttesterSubnetID(0, 10)
-	testService.RefreshENR()
+	go testService.RefreshENR()
+	fd.SyncFeed().Send(&feed.Event{Type: syncFeed.SubscribedToSubnet, Data: syncFeed.SubnetSubscribe{
+		Subnet: 10,
+	}})
 	time.Sleep(2 * time.Second)
 
 	exists, err = s.FindPeersWithSubnet(ctx, 2)
@@ -127,4 +136,48 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")
 	assert.NoError(t, s.Stop())
 	exitRoutine <- true
+}
+
+func TestRefreshENR_SubscribeToSubnet(t *testing.T) {
+	port := 2000
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	s := &Service{
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	listener, err := s.createListener(ipAddr, pkey)
+	require.NoError(t, err)
+	defer listener.Close()
+
+	fd := &mock.MockSyncNotifier{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// Update ENR of a peer.
+	testService := &Service{
+		dv5Listener:  listener,
+		metaData:     &pb.MetaData{},
+		syncNotifier: fd,
+		ctx:          ctx,
+	}
+	go testService.RefreshENR()
+	time.Sleep(100 * time.Millisecond)
+	fd.SyncFeed().Send(&feed.Event{Type: syncFeed.SubscribedToSubnet, Data: &syncFeed.SubnetSubscribe{
+		Subnet: 32,
+	}})
+	time.Sleep(2 * time.Second)
+
+	assert.Equal(t, 1, int(testService.metaData.SeqNumber), "Unexpected Sequence Number")
+	assert.Equal(t, true, testService.metaData.Attnets.BitAt(32))
+
+	fd.SyncFeed().Send(&feed.Event{Type: syncFeed.UnSubscribeFromSubnet, Data: &syncFeed.SubnetUnsubscribe{
+		Subnet: 32,
+	}})
+	time.Sleep(2 * time.Second)
+
+	assert.Equal(t, 2, int(testService.metaData.SeqNumber), "Unexpected Sequence Number")
+	assert.Equal(t, false, testService.metaData.Attnets.BitAt(32))
+
 }

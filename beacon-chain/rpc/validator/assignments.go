@@ -176,8 +176,8 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		validatorAssignments = append(validatorAssignments, assignment)
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 		// Assign relevant validator to subnet.
-		assignValidatorToSubnet(pubKey, assignment.Status)
-		assignValidatorToSubnet(pubKey, nextAssignment.Status)
+		vs.assignValidatorToSubnet(pubKey, assignment.Status)
+		vs.assignValidatorToSubnet(pubKey, nextAssignment.Status)
 	}
 
 	return &ethpb.DutiesResponse{
@@ -189,7 +189,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 
 // assignValidatorToSubnet checks the status and pubkey of a particular validator
 // to discern whether persistent subnets need to be registered for them.
-func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
+func (vs *Server) assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
 		return
 	}

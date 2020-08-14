@@ -13,6 +13,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	syncFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -194,6 +196,10 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 	}
 	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
 		s.subscribeWithBase(base, s.addDigestAndIndexToTopic(topic, i), validator, handle)
+		s.syncNotifier.SyncFeed().Send(&feed.Event{
+			Type: syncFeed.SubscribedToSubnet,
+			Data: &syncFeed.SubnetSubscribe{Subnet: i},
+		})
 	}
 	genesis := s.chain.GenesisTime()
 	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
@@ -301,6 +307,13 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 				log.WithError(err).Error("Failed to unregister topic validator")
 			}
 			delete(subscriptions, k)
+			// Fire event to consumers.
+			s.syncNotifier.SyncFeed().Send(&feed.Event{
+				Type: syncFeed.UnSubscribeFromSubnet,
+				Data: &syncFeed.SubnetUnsubscribe{
+					Subnet: k,
+				},
+			})
 		}
 	}
 }
@@ -315,6 +328,13 @@ func (s *Service) subscribeAggregatorSubnet(subscriptions map[uint64]*pubsub.Sub
 	// check if subscription exists and if not subscribe the relevant subnet.
 	if _, exists := subscriptions[idx]; !exists {
 		subscriptions[idx] = s.subscribeWithBase(base, subnetTopic, validate, handle)
+		// Fire on subscription.
+		s.syncNotifier.SyncFeed().Send(&feed.Event{
+			Type: syncFeed.SubscribedToSubnet,
+			Data: &syncFeed.SubnetSubscribe{
+				Subnet: idx,
+			},
+		})
 	}
 	if !s.validPeersExist(subnetTopic, idx) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+

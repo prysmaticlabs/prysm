@@ -19,6 +19,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	syncFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -55,6 +56,7 @@ type Config struct {
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
+	SyncNotifier        syncFeed.Notifier
 	StateSummaryCache   *cache.StateSummaryCache
 	StateGen            *stategen.State
 }
@@ -92,6 +94,7 @@ type Service struct {
 	validateBlockLock         sync.RWMutex
 	stateNotifier             statefeed.Notifier
 	blockNotifier             blockfeed.Notifier
+	syncNotifier              syncFeed.Notifier
 	rateLimiter               *limiter
 	attestationNotifier       operation.Notifier
 	seenBlockLock             sync.RWMutex
@@ -130,6 +133,7 @@ func NewRegularSync(cfg *Config) *Service {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
+		syncNotifier:         cfg.SyncNotifier,
 		stateSummaryCache:    cfg.StateSummaryCache,
 		stateGen:             cfg.StateGen,
 		rateLimiter:          rLimiter,

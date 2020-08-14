@@ -23,6 +23,7 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	syncFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/sync"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -80,6 +81,7 @@ type Service struct {
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
+	syncNotifier          syncFeed.Notifier
 	ctx                   context.Context
 	host                  host.Host
 	genesisTime           time.Time
@@ -104,6 +106,7 @@ func NewService(cfg *Config) (*Service, error) {
 	s := &Service{
 		ctx:           ctx,
 		stateNotifier: cfg.StateNotifier,
+		syncNotifier:  cfg.SyncNotifier,
 		cancel:        cancel,
 		cfg:           cfg,
 		exclusionList: cache,
@@ -233,9 +236,8 @@ func (s *Service) Start() {
 	})
 	runutil.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
 	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
-	runutil.RunEvery(s.ctx, refreshRate, func() {
-		s.RefreshENR()
-	})
+
+	go s.RefreshENR()
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIPAddr(s.host.ID(), multiAddrs...)
