@@ -151,6 +151,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
+	stateCopy := state.Copy()
 	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
 	require.NoError(t, err, "Could not process exits")
 	newRegistry := newState.Validators()
@@ -159,7 +160,6 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
 
-	stateCopy := state.Copy()
 	// Check conformance with NoVerify Exit Method.
 	newState, err = blocks.ProcessVoluntaryExitsNoVerifySignature(stateCopy, block.Body)
 	require.NoError(t, err, "Could not process exits")
