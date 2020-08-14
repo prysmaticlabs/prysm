@@ -11,16 +11,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -223,9 +223,17 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, _, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
+	tx, data, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
 		return "", errors.Wrap(err, "could not generate deposit transaction data")
+	}
+	domain, err := helpers.ComputeDomain(
+		params.BeaconConfig().DomainDeposit,
+		nil, /*forkVersion*/
+		nil, /*genesisValidatorsRoot*/
+	)
+	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
+		return "", errors.Wrap(err, "failed to verify deposit signature")
 	}
 
 	// Log the deposit transaction data to the user.
