@@ -186,12 +186,12 @@ func setupFakeClient() *client.FakeValidator {
 			{'f'}: 16,
 		},
 		PubkeysToStatusesMap: map[[48]byte]ethpb.ValidatorStatus{
-			[48]byte{'a'}: 0,
-			[48]byte{'b'}: 1,
-			[48]byte{'c'}: 2,
-			[48]byte{'d'}: 3,
-			[48]byte{'e'}: 4,
-			[48]byte{'f'}: 5,
+			{'a'}: 0,
+			{'b'}: 1,
+			{'c'}: 2,
+			{'d'}: 3,
+			{'e'}: 4,
+			{'f'}: 5,
 		},
 	}
 }
