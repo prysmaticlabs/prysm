@@ -3,6 +3,7 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
@@ -22,10 +23,12 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	}
 
 	// Don't save the attestation if the bitfield has been contained in previous blocks.
-	p.seenAggregatedAttLock.RLock()
-	seenBits, ok := p.seenAggregatedAtt[r]
-	p.seenAggregatedAttLock.RUnlock()
+	v, ok := p.seenAggregatedAtt.Get(string(r[:]))
 	if ok {
+		seenBits, ok := v.([]bitfield.Bitlist)
+		if !ok {
+			return errors.New("could not convert to bitlist type")
+		}
 		for _, bit := range seenBits {
 			if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
 				return nil
@@ -66,12 +69,18 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not tree hash attestation")
 		}
-		p.seenAggregatedAttLock.RLock()
-		seenBits, ok := p.seenAggregatedAtt[r]
-		p.seenAggregatedAttLock.RUnlock()
+		v, ok := p.seenAggregatedAtt.Get(string(r[:]))
 		if ok {
+			seenBits, ok := v.([]bitfield.Bitlist)
+			if !ok {
+				return nil, errors.New("could not convert to bitlist type")
+			}
 			for _, bit := range seenBits {
 				if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
+					r, err := hashFn(att)
+					if err != nil {
+						return nil, errors.Wrap(err, "could not tree hash attestation")
+					}
 					delete(p.unAggregatedAtt, r)
 					continue
 				}

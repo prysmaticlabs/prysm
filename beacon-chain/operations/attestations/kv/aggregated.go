@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -92,10 +93,12 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	}
 
 	// Don't save the attestation if the bitfield has been contained in previous blocks.
-	p.seenAggregatedAttLock.RLock()
-	seenBits, ok := p.seenAggregatedAtt[r]
-	p.seenAggregatedAttLock.RUnlock()
+	v, ok := p.seenAggregatedAtt.Get(string(r[:]))
 	if ok {
+		seenBits, ok := v.([]bitfield.Bitlist)
+		if !ok {
+			return errors.New("could not convert to bitlist type")
+		}
 		for _, bit := range seenBits {
 			if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
 				return nil
@@ -175,14 +178,17 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
 
-	p.seenAggregatedAttLock.Lock()
-	_, ok := p.seenAggregatedAtt[r]
+	v, ok := p.seenAggregatedAtt.Get(string(r[:]))
 	if ok {
-		p.seenAggregatedAtt[r] = append(p.seenAggregatedAtt[r], att.AggregationBits)
+		seenBits, ok := v.([]bitfield.Bitlist)
+		if !ok {
+			return errors.New("could not convert to bitlist type")
+		}
+		seenBits = append(seenBits, att.AggregationBits)
+		p.seenAggregatedAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration)
 	} else {
-		p.seenAggregatedAtt[r] = []bitfield.Bitlist{att.AggregationBits}
+		p.seenAggregatedAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration)
 	}
-	p.seenAggregatedAttLock.Unlock()
 
 	p.aggregatedAttLock.Lock()
 	defer p.aggregatedAttLock.Unlock()
@@ -244,11 +250,4 @@ func (p *AttCaches) AggregatedAttestationCount() int {
 	p.aggregatedAttLock.RLock()
 	defer p.aggregatedAttLock.RUnlock()
 	return len(p.aggregatedAtt)
-}
-
-// ClearSeenAtts clears the seen attestations cache.
-func (p *AttCaches) ClearSeenAtts() {
-	p.seenAggregatedAttLock.Lock()
-	defer p.seenAggregatedAttLock.Unlock()
-	p.seenAggregatedAtt = make(map[[32]byte][]bitfield.Bitlist)
 }
