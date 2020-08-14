@@ -59,6 +59,9 @@ func (g *Gateway) Start() {
 	if err := pb.RegisterAuthHandlerFromEndpoint(ctx, gwmux, g.remoteAddr, opts); err != nil {
 		log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
 	}
+	if err := pb.RegisterHealthHandlerFromEndpoint(ctx, gwmux, g.remoteAddr, opts); err != nil {
+		log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
+	}
 	g.mux.Handle("/", g.corsMiddleware(gwmux))
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
