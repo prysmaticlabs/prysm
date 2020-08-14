@@ -419,7 +419,7 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 		fuzzer.Fuzz(val)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
-		err := VerifyExit(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
+		err := VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
 		_ = err
 	}
 }
