@@ -30,6 +30,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
+	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -41,6 +42,7 @@ var log = logrus.WithField("prefix", "node")
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
 	cliCtx   *cli.Context
+	db       *kv.Store
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
 	wallet   *accountsv2.Wallet
@@ -140,6 +142,12 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
+	valDB, err := kv.NewKVStore(dataDir, pubKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize db")
+	}
+	ValidatorClient.db = valDB
+
 	if err := ValidatorClient.registerPrometheusService(); err != nil {
 		return nil, err
 	}
@@ -149,6 +157,14 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2, pubKeys); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatorClient.registerRPCService(cliCtx); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatorClient.registerRPCGatewayService(cliCtx); err != nil {
 		return nil, err
 	}
 
@@ -245,6 +261,7 @@ func (s *ValidatorClient) registerClientService(
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
+		ValDB:                      s.db,
 	})
 
 	if err != nil {
@@ -276,14 +293,37 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	return s.services.RegisterService(sp)
 }
 
-func (s *ValidatorClient) registerRPCService() error {
+func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	var vs *client.ValidatorService
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
 	}
-
-	server := rpc.NewServer(context.Background(), &rpc.Config{ValidatorService: vs})
+	rpcHost := cliCtx.String(flags.RPCHost.Name)
+	rpcPort := cliCtx.Int(flags.RPCPort.Name)
+	server := rpc.NewServer(context.Background(), &rpc.Config{
+		ValDB:            s.db,
+		Host:             rpcHost,
+		Port:             fmt.Sprintf("%d", rpcPort),
+		ValidatorService: vs,
+	})
 	return s.services.RegisterService(server)
+}
+
+func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
+	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
+	rpcHost := cliCtx.String(flags.RPCHost.Name)
+	rpcPort := cliCtx.Int(flags.RPCPort.Name)
+	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
+	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	allowedOrigins := []string{"localhost"}
+	gatewaySrv := gateway.New(
+		context.Background(),
+		rpcAddr,
+		gatewayAddress,
+		allowedOrigins,
+	)
+	return s.services.RegisterService(gatewaySrv)
 }
 
 // Selects the key manager depending on the options provided by the user.
