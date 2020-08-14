@@ -188,7 +188,7 @@ message AuthRequest {
 }
 
 message AuthResponse {
-    bytes token = 1;
+    string token = 1;
 
     uint64 token_expiration = 2;
 }
