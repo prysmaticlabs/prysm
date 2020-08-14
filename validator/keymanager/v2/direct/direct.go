@@ -232,7 +232,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	fmt.Printf(`
 ======================Eth1 Deposit Transaction Data================
 %#x
-======================For the %s network=======================`, tx.Data(), params.BeaconConfig().NetworkName)
+========================For the %s network====================`, tx.Data(), params.BeaconConfig().NetworkName)
 	fmt.Println("")
 
 	// Write the encoded keystore.
