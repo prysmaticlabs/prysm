@@ -81,11 +81,11 @@ func (s *Server) createTokenString() (string, uint64, error) {
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
 	expirationTime := roughtime.Now().Add(tokenExpiryLength)
-	fakeToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expirationTime.Unix(),
 	})
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := fakeToken.SignedString(s.jwtKey)
+	tokenString, err := token.SignedString(s.jwtKey)
 	if err != nil {
 		return "", 0, err
 	}
