@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -72,23 +71,23 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 		return nil, status.Error(codes.Internal, "Could not create jwt token string")
 	}
 	return &pb.AuthResponse{
-		Token:           []byte(tokenString),
+		Token:           tokenString,
 		TokenExpiration: expirationTime,
 	}, nil
 }
 
 // Creates a JWT token string using the JWT key with an expiration timestamp.
 func (s *Server) createTokenString() (string, uint64, error) {
+	// Create a new token object, specifying signing method and the claims
+	// you would like it to contain.
 	expirationTime := roughtime.Now().Add(tokenExpiryLength)
-	claims := &jwt.StandardClaims{
-		// In JWT, the expiry time is expressed as unix milliseconds.
+	fakeToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expirationTime.Unix(),
-	}
-	// Declare the token with the algorithm used for signing, and the claims.
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(s.jwtKey)
+	})
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := fakeToken.SignedString(s.jwtKey)
 	if err != nil {
-		return "", 0, errors.Wrap(err, "could not sign token")
+		return "", 0, err
 	}
-	return tokenString, uint64(claims.ExpiresAt), nil
+	return tokenString, uint64(expirationTime.Unix()), nil
 }
