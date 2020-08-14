@@ -62,7 +62,7 @@ func (s *Server) authorize(ctx context.Context) error {
 		return s.jwtKey, nil
 	}
 	token := authHeader[0]
-	_, err := jwt.ParseWithClaims(token, jwt.StandardClaims{}, checkParsedKey)
+	_, err := jwt.Parse(token, checkParsedKey)
 	if err != nil {
 		return err
 	}
