@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,6 +87,22 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		p2p:         s.p2p,
 		headFetcher: s.chain,
 	})
+
+	// Select a new peer in the event of failure.
+	nextBestPeer := func(prevPeer peer.ID) peer.ID {
+		_, pids := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync /* maxPeers */, s.highestFinalizedEpoch())
+		if len(pids) == 0 {
+			return ""
+		}
+		// Return new peer in the event of failure
+		for _, id := range pids {
+			if prevPeer != id {
+				return id
+			}
+		}
+		return prevPeer
+	}
+
 	_, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	for len(pids) == 0 {
 		log.Info("Waiting for a suitable peer before syncing to the head of the chain")
@@ -107,18 +125,29 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}).Debug("Sending batch block request")
 		resp, err := blocksFetcher.requestBlocks(ctx, req, best)
 		if err != nil {
-			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
-			return nil
+			log.WithError(err).Error("Failed to receive blocks")
+			nxtPeer := nextBestPeer(best)
+			if nxtPeer != "" {
+				best = nxtPeer
+			}
+			continue
 		}
 		for _, blk := range resp {
 			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlock)
 			if err != nil {
-				log.WithError(err).Error("Failed to process block, exiting init sync")
-				return nil
+				log.WithError(err).Error("Failed to process block")
+				nxtPeer := nextBestPeer(best)
+				if nxtPeer != "" {
+					best = nxtPeer
+				}
+				break
 			}
 		}
 		if len(resp) == 0 {
-			break
+			nxtPeer := nextBestPeer(best)
+			if nxtPeer != "" {
+				best = nxtPeer
+			}
 		}
 	}
 
