@@ -491,30 +491,35 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 	// Peer 1
 	pid1 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid1, &pb.Status{
+		HeadSlot:       3 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 3,
 		FinalizedRoot:  mockroot3[:],
 	})
 	// Peer 2
 	pid2 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid2, &pb.Status{
+		HeadSlot:       4 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 4,
 		FinalizedRoot:  mockroot4[:],
 	})
 	// Peer 3
 	pid3 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid3, &pb.Status{
+		HeadSlot:       5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 5,
 		FinalizedRoot:  mockroot5[:],
 	})
 	// Peer 4
 	pid4 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid4, &pb.Status{
+		HeadSlot:       2 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 2,
 		FinalizedRoot:  mockroot2[:],
 	})
 	// Peer 5
 	pid5 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid5, &pb.Status{
+		HeadSlot:       2 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 2,
 		FinalizedRoot:  mockroot2[:],
 	})
