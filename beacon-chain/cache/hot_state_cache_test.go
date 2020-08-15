@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -11,6 +12,13 @@ import (
 )
 
 func TestHotStateCache_RoundTrip(t *testing.T) {
+	cfg := &flags.GlobalFlags{}
+	oldCfg := flags.Get()
+	cfg.HotStateCacheSize = 32
+	flags.Init(cfg)
+	defer func() {
+		flags.Init(oldCfg)
+	}()
 	c := cache.NewHotStateCache()
 	root := [32]byte{'A'}
 	state := c.Get(root)

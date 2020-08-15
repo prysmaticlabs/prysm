@@ -108,6 +108,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.HistoricalSlasherNode,
 			flags.ChainID,
 			flags.NetworkID,
+			flags.HotStateCacheSize,
+			flags.EpochBoundaryCacheSize,
 		},
 	},
 	{

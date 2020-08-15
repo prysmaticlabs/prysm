@@ -149,4 +149,16 @@ var (
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
 	}
+	// HotStateCacheSize specifies the size of the hot state cache.
+	HotStateCacheSize = &cli.IntFlag{
+		Name:  "hot-state-cache-size",
+		Usage: "The number of states stored in our hot state cache",
+		Value: 32,
+	}
+	// EpochBoundaryCacheSize specifies the size of our epoch boundary cache.
+	EpochBoundaryCacheSize = &cli.IntFlag{
+		Name:  "boundary-cache-size",
+		Usage: "The number of boundary states stored in our epoch boundary cache",
+		Value: 8,
+	}
 )

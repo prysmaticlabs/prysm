@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"k8s.io/client-go/tools/cache"
 )
@@ -128,6 +129,9 @@ func (e *epochBoundaryState) put(r [32]byte, s *stateTrie.BeaconState) error {
 		return err
 	}
 
+	if flags.Get().BoundaryCacheSize != 0 {
+		maxCacheSize = uint64(flags.Get().BoundaryCacheSize)
+	}
 	trim(e.rootStateCache, maxCacheSize)
 	trim(e.slotRootCache, maxCacheSize)
 

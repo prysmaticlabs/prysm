@@ -6,6 +6,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
@@ -31,6 +32,9 @@ type HotStateCache struct {
 
 // NewHotStateCache initializes the map and underlying cache.
 func NewHotStateCache() *HotStateCache {
+	if flags.Get().HotStateCacheSize != 0 {
+		hotStateCacheSize = flags.Get().HotStateCacheSize
+	}
 	cache, err := lru.New(hotStateCacheSize)
 	if err != nil {
 		panic(err)

@@ -14,6 +14,8 @@ type GlobalFlags struct {
 	MinimumSyncPeers           int
 	BlockBatchLimit            int
 	BlockBatchLimitBurstFactor int
+	HotStateCacheSize          int
+	BoundaryCacheSize          int
 }
 
 var globalConfig *GlobalFlags
@@ -43,6 +45,8 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	}
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
+	cfg.HotStateCacheSize = ctx.Int(HotStateCacheSize.Name)
+	cfg.BoundaryCacheSize = ctx.Int(EpochBoundaryCacheSize.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)
