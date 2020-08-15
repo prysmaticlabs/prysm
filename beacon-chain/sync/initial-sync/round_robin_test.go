@@ -34,9 +34,10 @@ func TestService_roundRobinSync(t *testing.T) {
 		peers               []*peerData
 	}{
 		{
-			name:               "Single peer with no finalized blocks",
-			currentSlot:        2,
-			expectedBlockSlots: makeSequence(1, 2),
+			name:                "Single peer with no finalized blocks",
+			currentSlot:         2,
+			availableBlockSlots: makeSequence(1, 32),
+			expectedBlockSlots:  makeSequence(1, 2),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 2),
@@ -46,9 +47,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with no finalized blocks",
-			currentSlot:        2,
-			expectedBlockSlots: makeSequence(1, 2),
+			name:                "Multiple peers with no finalized blocks",
+			currentSlot:         2,
+			availableBlockSlots: makeSequence(1, 32),
+			expectedBlockSlots:  makeSequence(1, 2),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 2),
@@ -68,9 +70,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Single peer with all blocks",
-			currentSlot:        131,
-			expectedBlockSlots: makeSequence(1, 131),
+			name:                "Single peer with all blocks",
+			currentSlot:         131,
+			availableBlockSlots: makeSequence(1, 320),
+			expectedBlockSlots:  makeSequence(1, 131),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -80,9 +83,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with all blocks",
-			currentSlot:        131,
-			expectedBlockSlots: makeSequence(1, 131),
+			name:                "Multiple peers with all blocks",
+			currentSlot:         131,
+			availableBlockSlots: makeSequence(1, 320),
+			expectedBlockSlots:  makeSequence(1, 131),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -107,9 +111,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with failures",
-			currentSlot:        320, // 10 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			name:                "Multiple peers with failures",
+			currentSlot:         320, // 10 epochs
+			availableBlockSlots: makeSequence(1, 384),
+			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -158,9 +163,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with multiple failures",
-			currentSlot:        320, // 10 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			name:                "Multiple peers with multiple failures",
+			currentSlot:         320, // 10 epochs
+			availableBlockSlots: makeSequence(1, 480),
+			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -188,9 +194,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with different finalized epoch",
-			currentSlot:        320, // 10 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			name:                "Multiple peers with different finalized epoch",
+			currentSlot:         320, // 10 epochs
+			availableBlockSlots: makeSequence(1, 480),
+			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -215,9 +222,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with missing parent blocks",
-			currentSlot:        160, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 160),
+			name:                "Multiple peers with missing parent blocks",
+			currentSlot:         160, // 5 epochs
+			availableBlockSlots: makeSequence(1, 240),
+			expectedBlockSlots:  makeSequence(1, 160),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 160),
