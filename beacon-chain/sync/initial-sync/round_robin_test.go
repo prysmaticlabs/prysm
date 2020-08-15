@@ -482,7 +482,7 @@ func TestService_processBlockBatch(t *testing.T) {
 }
 
 func TestService_blockProviderScoring(t *testing.T) {
-	cache.initializeRootCache(makeSequence(1, 320), t)
+	cache.initializeRootCache(makeSequence(1, 640), t)
 
 	p := p2pt.NewTestP2P(t)
 	beaconDB, _ := dbtest.SetupDB(t)
@@ -502,7 +502,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 		},
 		{
 			// This peer has all blocks - should be a preferred one.
-			blocks:         makeSequence(1, 160),
+			blocks:         makeSequence(1, 320),
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
@@ -542,10 +542,10 @@ func TestService_blockProviderScoring(t *testing.T) {
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer3))
 
 	assert.NoError(t, s.roundRobinSync(makeGenesisTime(currentSlot)))
-	if s.chain.HeadSlot() != currentSlot {
-		t.Errorf("Head slot (%d) is not currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
+	if s.chain.HeadSlot() < currentSlot {
+		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
 	}
-	assert.Equal(t, len(expectedBlockSlots), len(mc.BlocksReceived), "Processes wrong number of blocks")
+	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
 	var receivedBlockSlots []uint64
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
@@ -555,6 +555,10 @@ func TestService_blockProviderScoring(t *testing.T) {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}
 
+	// Increment all peers' stats, so that nobody is boosted (as new, not yet used peer).
+	scorer.IncrementProcessedBlocks(peer1, 1)
+	scorer.IncrementProcessedBlocks(peer2, 1)
+	scorer.IncrementProcessedBlocks(peer3, 1)
 	score1 := scorer.Score(peer1)
 	score2 := scorer.Score(peer2)
 	score3 := scorer.Score(peer3)
