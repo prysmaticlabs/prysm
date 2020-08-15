@@ -46,9 +46,10 @@ const (
 )
 
 var (
-	errNoPeersAvailable = errors.New("no peers available, waiting for reconnect")
-	errFetcherCtxIsDone = errors.New("fetcher's context is done, reinitialize")
-	errSlotIsTooHigh    = errors.New("slot is higher than the finalized slot")
+	errNoPeersAvailable      = errors.New("no peers available, waiting for reconnect")
+	errFetcherCtxIsDone      = errors.New("fetcher's context is done, reinitialize")
+	errSlotIsTooHigh         = errors.New("slot is higher than the finalized slot")
+	errBlockAlreadyProcessed = errors.New("block is already processed")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
