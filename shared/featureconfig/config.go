@@ -264,8 +264,8 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableRoughtime.Name) {
 		log.Warn("Enabling roughtime sync")
 		cfg.EnableRoughtime = true
-		Init(cfg)
 	}
+	Init(cfg)
 }
 
 // ConfigureSlasher sets the global config based
