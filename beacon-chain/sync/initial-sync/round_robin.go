@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -17,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -66,7 +69,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		s.processFetchedData(ctx, genesis, s.chain.HeadSlot(), data)
 	}
 
-	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
+	log.WithFields(logrus.Fields{
+		"syncedSlot": s.chain.HeadSlot(),
+		"headSlot":   helpers.SlotsSince(genesis),
+	}).Debug("Synced to finalized epoch - now syncing blocks up to current head")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
@@ -85,6 +91,28 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		p2p:         s.p2p,
 		headFetcher: s.chain,
 	})
+
+	// Select a new peer in the event of failure.
+	nextBestPeer := func(prevPeer peer.ID) peer.ID {
+		var pids []peer.ID
+		for {
+			_, pids = s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync /* maxPeers */, s.highestFinalizedEpoch())
+			if len(pids) == 0 {
+				log.Info("Waiting for a suitable peer before syncing to the head of the chain")
+				time.Sleep(refreshTime)
+				continue
+			}
+			break
+		}
+		// Return new peer in the event of failure
+		for _, id := range pids {
+			if prevPeer != id {
+				return id
+			}
+		}
+		return prevPeer
+	}
+
 	_, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	for len(pids) == 0 {
 		log.Info("Waiting for a suitable peer before syncing to the head of the chain")
@@ -107,18 +135,23 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}).Debug("Sending batch block request")
 		resp, err := blocksFetcher.requestBlocks(ctx, req, best)
 		if err != nil {
-			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
-			return nil
+			log.WithError(err).Error("Failed to receive blocks")
+			best = nextBestPeer(best)
+			continue
 		}
 		for _, blk := range resp {
 			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlock)
 			if err != nil {
-				log.WithError(err).Error("Failed to process block, exiting init sync")
-				return nil
+				if strings.Contains(err.Error(), errBlockAlreadyProcessed.Error()) {
+					continue
+				}
+				log.WithError(err).Error("Failed to process block")
+				best = nextBestPeer(best)
+				break
 			}
 		}
 		if len(resp) == 0 {
-			break
+			best = nextBestPeer(best)
 		}
 	}
 
@@ -216,13 +249,14 @@ func (s *Service) processBlock(
 	blk *eth.SignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
-	if blk.Block.Slot <= s.lastProcessedSlot {
-		return fmt.Errorf("slot %d already processed", blk.Block.Slot)
-	}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		return err
 	}
+	if blk.Block.Slot <= s.lastProcessedSlot && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
+		return errors.Wrapf(errBlockAlreadyProcessed, "slot: %d , root %#x", blk.Block.Slot, blkRoot)
+	}
+
 	s.logSyncStatus(genesis, blk.Block, blkRoot)
 	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
