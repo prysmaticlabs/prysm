@@ -69,7 +69,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		s.processFetchedData(ctx, genesis, s.chain.HeadSlot(), data)
 	}
 
-	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
+	log.WithFields(logrus.Fields{
+		"syncedSlot": s.chain.HeadSlot(),
+		"headSlot":   helpers.SlotsSince(genesis),
+	}).Debug("Synced to finalized epoch - now syncing blocks up to current head")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}

@@ -27,10 +27,11 @@ func TestConstants(t *testing.T) {
 
 func TestService_roundRobinSync(t *testing.T) {
 	tests := []struct {
-		name               string
-		currentSlot        uint64
-		expectedBlockSlots []uint64
-		peers              []*peerData
+		name                string
+		currentSlot         uint64
+		availableBlockSlots []uint64
+		expectedBlockSlots  []uint64
+		peers               []*peerData
 	}{
 		{
 			name:               "Single peer with no finalized blocks",
@@ -134,22 +135,23 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with many skipped slots",
-			currentSlot:        1280,
-			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+			name:                "Multiple peers with many skipped slots",
+			currentSlot:         1280,
+			availableBlockSlots: append(makeSequence(1, 64), makeSequence(1000, 1300)...),
+			expectedBlockSlots:  append(makeSequence(1, 64), makeSequence(1000, 1280)...),
 			peers: []*peerData{
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1300)...),
 					finalizedEpoch: 36,
 					headSlot:       1280,
 				},
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1300)...),
 					finalizedEpoch: 36,
 					headSlot:       1280,
 				},
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1300)...),
 					finalizedEpoch: 36,
 					headSlot:       1280,
 				},
@@ -264,7 +266,10 @@ func TestService_roundRobinSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cache.initializeRootCache(tt.expectedBlockSlots, t)
+			if tt.availableBlockSlots == nil {
+				tt.availableBlockSlots = tt.expectedBlockSlots
+			}
+			cache.initializeRootCache(tt.availableBlockSlots, t)
 
 			p := p2pt.NewTestP2P(t)
 			beaconDB, _ := dbtest.SetupDB(t)
@@ -292,10 +297,10 @@ func TestService_roundRobinSync(t *testing.T) {
 				chainStarted: true,
 			}
 			assert.NoError(t, s.roundRobinSync(makeGenesisTime(tt.currentSlot)))
-			if s.chain.HeadSlot() != tt.currentSlot {
-				t.Errorf("Head slot (%d) is not currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
+			if s.chain.HeadSlot() < tt.currentSlot {
+				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
 			}
-			assert.Equal(t, len(tt.expectedBlockSlots), len(mc.BlocksReceived), "Processes wrong number of blocks")
+			assert.Equal(t, true, len(tt.expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
 			var receivedBlockSlots []uint64
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
