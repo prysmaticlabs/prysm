@@ -40,7 +40,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 
 	// Update and save head block after fork choice.
 	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-		log.Warnf("Resolving fork due to new attestation: %v", err)
+		log.Warnf("Could not update head: %v", err)
 	}
 
 	// Send notification of the processed block to the state feed.
