@@ -39,18 +39,23 @@ import (
 //    validator.exit_epoch = exit_queue_epoch
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie.BeaconState, error) {
-	vals := state.Validators()
-	if idx >= uint64(len(vals)) {
-		return nil, fmt.Errorf("validator idx %d is higher then validator count %d", idx, len(vals))
+	readOnlyVals := state.ValidatorsReadOnly()
+	if idx >= uint64(len(readOnlyVals)) {
+		return nil, fmt.Errorf("validator idx %d is higher then validator count %d", idx, len(readOnlyVals))
 	}
-	validator := vals[idx]
+
+	validator, err := state.ValidatorAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
+
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state, nil
 	}
 	exitEpochs := []uint64{}
-	for _, val := range vals {
-		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, val.ExitEpoch)
+	for _, val := range readOnlyVals {
+		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
 	}
 	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(helpers.CurrentEpoch(state)))
@@ -65,8 +70,8 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := 0
-	for _, val := range vals {
-		if val.ExitEpoch == exitQueueEpoch {
+	for _, val := range readOnlyVals {
+		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
