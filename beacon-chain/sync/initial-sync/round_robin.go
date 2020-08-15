@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -135,6 +136,9 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		for _, blk := range resp {
 			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlock)
 			if err != nil {
+				if strings.Contains(err.Error(), errBlockAlreadyProcessed.Error()) {
+					continue
+				}
 				log.WithError(err).Error("Failed to process block")
 				nxtPeer := nextBestPeer(best)
 				if nxtPeer != "" {
@@ -245,13 +249,14 @@ func (s *Service) processBlock(
 	blk *eth.SignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
-	if blk.Block.Slot <= s.lastProcessedSlot {
-		return fmt.Errorf("slot %d already processed", blk.Block.Slot)
-	}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		return err
 	}
+	if blk.Block.Slot <= s.lastProcessedSlot && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
+		return errors.Wrapf(errBlockAlreadyProcessed, "slot: %d , root %#x", blk.Block.Slot, blkRoot)
+	}
+
 	s.logSyncStatus(genesis, blk.Block, blkRoot)
 	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
