@@ -365,8 +365,7 @@ func TestService_processBlock(t *testing.T) {
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
-		expectedErr := fmt.Errorf("slot %d already processed", blk1.Block.Slot)
-		assert.ErrorContains(t, expectedErr.Error(), err)
+		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBlock(ctx, genesis, blk2, func(
