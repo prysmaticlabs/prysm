@@ -72,11 +72,11 @@ func TestService_roundRobinSync(t *testing.T) {
 		{
 			name:                "Single peer with all blocks",
 			currentSlot:         131,
-			availableBlockSlots: makeSequence(1, 320),
+			availableBlockSlots: makeSequence(1, 192),
 			expectedBlockSlots:  makeSequence(1, 131),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
@@ -85,26 +85,26 @@ func TestService_roundRobinSync(t *testing.T) {
 		{
 			name:                "Multiple peers with all blocks",
 			currentSlot:         131,
-			availableBlockSlots: makeSequence(1, 320),
+			availableBlockSlots: makeSequence(1, 192),
 			expectedBlockSlots:  makeSequence(1, 131),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
@@ -117,23 +117,23 @@ func TestService_roundRobinSync(t *testing.T) {
 			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 					failureSlots:   makeSequence(1, 32), // first epoch
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 				},
@@ -165,11 +165,11 @@ func TestService_roundRobinSync(t *testing.T) {
 		{
 			name:                "Multiple peers with multiple failures",
 			currentSlot:         320, // 10 epochs
-			availableBlockSlots: makeSequence(1, 480),
+			availableBlockSlots: makeSequence(1, 384),
 			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 9,
 					headSlot:       320,
 				},
@@ -196,11 +196,11 @@ func TestService_roundRobinSync(t *testing.T) {
 		{
 			name:                "Multiple peers with different finalized epoch",
 			currentSlot:         320, // 10 epochs
-			availableBlockSlots: makeSequence(1, 480),
+			availableBlockSlots: makeSequence(1, 384),
 			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 4,
 					headSlot:       320,
 				},
@@ -224,11 +224,11 @@ func TestService_roundRobinSync(t *testing.T) {
 		{
 			name:                "Multiple peers with missing parent blocks",
 			currentSlot:         160, // 5 epochs
-			availableBlockSlots: makeSequence(1, 240),
+			availableBlockSlots: makeSequence(1, 192),
 			expectedBlockSlots:  makeSequence(1, 160),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
@@ -239,32 +239,32 @@ func TestService_roundRobinSync(t *testing.T) {
 					forkedPeer:     true,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
