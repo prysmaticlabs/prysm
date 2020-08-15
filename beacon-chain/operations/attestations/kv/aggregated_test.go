@@ -26,19 +26,11 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	att7 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()}
 	att8 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()}
 	atts := []*ethpb.Attestation{att1, att2, att3, att4, att5, att6, att7, att8}
-	if err := cache.SaveUnaggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.AggregateUnaggregatedAttestations(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
+	require.NoError(t, cache.AggregateUnaggregatedAttestations())
 
-	if len(cache.AggregatedAttestationsBySlotIndex(1, 0)) != 1 {
-		t.Fatal("Did not aggregate correctly")
-	}
-	if len(cache.AggregatedAttestationsBySlotIndex(2, 0)) != 1 {
-		t.Fatal("Did not aggregate correctly")
-	}
+	require.Equal(t, 1, len(cache.AggregatedAttestationsBySlotIndex(1, 0)), "Did not aggregate correctly")
+	require.Equal(t, 1, len(cache.AggregatedAttestationsBySlotIndex(2, 0)), "Did not aggregate correctly")
 }
 
 func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
@@ -102,9 +94,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
 			cache.seenAggregatedAtt[r] = []bitfield.Bitlist{{0xff}}
-			if len(cache.unAggregatedAtt) != 0 {
-				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
-			}
+			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool")
 
 			err := cache.SaveAggregatedAttestation(tt.att)
 			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {
@@ -115,12 +105,8 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			if len(cache.aggregatedAtt) != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.aggregatedAtt))
-			}
-			if cache.AggregatedAttestationCount() != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.AggregatedAttestationCount())
-			}
+			assert.Equal(t, tt.count, len(cache.aggregatedAtt), "Wrong attestation count")
+			assert.Equal(t, tt.count, cache.AggregatedAttestationCount(), "Wrong attestation count")
 		})
 	}
 }
