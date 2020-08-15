@@ -91,9 +91,15 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	// Select a new peer in the event of failure.
 	nextBestPeer := func(prevPeer peer.ID) peer.ID {
-		_, pids := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync /* maxPeers */, s.highestFinalizedEpoch())
-		if len(pids) == 0 {
-			return ""
+		var pids []peer.ID
+		for {
+			_, pids = s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync /* maxPeers */, s.highestFinalizedEpoch())
+			if len(pids) == 0 {
+				log.Info("Waiting for a suitable peer before syncing to the head of the chain")
+				time.Sleep(refreshTime)
+				continue
+			}
+			break
 		}
 		// Return new peer in the event of failure
 		for _, id := range pids {
@@ -127,10 +133,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		resp, err := blocksFetcher.requestBlocks(ctx, req, best)
 		if err != nil {
 			log.WithError(err).Error("Failed to receive blocks")
-			nxtPeer := nextBestPeer(best)
-			if nxtPeer != "" {
-				best = nxtPeer
-			}
+			best = nextBestPeer(best)
 			continue
 		}
 		for _, blk := range resp {
@@ -140,18 +143,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 					continue
 				}
 				log.WithError(err).Error("Failed to process block")
-				nxtPeer := nextBestPeer(best)
-				if nxtPeer != "" {
-					best = nxtPeer
-				}
+				best = nextBestPeer(best)
 				break
 			}
 		}
 		if len(resp) == 0 {
-			nxtPeer := nextBestPeer(best)
-			if nxtPeer != "" {
-				best = nxtPeer
-			}
+			best = nextBestPeer(best)
 		}
 	}
 
