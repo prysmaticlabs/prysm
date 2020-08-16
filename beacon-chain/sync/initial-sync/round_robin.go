@@ -112,7 +112,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedData(
 	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
-	s.updatePeerScorerStats(data.pid, startSlot)
+	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.chain.ReceiveBlockInitialSync
 	batchReceiver := s.chain.ReceiveBlockBatch
