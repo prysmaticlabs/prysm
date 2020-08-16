@@ -47,6 +47,7 @@ type syncMode uint8
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
+	finalizationFetcher blockchain.FinalizationFetcher
 	startSlot           uint64
 	highestExpectedSlot uint64
 	p2p                 p2p.P2P
@@ -83,8 +84,9 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	blocksFetcher := cfg.blocksFetcher
 	if blocksFetcher == nil {
 		blocksFetcher = newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher: cfg.headFetcher,
-			p2p:         cfg.p2p,
+			headFetcher:         cfg.headFetcher,
+			finalizationFetcher: cfg.finalizationFetcher,
+			p2p:                 cfg.p2p,
 		})
 	}
 	highestExpectedSlot := cfg.highestExpectedSlot

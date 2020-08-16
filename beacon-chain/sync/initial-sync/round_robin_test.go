@@ -296,6 +296,9 @@ func TestService_roundRobinSync(t *testing.T) {
 				State: st,
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
+				FinalizedCheckPoint: &eth.Checkpoint{
+					Epoch: 0,
+				},
 			} // no-op mock
 			s := &Service{
 				chain:        mc,

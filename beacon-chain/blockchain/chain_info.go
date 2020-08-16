@@ -45,7 +45,6 @@ type HeadFetcher interface {
 	HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error)
 	HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
-	HeadFinalizedEpoch() uint64
 	HeadETH1Data() *ethpb.Eth1Data
 	ProtoArrayStore() *protoarray.Store
 }
@@ -188,14 +187,6 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 		return &ethpb.Eth1Data{}
 	}
 	return s.head.state.Eth1Data()
-}
-
-// HeadFinalizedEpoch returns the finalized epoch of the current head state.
-func (s *Service) HeadFinalizedEpoch() uint64 {
-	if !s.hasHeadState() {
-		return 0
-	}
-	return s.head.state.FinalizedCheckpointEpoch()
 }
 
 // ProtoArrayStore returns the proto array store object.
