@@ -238,9 +238,9 @@ func TestBlocksQueueLoop(t *testing.T) {
 			defer cancel()
 
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-				headFetcher: mc,
+				headFetcher:         mc,
 				finalizationFetcher: mc,
-				p2p:         p2p,
+				p2p:                 p2p,
 			})
 			queue := newBlocksQueue(ctx, &blocksQueueConfig{
 				blocksFetcher:       fetcher,
