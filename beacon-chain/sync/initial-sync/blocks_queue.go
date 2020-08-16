@@ -23,6 +23,8 @@ const (
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
+	// noFinalizedPeersErrMaxRetries defines number of retries when no finalized peers are found.
+	noFinalizedPeersErrMaxRetries = 100
 )
 
 var (
@@ -33,13 +35,23 @@ var (
 	errNoPeersWithFinalizedBlocks = errors.New("no peers with finalized blocks are found")
 )
 
+const (
+	modeStopOnFinalizedEpoch syncMode = iota
+	modeNonConstrained
+)
+
+// syncMode specifies sync mod type.
+type syncMode uint8
+
 // blocksQueueConfig is a config to setup block queue service.
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
+	finalizationFetcher blockchain.FinalizationFetcher
 	startSlot           uint64
 	highestExpectedSlot uint64
 	p2p                 p2p.P2P
+	mode                syncMode
 }
 
 // blocksQueue is a priority queue that serves as a intermediary between block fetchers (producers)
@@ -51,8 +63,12 @@ type blocksQueue struct {
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	highestExpectedSlot uint64
-	fetchedData         chan *blocksQueueFetchedData // output channel for ready blocks
-	quit                chan struct{}                // termination notifier
+	mode                syncMode
+	exitConditions      struct {
+		noFinalizedPeersErrRetries int
+	}
+	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
+	quit        chan struct{}                // termination notifier
 }
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
@@ -68,8 +84,9 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	blocksFetcher := cfg.blocksFetcher
 	if blocksFetcher == nil {
 		blocksFetcher = newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher: cfg.headFetcher,
-			p2p:         cfg.p2p,
+			headFetcher:         cfg.headFetcher,
+			finalizationFetcher: cfg.finalizationFetcher,
+			p2p:                 cfg.p2p,
 		})
 	}
 	highestExpectedSlot := cfg.highestExpectedSlot
@@ -77,12 +94,16 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
 	}
 
+	// Override fetcher's sync mode.
+	blocksFetcher.mode = cfg.mode
+
 	queue := &blocksQueue{
 		ctx:                 ctx,
 		cancel:              cancel,
 		highestExpectedSlot: highestExpectedSlot,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
+		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
 	}
@@ -159,14 +180,19 @@ func (q *blocksQueue) loop() {
 				fsm := q.smm.machines[key]
 				if err := fsm.trigger(eventTick, nil); err != nil {
 					log.WithFields(logrus.Fields{
-						"highestExpectedSlot": q.highestExpectedSlot,
-						"event":               eventTick,
-						"epoch":               helpers.SlotToEpoch(fsm.start),
-						"start":               fsm.start,
-						"error":               err.Error(),
+						"highestExpectedSlot":        q.highestExpectedSlot,
+						"noFinalizedPeersErrRetries": q.exitConditions.noFinalizedPeersErrRetries,
+						"event":                      eventTick,
+						"epoch":                      helpers.SlotToEpoch(fsm.start),
+						"start":                      fsm.start,
+						"error":                      err.Error(),
 					}).Debug("Can not trigger event")
 					if err == errNoPeersWithFinalizedBlocks {
-						q.cancel()
+						forceExit := q.exitConditions.noFinalizedPeersErrRetries > noFinalizedPeersErrMaxRetries
+						if q.mode == modeStopOnFinalizedEpoch || forceExit {
+							q.cancel()
+						}
+						q.exitConditions.noFinalizedPeersErrRetries++
 						continue
 					}
 				}
