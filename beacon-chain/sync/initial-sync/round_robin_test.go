@@ -201,17 +201,17 @@ func TestService_roundRobinSync(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 384),
-					finalizedEpoch: 4,
+					finalizedEpoch: 10,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 384),
+					finalizedEpoch: 10,
 					headSlot:       320,
 				},
 				{
 					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
-					headSlot:       256,
-				},
-				{
-					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
+					finalizedEpoch: 5,
 					headSlot:       256,
 				},
 				{
