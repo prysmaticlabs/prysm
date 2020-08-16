@@ -139,6 +139,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			best = nextBestPeer(best)
 			continue
 		}
+		h := s.chain.HeadSlot()
 		for _, blk := range resp {
 			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlock)
 			if err != nil {
@@ -150,7 +151,9 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				break
 			}
 		}
-		if len(resp) == 0 {
+		// If peer response was empty or the response did not advance the head of the chain, try the
+		// next best peer.
+		if len(resp) == 0 || h == s.chain.HeadSlot() {
 			best = nextBestPeer(best)
 		}
 	}
