@@ -342,6 +342,9 @@ func TestService_processBlock(t *testing.T) {
 			State: st,
 			Root:  genesisBlkRoot[:],
 			DB:    beaconDB,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
 		},
 	})
 	ctx := context.Background()
@@ -407,6 +410,9 @@ func TestService_processBlockBatch(t *testing.T) {
 			State: st,
 			Root:  genesisBlkRoot[:],
 			DB:    beaconDB,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
 		},
 	})
 	ctx := context.Background()
@@ -536,6 +542,9 @@ func TestService_blockProviderScoring(t *testing.T) {
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: 0,
+		},
 	} // no-op mock
 	s := &Service{
 		chain:        mc,
