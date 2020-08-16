@@ -166,7 +166,7 @@ func (q *blocksQueue) loop() {
 						"error":               err.Error(),
 					}).Debug("Can not trigger event")
 					if err == errNoPeersWithFinalizedBlocks {
-						q.cancel()
+						//q.cancel()
 						continue
 					}
 				}
