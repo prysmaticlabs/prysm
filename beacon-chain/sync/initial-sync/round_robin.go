@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -111,15 +112,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedData(
 	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
-	defer func() {
-		if !featureconfig.Get().EnablePeerScorer || data.pid == "" {
-			return
-		}
-		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
-		if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
-			scorer.IncrementProcessedBlocks(data.pid, diff)
-		}
-	}()
+	s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.chain.ReceiveBlockInitialSync
 	batchReceiver := s.chain.ReceiveBlockBatch
@@ -142,15 +135,7 @@ func (s *Service) processFetchedData(
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedDataRegSync(
 	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
-	defer func() {
-		if !featureconfig.Get().EnablePeerScorer || data.pid == "" {
-			return
-		}
-		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
-		if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
-			scorer.IncrementProcessedBlocks(data.pid, diff)
-		}
-	}()
+	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.chain.ReceiveBlock
 
@@ -284,4 +269,19 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	lastBlk := blks[len(blks)-1]
 	s.lastProcessedSlot = lastBlk.Block.Slot
 	return nil
+}
+
+// updatePeerScorerStats adjusts monitored metrics for a peer.
+func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
+	if !featureconfig.Get().EnablePeerScorer || pid == "" {
+		return
+	}
+	headSlot := s.chain.HeadSlot()
+	if startSlot >= headSlot {
+		return
+	}
+	if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
+		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
+		scorer.IncrementProcessedBlocks(pid, diff)
+	}
 }
