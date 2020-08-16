@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -16,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -56,6 +54,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		p2p:                 s.p2p,
 		headFetcher:         s.chain,
 		highestExpectedSlot: highestFinalizedSlot,
+		mode:                modeStopOnFinalizedEpoch,
 	})
 	if err := queue.start(); err != nil {
 		return err
@@ -84,45 +83,18 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// mitigation. We are already convinced that we are on the correct finalized chain. Any blocks
 	// we receive there after must build on the finalized chain or be considered invalid during
 	// fork choice resolution / block processing.
-	_ = newBlocksFetcher(ctx, &blocksFetcherConfig{
-		p2p:         s.p2p,
-		headFetcher: s.chain,
-	})
-
-	// Select a new peer in the event of failure.
-	_ = func(prevPeer peer.ID) peer.ID {
-		var pids []peer.ID
-		for {
-			_, pids = s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync /* maxPeers */, s.highestFinalizedEpoch())
-			if len(pids) == 0 {
-				log.Info("Waiting for a suitable peer before syncing to the head of the chain")
-				time.Sleep(refreshTime)
-				continue
-			}
-			break
-		}
-		// Return new peer in the event of failure
-		for _, id := range pids {
-			if prevPeer != id {
-				return id
-			}
-		}
-		return prevPeer
-	}
 	queue = newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		headFetcher:         s.chain,
 		highestExpectedSlot: helpers.SlotsSince(genesis),
+		mode:                modeNonConstrained,
 	})
 	if err := queue.start(); err != nil {
 		return err
 	}
-
-	// Step 1 - Sync to end of finalized epoch.
 	for data := range queue.fetchedData {
 		s.processFetchedDataRegSync(ctx, genesis, s.chain.HeadSlot(), data)
 	}
-
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.chain.HeadSlot(),
 		"headSlot":   helpers.SlotsSince(genesis),
@@ -130,48 +102,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
-
-	//_, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
-	//for len(pids) == 0 {
-	//	log.Info("Waiting for a suitable peer before syncing to the head of the chain")
-	//	time.Sleep(refreshTime)
-	//	_, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
-	//}
-	/*	best := pids[0]
-
-		for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
-			count := mathutil.Min(
-				helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, blocksFetcher.blocksPerSecond)
-			req := &p2ppb.BeaconBlocksByRangeRequest{
-				StartSlot: s.chain.HeadSlot() + 1,
-				Count:     count,
-				Step:      1,
-			}
-			log.WithFields(logrus.Fields{
-				"req":  req,
-				"peer": best.Pretty(),
-			}).Debug("Sending batch block request")
-			resp, err := blocksFetcher.requestBlocks(ctx, req, best)
-			if err != nil {
-				log.WithError(err).Error("Failed to receive blocks")
-				best = nextBestPeer(best)
-				continue
-			}
-			for _, blk := range resp {
-				err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlock)
-				if err != nil {
-					if strings.Contains(err.Error(), errBlockAlreadyProcessed.Error()) {
-						continue
-					}
-					log.WithError(err).Error("Failed to process block")
-					best = nextBestPeer(best)
-					break
-				}
-			}
-			if len(resp) == 0 {
-				best = nextBestPeer(best)
-			}
-		} */
 
 	return nil
 }

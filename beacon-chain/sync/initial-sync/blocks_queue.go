@@ -33,6 +33,14 @@ var (
 	errNoPeersWithFinalizedBlocks = errors.New("no peers with finalized blocks are found")
 )
 
+const (
+	modeStopOnFinalizedEpoch syncMode = iota
+	modeNonConstrained
+)
+
+// syncMode specifies sync mod type.
+type syncMode uint8
+
 // blocksQueueConfig is a config to setup block queue service.
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
@@ -40,6 +48,7 @@ type blocksQueueConfig struct {
 	startSlot           uint64
 	highestExpectedSlot uint64
 	p2p                 p2p.P2P
+	mode                syncMode
 }
 
 // blocksQueue is a priority queue that serves as a intermediary between block fetchers (producers)
@@ -51,6 +60,7 @@ type blocksQueue struct {
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	highestExpectedSlot uint64
+	mode                syncMode
 	fetchedData         chan *blocksQueueFetchedData // output channel for ready blocks
 	quit                chan struct{}                // termination notifier
 }
@@ -77,12 +87,16 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
 	}
 
+	// Override fetcher's sync mode.
+	blocksFetcher.mode = cfg.mode
+
 	queue := &blocksQueue{
 		ctx:                 ctx,
 		cancel:              cancel,
 		highestExpectedSlot: highestExpectedSlot,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
+		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
 	}
@@ -166,7 +180,9 @@ func (q *blocksQueue) loop() {
 						"error":               err.Error(),
 					}).Debug("Can not trigger event")
 					if err == errNoPeersWithFinalizedBlocks {
-						//q.cancel()
+						if q.mode == modeStopOnFinalizedEpoch {
+							q.cancel()
+						}
 						continue
 					}
 				}
