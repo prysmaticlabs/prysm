@@ -48,13 +48,13 @@ func ProcessAttesterSlashings(
 		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 		var err error
 		var slashedAny bool
-		var val *ethpb.Validator
+		var val *stateTrie.ReadOnlyValidator
 		for _, validatorIndex := range slashableIndices {
-			val, err = beaconState.ValidatorAtIndex(validatorIndex)
+			val, err = beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 			if err != nil {
 				return nil, err
 			}
-			if helpers.IsSlashableValidator(val, currentEpoch) {
+			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
