@@ -38,13 +38,13 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.WalletPasswordsDirFlag.Name, passwordsDir, "")
+	set.String(flags.DeprecatedPasswordsDirFlag.Name, passwordsDir, "")
 	set.String(flags.WalletPasswordFileFlag.Name, passwordFilePath, "")
 	set.String(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String(), "")
 	set.String(flags.MnemonicFileFlag.Name, mnemonicFilePath, "")
 	set.Int64(flags.NumAccountsFlag.Name, numAccounts, "")
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.WalletPasswordsDirFlag.Name, passwordsDir))
+	assert.NoError(t, set.Set(flags.DeprecatedPasswordsDirFlag.Name, passwordsDir))
 	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath))
 	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String()))
 	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
@@ -66,7 +66,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	wantCfg := derived.DefaultConfig()
 	assert.DeepEqual(t, wantCfg, cfg)
 
-	keymanager, err := wallet.InitializeKeymanager(ctx, true)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, true)
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {

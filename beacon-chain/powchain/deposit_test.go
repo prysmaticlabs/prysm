@@ -102,7 +102,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	require.NoError(t, err)
 
-	testutil.AssertLogsContain(t, hook, pubKeyErr)
+	require.LogsContain(t, hook, pubKeyErr)
 }
 
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
@@ -137,7 +137,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	require.NoError(t, err)
 
-	testutil.AssertLogsContain(t, hook, pubKeyErr)
+	require.LogsContain(t, hook, pubKeyErr)
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
@@ -170,7 +170,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	require.NoError(t, err)
 	want := "signature did not verify"
 
-	testutil.AssertLogsContain(t, hook, want)
+	require.LogsContain(t, hook, want)
 
 }
 

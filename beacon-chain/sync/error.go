@@ -64,10 +64,8 @@ func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pc
 	resp, err := createErrorResponse(responseCode, reason, encoder)
 	if err != nil {
 		log.WithError(err).Debug("Failed to generate a response error")
-	} else {
-		if _, err := stream.Write(resp); err != nil {
-			log.WithError(err).Debugf("Failed to write to stream")
-		}
+	} else if _, err := stream.Write(resp); err != nil {
+		log.WithError(err).Debugf("Failed to write to stream")
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 var runAmount = 25
@@ -19,42 +20,29 @@ var runAmount = 25
 func TestExecuteStateTransition_FullBlock(t *testing.T) {
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState1Epoch()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block, err := benchutil.PreGenFullBlock()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	oldSlot := beaconState.Slot()
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
-	}
-	if oldSlot == beaconState.Slot() {
-		t.Fatal("Expected slots to be different")
-	}
+	require.NoError(t, err, "Failed to process block, benchmarks will fail")
+	require.NotEqual(t, oldSlot, beaconState.Slot(), "Expected slots to be different")
 }
 
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState1Epoch()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	cleanStates := clonedStates(beaconState)
 	block, err := benchutil.PreGenFullBlock()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
-			b.Fatal(err)
-		}
+		_, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block)
+		require.NoError(b, err)
 	}
 }
 
@@ -62,76 +50,53 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	benchutil.SetBenchmarkConfig()
 
 	beaconState, err := benchutil.PreGenState1Epoch()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	cleanStates := clonedStates(beaconState)
 	block, err := benchutil.PreGenFullBlock()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
-	if err := beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch); err != nil {
-		b.Fatal(err)
-	}
-	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
-		b.Fatal(err)
-	}
-	if err := beaconState.SetSlot(currentSlot); err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)))
+	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
-	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
-		b.Fatalf("failed to process block, benchmarks will fail: %v", err)
-	}
+	_, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	require.NoError(b, err, "Failed to process block, benchmarks will fail")
 
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block); err != nil {
-			b.Fatalf("failed to process block, benchmarks will fail: %v", err)
-		}
+		_, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block)
+		require.NoError(b, err, "Failed to process block, benchmarks will fail")
 	}
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState2FullEpochs()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
-	if err := beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch); err != nil {
-		b.Fatal(err)
-	}
-	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
-		b.Fatal(err)
-	}
-	if err := beaconState.SetSlot(currentSlot); err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)))
+	require.NoError(b, beaconState.SetSlot(currentSlot))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// ProcessEpochPrecompute is the optimized version of process epoch. It's enabled by default
 		// at run time.
-		if _, err := state.ProcessEpochPrecompute(context.Background(), beaconState.Copy()); err != nil {
-			b.Fatal(err)
-		}
+		_, err := state.ProcessEpochPrecompute(context.Background(), beaconState.Copy())
+		require.NoError(b, err)
 	}
 }
 
 func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 	beaconState, err := benchutil.PreGenState2FullEpochs()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	b.N = 50
 	b.ResetTimer()
@@ -144,31 +109,25 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 
 func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 	beaconState, err := benchutil.PreGenState2FullEpochs()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	ctx := context.Background()
 
 	// Hydrate the HashTreeRootState cache.
-	if _, err := beaconState.HashTreeRoot(ctx); err != nil {
-		b.Fatal(err)
-	}
+	_, err = beaconState.HashTreeRoot(ctx)
+	require.NoError(b, err)
 
 	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := beaconState.HashTreeRoot(ctx); err != nil {
-			b.Fatal(err)
-		}
+		_, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(b, err)
 	}
 }
 
 func BenchmarkMarshalState_FullState(b *testing.B) {
 	beaconState, err := benchutil.PreGenState2FullEpochs()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	natState := beaconState.InnerStateUnsafe()
 
 	b.Run("Proto_Marshal", func(b *testing.B) {
@@ -176,9 +135,8 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 		b.ReportAllocs()
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
-			if _, err := proto.Marshal(natState); err != nil {
-				b.Fatal(err)
-			}
+			_, err := proto.Marshal(natState)
+			require.NoError(b, err)
 		}
 	})
 
@@ -187,36 +145,27 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 		b.ReportAllocs()
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
-			if _, err := natState.MarshalSSZ(); err != nil {
-				b.Fatal(err)
-			}
+			_, err := natState.MarshalSSZ()
+			require.NoError(b, err)
 		}
 	})
 }
 
 func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	beaconState, err := benchutil.PreGenState2FullEpochs()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	natState := beaconState.InnerStateUnsafe()
 	protoObject, err := proto.Marshal(natState)
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	sszObject, err := natState.MarshalSSZ()
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 
 	b.Run("Proto_Unmarshal", func(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
-			if err := proto.Unmarshal(protoObject, &pb.BeaconState{}); err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, proto.Unmarshal(protoObject, &pb.BeaconState{}))
 		}
 	})
 
@@ -226,9 +175,7 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
 			sszState := &pb.BeaconState{}
-			if err := sszState.UnmarshalSSZ(sszObject); err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, sszState.UnmarshalSSZ(sszObject))
 		}
 	})
 }

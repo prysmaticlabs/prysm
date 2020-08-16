@@ -63,10 +63,8 @@ type Service struct {
 	finalizedCheckpt          *ethpb.Checkpoint
 	prevFinalizedCheckpt      *ethpb.Checkpoint
 	nextEpochBoundarySlot     uint64
-	voteLock                  sync.RWMutex
 	initSyncState             map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots             [][32]byte
-	initSyncStateLock         sync.RWMutex
 	checkpointState           *cache.CheckpointStateCache
 	checkpointStateLock       sync.Mutex
 	stateGen                  *stategen.State
@@ -152,8 +150,8 @@ func (s *Service) Start() {
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
-		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
-		s.opsService.SetGenesisTime(beaconState.GenesisTime())
+		s.genesisTime = time.Unix(int64(helpers.GenesisTime(beaconState)), 0)
+		s.opsService.SetGenesisTime(helpers.GenesisTime(beaconState))
 		if err := s.initializeChainInfo(s.ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -287,7 +285,7 @@ func (s *Service) initializeBeaconChain(
 		return nil, err
 	}
 
-	s.opsService.SetGenesisTime(genesisState.GenesisTime())
+	s.opsService.SetGenesisTime(helpers.GenesisTime(genesisState))
 
 	return genesisState, nil
 }

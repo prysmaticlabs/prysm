@@ -3,7 +3,7 @@ Package remote defines an implementation of an on-disk, EIP-2335 keystore.json
 approach towards defining validator accounts in Prysm. A validating private key is
 encrypted using a passphrase and its resulting encrypted file is stored as a
 keystore.json file under a unique, human-readable, account namespace. This direct keymanager approach
-relies on storing account information on-disk, making it trivial to import, export and
+relies on storing account information on-disk, making it trivial to import, backup and
 list all associated accounts for a user.
 
 Package remote defines a keymanager implementation which connects to a remote signer

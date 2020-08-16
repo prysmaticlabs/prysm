@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 type Delta struct {
@@ -24,9 +25,7 @@ type Delta struct {
 var deltaFiles = []string{"source_deltas.yaml", "target_deltas.yaml", "head_deltas.yaml", "inactivity_penalty_deltas.yaml", "inclusion_delay_deltas.yaml"}
 
 func runPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 	testPath := "rewards/core/pyspec_tests"
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, testPath)
 	for _, folder := range testFolders {
@@ -41,35 +40,21 @@ func runPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	ctx := context.Background()
 	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	preBeaconStateBase := &pb.BeaconState{}
-	if err := ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase); err != nil {
-		t.Fatalf("Failed to unmarshal: %v", err)
-	}
+	require.NoError(t, ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase), "Failed to unmarshal")
 	preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	vp, bp, err := precompute.New(ctx, preBeaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	vp, bp, err = precompute.ProcessAttestations(ctx, preBeaconState, vp, bp)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	rewards, penalties, err := precompute.AttestationsDelta(preBeaconState, bp, vp)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pRewards, err := precompute.ProposersDelta(preBeaconState, bp, vp)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if len(rewards) != len(penalties) && len(pRewards) != len(pRewards) {
 		t.Fatal("Incorrect lengths")
 	}
@@ -82,9 +67,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 
 	for _, dFile := range deltaFiles {
 		sourceFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, dFile))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		d := &Delta{}
 		err = yaml.Unmarshal(sourceFile, &d)
 		if err != nil {

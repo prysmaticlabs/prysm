@@ -89,15 +89,15 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	err = web3Service.ProcessLog(context.Background(), logs[0])
 	require.NoError(t, err)
 
-	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
-	testutil.AssertLogsDoNotContain(t, hook, "could not deserialize validator public key")
-	testutil.AssertLogsDoNotContain(t, hook, "could not convert bytes to signature")
-	testutil.AssertLogsDoNotContain(t, hook, "could not sign root for deposit data")
-	testutil.AssertLogsDoNotContain(t, hook, "deposit signature did not verify")
-	testutil.AssertLogsDoNotContain(t, hook, "could not tree hash deposit data")
-	testutil.AssertLogsDoNotContain(t, hook, "deposit merkle branch of deposit root did not verify for root")
-	testutil.AssertLogsContain(t, hook, "Deposit registered from deposit contract")
+	require.LogsDoNotContain(t, hook, "Could not unpack log")
+	require.LogsDoNotContain(t, hook, "Could not save in trie")
+	require.LogsDoNotContain(t, hook, "could not deserialize validator public key")
+	require.LogsDoNotContain(t, hook, "could not convert bytes to signature")
+	require.LogsDoNotContain(t, hook, "could not sign root for deposit data")
+	require.LogsDoNotContain(t, hook, "deposit signature did not verify")
+	require.LogsDoNotContain(t, hook, "could not tree hash deposit data")
+	require.LogsDoNotContain(t, hook, "deposit merkle branch of deposit root did not verify for root")
+	require.LogsContain(t, hook, "Deposit registered from deposit contract")
 
 	hook.Reset()
 }
@@ -279,7 +279,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	}
 	assert.Equal(t, false, web3Service.chainStartData.Chainstarted, "Genesis has been triggered despite being 8 duplicate keys")
 
-	testutil.AssertLogsDoNotContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
+	require.LogsDoNotContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 	hook.Reset()
 }
 
@@ -370,10 +370,10 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		}
 	}
 
-	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
-	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
-	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
-	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
+	require.LogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
+	require.LogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
+	require.LogsDoNotContain(t, hook, "Invalid timestamp from log")
+	require.LogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 
 	hook.Reset()
 }
@@ -465,10 +465,10 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		}
 	}
 
-	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
-	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
-	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
-	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
+	require.LogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
+	require.LogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
+	require.LogsDoNotContain(t, hook, "Invalid timestamp from log")
+	require.LogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 
 	hook.Reset()
 }
@@ -630,7 +630,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 	beaconDB, _ := testDB.SetupDB(t)
 	s := newPowchainService(t, testAcc, beaconDB)
 	s.checkForChainstart([32]byte{}, nil, 0)
-	testutil.AssertLogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
+	require.LogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
 }
 
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {

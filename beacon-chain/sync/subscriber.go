@@ -214,7 +214,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
 						go func(idx uint64) {
-							_, err := s.p2p.FindPeersWithSubnet(idx)
+							_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
 							if err != nil {
 								log.Debugf("Could not search for peers: %v", err)
 								return
@@ -320,7 +320,7 @@ func (s *Service) subscribeAggregatorSubnet(subscriptions map[uint64]*pubsub.Sub
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		go func(idx uint64) {
-			_, err := s.p2p.FindPeersWithSubnet(idx)
+			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
 			if err != nil {
 				log.Debugf("Could not search for peers: %v", err)
 				return
@@ -339,7 +339,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		go func(idx uint64) {
 			// perform a search for peers with the desired committee index.
-			_, err := s.p2p.FindPeersWithSubnet(idx)
+			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
 			if err != nil {
 				log.Debugf("Could not search for peers: %v", err)
 				return

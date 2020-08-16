@@ -399,7 +399,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
-	receivedTime := exp.Round(time.Second).Sub(time.Now())
+	receivedTime := time.Until(exp.Round(time.Second))
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
 	}

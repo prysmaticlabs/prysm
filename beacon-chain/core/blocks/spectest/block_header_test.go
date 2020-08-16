@@ -14,38 +14,27 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func runBlockHeaderTest(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/block_header/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			blockFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz")
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			block := &ethpb.BeaconBlock{}
-			if err := block.UnmarshalSSZ(blockFile); err != nil {
-				t.Fatalf("Failed to unmarshal: %v", err)
-			}
+			require.NoError(t, block.UnmarshalSSZ(blockFile), "Failed to unmarshal")
 
 			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			preBeaconStateBase := &pb.BeaconState{}
-			if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
-				t.Fatalf("Failed to unmarshal: %v", err)
-			}
+			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile), "Failed to unmarshal")
 			preBeaconState, err := stateTrie.InitializeFromProto(preBeaconStateBase)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
 			postSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "post.ssz"))
@@ -59,19 +48,13 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.
 			beaconState, err := blocks.ProcessBlockHeaderNoVerify(preBeaconState, block)
 			if postSSZExists {
-				if err != nil {
-					t.Fatalf("Unexpected error: %v", err)
-				}
+				require.NoError(t, err)
 
 				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 
 				postBeaconState := &pb.BeaconState{}
-				if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
-					t.Fatalf("Failed to unmarshal: %v", err)
-				}
+				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateFile), "Failed to unmarshal")
 				if !proto.Equal(beaconState.CloneInnerState(), postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.CloneInnerState(), postBeaconState)
 					t.Log(diff)

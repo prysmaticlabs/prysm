@@ -45,7 +45,7 @@ go_test(
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
-        "//shared/testutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "//slasher/db/testing:go_default_library",
         "//slasher/db/types:go_default_library",
         "//slasher/detection/attestations:go_default_library",

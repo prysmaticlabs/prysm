@@ -63,7 +63,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error)
 			layers[i] = append(layers[i], ZeroHashes[i][:])
 			fmt.Printf("[GenTrie] layers[%v] = %v \n", i, layers[i])
 		}
-		updatedValues := make([][]byte, 0, 0)
+		updatedValues := make([][]byte, 0)
 		for j := 0; j < len(layers[i]); j += 2 {
 			fmt.Printf("[GenTrie] j = %v; j < %v \n", j, len(layers[i]))
 			concat := hashutil.Hash(append(layers[i][j], layers[i][j+1]...))

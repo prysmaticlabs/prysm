@@ -5,7 +5,6 @@ package kv
 import (
 	"os"
 	"path"
-	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -40,8 +39,6 @@ type Store struct {
 	databasePath        string
 	blockCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
-	stateSlotBitLock    sync.Mutex
-	blockSlotBitLock    sync.Mutex
 	stateSummaryCache   *cache.StateSummaryCache
 }
 

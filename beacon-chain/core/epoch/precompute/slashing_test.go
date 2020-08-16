@@ -9,6 +9,8 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessSlashingsPrecompute_NotSlashed(t *testing.T) {
@@ -18,22 +20,15 @@ func TestProcessSlashingsPrecompute_NotSlashed(t *testing.T) {
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{0, 1e9},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pBal := &precompute.Balance{ActiveCurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
-	if err := precompute.ProcessSlashingsPrecompute(s, pBal); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, precompute.ProcessSlashingsPrecompute(s, pBal))
 
 	wanted := params.BeaconConfig().MaxEffectiveBalance
-	if s.Balances()[0] != wanted {
-		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, s.Balances()[0])
-	}
+	assert.Equal(t, wanted, s.Balances()[0], "Unexpected slashed balance")
 }
 
 func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
-
 	tests := []struct {
 		state *pb.BeaconState
 		want  uint64
@@ -114,21 +109,9 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 
 			original := proto.Clone(tt.state)
 			state, err := beaconstate.InitializeFromProto(tt.state)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := precompute.ProcessSlashingsPrecompute(state, pBal); err != nil {
-				t.Fatal(err)
-			}
-
-			if state.Balances()[0] != tt.want {
-				t.Errorf(
-					"ProcessSlashings({%v}) = newState; newState.Balances[0] = %d; wanted %d",
-					original,
-					state.Balances()[0],
-					tt.want,
-				)
-			}
+			require.NoError(t, err)
+			require.NoError(t, precompute.ProcessSlashingsPrecompute(state, pBal))
+			assert.Equal(t, tt.want, state.Balances()[0], "ProcessSlashings({%v}) = newState; newState.Balances[0] = %d; wanted %d", original, state.Balances()[0])
 		})
 	}
 }

@@ -68,9 +68,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		// Blocks up until all resources are reclaimed (or timeout is called)
 		assert.NoError(t, queue.stop())
 		select {
-		case <-queue.fetchedBlocks:
+		case <-queue.fetchedData:
 		default:
-			t.Error("queue.fetchedBlocks channel is leaked")
+			t.Error("queue.fetchedData channel is leaked")
 		}
 		select {
 		case <-fetcher.fetchResponses:
@@ -255,8 +255,8 @@ func TestBlocksQueueLoop(t *testing.T) {
 			}
 
 			var blocks []*eth.SignedBeaconBlock
-			for fetchedBlocks := range queue.fetchedBlocks {
-				for _, block := range fetchedBlocks {
+			for data := range queue.fetchedData {
+				for _, block := range data.blocks {
 					if err := processBlock(block); err != nil {
 						continue
 					}

@@ -10,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -83,6 +83,6 @@ func TestService_QuerySyncStatus(t *testing.T) {
 		Syncing: false,
 	}, nil)
 	bs.querySyncStatus(context.Background())
-	testutil.AssertLogsContain(t, hook, "Waiting for beacon node to be fully synced...")
-	testutil.AssertLogsContain(t, hook, "Beacon node is fully synced")
+	require.LogsContain(t, hook, "Waiting for beacon node to be fully synced...")
+	require.LogsContain(t, hook, "Beacon node is fully synced")
 }

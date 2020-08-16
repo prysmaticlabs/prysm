@@ -195,7 +195,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		t.Error("Expected to have valid peers, got 0")
 	}
 
-	testutil.AssertLogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
+	require.LogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
 	require.NoError(t, s.Stop())
 }
 
