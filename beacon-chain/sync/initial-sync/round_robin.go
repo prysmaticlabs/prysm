@@ -147,7 +147,7 @@ func (s *Service) processFetchedDataRegSync(
 			return
 		}
 		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
-		if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
+		if diff := s.chain.HeadSlot() - startSlot; diff > 0 && s.chain.HeadSlot() > startSlot  {
 			scorer.IncrementProcessedBlocks(data.pid, diff)
 		}
 	}()
