@@ -23,6 +23,8 @@ const (
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
+	// noFinalizedPeersErrMaxRetries defines number of retries when no finalized peers are found.
+	noFinalizedPeersErrMaxRetries = 10
 )
 
 var (
@@ -61,8 +63,11 @@ type blocksQueue struct {
 	headFetcher         blockchain.HeadFetcher
 	highestExpectedSlot uint64
 	mode                syncMode
-	fetchedData         chan *blocksQueueFetchedData // output channel for ready blocks
-	quit                chan struct{}                // termination notifier
+	exitConditions      struct {
+		noFinalizedPeersErrRetries int
+	}
+	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
+	quit        chan struct{}                // termination notifier
 }
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
@@ -173,16 +178,19 @@ func (q *blocksQueue) loop() {
 				fsm := q.smm.machines[key]
 				if err := fsm.trigger(eventTick, nil); err != nil {
 					log.WithFields(logrus.Fields{
-						"highestExpectedSlot": q.highestExpectedSlot,
-						"event":               eventTick,
-						"epoch":               helpers.SlotToEpoch(fsm.start),
-						"start":               fsm.start,
-						"error":               err.Error(),
+						"highestExpectedSlot":        q.highestExpectedSlot,
+						"noFinalizedPeersErrRetries": q.exitConditions.noFinalizedPeersErrRetries,
+						"event":                      eventTick,
+						"epoch":                      helpers.SlotToEpoch(fsm.start),
+						"start":                      fsm.start,
+						"error":                      err.Error(),
 					}).Debug("Can not trigger event")
 					if err == errNoPeersWithFinalizedBlocks {
-						if q.mode == modeStopOnFinalizedEpoch {
+						forceExit := q.exitConditions.noFinalizedPeersErrRetries > noFinalizedPeersErrMaxRetries
+						if q.mode == modeStopOnFinalizedEpoch || forceExit {
 							q.cancel()
 						}
+						q.exitConditions.noFinalizedPeersErrRetries++
 						continue
 					}
 				}
