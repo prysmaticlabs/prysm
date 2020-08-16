@@ -24,7 +24,7 @@ const (
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
 	// noFinalizedPeersErrMaxRetries defines number of retries when no finalized peers are found.
-	noFinalizedPeersErrMaxRetries = 10
+	noFinalizedPeersErrMaxRetries = 100
 )
 
 var (
