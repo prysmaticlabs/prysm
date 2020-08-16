@@ -18,9 +18,9 @@ var (
 	ErrNotCheckpointState = errors.New("object is not a state by check point struct")
 
 	// maxCheckpointStateSize defines the max number of entries check point to state cache can contain.
-	// Choosing 12 to account for multiple forks, this allows 6 forks per epoch boundary with 2 epochs
+	// Choosing 10 to account for multiple forks, this allows 5 forks per epoch boundary with 2 epochs
 	// window to accept attestation based on latest spec.
-	maxCheckpointStateSize = uint64(12)
+	maxCheckpointStateSize = 10
 
 	// Metrics.
 	checkpointStateMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -41,7 +41,7 @@ type CheckpointStateCache struct {
 
 // NewCheckpointStateCache creates a new checkpoint state cache for storing/accessing processed state.
 func NewCheckpointStateCache() *CheckpointStateCache {
-	cache, err := lru.New(hotStateCacheSize)
+	cache, err := lru.New(maxCheckpointStateSize)
 	if err != nil {
 		panic(err)
 	}
