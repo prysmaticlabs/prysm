@@ -24,7 +24,7 @@ var (
 
 	// Metrics.
 	checkpointStateMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "check_point_statecache_miss",
+		Name: "check_point_state_cache_miss",
 		Help: "The number of check point state requests that aren't present in the cache.",
 	})
 	checkpointStateHit = promauto.NewCounter(prometheus.CounterOpts{
