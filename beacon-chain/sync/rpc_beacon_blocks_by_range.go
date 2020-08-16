@@ -138,7 +138,12 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	}
 	// Filter and sort our retrieved blocks, so that
 	// we only return valid sets of blocks.
-	blks, roots = s.dedupBlocksAndRoots(blks, roots)
+	blks, roots, err = s.dedupBlocksAndRoots(blks, roots)
+	if err != nil {
+		s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+		traceutil.AnnotateError(span, err)
+		return err
+	}
 	blks, roots = s.sortBlocksAndRoots(blks, roots)
 	for i, b := range blks {
 		if b == nil || b.Block == nil {
