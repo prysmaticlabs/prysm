@@ -2,7 +2,6 @@ package initialsync
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -244,20 +242,19 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 		return response
 	}
 
-	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	_, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, f.headFetcher.HeadFinalizedEpoch())
 	if len(peers) == 0 {
 		response.err = errNoPeersAvailable
 		return response
 	}
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
-	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
-	if start > highestFinalizedSlot {
+	//highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
+	/*if start > highestFinalizedSlot {
 		response.err = fmt.Errorf("%v, slot: %d, higest finilized slot: %d",
 			errSlotIsTooHigh, start, highestFinalizedSlot)
 		return response
-	}
+	} */
 
 	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
 	return response
