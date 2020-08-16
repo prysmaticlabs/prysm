@@ -131,7 +131,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 		if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 			log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
-			s.setBadBlock(blkRoot)
+			if err != context.DeadlineExceeded {
+				s.setBadBlock(blkRoot)
+			}
 			traceutil.AnnotateError(span, err)
 		}
 
