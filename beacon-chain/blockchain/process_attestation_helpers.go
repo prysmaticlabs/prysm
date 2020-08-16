@@ -20,6 +20,7 @@ import (
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
 	s.checkpointStateLock.Lock()
 	defer s.checkpointStateLock.Unlock()
+
 	cachedState, err := s.checkpointState.StateByCheckpoint(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
@@ -39,10 +40,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
-	}
-
-	if err := s.checkpointState.AddCheckpointState(c, baseState); err != nil {
-		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		if err := s.checkpointState.AddCheckpointState(c, baseState); err != nil {
+			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		}
 	}
 
 	return baseState, nil
