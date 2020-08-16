@@ -3,6 +3,7 @@ package kv
 import (
 	"testing"
 
+	c "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -63,7 +64,7 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			cache.seenAggregatedAtt[r] = []bitfield.Bitlist{{0xff}}
+			cache.seenAggregatedAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
 			if len(cache.unAggregatedAtt) != 0 {
 				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 			}
