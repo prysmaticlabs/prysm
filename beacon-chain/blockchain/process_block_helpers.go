@@ -78,7 +78,11 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
 	}
-	if !s.stateGen.HasState(ctx, parentRoot) {
+	has, err := s.stateGen.HasState(ctx, parentRoot)
+	if err != nil {
+		return err
+	}
+	if !has {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return errors.Wrap(err, "could not save initial sync blocks")
 		}
