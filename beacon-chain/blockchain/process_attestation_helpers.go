@@ -40,11 +40,16 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
+	}
+	has, err := s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root))
+	if err != nil {
+		return nil, err
+	}
+	if !has {
 		if err := s.checkpointState.AddCheckpointState(c, baseState); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 		}
 	}
-
 	return baseState, nil
 
 }
