@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -90,7 +91,7 @@ type BeaconState struct {
 	dirtyIndices          map[fieldIndex][]uint64
 	stateFieldLeaves      map[fieldIndex]*FieldTrie
 	rebuildTrie           map[fieldIndex]bool
-	valIdxMap             map[[48]byte]uint64
+	valMapHandler         *validatorMapHandler
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[fieldIndex]*reference
 }
@@ -121,4 +122,34 @@ func (r *reference) MinusRef() {
 		r.refs--
 	}
 	r.lock.Unlock()
+}
+
+// a container to hold the map and a reference tracker for how many
+// states shared this.
+type validatorMapHandler struct {
+	valIdxMap map[[48]byte]uint64
+	mapRef    *reference
+}
+
+// A constructor for the map handler.
+func newValHandler(vals []*ethpb.Validator) *validatorMapHandler {
+	return &validatorMapHandler{
+		valIdxMap: coreutils.ValidatorIndexMap(vals),
+		mapRef:    &reference{refs: 1},
+	}
+}
+
+// copies the whole map and returns a map handler with the copied map.
+func (v *validatorMapHandler) copy() *validatorMapHandler {
+	if v == nil || v.valIdxMap == nil {
+		return &validatorMapHandler{valIdxMap: map[[48]byte]uint64{}, mapRef: new(reference)}
+	}
+	m := make(map[[48]byte]uint64, len(v.valIdxMap))
+	for k, v := range v.valIdxMap {
+		m[k] = v
+	}
+	return &validatorMapHandler{
+		valIdxMap: m,
+		mapRef:    &reference{refs: 1},
+	}
 }

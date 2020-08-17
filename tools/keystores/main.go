@@ -11,8 +11,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +18,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -92,7 +91,7 @@ func decrypt(cliCtx *cli.Context) error {
 	if keystorePath == "" {
 		return errors.New("--keystore must be set")
 	}
-	fullPath, err := expandPath(keystorePath)
+	fullPath, err := fileutil.ExpandPath(keystorePath)
 	if err != nil {
 		return errors.Wrapf(err, "could not expand path: %s", keystorePath)
 	}
@@ -104,7 +103,7 @@ func decrypt(cliCtx *cli.Context) error {
 			return nil
 		})
 	}
-	isDir, err := hasDir(fullPath)
+	isDir, err := fileutil.HasDir(fullPath)
 	if err != nil {
 		return errors.Wrapf(err, "could not check if path exists: %s", fullPath)
 	}
@@ -149,15 +148,11 @@ func encrypt(cliCtx *cli.Context) error {
 	if outputPath == "" {
 		return errors.New("--output-path must be set")
 	}
-	fullPath, err := expandPath(outputPath)
+	fullPath, err := fileutil.ExpandPath(outputPath)
 	if err != nil {
 		return errors.Wrapf(err, "could not expand path: %s", outputPath)
 	}
-	exists, err := fileExists(fullPath)
-	if err != nil {
-		return errors.Wrapf(err, "could not check if file exists: %s", fullPath)
-	}
-	if exists {
+	if fileutil.FileExists(fullPath) {
 		response, err := promptutil.ValidatePrompt(
 			fmt.Sprintf("file at path %s already exists, are you sure you want to overwrite it? [y/n]", fullPath),
 			func(s string) error {
@@ -242,67 +237,24 @@ func readAndDecryptKeystore(fullPath string, password string) error {
 		}
 		return err
 	}
-	publicKeyBytes, err := hex.DecodeString(keystoreFile.Pubkey)
-	if err != nil {
-		return errors.Wrapf(err, "could not parse public key for keystore at path: %s", fullPath)
+
+	var pubKeyBytes []byte
+	// Attempt to use the pubkey present in the keystore itself as a field. If unavailable,
+	// then utilize the public key directly from the private key.
+	if keystoreFile.Pubkey != "" {
+		pubKeyBytes, err = hex.DecodeString(keystoreFile.Pubkey)
+		if err != nil {
+			return errors.Wrap(err, "could not decode pubkey from keystore")
+		}
+	} else {
+		privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
+		if err != nil {
+			return errors.Wrap(err, "could not initialize private key from bytes")
+		}
+		pubKeyBytes = privKey.PublicKey().Marshal()
 	}
 	fmt.Printf("\nDecrypted keystore %s\n", au.BrightMagenta(fullPath))
 	fmt.Printf("Privkey: %#x\n", au.BrightGreen(privKeyBytes))
-	fmt.Printf("Pubkey: %#x\n", au.BrightGreen(publicKeyBytes))
+	fmt.Printf("Pubkey: %#x\n", au.BrightGreen(pubKeyBytes))
 	return nil
-}
-
-// Checks if the item at the specified path exists and is a directory.
-func hasDir(dirPath string) (bool, error) {
-	fullPath, err := expandPath(dirPath)
-	if err != nil {
-		return false, err
-	}
-	info, err := os.Stat(fullPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return info.IsDir(), nil
-}
-
-// Check if a file at the specified path exists.
-func fileExists(filePath string) (bool, error) {
-	fullPath, err := expandPath(filePath)
-	if err != nil {
-		return false, err
-	}
-	if _, err := os.Stat(fullPath); err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-// Expands a file path
-// 1. replace tilde with users home dir
-// 2. expands embedded environment variables
-// 3. cleans the path, e.g. /a/b/../c -> /a/c
-// Note, it has limitations, e.g. ~someuser/tmp will not be expanded
-func expandPath(p string) (string, error) {
-	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
-		if home := homeDir(); home != "" {
-			p = home + p[1:]
-		}
-	}
-	return filepath.Abs(path.Clean(os.ExpandEnv(p)))
-}
-
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
-	return ""
 }

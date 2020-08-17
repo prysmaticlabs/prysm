@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStore_DepositContract(t *testing.T) {
@@ -12,24 +14,14 @@ func TestStore_DepositContract(t *testing.T) {
 	ctx := context.Background()
 	contractAddress := common.Address{1, 2, 3}
 	retrieved, err := db.DepositContractAddress(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if retrieved != nil {
-		t.Errorf("Expected nil contract address, received %v", retrieved)
-	}
-	if err := db.SaveDepositContractAddress(ctx, contractAddress); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, ([]uint8)(nil), retrieved, "Expected nil contract address")
+	require.NoError(t, db.SaveDepositContractAddress(ctx, contractAddress))
 	retrieved, err = db.DepositContractAddress(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if common.BytesToAddress(retrieved) != contractAddress {
-		t.Errorf("Expected address %#x, received %#x", contractAddress, retrieved)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, contractAddress, common.BytesToAddress(retrieved), "Unexpected address")
 	otherAddress := common.Address{4, 5, 6}
-	if err := db.SaveDepositContractAddress(ctx, otherAddress); err == nil {
-		t.Error("Should not have been able to override old deposit contract address")
-	}
+	err = db.SaveDepositContractAddress(ctx, otherAddress)
+	want := "cannot override deposit contract address"
+	assert.ErrorContains(t, want, err, "Should not have been able to override old deposit contract address")
 }

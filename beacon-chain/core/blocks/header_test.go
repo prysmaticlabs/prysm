@@ -2,7 +2,6 @@ package blocks_test
 
 import (
 	"io/ioutil"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
@@ -42,21 +42,15 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: pID,
@@ -71,41 +65,27 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	require.NoError(t, err)
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_, err = blocks.ProcessBlockHeader(state, block)
-	if err == nil || err.Error() != "block.Slot 10 must be greater than state.LatestBlockHeader.Slot 10" {
-		t.Fatalf("did not get expected error, got %v", err)
-	}
+	assert.ErrorContains(t, "block.Slot 10 must be greater than state.LatestBlockHeader.Slot 10", err)
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9}); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetSlot(10); err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9}))
+	require.NoError(t, beaconState.SetSlot(10))
 
 	lbhdr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -122,9 +102,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	_, err = blocks.ProcessBlockHeader(beaconState, block)
 	want := "signature did not verify"
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
@@ -146,14 +124,10 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	lbhsr, err := state.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(state)
 
 	priv := bls.RandKey()
@@ -173,9 +147,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 
 	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "is different than block slot"
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
@@ -197,9 +169,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv := bls.RandKey()
@@ -207,9 +177,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	pID, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: pID,
@@ -224,9 +192,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 
 	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "does not match"
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
@@ -248,14 +214,10 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	parentRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv := bls.RandKey()
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
@@ -263,9 +225,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	pID, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: pID,
@@ -280,9 +240,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 
 	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "was previously slashed"
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessBlockHeader_OK(t *testing.T) {
@@ -304,21 +262,15 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: pID,
@@ -332,25 +284,17 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
-	if err != nil {
-		t.Fatalf("Failed to hash block bytes got: %v", err)
-	}
+	require.NoError(t, err, "Failed to hash block bytes got")
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	newState, err := blocks.ProcessBlockHeader(state, block)
-	if err != nil {
-		t.Fatalf("Failed to process block header got: %v", err)
-	}
+	require.NoError(t, err, "Failed to process block header got")
 	var zeroHash [32]byte
 	nsh := newState.LatestBlockHeader()
 	expected := &ethpb.BeaconBlockHeader{
@@ -360,9 +304,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 		StateRoot:     zeroHash[:],
 	}
-	if !proto.Equal(nsh, expected) {
-		t.Errorf("Expected %v, received %v", expected, nsh)
-	}
+	assert.Equal(t, true, proto.Equal(nsh, expected), "Expected %v, received %v", expected, nsh)
 }
 
 func TestBlockSignatureSet_OK(t *testing.T) {
@@ -384,21 +326,15 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv := bls.RandKey()
 	pID, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: pID,
@@ -412,25 +348,15 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	set, err := blocks.BlockSignatureSet(state, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	verified, err := set.Verify()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !verified {
-		t.Error("Block signature set returned a set which was unable to be verified")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, verified, "Block signature set returned a set which was unable to be verified")
 }

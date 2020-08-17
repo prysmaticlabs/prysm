@@ -58,7 +58,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), lastIndex, "Did not save last archived index")
 
-	testutil.AssertLogsContain(t, hook, "Saved state in DB")
+	require.LogsContain(t, hook, "Saved state in DB")
 }
 
 func TestMigrateToCold_RegeneratePath(t *testing.T) {
@@ -100,5 +100,5 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), lastIndex, "Did not save last archived index")
 
-	testutil.AssertLogsContain(t, hook, "Saved state in DB")
+	require.LogsContain(t, hook, "Saved state in DB")
 }

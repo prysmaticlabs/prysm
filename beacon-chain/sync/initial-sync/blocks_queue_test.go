@@ -20,8 +20,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher: mc,
-		p2p:         p2p,
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
 	})
 
 	t.Run("stop without start", func(t *testing.T) {
@@ -29,6 +30,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
@@ -39,6 +41,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -49,6 +52,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -61,6 +65,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -68,9 +73,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		// Blocks up until all resources are reclaimed (or timeout is called)
 		assert.NoError(t, queue.stop())
 		select {
-		case <-queue.fetchedBlocks:
+		case <-queue.fetchedData:
 		default:
-			t.Error("queue.fetchedBlocks channel is leaked")
+			t.Error("queue.fetchedData channel is leaked")
 		}
 		select {
 		case <-fetcher.fetchResponses:
@@ -85,6 +90,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -98,6 +104,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -110,6 +117,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -230,12 +238,14 @@ func TestBlocksQueueLoop(t *testing.T) {
 			defer cancel()
 
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-				headFetcher: mc,
-				p2p:         p2p,
+				headFetcher:         mc,
+				finalizationFetcher: mc,
+				p2p:                 p2p,
 			})
 			queue := newBlocksQueue(ctx, &blocksQueueConfig{
 				blocksFetcher:       fetcher,
 				headFetcher:         mc,
+				finalizationFetcher: mc,
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
@@ -255,8 +265,8 @@ func TestBlocksQueueLoop(t *testing.T) {
 			}
 
 			var blocks []*eth.SignedBeaconBlock
-			for fetchedBlocks := range queue.fetchedBlocks {
-				for _, block := range fetchedBlocks {
+			for data := range queue.fetchedData {
+				for _, block := range data.blocks {
 					if err := processBlock(block); err != nil {
 						continue
 					}

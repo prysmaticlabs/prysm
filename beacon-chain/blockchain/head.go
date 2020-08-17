@@ -253,12 +253,12 @@ func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]
 		return nil
 	}
 
-	for node.Parent != protoarray.NonExistentNode {
+	for node.Parent() != protoarray.NonExistentNode {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		node = nodes[node.Parent]
-		s.recentCanonicalBlocks[node.Root] = true
+		node = nodes[node.Parent()]
+		s.recentCanonicalBlocks[node.Root()] = true
 	}
 
 	return nil

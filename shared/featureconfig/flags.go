@@ -136,15 +136,11 @@ var (
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
-		Value: "naive",
+		Value: "max_cover",
 	}
-	newBeaconStateLocks = &cli.BoolFlag{
-		Name:  "new-beacon-state-locks",
-		Usage: "Enable new beacon state locking",
-	}
-	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
-		Name:  "attestation-aggregation-force-maxcover",
-		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
+	disableNewBeaconStateLocks = &cli.BoolFlag{
+		Name:  "disable-new-beacon-state-locks",
+		Usage: "Disable new beacon state locking",
 	}
 	batchBlockVerify = &cli.BoolFlag{
 		Name:  "batch-block-verify",
@@ -166,13 +162,25 @@ var (
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
+	enableAttBroadcastDiscoveryAttempts = &cli.BoolFlag{
+		Name:  "enable-att-broadcast-discovery-attempts",
+		Usage: "Enable experimental attestation subnet discovery before broadcasting.",
+	}
+	enablePeerScorer = &cli.BoolFlag{
+		Name:  "enable-peer-scorer",
+		Usage: "Enable experimental P2P peer scorer",
+	}
+	enableRoughtime = &cli.BoolFlag{
+		Name:  "enable-roughtime",
+		Usage: "Enables periodic roughtime syncs.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	forceMaxCoverAttestationAggregation,
-	newBeaconStateLocks,
 	batchBlockVerify,
+	enableAttBroadcastDiscoveryAttempts,
+	enablePeerScorer,
 }
 
 // Deprecated flags list.
@@ -515,6 +523,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedNewBeaconStateLocks = &cli.BoolFlag{
+		Name:   "new-beacon-state-locks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprectedForceMaxCoverAttestationAggregation = &cli.BoolFlag{
+		Name:   "attestation-aggregation-force-maxcover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -585,6 +603,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedMedallaTestnet,
 	deprecatedEnableAccountsV2,
 	deprecatedCustomGenesisDelay,
+	deprecatedNewBeaconStateLocks,
+	deprectedForceMaxCoverAttestationAggregation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -635,14 +655,16 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	newBeaconStateLocks,
-	forceMaxCoverAttestationAggregation,
+	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
+	enableAttBroadcastDiscoveryAttempts,
+	enablePeerScorer,
+	enableRoughtime,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

@@ -223,11 +223,9 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		resp, err := s.generateErrorResponse(respCode, err.Error())
 		if err != nil {
 			log.WithError(err).Debug("Failed to generate a response error")
-		} else {
-			if _, err := stream.Write(resp); err != nil {
-				// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
-				log.WithError(err).Debug("Failed to write to stream")
-			}
+		} else if _, err := stream.Write(resp); err != nil {
+			// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
+			log.WithError(err).Debug("Failed to write to stream")
 		}
 		if err := stream.Close(); err != nil { // Close before disconnecting.
 			log.WithError(err).Debug("Failed to close stream")

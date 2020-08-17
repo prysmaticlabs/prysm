@@ -13,8 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
-package cmd
+package fileutil
 
 import (
 	"os"
@@ -22,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPathExpansion(t *testing.T) {
@@ -32,7 +32,6 @@ func TestPathExpansion(t *testing.T) {
 	tests := map[string]string{
 		"/home/someuser/tmp": "/home/someuser/tmp",
 		"~/tmp":              user.HomeDir + "/tmp",
-		"~thisOtherUser/b/":  "~thisOtherUser/b",
 		"$DDDXXX/a/b":        "/tmp/a/b",
 		"/a/b/":              "/a/b",
 	}
@@ -41,6 +40,8 @@ func TestPathExpansion(t *testing.T) {
 		t.Error(err)
 	}
 	for test, expected := range tests {
-		assert.Equal(t, expected, expandPath(test))
+		expanded, err := ExpandPath(test)
+		require.NoError(t, err)
+		assert.Equal(t, expected, expanded)
 	}
 }

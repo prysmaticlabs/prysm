@@ -179,8 +179,10 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 	var sig bls.Signature
 	if featureconfig.Get().EnableAccountsV2 {
 		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
-			PublicKey:   pubKey[:],
-			SigningRoot: root[:],
+			PublicKey:       pubKey[:],
+			SigningRoot:     root[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_AttestationData{AttestationData: data},
 		})
 	} else {
 		if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {

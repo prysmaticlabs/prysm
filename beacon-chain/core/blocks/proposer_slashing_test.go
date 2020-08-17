@@ -3,7 +3,6 @@ package blocks_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -37,9 +37,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 			},
 		},
 	}
-	if err := beaconState.SetSlot(currentSlot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(currentSlot))
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -48,9 +46,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	}
 	want := "mismatched header slots"
 	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
@@ -74,9 +70,7 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 		},
 	}
 
-	if err := beaconState.SetSlot(currentSlot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(currentSlot))
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -84,9 +78,7 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	}
 	want := "expected slashing headers to differ"
 	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
@@ -122,9 +114,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		Validators: registry,
 		Slot:       currentSlot,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -134,11 +124,8 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		"validator with key %#x is not slashable",
 		bytesutil.ToBytes48(beaconState.Validators()[0].PublicKey),
 	)
-
 	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
@@ -182,9 +169,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
-	if err != nil {
-		t.Fatalf("Unexpected error: %s", err)
-	}
+	require.NoError(t, err)
 
 	newStateVals := newState.Validators()
 	if newStateVals[1].ExitEpoch != beaconState.Validators()[1].ExitEpoch {

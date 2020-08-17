@@ -5,7 +5,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "config.go",
-        "customflags.go",
         "defaults.go",
         "flags.go",
         "helpers.go",
@@ -16,6 +15,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/cmd",
     visibility = ["//visibility:public"],
     deps = [
+        "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -31,7 +31,6 @@ go_test(
     size = "small",
     srcs = [
         "config_test.go",
-        "customflags_test.go",
         "helpers_test.go",
     ],
     embed = [":go_default_library"],

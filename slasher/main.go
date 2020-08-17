@@ -103,13 +103,10 @@ func main() {
 			// the colors are ANSI codes and seen as Gibberish in the log files.
 			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
-			break
 		case "fluentd":
 			logrus.SetFormatter(joonix.NewFormatter())
-			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-			break
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

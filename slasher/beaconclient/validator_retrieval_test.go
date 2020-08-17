@@ -8,7 +8,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -66,8 +66,8 @@ func TestService_RequestValidator(t *testing.T) {
 		}
 	}
 
-	testutil.AssertLogsContain(t, hook, "Retrieved validators id public key map:")
-	testutil.AssertLogsDoNotContain(t, hook, "Retrieved validators public keys from cache:")
+	require.LogsContain(t, hook, "Retrieved validators id public key map:")
+	require.LogsDoNotContain(t, hook, "Retrieved validators public keys from cache:")
 	// We expect public key of validator id 0 to be in cache.
 	res, err = bs.FindOrGetPublicKeys(context.Background(), []uint64{0, 3})
 	if err != nil {
@@ -79,5 +79,5 @@ func TestService_RequestValidator(t *testing.T) {
 			t.Errorf("Wanted %v, received %v", wanted2, res)
 		}
 	}
-	testutil.AssertLogsContain(t, hook, "Retrieved validators public keys from cache: map[0:[1 2 3]]")
+	require.LogsContain(t, hook, "Retrieved validators public keys from cache: map[0:[1 2 3]]")
 }

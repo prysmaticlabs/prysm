@@ -377,7 +377,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	}
 
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending genesis time")
+	require.LogsContain(t, hook, "Sending genesis time")
 }
 
 func TestWaitForSynced_ContextClosed(t *testing.T) {
@@ -481,5 +481,5 @@ func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	}
 
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending genesis time")
+	require.LogsContain(t, hook, "Sending genesis time")
 }

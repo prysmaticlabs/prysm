@@ -19,9 +19,8 @@ var (
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
 	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
-	// Due to reorgs, it's good to keep the old cache around for quickly switch over. 10 is a generous
-	// cache size as it considers 3 concurrent branches over 3 epochs.
-	maxCommitteesCacheSize = uint64(10)
+	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
+	maxCommitteesCacheSize = uint64(32)
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{

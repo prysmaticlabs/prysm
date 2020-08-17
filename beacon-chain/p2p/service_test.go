@@ -17,7 +17,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -119,7 +118,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	assert.Equal(t, true, s.started, "Expected service to be started")
 	s.Start()
-	testutil.AssertLogsContain(t, hook, "Attempted to start p2p service when it was already started")
+	require.LogsContain(t, hook, "Attempted to start p2p service when it was already started")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }

@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"runtime/debug"
@@ -25,11 +24,6 @@ import (
 )
 
 const pubsubMessageTimeout = 30 * time.Second
-
-var (
-	// TODO(6449): Replace this with pubsub.ErrSubscriptionCancelled.
-	errSubscriptionCancelled = errors.New("subscription cancelled by calling sub.Cancel()")
-)
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
@@ -151,7 +145,7 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 			msg, err := sub.Next(s.ctx)
 			if err != nil {
 				// This should only happen when the context is cancelled or subscription is cancelled.
-				if err != errSubscriptionCancelled { // Only log a warning on unexpected errors.
+				if err != pubsub.ErrSubscriptionCancelled { // Only log a warning on unexpected errors.
 					log.WithError(err).Warn("Subscription next failed")
 				}
 				return
@@ -214,7 +208,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
 						go func(idx uint64) {
-							_, err := s.p2p.FindPeersWithSubnet(idx)
+							_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
 							if err != nil {
 								log.Debugf("Could not search for peers: %v", err)
 								return
@@ -320,7 +314,7 @@ func (s *Service) subscribeAggregatorSubnet(subscriptions map[uint64]*pubsub.Sub
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		go func(idx uint64) {
-			_, err := s.p2p.FindPeersWithSubnet(idx)
+			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
 			if err != nil {
 				log.Debugf("Could not search for peers: %v", err)
 				return
@@ -339,7 +333,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		go func(idx uint64) {
 			// perform a search for peers with the desired committee index.
-			_, err := s.p2p.FindPeersWithSubnet(idx)
+			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
 			if err != nil {
 				log.Debugf("Could not search for peers: %v", err)
 				return

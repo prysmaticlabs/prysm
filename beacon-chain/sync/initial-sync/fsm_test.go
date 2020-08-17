@@ -330,10 +330,8 @@ func TestStateMachineManager_allMachinesInState(t *testing.T) {
 		unexpectedStates []stateID
 	}{
 		{
-			name: "empty manager",
-			smmGen: func() *stateMachineManager {
-				return newStateMachineManager()
-			},
+			name:             "empty manager",
+			smmGen:           newStateMachineManager,
 			expectedStates:   []stateID{},
 			unexpectedStates: []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped, stateSent},
 		},
