@@ -65,16 +65,18 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			span.End()
 			continue
 		}
+		s.pendingQueueLock.RUnlock()
 
 		// Loop through the pending queue and mark the potential parent blocks as seen.
 		for _, b := range bs {
 			if b == nil || b.Block == nil {
-				s.pendingQueueLock.RUnlock()
 				span.End()
 				continue
 			}
 
+			s.pendingQueueLock.RLock()
 			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
+			s.pendingQueueLock.RUnlock()
 
 			blkRoot, err := stateutil.BlockRoot(b.Block)
 			if err != nil {
