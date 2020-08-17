@@ -79,7 +79,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		if parentIsBad || blockIsBad {
 			// Set block as bad if its parent block is bad too.
 			if parentIsBad {
-				s.setBadBlock(blkRoot)
+				s.setBadBlock(ctx, blkRoot)
 			}
 			// Remove block from queue.
 			s.pendingQueueLock.Lock()
@@ -131,7 +131,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 		if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 			log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
-			s.setBadBlock(blkRoot)
+			s.setBadBlock(ctx, blkRoot)
 			traceutil.AnnotateError(span, err)
 		}
 
