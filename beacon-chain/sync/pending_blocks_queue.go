@@ -54,7 +54,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 	randGen := rand.NewGenerator()
 	parentRoots := [][32]byte{}
-	_, bestPeers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
 
 	for _, slot := range slots {
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
@@ -156,37 +155,49 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 		span.End()
 	}
+	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
+}
 
+func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, randGen *rand.Rand) error {
+	ctx, span := trace.StartSpan(ctx, "sendBatchRootRequest")
+	defer span.End()
+
+	if len(roots) == 0 {
+		return nil
+	}
+	_, bestPeers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
 	if len(bestPeers) == 0 {
 		return nil
 	}
-	parentRoots = s.dedupRoots(parentRoots)
+	roots = s.dedupRoots(roots)
 	// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 	// have a head slot newer than the block slot we are requesting.
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
-	log.Errorf("parent roots initially: %d", len(parentRoots))
 	for i := 0; i < params.BeaconConfig().MaxPeersToSync; i++ {
-		req := parentRoots
-		if len(parentRoots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
-			req = parentRoots[:params.BeaconNetworkConfig().MaxRequestBlocks]
+		req := roots
+		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
+			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
 		if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
 			traceutil.AnnotateError(span, err)
 			log.Debugf("Could not send recent block request: %v", err)
 		}
-		newRoots := parentRoots[:0]
-		for _, rt := range parentRoots {
+		newRoots := make([][32]byte, 0, len(roots))
+		for _, rt := range roots {
+			s.pendingQueueLock.RLock()
 			if !s.seenPendingBlocks[rt] {
 				newRoots = append(newRoots, rt)
+			} else {
+				log.Errorf("just received block with root %#x", rt)
 			}
+			s.pendingQueueLock.RUnlock()
 		}
 		if len(newRoots) == 0 {
 			break
 		}
-		parentRoots = newRoots
+		roots = newRoots
 		pid = bestPeers[randGen.Int()%len(bestPeers)]
 	}
-
 	return nil
 }
 

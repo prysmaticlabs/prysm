@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -46,7 +45,6 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	defer span.End()
 
 	pids := s.p2p.Peers().Connected()
-	_, bestPeers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
 
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
@@ -134,32 +132,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			}
 		}
 	}
-
-	if len(bestPeers) == 0 {
-		return nil
-	}
-	pendingRoots = s.dedupRoots(pendingRoots)
-	// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
-	// have a head slot newer than the block slot we are requesting.
-	pid := bestPeers[randGen.Int()%len(bestPeers)]
-	for i := 0; i < 5; i++ {
-		if err := s.sendRecentBeaconBlocksRequest(ctx, pendingRoots, pid); err != nil {
-			traceutil.AnnotateError(span, err)
-			log.Debugf("Could not send recent block request: %v", err)
-		}
-		newRoots := pendingRoots[:0]
-		for _, rt := range pendingRoots {
-			if !s.seenPendingBlocks[rt] {
-				newRoots = append(newRoots, rt)
-			}
-		}
-		if len(newRoots) == 0 {
-			break
-		}
-		pendingRoots = newRoots
-		pid = bestPeers[randGen.Int()%len(bestPeers)]
-	}
-	return nil
+	return s.sendBatchRootRequest(ctx, pendingRoots, randGen)
 }
 
 // This defines how pending attestations is saved in the map. The key is the
