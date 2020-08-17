@@ -227,6 +227,8 @@ func (s *Service) clearPendingSlots() {
 	s.seenPendingBlocks = make(map[[32]byte]bool)
 }
 
+// Delete block from the list from the pending queue using the slot as key.
+// Note: this helper is not thread safe.
 func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock) {
 	blks, ok := s.slotToPendingBlocks[slot]
 	if !ok {
@@ -246,6 +248,8 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 	s.slotToPendingBlocks[slot] = newBlks
 }
 
+// Insert block to the list in the pending queue using the slot as key.
+// Note: this helper is not thread safe.
 func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock) {
 	_, ok := s.slotToPendingBlocks[slot]
 	if ok {
