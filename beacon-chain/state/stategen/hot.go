@@ -14,12 +14,18 @@ import (
 )
 
 // HasState returns true if the state exists in cache or in DB.
-func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
+func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
 	if s.hotStateCache.Has(blockRoot) {
-		return true
+		return true, nil
 	}
-
-	return s.beaconDB.HasState(ctx, blockRoot)
+	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return false, err
+	}
+	if has {
+		return true, nil
+	}
+	return s.beaconDB.HasState(ctx, blockRoot), nil
 }
 
 // SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
