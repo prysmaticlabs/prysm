@@ -712,3 +712,16 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	result = r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 	assert.Equal(t, false, result)
 }
+
+func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
+	s := Service{}
+	require.NoError(t, s.initCaches())
+
+	root := [32]byte{'b', 'a', 'd'}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	s.setBadBlock(ctx, root)
+	if s.hasBadBlock(root) {
+		t.Error("Set bad root with cancelled context")
+	}
+}
