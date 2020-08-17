@@ -24,7 +24,10 @@ const (
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
 	// noFinalizedPeersErrMaxRetries defines number of retries when no finalized peers are found.
-	noFinalizedPeersErrMaxRetries = 100
+	noFinalizedPeersErrMaxRetries = 1000
+	// noFinalizedPeersErrRefreshInterval defines interval for which queue will be paused before
+	// making the next attempt to obtain data.
+	noFinalizedPeersErrRefreshInterval = 15 * time.Second
 )
 
 var (
@@ -191,8 +194,11 @@ func (q *blocksQueue) loop() {
 						forceExit := q.exitConditions.noFinalizedPeersErrRetries > noFinalizedPeersErrMaxRetries
 						if q.mode == modeStopOnFinalizedEpoch || forceExit {
 							q.cancel()
+						} else {
+							q.exitConditions.noFinalizedPeersErrRetries++
+							log.Debug("Waiting for finalized peers")
+							time.Sleep(noFinalizedPeersErrRefreshInterval)
 						}
-						q.exitConditions.noFinalizedPeersErrRetries++
 						continue
 					}
 				}
