@@ -529,16 +529,19 @@ var (
 		Hidden: true,
 	}
 	deprecatedSlasherCertFlag = &cli.StringFlag{
-		Name:  "slasher-tls-cert",
-		Usage: deprecatedUsage,
+		Name:   "slasher-tls-cert",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 	deprecatedSlasherProviderFlag = &cli.StringFlag{
-		Name:  "slasher-provider",
-		Usage: deprecatedUsage,
+		Name:   "slasher-provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 	deprecatedEnableSlasherFlag = &cli.BoolFlag{
-		Name:  "enable-slasher",
-		Usage: deprecatedUsage,
+		Name:   "enable-slasher",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 )
 
