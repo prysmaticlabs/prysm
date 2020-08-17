@@ -179,9 +179,6 @@ func (s *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
 
 // Returns true if the block is marked as a bad block.
 func (s *Service) hasBadBlock(root [32]byte) bool {
-	if true {
-		return false
-	}
 	s.badBlockLock.RLock()
 	defer s.badBlockLock.RUnlock()
 	_, seen := s.badBlockCache.Get(string(root[:]))
