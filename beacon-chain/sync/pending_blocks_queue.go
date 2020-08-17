@@ -134,7 +134,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-			log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
+			log.Errorf("Could not process block from slot %d with root %#x: %v", b.Block.Slot, blkRoot, err)
 			s.setBadBlock(blkRoot)
 			traceutil.AnnotateError(span, err)
 		}
@@ -180,7 +180,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				newRoots = append(newRoots, rt)
 			}
 		}
-		log.Errorf("parent roots now: %d", len(parentRoots))
 		if len(newRoots) == 0 {
 			break
 		}
