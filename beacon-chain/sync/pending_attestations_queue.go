@@ -3,11 +3,9 @@ package sync
 import (
 	"context"
 	"encoding/hex"
-	"io"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -48,6 +46,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	defer span.End()
 
 	pids := s.p2p.Peers().Connected()
+	_, bestPeers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
 
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
@@ -62,6 +61,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	s.pendingAttsLock.RUnlock()
 
 	randGen := rand.NewGenerator()
+	pendingRoots := [][32]byte{}
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]
@@ -132,25 +132,32 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				log.Debug("No peer IDs available to request missing block from for pending attestation")
 				return nil
 			}
-			pid := pids[randGen.Int()%len(pids)]
-			targetSlot := helpers.SlotToEpoch(attestations[0].Message.Aggregate.Data.Target.Epoch)
-			for _, p := range pids {
-				cs, err := s.p2p.Peers().ChainState(p)
-				if err != nil {
-					return errors.Wrap(err, "could not get chain state for peer")
-				}
-				if cs != nil && cs.HeadSlot >= targetSlot {
-					pid = p
-					break
-				}
-			}
+		}
+	}
 
-			req := [][32]byte{bRoot}
-			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil && err == io.EOF {
-				traceutil.AnnotateError(span, err)
-				log.Debugf("Could not send recent block request: %v", err)
+	if len(bestPeers) == 0 {
+		return nil
+	}
+	pendingRoots = s.dedupRoots(pendingRoots)
+	// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
+	// have a head slot newer than the block slot we are requesting.
+	pid := bestPeers[randGen.Int()%len(bestPeers)]
+	for i := 0; i < 5; i++ {
+		if err := s.sendRecentBeaconBlocksRequest(ctx, pendingRoots, pid); err != nil {
+			traceutil.AnnotateError(span, err)
+			log.Debugf("Could not send recent block request: %v", err)
+		}
+		newRoots := pendingRoots[:0]
+		for _, rt := range pendingRoots {
+			if !s.seenPendingBlocks[rt] {
+				newRoots = append(newRoots, rt)
 			}
 		}
+		if len(newRoots) == 0 {
+			break
+		}
+		pendingRoots = newRoots
+		pid = bestPeers[randGen.Int()%len(bestPeers)]
 	}
 	return nil
 }
