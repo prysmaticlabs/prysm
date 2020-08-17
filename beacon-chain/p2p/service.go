@@ -57,7 +57,7 @@ const maxBadResponses = 5
 const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
 // maxDialTimeout is the timeout for a single peer dial.
-var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
+const maxDialTimeout = 30 * time.Second
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {

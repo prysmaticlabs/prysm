@@ -88,7 +88,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	s.pendingQueueLock.RLock()
 	if s.seenPendingBlocks[blockRoot] {
 		s.pendingQueueLock.RUnlock()
-		log.Debugf("Block with slot %d and root %#x is already in the pending block cache", blk.Block.Slot, blockRoot)
 		return pubsub.ValidationIgnore
 	}
 	s.pendingQueueLock.RUnlock()
@@ -114,7 +113,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		s.slotToPendingBlocks[blk.Block.Slot] = blk
 		s.seenPendingBlocks[blockRoot] = true
 		s.pendingQueueLock.Unlock()
-		log.Debugf("Block with slot %d has its parent %#x unknown", blk.Block.Slot, blockRoot)
 		return pubsub.ValidationIgnore
 	}
 
@@ -127,10 +125,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	hasStateSummaryDB := s.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	hasStateSummaryCache := s.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if !hasStateSummaryDB && !hasStateSummaryCache {
-		s.pendingQueueLock.Lock()
-		s.slotToPendingBlocks[blk.Block.Slot] = blk
-		s.seenPendingBlocks[blockRoot] = true
-		s.pendingQueueLock.Unlock()
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("No access to parent state")
 		return pubsub.ValidationIgnore
 	}
@@ -193,9 +187,9 @@ func (s *Service) hasBadBlock(root [32]byte) bool {
 
 // Set bad block in the cache.
 func (s *Service) setBadBlock(root [32]byte) {
-	//	s.badBlockLock.Lock()
-	//	defer s.badBlockLock.Unlock()
-	//	s.badBlockCache.Add(string(root[:]), true)
+	s.badBlockLock.Lock()
+	defer s.badBlockLock.Unlock()
+	s.badBlockCache.Add(string(root[:]), true)
 }
 
 // This captures metrics for block arrival time by subtracts slot start time.

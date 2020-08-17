@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -53,8 +52,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	)
 
 	randGen := rand.NewGenerator()
-	parentRoots := [][32]byte{}
-
 	for _, slot := range slots {
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
 		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
@@ -102,27 +99,27 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			log.WithFields(logrus.Fields{
 				"currentSlot": b.Block.Slot,
 				"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block.ParentRoot)),
-			}).Debug("Requesting parent block")
-			parentRoots = append(parentRoots, bytesutil.ToBytes32(b.Block.ParentRoot))
-			/*
-				// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
-				// have a head slot newer than the block slot we are requesting.
-				pid := pids[randGen.Int()%len(pids)]
-				for _, p := range pids {
-					cs, err := s.p2p.Peers().ChainState(p)
-					if err != nil {
-						return errors.Wrap(err, "failed to read chain state for peer")
-					}
-					if cs != nil && cs.HeadSlot >= slot {
-						pid = p
-						break
-					}
-				}
+			}).Info("Requesting parent block")
+			req := [][32]byte{bytesutil.ToBytes32(b.Block.ParentRoot)}
 
-				if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-					traceutil.AnnotateError(span, err)
-					log.Debugf("Could not send recent block request: %v", err)
-				} */
+			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
+			// have a head slot newer than the block slot we are requesting.
+			pid := pids[randGen.Int()%len(pids)]
+			for _, p := range pids {
+				cs, err := s.p2p.Peers().ChainState(p)
+				if err != nil {
+					return errors.Wrap(err, "failed to read chain state for peer")
+				}
+				if cs != nil && cs.HeadSlot >= slot {
+					pid = p
+					break
+				}
+			}
+
+			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
+				traceutil.AnnotateError(span, err)
+				log.Debugf("Could not send recent block request: %v", err)
+			}
 			span.End()
 			continue
 		}
@@ -133,7 +130,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-			log.Errorf("Could not process block from slot %d with root %#x: %v", b.Block.Slot, blkRoot, err)
+			log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 			s.setBadBlock(blkRoot)
 			traceutil.AnnotateError(span, err)
 		}
@@ -155,49 +152,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 		span.End()
 	}
-	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
-}
 
-func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, randGen *rand.Rand) error {
-	ctx, span := trace.StartSpan(ctx, "sendBatchRootRequest")
-	defer span.End()
-
-	if len(roots) == 0 {
-		return nil
-	}
-	_, bestPeers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
-	if len(bestPeers) == 0 {
-		return nil
-	}
-	roots = s.dedupRoots(roots)
-	// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
-	// have a head slot newer than the block slot we are requesting.
-	pid := bestPeers[randGen.Int()%len(bestPeers)]
-	for i := 0; i < params.BeaconConfig().MaxPeersToSync; i++ {
-		req := roots
-		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
-			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
-		}
-		if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-			traceutil.AnnotateError(span, err)
-			log.Debugf("Could not send recent block request: %v", err)
-		}
-		newRoots := make([][32]byte, 0, len(roots))
-		for _, rt := range roots {
-			s.pendingQueueLock.RLock()
-			if !s.seenPendingBlocks[rt] {
-				newRoots = append(newRoots, rt)
-			} else {
-				log.Errorf("just received block with root %#x", rt)
-			}
-			s.pendingQueueLock.RUnlock()
-		}
-		if len(newRoots) == 0 {
-			break
-		}
-		roots = newRoots
-		pid = bestPeers[randGen.Int()%len(bestPeers)]
-	}
 	return nil
 }
 
