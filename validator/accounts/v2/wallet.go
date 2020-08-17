@@ -206,7 +206,8 @@ func (w *Wallet) Exists() (bool, error) {
 	if err != nil {
 		return false, errors.Wrapf(err, "could not read files in directory: %s", w.AccountsDir())
 	}
-	walletExists := len(list) > 0
+	// There are 2 files for derived and non-derived wallets if a wallet is properly setup.
+	walletExists := len(list) >= 2
 	return walletExists, nil
 }
 
