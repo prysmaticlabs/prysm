@@ -168,10 +168,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.Bool(enableSlasherFlag.Name) {
-		log.Warn("Enable slasher connection.")
-		cfg.EnableSlasherConnection = true
-	}
 	if ctx.Bool(cacheFilteredBlockTreeFlag.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
