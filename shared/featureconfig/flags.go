@@ -528,12 +528,10 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	// SlasherCertFlag defines a flag for the slasher TLS certificate.
 	deprecatedSlasherCertFlag = &cli.StringFlag{
 		Name:  "slasher-tls-cert",
 		Usage: deprecatedUsage,
 	}
-	// SlasherProviderFlag defines a flag for a slasher RPC provider.
 	deprecatedSlasherProviderFlag = &cli.StringFlag{
 		Name:  "slasher-provider",
 		Usage: deprecatedUsage,
