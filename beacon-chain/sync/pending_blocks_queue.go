@@ -75,7 +75,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
-			s.pendingQueueLock.RUnlock()
 
 			blkRoot, err := stateutil.BlockRoot(b.Block)
 			if err != nil {
