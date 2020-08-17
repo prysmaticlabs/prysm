@@ -152,8 +152,8 @@ func BeaconFuzzBlock(b []byte) {
 	//}()
 
 	s := sync.NewRegularSyncFuzz(&sync.Config{
-		DB:  db1,
-		P2P: p2p,
+		DB:    db1,
+		P2P:   p2p,
 		Chain: chain,
 		//Chain: &testing.ChainService{
 		//	FinalizedCheckPoint:         st.FinalizedCheckpoint(),

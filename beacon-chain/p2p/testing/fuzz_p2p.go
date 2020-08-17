@@ -50,7 +50,7 @@ func (p *fakeP2P) ENR() *enr.Record {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *fakeP2P) FindPeersWithSubnet(index uint64) (bool, error) {
+func (p *fakeP2P) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
 	return false, nil
 }
 
