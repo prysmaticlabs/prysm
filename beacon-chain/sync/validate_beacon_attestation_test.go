@@ -52,7 +52,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	require.NoError(t, err)
 
 	invalidRoot := [32]byte{'A', 'B', 'C', 'D'}
-	s.setBadBlock(invalidRoot)
+	s.setBadBlock(ctx, invalidRoot)
 
 	digest, err := s.forkDigest()
 	require.NoError(t, err)
