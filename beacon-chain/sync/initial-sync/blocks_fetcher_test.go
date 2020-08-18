@@ -479,8 +479,9 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 	fetcher := newBlocksFetcher(
 		ctx,
 		&blocksFetcherConfig{
-			headFetcher: mc,
-			p2p:         p2p,
+			finalizationFetcher: mc,
+			headFetcher:         mc,
+			p2p:                 p2p,
 		})
 
 	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
@@ -620,8 +621,9 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	fetcher := newBlocksFetcher(
 		ctx,
 		&blocksFetcherConfig{
-			headFetcher: mc,
-			p2p:         p2p,
+			finalizationFetcher: mc,
+			headFetcher:         mc,
+			p2p:                 p2p,
 		},
 	)
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
@@ -882,6 +884,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 			fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
+				finalizationFetcher:      mc,
 				headFetcher:              mc,
 				p2p:                      p2p,
 				peerFilterCapacityWeight: tt.args.capacityWeight,
