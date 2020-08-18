@@ -67,7 +67,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 		s.pendingQueueLock.RUnlock()
 
-
 		// Loop through the pending queue and mark the potential parent blocks as seen.
 		for _, b := range bs {
 			if b == nil || b.Block == nil {
