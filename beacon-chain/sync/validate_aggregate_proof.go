@@ -26,10 +26,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationAccept
 	}
 
-	if true {
-		return pubsub.ValidationIgnore
-	}
-
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregateAndProof")
 	defer span.End()
 
