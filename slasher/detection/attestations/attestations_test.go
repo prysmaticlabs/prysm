@@ -1,4 +1,4 @@
-package beaconclient
+package attestations
 
 import (
 	"io/ioutil"
@@ -6,11 +6,6 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
-)
-
-var (
-	_ = Notifier(&Service{})
-	_ = ChainFetcher(&Service{})
 )
 
 func TestMain(m *testing.M) {
