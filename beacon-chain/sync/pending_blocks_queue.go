@@ -160,7 +160,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		return nil
 	}
 
-	_, bestPeers := s.p2p.Peers().BestNonFinalized(maxPeerRequest, s.chain.FinalizedCheckpt().Epoch)
+	_, bestPeers := s.p2p.Peers().BestFinalized(maxPeerRequest, s.chain.FinalizedCheckpt().Epoch)
 	if len(bestPeers) == 0 {
 		return nil
 	}

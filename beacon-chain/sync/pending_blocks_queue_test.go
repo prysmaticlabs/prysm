@@ -5,6 +5,7 @@ import (
 	"math"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -17,6 +18,8 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -277,4 +280,81 @@ func TestService_sortedPendingSlots(t *testing.T) {
 
 	want := []uint64{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
 	assert.DeepEqual(t, want, r.sortedPendingSlots(), "Unexpected pending slots list")
+}
+
+func TestService_BatchRootRequest(t *testing.T) {
+	db, _ := dbtest.SetupDB(t)
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+
+	r := &Service{
+		p2p: p1,
+		db:  db,
+		chain: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 1,
+			},
+		},
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+
+	err := r.initCaches()
+	require.NoError(t, err)
+	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
+	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
+	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{FinalizedEpoch: 2})
+
+	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
+	b0Root, err := stateutil.BlockRoot(b0.Block)
+	require.NoError(t, err)
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
+	b1Root, err := stateutil.BlockRoot(b1.Block)
+	require.NoError(t, err)
+
+	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
+	b2Root, err := ssz.HashTreeRoot(b2)
+	require.NoError(t, err)
+	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
+	b5Root, err := ssz.HashTreeRoot(b5)
+	require.NoError(t, err)
+	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
+	b3Root, err := ssz.HashTreeRoot(b3)
+	require.NoError(t, err)
+	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
+	b4Root, err := ssz.HashTreeRoot(b4)
+	require.NoError(t, err)
+
+	expectedRoots := [][32]byte{b2Root, b3Root, b4Root, b5Root}
+
+	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		out := [][32]byte{}
+		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
+		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
+		response := []*ethpb.SignedBeaconBlock{{Block: b2},
+			{Block: b3}, {Block: b4}, {Block: b5}}
+		for _, blk := range response {
+			_, err := stream.Write([]byte{responseCodeSuccess})
+			assert.NoError(t, err, "Failed to write to stream")
+			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
+			assert.NoError(t, err, "Could not send response back")
+		}
+		assert.NoError(t, stream.Close())
+	})
+
+	require.NoError(t, r.sendBatchRootRequest(context.Background(), expectedRoots, rand.NewGenerator()))
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+	assert.Equal(t, 4, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 4, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
