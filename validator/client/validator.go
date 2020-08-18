@@ -34,6 +34,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// reconnectPeriod is the frequency that we try to restart our
+// slasher connection when the slasher client connection is not ready.
+var reconnectPeriod = 5 * time.Second
+
 // ValidatorRole defines the validator role.
 type ValidatorRole int8
 
@@ -181,8 +185,24 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	defer span.End()
 	if featureconfig.Get().SlasherProtection {
 		err := v.protector.Status()
-		if err != nil {
-			return errors.Wrap(err, "could not setup slasher protection client")
+		if err == nil {
+			return nil
+		}
+		ticker := time.NewTicker(reconnectPeriod)
+		for {
+			select {
+			case <-ticker.C:
+				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
+				err = v.protector.Status()
+				if err != nil {
+					continue
+				}
+				log.Info("Slasher connection is ready")
+				return nil
+			case <-ctx.Done():
+				log.Debug("Context closed, exiting reconnect external protection")
+				return errors.New("context closed, no longer attempting to restart external protection")
+			}
 		}
 	}
 	return nil
