@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	scorers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -71,7 +72,14 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		_, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, f.finalizationFetcher.FinalizedCheckpt().Epoch)
+		var peers []peer.ID
+		if f.mode == modeStopOnFinalizedEpoch {
+			headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
+			_, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+		} else {
+			headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+			_, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+		}
 		if len(peers) >= required {
 			return peers, nil
 		}
