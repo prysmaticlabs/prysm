@@ -78,6 +78,45 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
+func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
+	db, _ := dbtest.SetupDB(t)
+
+	p1 := p2ptest.NewTestP2P(t)
+	r := &Service{
+		p2p: p1,
+		db:  db,
+		chain: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	err := r.initCaches()
+	require.NoError(t, err)
+
+	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
+	b0Root, err := stateutil.BlockRoot(b0.Block)
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
+
+	r.insertBlockToPendingQueue(b0.Block.Slot, b0)
+	require.Equal(t, int(1), len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was not added to map")
+
+	r.insertBlockToPendingQueue(b1.Block.Slot, b1)
+	require.Equal(t, int(1), len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was not added to map")
+
+	// Add duplicate block which should not be saved.
+	r.insertBlockToPendingQueue(b0.Block.Slot, b0)
+	require.Equal(t, int(1), len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was added to map")
+
+	// Add duplicate block which should not be saved.
+	r.insertBlockToPendingQueue(b1.Block.Slot, b1)
+	require.Equal(t, int(1), len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was added to map")
+
+}
+
 //    /- b1 - b2 - b5
 // b0
 //    \- b3 - b4
