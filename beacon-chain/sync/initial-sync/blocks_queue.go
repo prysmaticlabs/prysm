@@ -94,7 +94,11 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	}
 	highestExpectedSlot := cfg.highestExpectedSlot
 	if highestExpectedSlot <= cfg.startSlot {
-		highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
+		if cfg.mode == modeStopOnFinalizedEpoch {
+			highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
+		} else {
+			highestExpectedSlot = blocksFetcher.bestNonFinalizedSlot()
+		}
 	}
 
 	// Override fetcher's sync mode.
@@ -169,9 +173,16 @@ func (q *blocksQueue) loop() {
 		// Check highest expected slot when we approach chain's head slot.
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
 			// By the time initial sync is complete, highest slot may increase, re-check.
-			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
-				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
-				continue
+			if q.mode == modeStopOnFinalizedEpoch {
+				if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
+					q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
+					continue
+				}
+			} else {
+				if q.highestExpectedSlot < q.blocksFetcher.bestNonFinalizedSlot() {
+					q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
+					continue
+				}
 			}
 			log.WithField("slot", q.highestExpectedSlot).Debug("Highest expected slot reached")
 			q.cancel()
@@ -366,8 +377,14 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		}
 
 		// Check if we have enough peers to progress, or sync needs to halt (due to no peers available).
-		if q.blocksFetcher.bestFinalizedSlot() <= q.headFetcher.HeadSlot() {
-			return stateSkipped, errNoPeersWithFinalizedBlocks
+		if q.mode == modeStopOnFinalizedEpoch {
+			if q.blocksFetcher.bestFinalizedSlot() <= q.headFetcher.HeadSlot() {
+				return stateSkipped, errNoPeersWithFinalizedBlocks
+			}
+		} else {
+			if q.blocksFetcher.bestNonFinalizedSlot() <= q.headFetcher.HeadSlot() {
+				return stateSkipped, errNoPeersWithFinalizedBlocks
+			}
 		}
 
 		// Shift start position of all the machines except for the last one.
@@ -385,8 +402,14 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		if err != nil {
 			return stateSkipped, err
 		}
-		if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
-			q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
+		if q.mode == modeStopOnFinalizedEpoch {
+			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
+			}
+		} else {
+			if q.highestExpectedSlot < q.blocksFetcher.bestNonFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
+			}
 		}
 		if nonSkippedSlot > q.highestExpectedSlot {
 			nonSkippedSlot = startSlot + blocksPerRequest*(lookaheadSteps-1)
