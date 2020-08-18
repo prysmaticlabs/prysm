@@ -89,9 +89,9 @@ func ExitAccounts(cliCtx *cli.Context) error {
 	promptDescription := "Withdrawing funds is not possible in Phase 0 of the system. " +
 		"Please navigate to the following website and make sure you understand the current implications " +
 		"of a voluntary exit before making the final decision:"
-	promptUrl := au.Blue("https://docs.prylabs.network/docs/faq/#can-i-get-back-my-testnet-eth-how-can-i-withdraw-my-validator-gains")
+	promptURL := au.Blue("https://docs.prylabs.network/docs/faq/#can-i-get-back-my-testnet-eth-how-can-i-withdraw-my-validator-gains")
 	promptQuestion := "Do you still want to continue with the voluntary exit? Y/N"
-	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptUrl, promptQuestion)
+	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
 	resp, err := promptutil.ValidatePrompt(promptText, promptutil.ValidateYesOrNo)
 	if err != nil {
 		return err
