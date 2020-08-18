@@ -225,6 +225,6 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(spanTests), len(res), "Unexpected number of elements")
 	for _, tt := range spanTests {
-		assert.DeepEqual(t, tt.spanMap, res[tt.epoch], "Unexpected snap map")
+		assert.DeepEqual(t, tt.spanMap, res[tt.epoch], "Unexpected span map")
 	}
 }
