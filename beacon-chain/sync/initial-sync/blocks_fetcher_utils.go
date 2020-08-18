@@ -23,8 +23,15 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	ctx, span := trace.StartSpan(ctx, "initialsync.nonSkippedSlotAfter")
 	defer span.End()
 
-	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	targetEpoch, peers := f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+	var targetEpoch, headEpoch uint64
+	var peers []peer.ID
+	if f.mode == modeStopOnFinalizedEpoch {
+		headEpoch = f.finalizationFetcher.FinalizedCheckpt().Epoch
+		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	} else {
+		headEpoch = helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+	}
 	log.WithFields(logrus.Fields{
 		"start":       slot,
 		"headEpoch":   headEpoch,
