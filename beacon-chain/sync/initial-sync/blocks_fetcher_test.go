@@ -39,8 +39,9 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 	fetcher := newBlocksFetcher(
 		ctx,
 		&blocksFetcherConfig{
-			headFetcher: mc,
-			p2p:         p2p,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			p2p:                 p2p,
 		},
 	)
 
@@ -63,8 +64,9 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 		fetcher := newBlocksFetcher(
 			context.Background(),
 			&blocksFetcherConfig{
-				headFetcher: mc,
-				p2p:         p2p,
+				headFetcher:         mc,
+				finalizationFetcher: mc,
+				p2p:                 p2p,
 			})
 		require.NoError(t, fetcher.start())
 		fetcher.stop()
@@ -76,8 +78,9 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 		fetcher := newBlocksFetcher(
 			ctx,
 			&blocksFetcherConfig{
-				headFetcher: mc,
-				p2p:         p2p,
+				headFetcher:         mc,
+				finalizationFetcher: mc,
+				p2p:                 p2p,
 			})
 		require.NoError(t, fetcher.start())
 		cancel()
@@ -263,10 +266,17 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				State: st,
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
+				FinalizedCheckPoint: &eth.Checkpoint{
+					Epoch: 0,
+				},
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
-			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{headFetcher: mc, p2p: p})
+			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+				headFetcher:         mc,
+				finalizationFetcher: mc,
+				p2p:                 p,
+			})
 			require.NoError(t, fetcher.start())
 
 			var wg sync.WaitGroup
@@ -384,8 +394,9 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher: mc,
-			p2p:         p2p,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			p2p:                 p2p,
 		})
 
 		cancel()
@@ -397,8 +408,9 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher: mc,
-			p2p:         p2p,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			p2p:                 p2p,
 		})
 
 		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -467,8 +479,9 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 	fetcher := newBlocksFetcher(
 		ctx,
 		&blocksFetcherConfig{
-			headFetcher: mc,
-			p2p:         p2p,
+			finalizationFetcher: mc,
+			headFetcher:         mc,
+			p2p:                 p2p,
 		})
 
 	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
@@ -608,8 +621,9 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	fetcher := newBlocksFetcher(
 		ctx,
 		&blocksFetcherConfig{
-			headFetcher: mc,
-			p2p:         p2p,
+			finalizationFetcher: mc,
+			headFetcher:         mc,
+			p2p:                 p2p,
 		},
 	)
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
@@ -870,6 +884,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 			fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
+				finalizationFetcher:      mc,
 				headFetcher:              mc,
 				p2p:                      p2p,
 				peerFilterCapacityWeight: tt.args.capacityWeight,

@@ -8,6 +8,7 @@ import (
 	rt "github.com/cloudflare/roughtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,16 +86,18 @@ func recalibrateRoughtime() {
 		log.WithField("offset", newOffset).Warn("Roughtime reports your clock is off by more than 2 seconds")
 	}
 
-	chain := rt.NewChain(results)
-	ok, err := chain.Verify(nil)
-	if err != nil || !ok {
-		log.WithError(err).WithField("offset", newOffset).Error("Could not verify roughtime responses, not accepting roughtime offset")
-		offsetsRejected.Inc()
-		return
-	}
+	if featureconfig.Get().EnableRoughtime {
+		chain := rt.NewChain(results)
+		ok, err := chain.Verify(nil)
+		if err != nil || !ok {
+			log.WithError(err).WithField("offset", newOffset).Error("Could not verify roughtime responses, not accepting roughtime offset")
+			offsetsRejected.Inc()
+			return
+		}
 
-	log.Debugf("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
-	offset = newOffset
+		log.Debugf("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
+		offset = newOffset
+	}
 }
 
 // Since returns the duration since t, based on the roughtime response
@@ -109,5 +112,8 @@ func Until(t time.Time) time.Duration {
 
 // Now returns the current local time given the roughtime offset.
 func Now() time.Time {
-	return time.Now().Add(offset)
+	if featureconfig.Get().EnableRoughtime {
+		return time.Now().Add(offset)
+	}
+	return time.Now()
 }

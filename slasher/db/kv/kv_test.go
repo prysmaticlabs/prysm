@@ -3,61 +3,51 @@ package kv
 import (
 	"crypto/rand"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
+func TestMain(m *testing.M) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+
+	os.Exit(m.Run())
+}
+
 func setupDB(t testing.TB, ctx *cli.Context) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		t.Fatalf("Could not generate random file path: %v", err)
-	}
+	require.NoError(t, err, "Could not generate random file path")
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	if err := os.RemoveAll(p); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
+	require.NoError(t, os.RemoveAll(p), "Failed to remove directory")
 	cfg := &Config{}
 	db, err := NewKVStore(p, cfg)
-	if err != nil {
-		t.Fatalf("Failed to instantiate DB: %v", err)
-	}
+	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed to close database: %v", err)
-		}
-		if err := os.RemoveAll(db.DatabasePath()); err != nil {
-			t.Fatalf("Failed to remove directory: %v", err)
-		}
+		require.NoError(t, db.Close(), "Failed to close database")
+		require.NoError(t, os.RemoveAll(db.DatabasePath()), "Failed to remove directory")
 	})
 	return db
 }
 
 func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		t.Fatalf("Could not generate random file path: %v", err)
-	}
+	require.NoError(t, err, "Could not generate random file path")
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	if err := os.RemoveAll(p); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
+	require.NoError(t, os.RemoveAll(p), "Failed to remove directory")
 	cfg := &Config{SpanCacheSize: cacheSize}
 	db, err := NewKVStore(p, cfg)
-	if err != nil {
-		t.Fatalf("Failed to instantiate DB: %v", err)
-	}
+	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed to close database: %v", err)
-		}
-		if err := os.RemoveAll(db.DatabasePath()); err != nil {
-			t.Fatalf("Failed to remove directory: %v", err)
-		}
+		require.NoError(t, db.Close(), "Failed to close database")
+		require.NoError(t, os.RemoveAll(db.DatabasePath()), "Failed to remove directory")
 	})
 	return db
 }

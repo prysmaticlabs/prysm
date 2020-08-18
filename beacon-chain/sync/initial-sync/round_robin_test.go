@@ -27,15 +27,17 @@ func TestConstants(t *testing.T) {
 
 func TestService_roundRobinSync(t *testing.T) {
 	tests := []struct {
-		name               string
-		currentSlot        uint64
-		expectedBlockSlots []uint64
-		peers              []*peerData
+		name                string
+		currentSlot         uint64
+		availableBlockSlots []uint64
+		expectedBlockSlots  []uint64
+		peers               []*peerData
 	}{
 		{
-			name:               "Single peer with no finalized blocks",
-			currentSlot:        2,
-			expectedBlockSlots: makeSequence(1, 2),
+			name:                "Single peer with no finalized blocks",
+			currentSlot:         2,
+			availableBlockSlots: makeSequence(1, 32),
+			expectedBlockSlots:  makeSequence(1, 2),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 2),
@@ -45,9 +47,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with no finalized blocks",
-			currentSlot:        2,
-			expectedBlockSlots: makeSequence(1, 2),
+			name:                "Multiple peers with no finalized blocks",
+			currentSlot:         2,
+			availableBlockSlots: makeSequence(1, 32),
+			expectedBlockSlots:  makeSequence(1, 2),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 2),
@@ -67,101 +70,106 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Single peer with all blocks",
-			currentSlot:        131,
-			expectedBlockSlots: makeSequence(1, 131),
+			name:                "Single peer with all blocks",
+			currentSlot:         131,
+			availableBlockSlots: makeSequence(1, 192),
+			expectedBlockSlots:  makeSequence(1, 131),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 			},
 		},
 		{
-			name:               "Multiple peers with all blocks",
-			currentSlot:        131,
-			expectedBlockSlots: makeSequence(1, 131),
+			name:                "Multiple peers with all blocks",
+			currentSlot:         131,
+			availableBlockSlots: makeSequence(1, 192),
+			expectedBlockSlots:  makeSequence(1, 131),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 				{
-					blocks:         makeSequence(1, 131),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 1,
 					headSlot:       131,
 				},
 			},
 		},
 		{
-			name:               "Multiple peers with failures",
-			currentSlot:        320, // 10 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			name:                "Multiple peers with failures",
+			currentSlot:         320, // 10 epochs
+			availableBlockSlots: makeSequence(1, 384),
+			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 					failureSlots:   makeSequence(1, 32), // first epoch
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 8,
 					headSlot:       320,
 				},
 			},
 		},
 		{
-			name:               "Multiple peers with many skipped slots",
-			currentSlot:        1280,
-			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+			name:                "Multiple peers with many skipped slots",
+			currentSlot:         1280,
+			availableBlockSlots: append(makeSequence(1, 64), makeSequence(1000, 1300)...),
+			expectedBlockSlots:  append(makeSequence(1, 64), makeSequence(1000, 1280)...),
 			peers: []*peerData{
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1300)...),
 					finalizedEpoch: 36,
 					headSlot:       1280,
 				},
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1300)...),
 					finalizedEpoch: 36,
 					headSlot:       1280,
 				},
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1300)...),
 					finalizedEpoch: 36,
 					headSlot:       1280,
 				},
 			},
 		},
 		{
-			name:               "Multiple peers with multiple failures",
-			currentSlot:        320, // 10 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			name:                "Multiple peers with multiple failures",
+			currentSlot:         320, // 10 epochs
+			availableBlockSlots: makeSequence(1, 384),
+			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 9,
 					headSlot:       320,
 				},
@@ -186,23 +194,24 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with different finalized epoch",
-			currentSlot:        320, // 10 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			name:                "Multiple peers with different finalized epoch",
+			currentSlot:         320, // 10 epochs
+			availableBlockSlots: makeSequence(1, 384),
+			expectedBlockSlots:  makeSequence(1, 320),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
-					finalizedEpoch: 4,
+					blocks:         makeSequence(1, 384),
+					finalizedEpoch: 10,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 384),
+					finalizedEpoch: 10,
 					headSlot:       320,
 				},
 				{
 					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
-					headSlot:       256,
-				},
-				{
-					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
+					finalizedEpoch: 5,
 					headSlot:       256,
 				},
 				{
@@ -213,12 +222,13 @@ func TestService_roundRobinSync(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with missing parent blocks",
-			currentSlot:        160, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 160),
+			name:                "Multiple peers with missing parent blocks",
+			currentSlot:         160, // 5 epochs
+			availableBlockSlots: makeSequence(1, 192),
+			expectedBlockSlots:  makeSequence(1, 160),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
@@ -229,32 +239,32 @@ func TestService_roundRobinSync(t *testing.T) {
 					forkedPeer:     true,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 160),
+					blocks:         makeSequence(1, 192),
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
@@ -264,7 +274,10 @@ func TestService_roundRobinSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cache.initializeRootCache(tt.expectedBlockSlots, t)
+			if tt.availableBlockSlots == nil {
+				tt.availableBlockSlots = tt.expectedBlockSlots
+			}
+			cache.initializeRootCache(tt.availableBlockSlots, t)
 
 			p := p2pt.NewTestP2P(t)
 			beaconDB, _ := dbtest.SetupDB(t)
@@ -283,6 +296,9 @@ func TestService_roundRobinSync(t *testing.T) {
 				State: st,
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
+				FinalizedCheckPoint: &eth.Checkpoint{
+					Epoch: 0,
+				},
 			} // no-op mock
 			s := &Service{
 				chain:        mc,
@@ -292,10 +308,10 @@ func TestService_roundRobinSync(t *testing.T) {
 				chainStarted: true,
 			}
 			assert.NoError(t, s.roundRobinSync(makeGenesisTime(tt.currentSlot)))
-			if s.chain.HeadSlot() != tt.currentSlot {
-				t.Errorf("Head slot (%d) is not currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
+			if s.chain.HeadSlot() < tt.currentSlot {
+				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
 			}
-			assert.Equal(t, len(tt.expectedBlockSlots), len(mc.BlocksReceived), "Processes wrong number of blocks")
+			assert.Equal(t, true, len(tt.expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
 			var receivedBlockSlots []uint64
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
@@ -326,6 +342,9 @@ func TestService_processBlock(t *testing.T) {
 			State: st,
 			Root:  genesisBlkRoot[:],
 			DB:    beaconDB,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
 		},
 	})
 	ctx := context.Background()
@@ -360,8 +379,7 @@ func TestService_processBlock(t *testing.T) {
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
-		expectedErr := fmt.Errorf("slot %d already processed", blk1.Block.Slot)
-		assert.ErrorContains(t, expectedErr.Error(), err)
+		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBlock(ctx, genesis, blk2, func(
@@ -392,6 +410,9 @@ func TestService_processBlockBatch(t *testing.T) {
 			State: st,
 			Root:  genesisBlkRoot[:],
 			DB:    beaconDB,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
 		},
 	})
 	ctx := context.Background()
@@ -478,7 +499,7 @@ func TestService_processBlockBatch(t *testing.T) {
 }
 
 func TestService_blockProviderScoring(t *testing.T) {
-	cache.initializeRootCache(makeSequence(1, 320), t)
+	cache.initializeRootCache(makeSequence(1, 640), t)
 
 	p := p2pt.NewTestP2P(t)
 	beaconDB, _ := dbtest.SetupDB(t)
@@ -498,7 +519,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 		},
 		{
 			// This peer has all blocks - should be a preferred one.
-			blocks:         makeSequence(1, 160),
+			blocks:         makeSequence(1, 320),
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
@@ -521,6 +542,9 @@ func TestService_blockProviderScoring(t *testing.T) {
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: 0,
+		},
 	} // no-op mock
 	s := &Service{
 		chain:        mc,
@@ -538,10 +562,10 @@ func TestService_blockProviderScoring(t *testing.T) {
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer3))
 
 	assert.NoError(t, s.roundRobinSync(makeGenesisTime(currentSlot)))
-	if s.chain.HeadSlot() != currentSlot {
-		t.Errorf("Head slot (%d) is not currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
+	if s.chain.HeadSlot() < currentSlot {
+		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
 	}
-	assert.Equal(t, len(expectedBlockSlots), len(mc.BlocksReceived), "Processes wrong number of blocks")
+	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
 	var receivedBlockSlots []uint64
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
@@ -551,10 +575,14 @@ func TestService_blockProviderScoring(t *testing.T) {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}
 
+	// Increment all peers' stats, so that nobody is boosted (as new, not yet used peer).
+	scorer.IncrementProcessedBlocks(peer1, 1)
+	scorer.IncrementProcessedBlocks(peer2, 1)
+	scorer.IncrementProcessedBlocks(peer3, 1)
 	score1 := scorer.Score(peer1)
 	score2 := scorer.Score(peer2)
 	score3 := scorer.Score(peer3)
 	assert.Equal(t, true, score1 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score1, peer1, score3)
 	assert.Equal(t, true, score2 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score2, peer2, score3)
-	assert.Equal(t, true, scorer.ProcessedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer")
+	assert.Equal(t, true, scorer.ProcessedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer: %d", scorer.ProcessedBlocks(peer3))
 }
