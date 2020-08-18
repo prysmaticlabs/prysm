@@ -57,7 +57,7 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	validatorIdx := uint64(1)
 	vsm, _, err := db.EpochSpansMap(ctx, validatorIdx)
 	require.NoError(t, err, "Nil EpochSpansMap should not return error")
-	require.DeepEqual(t, map[uint64]types.Span{}, vsm, "EpochSpansMap should return nil")
+	require.DeepEqual(t, map[uint64]types.Span{}, vsm, "EpochSpansMap should return empty map")
 }
 
 func TestStore_SaveSpans(t *testing.T) {
