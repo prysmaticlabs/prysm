@@ -5,8 +5,9 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -42,15 +43,10 @@ func TestChainHead(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if err := db.SaveChainHead(ctx, tt.head); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveChainHead(ctx, tt.head))
 		head, err := db.ChainHead(ctx)
-		if err != nil {
-			t.Fatalf("failed to get block: %v", err)
-		}
-		if head == nil || !proto.Equal(head, tt.head) {
-			t.Errorf("Expected %v, got %v", tt.head, head)
-		}
+		require.NoError(t, err, "Failed to get block")
+		assert.NotNil(t, head)
+		assert.DeepEqual(t, tt.head, head)
 	}
 }
