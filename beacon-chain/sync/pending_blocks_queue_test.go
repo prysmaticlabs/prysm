@@ -58,24 +58,22 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add b2 to the cache
-	r.insertBlockToPendingQueue(b2.Block.Slot, b2)
-	r.seenPendingBlocks[b2Root] = true
+	r.insertBlockToPendingQueue(b2.Block.Slot, b2, b2Root)
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 1, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b1 to the cache
-	r.insertBlockToPendingQueue(b1.Block.Slot, b1)
-	r.seenPendingBlocks[b1Root] = true
+	r.insertBlockToPendingQueue(b1.Block.Slot, b1, b1Root)
 	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
 
 	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
-	r.insertBlockToPendingQueue(b1.Block.Slot, &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}})
+	r.insertBlockToPendingQueue(b1.Block.Slot, &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}, [32]byte{})
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
-	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
+	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
 func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
@@ -97,22 +95,24 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 	require.NoError(t, err)
 
 	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b0r := [32]byte{'a'}
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
+	b1r := [32]byte{'b'}
 
-	r.insertBlockToPendingQueue(b0.Block.Slot, b0)
+	r.insertBlockToPendingQueue(b0.Block.Slot, b0, b0r)
 	require.Equal(t, int(1), len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was not added to map")
 
-	r.insertBlockToPendingQueue(b1.Block.Slot, b1)
+	r.insertBlockToPendingQueue(b1.Block.Slot, b1, b1r)
 	require.Equal(t, int(1), len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was not added to map")
 
 	// Add duplicate block which should not be saved.
-	r.insertBlockToPendingQueue(b0.Block.Slot, b0)
+	r.insertBlockToPendingQueue(b0.Block.Slot, b0, b0r)
 	require.Equal(t, int(1), len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was added to map")
 
 	// Add duplicate block which should not be saved.
-	r.insertBlockToPendingQueue(b1.Block.Slot, b1)
+	r.insertBlockToPendingQueue(b1.Block.Slot, b1, b1r)
 	require.Equal(t, int(1), len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was added to map")
 
 }
@@ -183,31 +183,27 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	b4Root, err := ssz.HashTreeRoot(b4)
 	require.NoError(t, err)
 
-	r.insertBlockToPendingQueue(b4.Slot, &ethpb.SignedBeaconBlock{Block: b4})
-	r.seenPendingBlocks[b4Root] = true
-	r.insertBlockToPendingQueue(b5.Slot, &ethpb.SignedBeaconBlock{Block: b5})
-	r.seenPendingBlocks[b5Root] = true
+	r.insertBlockToPendingQueue(b4.Slot, &ethpb.SignedBeaconBlock{Block: b4}, b4Root)
+	r.insertBlockToPendingQueue(b5.Slot, &ethpb.SignedBeaconBlock{Block: b5}, b5Root)
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 2, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b3 to the cache
-	r.insertBlockToPendingQueue(b3.Slot, &ethpb.SignedBeaconBlock{Block: b3})
-	r.seenPendingBlocks[b3Root] = true
+	r.insertBlockToPendingQueue(b3.Slot, &ethpb.SignedBeaconBlock{Block: b3}, b3Root)
 	require.NoError(t, r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b3}))
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
-	assert.Equal(t, 1, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
+	assert.Equal(t, 3, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b2 to the cache
-	r.insertBlockToPendingQueue(b2.Slot, &ethpb.SignedBeaconBlock{Block: b2})
-	r.seenPendingBlocks[b2Root] = true
+	r.insertBlockToPendingQueue(b2.Slot, &ethpb.SignedBeaconBlock{Block: b2}, b2Root)
 
 	require.NoError(t, r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b2}))
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 0, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
-	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
+	assert.Equal(t, 4, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
 func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
@@ -257,30 +253,27 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	b4Root, err := ssz.HashTreeRoot(b4)
 	require.NoError(t, err)
 
-	r.insertBlockToPendingQueue(b2.Slot, &ethpb.SignedBeaconBlock{Block: b2})
-	r.seenPendingBlocks[b2Root] = true
-	r.insertBlockToPendingQueue(b3.Slot, &ethpb.SignedBeaconBlock{Block: b3})
-	r.seenPendingBlocks[b3Root] = true
-	r.insertBlockToPendingQueue(b4.Slot, &ethpb.SignedBeaconBlock{Block: b4})
-	r.seenPendingBlocks[b4Root] = true
-	r.insertBlockToPendingQueue(b5.Slot, &ethpb.SignedBeaconBlock{Block: b5})
-	r.seenPendingBlocks[b5Root] = true
+	r.insertBlockToPendingQueue(b2.Slot, &ethpb.SignedBeaconBlock{Block: b2}, b2Root)
+	r.insertBlockToPendingQueue(b3.Slot, &ethpb.SignedBeaconBlock{Block: b3}, b3Root)
+	r.insertBlockToPendingQueue(b4.Slot, &ethpb.SignedBeaconBlock{Block: b4}, b4Root)
+	r.insertBlockToPendingQueue(b5.Slot, &ethpb.SignedBeaconBlock{Block: b5}, b5Root)
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 0, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
-	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
+	assert.Equal(t, 4, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
 func TestService_sortedPendingSlots(t *testing.T) {
 	r := &Service{
 		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
 	var lastSlot uint64 = math.MaxUint64
-	r.insertBlockToPendingQueue(lastSlot, &ethpb.SignedBeaconBlock{})
-	r.insertBlockToPendingQueue(lastSlot-3, &ethpb.SignedBeaconBlock{})
-	r.insertBlockToPendingQueue(lastSlot-5, &ethpb.SignedBeaconBlock{})
-	r.insertBlockToPendingQueue(lastSlot-2, &ethpb.SignedBeaconBlock{})
+	r.insertBlockToPendingQueue(lastSlot, &ethpb.SignedBeaconBlock{}, [32]byte{1})
+	r.insertBlockToPendingQueue(lastSlot-3, &ethpb.SignedBeaconBlock{}, [32]byte{2})
+	r.insertBlockToPendingQueue(lastSlot-5, &ethpb.SignedBeaconBlock{}, [32]byte{3})
+	r.insertBlockToPendingQueue(lastSlot-2, &ethpb.SignedBeaconBlock{}, [32]byte{4})
 
 	want := []uint64{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
 	assert.DeepEqual(t, want, r.sortedPendingSlots(), "Unexpected pending slots list")
