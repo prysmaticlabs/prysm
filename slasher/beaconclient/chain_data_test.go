@@ -1,15 +1,14 @@
 package beaconclient
 
 import (
-	"bytes"
 	"context"
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -29,12 +28,8 @@ func TestService_ChainHead(t *testing.T) {
 	}
 	client.EXPECT().GetChainHead(gomock.Any(), gomock.Any()).Return(wanted, nil)
 	res, err := bs.ChainHead(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(res, wanted) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, wanted, res)
 }
 
 func TestService_GenesisValidatorsRoot(t *testing.T) {
@@ -50,20 +45,12 @@ func TestService_GenesisValidatorsRoot(t *testing.T) {
 	}
 	client.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wanted, nil)
 	res, err := bs.GenesisValidatorsRoot(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(res, wanted.GenesisValidatorsRoot) {
-		t.Errorf("Wanted %#x, received %#x", wanted.GenesisValidatorsRoot, res)
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, wanted.GenesisValidatorsRoot, res, "Wanted %#x, received %#x", wanted.GenesisValidatorsRoot, res)
 	// test next fetch uses memory and not the rpc call.
 	res, err = bs.GenesisValidatorsRoot(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(res, wanted.GenesisValidatorsRoot) {
-		t.Errorf("Wanted %#x, received %#x", wanted.GenesisValidatorsRoot, res)
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, wanted.GenesisValidatorsRoot, res, "Wanted %#x, received %#x", wanted.GenesisValidatorsRoot, res)
 }
 
 func TestService_QuerySyncStatus(t *testing.T) {
