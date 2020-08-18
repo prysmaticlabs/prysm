@@ -116,5 +116,25 @@ this command outputs a deposit data string which is required to become a validat
 				return nil
 			},
 		},
+		{
+			Name:        "voluntary-exit",
+			Description: "Performs a voluntary exit on selected accounts",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				flags.VoluntaryExitPublicKeysFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				// if err := ExitAccounts(cliCtx); err != nil {
+				if err := ExitAccountsUnimplemented(cliCtx); err != nil {
+					log.Fatalf("Could not perform voluntary exit: %v", err)
+				}
+				return nil
+			},
+		},
 	},
 }

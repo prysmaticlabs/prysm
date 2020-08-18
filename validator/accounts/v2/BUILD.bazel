@@ -7,6 +7,7 @@ go_library(
         "accounts_backup.go",
         "accounts_create.go",
         "accounts_delete.go",
+        "accounts_exit.go",
         "accounts_import.go",
         "accounts_list.go",
         "cmd_accounts.go",
@@ -46,6 +47,8 @@ go_library(
         "@com_github_tyler_smith_go_bip39//wordlists:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
 
