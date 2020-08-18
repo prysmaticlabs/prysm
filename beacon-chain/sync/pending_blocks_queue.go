@@ -139,7 +139,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				continue
 			}
-
 			if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
@@ -253,7 +252,13 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock) {
 	_, ok := s.slotToPendingBlocks[slot]
 	if ok {
-		s.slotToPendingBlocks[slot] = append(s.slotToPendingBlocks[slot], b)
+		blks := s.slotToPendingBlocks[slot]
+		for _, blk := range blks {
+			if proto.Equal(blk, b) {
+				return
+			}
+		}
+		s.slotToPendingBlocks[slot] = append(blks, b)
 		return
 	}
 	s.slotToPendingBlocks[slot] = []*ethpb.SignedBeaconBlock{b}
