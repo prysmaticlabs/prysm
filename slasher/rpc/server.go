@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -37,6 +39,10 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
 
+	log.WithFields(logrus.Fields{
+		"slot":    req.Data.Slot,
+		"indices": req.AttestingIndices,
+	}).Debug("Server attestation detection")
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}
@@ -116,6 +122,10 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableBlock")
 	defer span.End()
 
+	log.WithFields(logrus.Fields{
+		"slot":           req.Header.Slot,
+		"proposer_index": req.Header.ProposerIndex,
+	}).Info("Server block for detection")
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}
