@@ -157,10 +157,10 @@ var (
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
 		Value: filepath.Join(DefaultValidatorDir(), WalletDefaultDirName),
 	}
-	// AccountPasswordFileFlag is path to a file containing a password for a new validator account.
+	// AccountPasswordFileFlag is path to a file containing a password for a validator account.
 	AccountPasswordFileFlag = &cli.StringFlag{
 		Name:  "account-password-file",
-		Usage: "Path to a plain-text, .txt file containing a password for a new validator account",
+		Usage: "Path to a plain-text, .txt file containing a password for a validator account",
 	}
 	// WalletPasswordFileFlag is the path to a file containing your wallet password.
 	WalletPasswordFileFlag = &cli.StringFlag{

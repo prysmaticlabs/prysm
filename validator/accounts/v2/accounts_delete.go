@@ -36,7 +36,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	if len(validatingPublicKeys) == 0 {
 		return errors.New("wallet is empty, no accounts to delete")
 	}
-	// Allow the user to interactively select the accounts to backup or optionally
+	// Allow the user to interactively select the accounts to delete or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings.
 	filteredPubKeys, err := filterPublicKeysFromUserInput(
 		cliCtx,
