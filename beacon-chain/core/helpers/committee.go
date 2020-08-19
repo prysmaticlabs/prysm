@@ -143,6 +143,26 @@ func ComputeCommittee(
 	// for fast computation of committees.
 	// Reference implementation: https://github.com/protolambda/eth2-shuffle
 	shuffledList, err := UnshuffleList(shuffledIndices, seed)
+	if err != nil {
+		return nil, err
+	}
+
+	sortedIndices := make([]uint64, len(indices))
+	copy(sortedIndices, indices)
+	sort.Slice(sortedIndices, func(i, j int) bool {
+		return sortedIndices[i] < sortedIndices[j]
+	})
+
+	count = SlotCommitteeCount(uint64(len(shuffledIndices)))
+	if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
+		ShuffledIndices: shuffledList,
+		CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
+		Seed:            seed,
+		SortedIndices:   sortedIndices,
+	}); err != nil {
+		return nil, err
+	}
+
 	return shuffledList[start:end], err
 }
 
