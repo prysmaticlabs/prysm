@@ -52,8 +52,10 @@ func TestExitAccounts_Ok(t *testing.T) {
 
 	require.NoError(t, ImportAccounts(cliCtx))
 
+	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
 	stdin.Write([]byte("Y\n"))
+
 	require.NoError(t, ExitAccounts(cliCtx, &stdin))
 }
 
