@@ -38,6 +38,18 @@ var (
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
+	// RPCHost defines the host on which the RPC server should listen.
+	RPCHost = &cli.StringFlag{
+		Name:  "rpc-host",
+		Usage: "Host on which the RPC server should listen",
+		Value: "127.0.0.1",
+	}
+	// RPCPort defines a validator client RPC port to open.
+	RPCPort = &cli.IntFlag{
+		Name:  "rpc-port",
+		Usage: "RPC port exposed by a validator client",
+		Value: 7000,
+	}
 	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
 	SlasherRPCProviderFlag = &cli.StringFlag{
 		Name:  "slasher-rpc-provider",
@@ -76,6 +88,18 @@ var (
 		Name: "grpc-headers",
 		Usage: "A comma separated list of key value pairs to pass as gRPC headers for all gRPC " +
 			"calls. Example: --grpc-headers=key=value",
+	}
+	// GRPCGatewayHost specifies a gRPC gateway host for the validator client.
+	GRPCGatewayHost = &cli.StringFlag{
+		Name:  "grpc-gateway-host",
+		Usage: "The host on which the gateway server runs on",
+		Value: "127.0.0.1",
+	}
+	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.
+	GRPCGatewayPort = &cli.IntFlag{
+		Name:  "grpc-gateway-port",
+		Usage: "Enable gRPC gateway for JSON requests",
+		Value: 7500,
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
@@ -143,6 +167,11 @@ var (
 		Name:  "wallet-password-file",
 		Usage: "Path to a plain-text, .txt file containing your wallet password",
 	}
+	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
+	ImportPrivateKeyFileFlag = &cli.StringFlag{
+		Name:  "import-private-key-file",
+		Usage: "Path to a plain-text, .txt file containing a hex string representation of a private key to import",
+	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{
 		Name:  "mnemonic-file",
@@ -159,21 +188,36 @@ var (
 		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
 		Value: false,
 	}
-	// AccountsFlag for non-interactive usage of accounts exporting, sets a list of account names or all to be exported.
-	AccountsFlag = &cli.StringSliceFlag{
-		Name:  "accounts",
-		Usage: "List of account names to export, or \"all\" to backup all accounts",
-	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
 	NumAccountsFlag = &cli.Int64Flag{
 		Name:  "num-accounts",
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,
 	}
+	// DeletePublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to delete from their wallet.
+	DeletePublicKeysFlag = &cli.StringFlag{
+		Name:  "delete-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to delete",
+		Value: "",
+	}
+	// BackupPublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to backup from their wallet.
+	BackupPublicKeysFlag = &cli.StringFlag{
+		Name:  "backup-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
+		Value: "",
+	}
+	// BackupPasswordFile for encrypting accounts a user wishes to back up.
+	BackupPasswordFile = &cli.StringFlag{
+		Name:  "backup-password-file",
+		Usage: "Path to a plain-text, .txt file containing the desired password for your backed up accounts",
+		Value: "",
+	}
 	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
 	BackupDirFlag = &cli.StringFlag{
 		Name:  "backup-dir",
-		Usage: "Path to a directory where accounts will be exported into a zip file",
+		Usage: "Path to a directory where accounts will be backed up into a zip file",
 		Value: DefaultValidatorDir(),
 	}
 	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.

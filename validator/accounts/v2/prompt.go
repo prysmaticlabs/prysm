@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	importKeysDirPromptText = "Enter the directory or filepath where your keystores to import are located"
-	walletDirPromptText     = "Enter a wallet directory"
+	importKeysDirPromptText        = "Enter the directory or filepath where your keystores to import are located"
+	walletDirPromptText            = "Enter a wallet directory"
+	selectAccountsDeletePromptText = "Select the account(s) you would like to delete"
+	selectAccountsBackupPromptText = "Select the account(s) you wish to backup"
 )
 
 var au = aurora.NewAurora(true)

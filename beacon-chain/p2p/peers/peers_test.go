@@ -16,7 +16,9 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		EnablePeerScorer: true,
+	})
 	defer resetCfg()
 
 	resetFlags := flags.Get()

@@ -3,22 +3,30 @@ package node
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
+
+func TestMain(m *testing.M) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+
+	os.Exit(m.Run())
+}
 
 // Test that slasher node can close.
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	tmp := fmt.Sprintf("%s/datadirtest2", testutil.TempDir())
-	if err := os.RemoveAll(tmp); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.RemoveAll(tmp))
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -28,15 +36,10 @@ func TestNodeClose_OK(t *testing.T) {
 	context := cli.NewContext(&app, set, nil)
 
 	node, err := NewSlasherNode(context)
-	if err != nil {
-		t.Fatalf("Failed to create SlasherNode: %v", err)
-	}
+	require.NoError(t, err, "Failed to create slasher node")
 
 	node.Close()
 
-	testutil.AssertLogsContain(t, hook, "Stopping hash slinging slasher")
-
-	if err := os.RemoveAll(tmp); err != nil {
-		t.Fatal(err)
-	}
+	require.LogsContain(t, hook, "Stopping hash slinging slasher")
+	require.NoError(t, os.RemoveAll(tmp))
 }

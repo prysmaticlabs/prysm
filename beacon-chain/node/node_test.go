@@ -9,6 +9,7 @@ import (
 
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -42,7 +43,7 @@ func TestNodeClose_OK(t *testing.T) {
 
 	node.Close()
 
-	testutil.AssertLogsContain(t, hook, "Stopping beacon node")
+	require.LogsContain(t, hook, "Stopping beacon node")
 
 	if err := os.RemoveAll(tmp); err != nil {
 		t.Log(err)

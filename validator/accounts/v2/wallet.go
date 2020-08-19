@@ -371,7 +371,7 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 	return 0, errors.New("no keymanager folder, 'direct', 'remote', nor 'derived' found in wallet path")
 }
 
-func createOrOpenWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
+func openOrCreateWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
 	directory := cliCtx.String(flags.WalletDirFlag.Name)
 	ok, err := fileutil.HasDir(directory)
 	if err != nil {

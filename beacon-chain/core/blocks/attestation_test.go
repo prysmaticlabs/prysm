@@ -603,6 +603,48 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	assert.ErrorContains(t, want, err)
 }
 
+func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
+	beaconState, keys := testutil.DeterministicGenesisState(t, 1000)
+
+	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
+	list := bitfield.Bitlist{0b11111111}
+	atts := []*ethpb.Attestation{}
+	for i := uint64(0); i < 1000; i++ {
+		atts = append(atts, &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				CommitteeIndex: 1,
+				Slot:           1,
+			},
+			Signature:       sig.Marshal(),
+			AggregationBits: list,
+		})
+	}
+
+	want := "nil or missing indexed attestation data"
+	_, err := blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	assert.ErrorContains(t, want, err)
+
+	atts = []*ethpb.Attestation{}
+	list = bitfield.Bitlist{0b00000000}
+	for i := uint64(0); i < 1000; i++ {
+		atts = append(atts, &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				CommitteeIndex: 1,
+				Slot:           1,
+				Target: &ethpb.Checkpoint{
+					Root: []byte{},
+				},
+			},
+			Signature:       sig.Marshal(),
+			AggregationBits: list,
+		})
+	}
+
+	want = "expected non-empty attesting indices"
+	_, err = blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	assert.ErrorContains(t, want, err)
+}
+
 func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	ctx := context.Background()
 	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
@@ -634,6 +676,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 0,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -655,6 +698,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 1,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -702,6 +746,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 0,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -723,6 +768,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:           1*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex: 1,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -770,6 +816,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 0,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}
@@ -791,6 +838,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 		Data: &ethpb.AttestationData{
 			Slot:           1,
 			CommitteeIndex: 1,
+			Target:         new(ethpb.Checkpoint),
 		},
 		Signature: nil,
 	}

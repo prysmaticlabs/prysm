@@ -3,13 +3,13 @@ package direct
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
@@ -59,8 +59,59 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 	pubKey := privKey.PublicKey().Marshal()
 	assert.DeepEqual(t, pubKey, store.PublicKeys[0])
-	testutil.AssertLogsContain(t, hook, accountName)
-	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
+	require.LogsContain(t, hook, accountName)
+	require.LogsContain(t, hook, "Successfully created new validator account")
+}
+
+func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
+	hook := logTest.NewGlobal()
+	password := "secretPassw0rd$1999"
+	wallet := &mock.Wallet{
+		Files: make(map[string]map[string][]byte),
+	}
+	dr := &Keymanager{
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
+	}
+	numAccounts := 5
+	ctx := context.Background()
+	for i := 0; i < numAccounts; i++ {
+		_, err := dr.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+	accounts, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, numAccounts, len(accounts))
+
+	accountToRemove := uint64(2)
+	accountPubKey := accounts[accountToRemove]
+	// Remove an account from the keystore.
+	require.NoError(t, dr.DeleteAccounts(ctx, [][]byte{accountPubKey[:]}))
+	// Ensure the keystore file was written to the wallet
+	// and ensure we can decrypt it using the EIP-2335 standard.
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	require.NotNil(t, encodedKeystore, "could not find keystore file")
+	keystoreFile := &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+
+	// We extract the accounts from the keystore.
+	decryptor := keystorev4.New()
+	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+	require.NoError(t, err, "Could not decrypt validator accounts")
+	store := &AccountStore{}
+	require.NoError(t, json.Unmarshal(encodedAccounts, store))
+
+	require.Equal(t, numAccounts-1, len(store.PublicKeys))
+	require.Equal(t, numAccounts-1, len(store.PrivateKeys))
+	require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
+	require.LogsContain(t, hook, "Successfully deleted validator account")
 }
 
 func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {

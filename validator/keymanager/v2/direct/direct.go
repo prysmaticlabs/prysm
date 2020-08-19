@@ -1,6 +1,7 @@
 package direct
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -31,8 +32,6 @@ import (
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
 
 const (
-	// KeystoreFileName exposes the expected filename for the keystore file for an account.
-	KeystoreFileName = "keystore-*.json"
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// AccountsPath where all direct keymanager keystores are kept.
@@ -174,6 +173,11 @@ func (c *Config) String() string {
 	return b.String()
 }
 
+// AccountsPassword for the direct keymanager.
+func (dr *Keymanager) AccountsPassword() string {
+	return dr.accountsPassword
+}
+
 // ValidatingAccountNames for a direct keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 	names := make([]string, len(dr.accountsStore.PublicKeys))
@@ -229,7 +233,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 ===================================================================`, tx.Data())
 	fmt.Println("")
 
-	// Write the encoded keystore to disk with the timestamp appended
+	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
 		return "", err
@@ -245,6 +249,51 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	dr.keysCache[bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())] = validatingKey
 	dr.lock.Unlock()
 	return accountName, nil
+}
+
+// DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
+func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
+	for _, publicKey := range publicKeys {
+		var index int
+		var found bool
+		for i, pubKey := range dr.accountsStore.PublicKeys {
+			if bytes.Equal(pubKey, publicKey) {
+				index = i
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("could not find public key %#x", publicKey)
+		}
+		deletedPublicKey := dr.accountsStore.PublicKeys[index]
+		accountName := petnames.DeterministicName(deletedPublicKey, "-")
+		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
+		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
+
+		newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+		if err != nil {
+			return errors.Wrap(err, "could not rewrite accounts keystore")
+		}
+
+		// Write the encoded keystore.
+		encoded, err := json.MarshalIndent(newStore, "", "\t")
+		if err != nil {
+			return err
+		}
+		if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+			return errors.Wrap(err, "could not write keystore file for accounts")
+		}
+
+		log.WithFields(logrus.Fields{
+			"name":      accountName,
+			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
+		}).Info("Successfully deleted validator account")
+		dr.lock.Lock()
+		delete(dr.keysCache, bytesutil.ToBytes48(deletedPublicKey))
+		dr.lock.Unlock()
+	}
+	return nil
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
@@ -341,6 +390,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
+	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -371,6 +421,7 @@ func (dr *Keymanager) createAccountsKeystore(
 			_, privKeyExists := existingPrivKeys[string(sk)]
 			_, pubKeyExists := existingPubKeys[string(pk)]
 			if privKeyExists || pubKeyExists {
+				fmt.Printf("Public key %#x already exists\n", au.BrightMagenta(bytesutil.Trunc(pk)))
 				continue
 			}
 			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)

@@ -3,10 +3,11 @@ package kv
 import (
 	"context"
 	"flag"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/urfave/cli/v2"
 )
@@ -55,12 +56,8 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 
 	validatorIdx := uint64(1)
 	vsm, _, err := db.EpochSpansMap(ctx, validatorIdx)
-	if err != nil {
-		t.Fatalf("Nil EpochSpansMap should not return error: %v", err)
-	}
-	if !reflect.DeepEqual(vsm, map[uint64]types.Span{}) {
-		t.Fatal("EpochSpansMap should return nil")
-	}
+	require.NoError(t, err, "Nil EpochSpansMap should not return error")
+	require.DeepEqual(t, map[uint64]types.Span{}, vsm, "EpochSpansMap should return empty map")
 }
 
 func TestStore_SaveSpans(t *testing.T) {
@@ -71,24 +68,14 @@ func TestStore_SaveSpans(t *testing.T) {
 
 	for _, tt := range spanTests {
 		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
-		if err != nil {
-			t.Fatalf("Save validator span map failed: %v", err)
-		}
+		require.NoError(t, err, "Save validator span map failed")
 		sm, _, err := db.EpochSpansMap(ctx, tt.epoch)
-		if err != nil {
-			t.Fatalf("Failed to get validator span map: %v", err)
-		}
-
-		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
-			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
-		}
+		require.NoError(t, err, "Failed to get validator span map")
+		require.NotNil(t, sm)
+		require.DeepEqual(t, tt.spanMap, sm, "Get should return validator span map")
 		s, err := db.EpochSpanByValidatorIndex(ctx, 1, tt.epoch)
-		if err != nil {
-			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
-		}
-		if !reflect.DeepEqual(s, tt.spanMap[1]) {
-			t.Fatalf("Get should return validator spans for epoch 1: %v got: %v", tt.spanMap[1], s)
-		}
+		require.NoError(t, err, "Failed to get validator span for epoch 1")
+		require.DeepEqual(t, tt.spanMap[1], s, "Get should return validator spans for epoch 1")
 	}
 }
 
@@ -100,26 +87,17 @@ func TestStore_SaveCachedSpans(t *testing.T) {
 
 	for _, tt := range spanTests {
 		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
-		if err != nil {
-			t.Fatalf("Save validator span map failed: %v", err)
-		}
+		require.NoError(t, err, "Save validator span map failed")
 		// wait for value to pass through cache buffers
 		time.Sleep(time.Millisecond * 10)
 		sm, _, err := db.EpochSpansMap(ctx, tt.epoch)
-		if err != nil {
-			t.Fatalf("Failed to get validator span map: %v", err)
-		}
+		require.NoError(t, err, "Failed to get validator span map")
+		require.NotNil(t, sm)
+		require.DeepEqual(t, tt.spanMap, sm, "Get should return validator span map")
 
-		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
-			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
-		}
 		s, err := db.EpochSpanByValidatorIndex(ctx, 1, tt.epoch)
-		if err != nil {
-			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
-		}
-		if !reflect.DeepEqual(s, tt.spanMap[1]) {
-			t.Fatalf("Get should return validator spans for epoch 1: %v got: %v", tt.spanMap[1], s)
-		}
+		require.NoError(t, err, "Failed to get validator span for epoch 1")
+		require.DeepEqual(t, tt.spanMap[1], s, "Get should return validator spans for epoch 1")
 	}
 }
 
@@ -131,30 +109,19 @@ func TestStore_DeleteEpochSpans(t *testing.T) {
 	db.spanCacheEnabled = false
 	for _, tt := range spanTests {
 		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
-		if err != nil {
-			t.Fatalf("Save validator span map failed: %v", err)
-		}
+		require.NoError(t, err, "Save validator span map failed")
 	}
 
 	for _, tt := range spanTests {
 		sm, _, err := db.EpochSpansMap(ctx, tt.epoch)
-		if err != nil {
-			t.Fatalf("Failed to get validator span map: %v", err)
-		}
-		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
-			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
-		}
+		require.NoError(t, err, "Failed to get validator span map")
+		require.NotNil(t, sm)
+		require.DeepEqual(t, tt.spanMap, sm, "Get should return validator span map")
 		err = db.DeleteEpochSpans(ctx, tt.epoch)
-		if err != nil {
-			t.Fatalf("Delete validator span map error: %v", err)
-		}
+		require.NoError(t, err, "Delete validator span map error")
 		sm, _, err = db.EpochSpansMap(ctx, tt.epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(sm, map[uint64]types.Span{}) {
-			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
-		}
+		require.NoError(t, err)
+		require.DeepEqual(t, map[uint64]types.Span{}, sm, "Expected validator span map to be deleted")
 	}
 }
 
@@ -166,35 +133,24 @@ func TestValidatorSpanMap_DeletesOnCacheSavesToDB(t *testing.T) {
 
 	for _, tt := range spanTests {
 		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
-		if err != nil {
-			t.Fatalf("Save validator span map failed: %v", err)
-		}
+		require.NoError(t, err, "Save validator span map failed")
 	}
 	// Wait for value to pass through cache buffers.
 	time.Sleep(time.Millisecond * 10)
 	for _, tt := range spanTests {
 		spanMap, _, err := db.EpochSpansMap(ctx, tt.epoch)
-		if err != nil {
-			t.Fatalf("Failed to get validator span map: %v", err)
-		}
-		if spanMap == nil || !reflect.DeepEqual(spanMap, tt.spanMap) {
-			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, spanMap)
-		}
+		require.NoError(t, err, "Failed to get validator span map")
+		require.NotNil(t, spanMap)
+		require.DeepEqual(t, tt.spanMap, spanMap, "Get should return validator span map")
 
-		if err = db.DeleteEpochSpans(ctx, tt.epoch); err != nil {
-			t.Fatalf("Delete validator span map error: %v", err)
-		}
+		require.NoError(t, db.DeleteEpochSpans(ctx, tt.epoch), "Delete validator span map error")
 		// Wait for value to pass through cache buffers.
 		db.EnableSpanCache(false)
 		time.Sleep(time.Millisecond * 10)
 		spanMap, _, err = db.EpochSpansMap(ctx, tt.epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		db.EnableSpanCache(true)
-		if !reflect.DeepEqual(spanMap, tt.spanMap) {
-			t.Errorf("Expected validator span map to be deleted, received: %v", spanMap)
-		}
+		require.DeepEqual(t, tt.spanMap, spanMap, "Expected validator span map to be deleted")
 	}
 }
 
@@ -212,21 +168,16 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 	}
 	for i := uint64(0); i < 6; i++ {
 		err := db.SaveEpochSpansMap(ctx, i, tsm.spanMap)
-		if err != nil {
-			t.Fatalf("Save validator span map failed: %v", err)
-		}
+		require.NoError(t, err, "Save validator span map failed")
 	}
 
 	// Wait for value to pass through cache buffers.
 	time.Sleep(time.Millisecond * 1000)
 	for i := uint64(0); i < 6; i++ {
 		sm, _, err := db.EpochSpansMap(ctx, i)
-		if err != nil {
-			t.Fatalf("Failed to get validator span map: %v", err)
-		}
-		if sm == nil || !reflect.DeepEqual(sm, tsm.spanMap) {
-			t.Fatalf("Get should return validator: %d span map: %v got: %v", i, tsm.spanMap, sm)
-		}
+		require.NoError(t, err, "Failed to get validator span map")
+		require.NotNil(t, sm)
+		require.DeepEqual(t, tsm.spanMap, sm, "Get should return validator")
 	}
 }
 
@@ -238,24 +189,16 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 
 	for _, tt := range spanTests {
 		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
-		if err != nil {
-			t.Fatalf("Save validator span map failed: %v", err)
-		}
+		require.NoError(t, err, "Save validator span map failed")
 	}
 	// wait for value to pass through cache buffers
 	time.Sleep(time.Millisecond * 10)
-	if err := db.SaveCachedSpansMaps(ctx); err != nil {
-		t.Errorf("Failed to save cached span maps to db: %v", err)
-	}
+	require.NoError(t, db.SaveCachedSpansMaps(ctx), "Failed to save cached span maps to db")
 	db.spanCache.Purge()
 	for _, tt := range spanTests {
 		sm, _, err := db.EpochSpansMap(ctx, tt.epoch)
-		if err != nil {
-			t.Fatalf("Failed to get validator span map: %v", err)
-		}
-		if !reflect.DeepEqual(sm, tt.spanMap) {
-			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
-		}
+		require.NoError(t, err, "Failed to get validator span map")
+		require.DeepEqual(t, tt.spanMap, sm, "Get should return validator span map")
 	}
 }
 
@@ -268,36 +211,20 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 
 	for _, tt := range spanTests {
 		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
-		if err != nil {
-			t.Fatalf("Save validator span map failed: %v", err)
-		}
+		require.NoError(t, err, "Save validator span map failed")
 	}
 	res, err := db.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res) != len(spanTests) {
-		t.Errorf("Wanted map of %d elemets, received map of %d elements", len(spanTests), len(res))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, len(spanTests), len(res), "Unexpected number of elements")
 	for _, tt := range spanTests {
-		if !reflect.DeepEqual(res[tt.epoch], tt.spanMap) {
-			t.Errorf("Wanted span map to be equal to: %v , received span map: %v ", spanTests[0].spanMap, res[1])
-		}
+		assert.DeepEqual(t, tt.spanMap, res[tt.epoch], "Unexpected span map")
 	}
 	db1 := setupDB(t, cli.NewContext(&app, set, nil))
-	if err := db1.SaveEpochsSpanByValidatorsIndices(ctx, res); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db1.SaveEpochsSpanByValidatorsIndices(ctx, res))
 	res, err = db1.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res) != len(spanTests) {
-		t.Errorf("Wanted map of %d elemets, received map of %d elements", len(spanTests), len(res))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, len(spanTests), len(res), "Unexpected number of elements")
 	for _, tt := range spanTests {
-		if !reflect.DeepEqual(res[tt.epoch], tt.spanMap) {
-			t.Errorf("Wanted span map to be equal to: %v , received span map: %v ", spanTests[0].spanMap, res[1])
-		}
+		assert.DeepEqual(t, tt.spanMap, res[tt.epoch], "Unexpected span map")
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -20,7 +20,7 @@ func TestSafelyHandleMessage(t *testing.T) {
 		return nil
 	}, &ethpb.BeaconBlock{})
 
-	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
+	require.LogsContain(t, hook, "Panicked when handling p2p message!")
 }
 
 func TestSafelyHandleMessage_NoData(t *testing.T) {

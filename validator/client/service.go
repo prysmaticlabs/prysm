@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -36,6 +36,7 @@ var log = logrus.WithField("prefix", "validator")
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
+	db                   db.Database
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	validator            Validator
@@ -72,6 +73,8 @@ type Config struct {
 	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
 	Protector                  slashingprotection.Protector
+	ValDB                      db.Database
+	Validator                  Validator
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -95,6 +98,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetryDelay:       cfg.GrpcRetryDelay,
 		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
 		protector:            cfg.Protector,
+		validator:            cfg.Validator,
+		db:                   cfg.ValDB,
 	}, nil
 }
 
@@ -126,12 +131,6 @@ func (v *ValidatorService) Start() {
 		log.Info("Established secure gRPC connection")
 	}
 
-	valDB, err := kv.NewKVStore(v.dataDir, v.validatingPubKeys)
-	if err != nil {
-		log.Errorf("Could not initialize db: %v", err)
-		return
-	}
-
 	v.conn = conn
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1920, // number of keys to track.
@@ -149,7 +148,7 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.validator = &validator{
-		db:                             valDB,
+		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
@@ -160,6 +159,9 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:             v.emitAccountMetrics,
 		startBalances:                  make(map[[48]byte]uint64),
 		prevBalance:                    make(map[[48]byte]uint64),
+		indexToPubkey:                  make(map[uint64][48]byte),
+		pubkeyToIndex:                  make(map[[48]byte]uint64),
+		pubkeyToStatus:                 make(map[[48]byte]ethpb.ValidatorStatus),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -281,4 +283,24 @@ func ConstructDialOptions(
 
 	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
+}
+
+// ValidatorBalances returns the validator balances mapping keyed by public keys.
+func (v *ValidatorService) ValidatorBalances(ctx context.Context) map[[48]byte]uint64 {
+	return v.validator.BalancesByPubkeys(ctx)
+}
+
+// ValidatorIndicesToPubkeys returns the validator indices mapping keyed by public keys.
+func (v *ValidatorService) ValidatorIndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
+	return v.validator.IndicesToPubkeys(ctx)
+}
+
+// ValidatorPubkeysToIndices returns the validator public keys mapping keyed by indices.
+func (v *ValidatorService) ValidatorPubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
+	return v.validator.PubkeysToIndices(ctx)
+}
+
+// ValidatorPubkeysToStatuses returns the validator statuses mapping keyed by public keys.
+func (v *ValidatorService) ValidatorPubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+	return v.validator.PubkeysToStatuses(ctx)
 }
