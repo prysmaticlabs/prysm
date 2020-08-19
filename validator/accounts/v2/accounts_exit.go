@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -15,7 +16,7 @@ import (
 )
 
 // ExitAccounts performs a voluntary exit on one or more accounts.
-func ExitAccounts(cliCtx *cli.Context) error {
+func ExitAccounts(cliCtx *cli.Context, stdin io.Reader) error {
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
@@ -58,7 +59,7 @@ func ExitAccounts(cliCtx *cli.Context) error {
 		if len(filteredPubKeys) == 1 {
 			promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
 			resp, err := promptutil.ValidatePrompt(
-				fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+				stdin, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
 			)
 			if err != nil {
 				return err
@@ -75,7 +76,7 @@ func ExitAccounts(cliCtx *cli.Context) error {
 			} else {
 				promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
 			}
-			resp, err := promptutil.ValidatePrompt(promptText, promptutil.ValidateYesOrNo)
+			resp, err := promptutil.ValidatePrompt(stdin, promptText, promptutil.ValidateYesOrNo)
 			if err != nil {
 				return err
 			}
@@ -92,7 +93,7 @@ func ExitAccounts(cliCtx *cli.Context) error {
 	promptURL := au.Blue("https://docs.prylabs.network/docs/faq/#can-i-get-back-my-testnet-eth-how-can-i-withdraw-my-validator-gains")
 	promptQuestion := "Do you still want to continue with the voluntary exit? Y/N"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
-	resp, err := promptutil.ValidatePrompt(promptText, promptutil.ValidateYesOrNo)
+	resp, err := promptutil.ValidatePrompt(stdin, promptText, promptutil.ValidateYesOrNo)
 	if err != nil {
 		return err
 	}
@@ -105,6 +106,6 @@ func ExitAccounts(cliCtx *cli.Context) error {
 }
 
 // ExitAccountsUnimplemented is a stub for ExitAccounts until the latter is fully implemented.
-func ExitAccountsUnimplemented(cliCtx *cli.Context) error {
+func ExitAccountsUnimplemented(cliCtx *cli.Context, stdin io.Reader) error {
 	return status.Errorf(codes.Unimplemented, "method ExitAccounts not implemented")
 }
