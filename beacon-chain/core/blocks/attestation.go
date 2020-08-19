@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -266,20 +267,14 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
-// VerifyAttestation converts and attestation into an indexed attestation and verifies
+// VerifyAttestationComposed converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestationComposed(
-	ctx context.Context,
-	activeIndices []uint64,
-	pubKeys [][48]byte,
-	seed [32]byte,
-	gRoot [32]byte,
-	fork *pb.Fork,
-	att *ethpb.Attestation) error {
+func VerifyAttestationComposed(ctx context.Context, c *pb.CheckPtInfo, att *ethpb.Attestation) error {
 	if att == nil || att.Data == nil || att.AggregationBits.Count() == 0 {
 		return fmt.Errorf("nil or missing attestation data: %v", att)
 	}
-	committee, err := helpers.BeaconCommittee(activeIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	seed := bytesutil.ToBytes32(c.Seed)
+	committee, err := helpers.BeaconCommitteeAndUpdateCache(c.ActiveIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -288,15 +283,15 @@ func VerifyAttestationComposed(
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, gRoot[:])
+	domain, err := helpers.Domain(c.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, c.GenesisRoot)
 	if err != nil {
 		return err
 	}
 	indices := indexedAtt.AttestingIndices
 	pubkeys := []bls.PublicKey{}
 	for i := 0; i < len(indices); i++ {
-		pubkeyAtIdx := pubKeys[activeIndices[i]]
-		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+		pubkeyAtIdx := c.PubKeys[c.ActiveIndices[i]]
+		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx)
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}

@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +25,7 @@ type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
 	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
-	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*CheckPtInfo, error)
+	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -76,7 +77,7 @@ func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestatio
 }
 
 // AttestationCheckPtInfo returns the pre check point info of attestation
-func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*CheckPtInfo, error) {
+func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
 	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
 }
 

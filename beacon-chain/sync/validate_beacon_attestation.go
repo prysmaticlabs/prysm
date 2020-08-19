@@ -105,11 +105,13 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
-		subnet := helpers.ComputeSubnetForAttestation(c.ActiveCount(), att)
+
+		indices := c.ActiveIndices
+		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
 		if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
 			return pubsub.ValidationReject
 		}
-		committee, err := helpers.BeaconCommittee(c.ActiveIndices(), c.Seed(), att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
@@ -117,7 +119,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
 			return pubsub.ValidationReject
 		}
-		if err := blocks.VerifyAttestationComposed(ctx, c.ActiveIndices(), c.Pubkeys(), c.Seed(), c.GenesisRoot(), c.Fork(), att); err != nil {
+		if err := blocks.VerifyAttestationComposed(ctx, c, att); err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}

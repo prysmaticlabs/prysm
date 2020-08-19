@@ -86,7 +86,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		if err := helpers.VerifySlotTime(params.BeaconConfig().GenesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			return nil, err
 		}
-		committee, err := helpers.BeaconCommittee(c.activeIndices, c.seed, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeAndUpdateCache(c.ActiveIndices, bytesutil.ToBytes32(c.Seed), a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -94,15 +94,15 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 			return nil, err
 		}
-		domain, err := helpers.Domain(c.fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, c.genesisRoot[:])
+		domain, err := helpers.Domain(c.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, c.GenesisRoot)
 		if err != nil {
 			return nil, err
 		}
 		indices := indexedAtt.AttestingIndices
 		pubkeys := []bls.PublicKey{}
 		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := c.pubKeys[indices[i]]
-			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+			pubkeyAtIdx := c.PubKeys[indices[i]]
+			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx)
 			if err != nil {
 				return nil, err
 			}

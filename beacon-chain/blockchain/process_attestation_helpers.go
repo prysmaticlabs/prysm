@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -59,7 +60,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 }
 
 // getAttCheckPtInfo retrieves the att check point info.
-func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e uint64) (*CheckPtInfo, error) {
+func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e uint64) (*pb.CheckPtInfo, error) {
 	info, err := s.checkPtInfoCache.get(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
@@ -92,21 +93,24 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 		return nil, err
 	}
 	validators := baseState.ValidatorsReadOnly()
-	pks := make([][48]byte, len(validators))
+	pks := make([][]byte, len(validators))
 	for i := 0; i < len(pks); i++ {
-		pks[i] = validators[i].PublicKey()
-	}
-	if err := s.checkPtInfoCache.put(c, f, g, seed, indices, pks); err != nil {
-		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		pk := validators[i].PublicKey()
+		pks[i] = pk[:]
 	}
 
-	return &CheckPtInfo{
-		fork:          f,
-		genesisRoot:   g,
-		seed:          seed,
-		activeIndices: indices,
-		pubKeys:       pks,
-	}, nil
+	info = &pb.CheckPtInfo{
+		Fork:          f,
+		GenesisRoot:   g[:],
+		Seed:          seed[:],
+		ActiveIndices: indices,
+		PubKeys:       pks,
+	}
+	if err := s.checkPtInfoCache.put(c, info); err != nil {
+		return nil, err
+	}
+
+	return info, nil
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
