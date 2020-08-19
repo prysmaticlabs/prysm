@@ -235,11 +235,6 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	s.prevFinalizedCheckpt = s.finalizedCheckpt
 	s.finalizedCheckpt = cp
 
-	fRoot := bytesutil.ToBytes32(cp.Root)
-	if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
-		return errors.Wrap(err, "could not migrate to cold")
-	}
-
 	return nil
 }
 

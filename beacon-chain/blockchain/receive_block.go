@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -30,6 +31,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
+	fEpoch := s.finalizedCheckpt.Epoch
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
@@ -66,6 +68,14 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
+
+	// When there's a new finalized check point, the node will migrate states from hot to cold section.
+	if s.finalizedCheckpt.Epoch > fEpoch {
+		fRoot := bytesutil.ToBytes32(s.finalizedCheckpt.Root)
+		if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
+			return errors.Wrap(err, "could not migrate to cold")
+		}
+	}
 
 	return nil
 }
