@@ -40,6 +40,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "rpc_test.go",
         "server_test.go",
         "service_test.go",
     ],
@@ -54,6 +55,7 @@ go_test(
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db/testing:go_default_library",
