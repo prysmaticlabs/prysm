@@ -37,9 +37,9 @@ func (m *Wallet) AccountsDir() string {
 	return m.InnerAccountsDir
 }
 
-// ListDirs --
-func (m *Wallet) ListDirs() ([]string, error) {
-	return m.Directories, nil
+// Exists --
+func (m *Wallet) Exists() (bool, error) {
+	return len(m.Directories) > 0, nil
 }
 
 // WriteFileAtPath --
