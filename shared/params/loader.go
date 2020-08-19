@@ -25,7 +25,7 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		}
 	}
 	yamlFile = []byte(strings.Join(lines, "\n"))
-	conf := BeaconConfig()
+	conf := MainnetConfig()
 	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
 		log.WithError(err).Fatal("Failed to parse chain config yaml file.")
 	}
