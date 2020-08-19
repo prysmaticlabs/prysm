@@ -177,11 +177,6 @@ var (
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
 	}
-	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
-	SkipMnemonicConfirmFlag = &cli.BoolFlag{
-		Name:  "skip-mnemonic-confirm",
-		Usage: "Skip the withdrawal key mnemonic phrase prompt confirmation",
-	}
 	// ShowDepositDataFlag for accounts-v2.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",

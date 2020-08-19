@@ -24,8 +24,8 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, skipMnemonicConfirm)
+
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

@@ -71,7 +71,6 @@ func setupWalletCtx(
 	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
-	set.Bool(flags.SkipMnemonicConfirmFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	if cfg.privateKeyFile != "" {
 		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
@@ -88,7 +87,6 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))
 	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
 	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
-	assert.NoError(tb, set.Set(flags.SkipMnemonicConfirmFlag.Name, "true"))
 	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
 	return cli.NewContext(&app, set, nil)
 }
