@@ -165,8 +165,8 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		return nil
 	}
 	roots = s.dedupRoots(roots)
-	// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
-	// have a head slot newer than the block slot we are requesting.
+	// Randomly choose a peer to query from our best peers. If that peer cannot return
+	// all the requested blocks, we randomly select another peer.
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
 	for i := 0; i < numOfTries; i++ {
 		req := roots
