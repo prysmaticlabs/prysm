@@ -63,6 +63,7 @@ type Flags struct {
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableRoughtime                            bool // EnableRoughtime is an opt-in flag for enabling hourly syncing with roughtime. Default is to not sync.
+	UseCheckPointInfoCache                     bool // UseCheckPointInfoCache uses check point info cache.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -264,6 +265,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableRoughtime.Name) {
 		log.Warn("Enabling roughtime sync")
 		cfg.EnableRoughtime = true
+	}
+	if ctx.Bool(checkPtInfoCache.Name) {
+		log.Warn("Using advanced check point info cache")
+		cfg.UseCheckPointInfoCache = true
 	}
 	Init(cfg)
 }

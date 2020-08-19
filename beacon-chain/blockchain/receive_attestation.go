@@ -24,6 +24,7 @@ type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
 	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
+	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*CheckPtInfo, error)
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -72,6 +73,11 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 // AttestationPreState returns the pre state of attestation.
 func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error) {
 	return s.getAttPreState(ctx, att.Data.Target)
+}
+
+// AttestationCheckPtInfo returns the pre check point info of attestation
+func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*CheckPtInfo, error) {
+	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.

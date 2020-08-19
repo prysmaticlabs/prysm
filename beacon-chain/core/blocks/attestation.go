@@ -266,6 +266,46 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
+// VerifyAttestation converts and attestation into an indexed attestation and verifies
+// the signature in that attestation.
+func VerifyAttestationComposed(
+	ctx context.Context,
+	activeIndices []uint64,
+	pubKeys [][48]byte,
+	seed [32]byte,
+	gRoot [32]byte,
+	fork *pb.Fork,
+	att *ethpb.Attestation) error {
+	if att == nil || att.Data == nil || att.AggregationBits.Count() == 0 {
+		return fmt.Errorf("nil or missing attestation data: %v", att)
+	}
+	committee, err := helpers.BeaconCommittee(activeIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+
+	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+		return err
+	}
+	domain, err := helpers.Domain(fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, gRoot[:])
+	if err != nil {
+		return err
+	}
+	indices := indexedAtt.AttestingIndices
+	pubkeys := []bls.PublicKey{}
+	for i := 0; i < len(indices); i++ {
+		pubkeyAtIdx := pubKeys[activeIndices[i]]
+		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+		if err != nil {
+			return errors.Wrap(err, "could not deserialize validator public key")
+		}
+		pubkeys = append(pubkeys, pk)
+	}
+
+	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
+}
+
 // VerifyIndexedAttestation determines the validity of an indexed attestation.
 //
 // Spec pseudocode definition:

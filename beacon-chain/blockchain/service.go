@@ -75,6 +75,7 @@ type Service struct {
 	recentCanonicalBlocksLock sync.RWMutex
 	justifiedBalances         []uint64
 	justifiedBalancesLock     sync.RWMutex
+	checkPtInfoCache          *checkPtInfoCache
 }
 
 // Config options for the service.
@@ -119,6 +120,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		initSyncBlocks:        make(map[[32]byte]*ethpb.SignedBeaconBlock),
 		recentCanonicalBlocks: make(map[[32]byte]bool),
 		justifiedBalances:     make([]uint64, 0),
+		checkPtInfoCache:      newCheckPointInfoCache(),
 	}, nil
 }
 

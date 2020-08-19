@@ -56,7 +56,57 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		}
 	}
 	return baseState, nil
+}
 
+// getAttCheckPtInfo retrieves the att check point info.
+func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e uint64) (*CheckPtInfo, error) {
+	info, err := s.checkPtInfoCache.get(c)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get cached checkpoint state")
+	}
+	if info != nil {
+		return info, nil
+	}
+
+	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+	}
+
+	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
+		baseState = baseState.Copy()
+		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+		}
+	}
+
+	f := baseState.Fork()
+	g := bytesutil.ToBytes32(baseState.GenesisValidatorRoot())
+	seed, err := helpers.Seed(baseState, e, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
+	indices, err := helpers.ActiveValidatorIndices(baseState, e)
+	if err != nil {
+		return nil, err
+	}
+	validators := baseState.ValidatorsReadOnly()
+	pks := make([][48]byte, len(validators))
+	for i := 0; i < len(pks); i++ {
+		pks[i] = validators[i].PublicKey()
+	}
+	if err := s.checkPtInfoCache.put(c, f, g, seed, indices, pks); err != nil {
+		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+	}
+
+	return &CheckPtInfo{
+		fork:          f,
+		genesisRoot:   g,
+		seed:          seed,
+		activeIndices: indices,
+		pubKeys:       pks,
+	}, nil
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.

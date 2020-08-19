@@ -8,6 +8,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -94,6 +95,36 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
+
+	if featureconfig.Get().UseCheckPointInfoCache {
+		c, err := s.chain.AttestationCheckPtInfo(ctx, signed.Message.Aggregate)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationIgnore
+		}
+
+		if err := validateIndexInCommitteeUsingCP(ctx, c, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
+			traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate index in committee"))
+			return pubsub.ValidationReject
+		}
+
+		if err := validateSelectionCP(ctx, c, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof); err != nil {
+			traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
+			return pubsub.ValidationReject
+		}
+
+		if err := validateAggregatorSignatureCP(c, signed); err != nil {
+			traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
+			return pubsub.ValidationReject
+		}
+
+		if err := blocks.VerifyAttestationComposed(ctx, c.ActiveIndices(), c.Pubkeys(), c.Seed(), c.GenesisRoot(), c.Fork(), signed.Message.Aggregate); err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+
+		return pubsub.ValidationAccept
+	}
 
 	bs, err := s.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
@@ -194,6 +225,29 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 	return nil
 }
 
+// This validates the aggregator's index in state is within the beacon committee.
+func validateIndexInCommitteeUsingCP(ctx context.Context, c *blockchain.CheckPtInfo, a *ethpb.Attestation, validatorIndex uint64) error {
+	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
+	defer span.End()
+
+	committee, err := helpers.BeaconCommittee(c.ActiveIndices(), c.Seed(), a.Data.Slot, a.Data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	var withinCommittee bool
+	for _, i := range committee {
+		if validatorIndex == i {
+			withinCommittee = true
+			break
+		}
+	}
+	if !withinCommittee {
+		return fmt.Errorf("validator index %d is not within the committee: %v",
+			validatorIndex, committee)
+	}
+	return nil
+}
+
 // This validates selection proof by validating it's from the correct validator index of the slot and selection
 // proof is a valid signature.
 func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
@@ -220,9 +274,45 @@ func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *eth
 	return nil
 }
 
+func validateSelectionCP(ctx context.Context, c *blockchain.CheckPtInfo, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
+	_, span := trace.StartSpan(ctx, "sync.validateSelection")
+	defer span.End()
+
+	committee, err := helpers.BeaconCommittee(c.ActiveIndices(), c.Seed(), data.Slot, data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	aggregator, err := helpers.IsAggregator(uint64(len(committee)), proof)
+	if err != nil {
+		return err
+	}
+	if !aggregator {
+		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
+	}
+
+	gRoot := c.GenesisRoot()
+	d, err := helpers.Domain(c.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainSelectionProof, gRoot[:])
+	if err != nil {
+		return err
+	}
+	pk := c.Pubkey(validatorIndex)
+	return helpers.VerifySigningRoot(data.Slot, pk[:], proof, d)
+}
+
 // This verifies aggregator signature over the signed aggregate and proof object.
 func validateAggregatorSignature(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) error {
 	return helpers.ComputeDomainVerifySigningRoot(s, a.Message.AggregatorIndex,
 		helpers.SlotToEpoch(a.Message.Aggregate.Data.Slot), a.Message, params.BeaconConfig().DomainAggregateAndProof, a.Signature)
 
+}
+
+// This verifies aggregator signature over the signed aggregate and proof object.
+func validateAggregatorSignatureCP(c *blockchain.CheckPtInfo, a *ethpb.SignedAggregateAttestationAndProof) error {
+	gRoot := c.GenesisRoot()
+	d, err := helpers.Domain(c.Fork(), helpers.SlotToEpoch(a.Message.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof, gRoot[:])
+	if err != nil {
+		return err
+	}
+	pk := c.Pubkey(a.Message.AggregatorIndex)
+	return helpers.VerifySigningRoot(a.Message, pk[:], a.Signature, d)
 }
