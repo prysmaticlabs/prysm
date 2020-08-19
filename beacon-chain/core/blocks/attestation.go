@@ -274,7 +274,7 @@ func VerifyAttestationComposed(ctx context.Context, c *pb.CheckPtInfo, att *ethp
 		return fmt.Errorf("nil or missing attestation data: %v", att)
 	}
 	seed := bytesutil.ToBytes32(c.Seed)
-	committee, err := helpers.BeaconCommitteeAndUpdateCache(c.ActiveIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommittee(c.ActiveIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

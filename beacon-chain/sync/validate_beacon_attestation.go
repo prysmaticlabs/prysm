@@ -102,7 +102,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if featureconfig.Get().UseCheckPointInfoCache {
 		c, err := s.chain.AttestationCheckPtInfo(ctx, att)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 
@@ -113,14 +112,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		}
 		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
 			return pubsub.ValidationReject
 		}
 		if err := blocks.VerifyAttestationComposed(ctx, c, att); err != nil {
-			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 

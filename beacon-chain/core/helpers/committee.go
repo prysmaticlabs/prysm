@@ -108,42 +108,6 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 	return ComputeCommittee(validatorIndices, seed, epochOffset, count)
 }
 
-// BeaconCommitteeAndUpdateCache is an implementation of BeaconCommittee. It also updates committee cache on miss.
-func BeaconCommitteeAndUpdateCache(validatorIndices []uint64, seed [32]byte, slot uint64, committeeIndex uint64) ([]uint64, error) {
-	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not interface with committee cache")
-	}
-	if indices != nil {
-		return indices, nil
-	}
-
-	committeesPerSlot := SlotCommitteeCount(uint64(len(validatorIndices)))
-	epochOffset := committeeIndex + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
-	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
-	shuffled, err := ComputeCommittee(validatorIndices, seed, epochOffset, count)
-	if err != nil {
-		return nil, err
-	}
-
-	sortedIndices := make([]uint64, len(shuffled))
-	copy(sortedIndices, shuffled)
-	sort.Slice(sortedIndices, func(i, j int) bool {
-		return sortedIndices[i] < sortedIndices[j]
-	})
-
-	if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
-		ShuffledIndices: shuffled,
-		CommitteeCount:  count,
-		Seed:            seed,
-		SortedIndices:   sortedIndices,
-	}); err != nil {
-		return nil, err
-	}
-
-	return shuffled, nil
-}
-
 // ComputeCommittee returns the requested shuffled committee out of the total committees using
 // validator indices and seed.
 //

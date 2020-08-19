@@ -86,7 +86,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		if err := helpers.VerifySlotTime(params.BeaconConfig().GenesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			return nil, err
 		}
-		committee, err := helpers.BeaconCommitteeAndUpdateCache(c.ActiveIndices, bytesutil.ToBytes32(c.Seed), a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommittee(c.ActiveIndices, bytesutil.ToBytes32(c.Seed), a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}
