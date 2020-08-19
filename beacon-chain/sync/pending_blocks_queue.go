@@ -94,8 +94,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				}
 				// Remove block from queue.
 				s.pendingQueueLock.Lock()
-				s.deleteBlockFromPendingQueue(slot, b)
-				delete(s.seenPendingBlocks, blkRoot)
+				s.deleteBlockFromPendingQueue(slot, b, blkRoot)
 				s.pendingQueueLock.Unlock()
 				span.End()
 				continue
@@ -151,8 +150,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			s.pendingQueueLock.Lock()
-			s.deleteBlockFromPendingQueue(slot, b)
-			delete(s.seenPendingBlocks, blkRoot)
+			s.deleteBlockFromPendingQueue(slot, b, blkRoot)
 			s.pendingQueueLock.Unlock()
 
 			log.WithFields(logrus.Fields{
@@ -200,8 +198,7 @@ func (s *Service) validatePendingSlots() error {
 					return err
 				}
 				oldBlockRoots[root] = true
-				s.deleteBlockFromPendingQueue(slot, b)
-				delete(s.seenPendingBlocks, root)
+				s.deleteBlockFromPendingQueue(slot, b, root)
 				continue
 			}
 			// don't process old blocks
@@ -211,8 +208,7 @@ func (s *Service) validatePendingSlots() error {
 					return err
 				}
 				oldBlockRoots[blkRoot] = true
-				s.deleteBlockFromPendingQueue(slot, b)
-				delete(s.seenPendingBlocks, blkRoot)
+				s.deleteBlockFromPendingQueue(slot, b, blkRoot)
 			}
 		}
 	}
@@ -228,7 +224,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock) {
+func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) {
 	blks, ok := s.slotToPendingBlocks[slot]
 	if !ok {
 		return
@@ -245,21 +241,22 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 		return
 	}
 	s.slotToPendingBlocks[slot] = newBlks
+	delete(s.seenPendingBlocks, r)
 }
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock) {
+func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) {
+	if s.seenPendingBlocks[r] {
+		return
+	}
+
 	_, ok := s.slotToPendingBlocks[slot]
 	if ok {
 		blks := s.slotToPendingBlocks[slot]
-		for _, blk := range blks {
-			if proto.Equal(blk, b) {
-				return
-			}
-		}
 		s.slotToPendingBlocks[slot] = append(blks, b)
-		return
+	} else {
+		s.slotToPendingBlocks[slot] = []*ethpb.SignedBeaconBlock{b}
 	}
-	s.slotToPendingBlocks[slot] = []*ethpb.SignedBeaconBlock{b}
+	s.seenPendingBlocks[r] = true
 }
