@@ -76,7 +76,6 @@ go_test(
     size = "medium",
     srcs = [
         "chain_info_test.go",
-        "check_point_info_cache.go",
         "head_test.go",
         "info_test.go",
         "process_attestation_test.go",
@@ -122,7 +121,6 @@ go_test(
     name = "go_raceon_test",
     srcs = [
         "chain_info_norace_test.go",
-        "check_point_info_cache.go",
         "receive_block_test.go",
         "service_norace_test.go",
     ],

@@ -12,31 +12,32 @@ import (
 )
 
 var (
-	// maxCacheSize defines the max number of committee info this can cache.
+	// This defines the max number of check point info this cache can store.
+	// Each cache is a little less than 3MB, the total cache size is 190MB.
 	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
-	maxCacheSize = 32
+	max = 64
 
-	// cacheMiss tracks the number of check point info  requests that aren't present in the cache.
-	cacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+	// This tracks the number of check point info requests that aren't present in the cache.
+	miss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "check_point_info_cache_miss",
 		Help: "The number of check point info requests that aren't present in the cache.",
 	})
-	// cacheHit tracks the number of check point info  requests that are in the cache.
-	cacheHit = promauto.NewCounter(prometheus.CounterOpts{
+	// This tracks the number of check point info requests that are in the cache.
+	hit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "check_point_info_cache_hit",
 		Help: "The number of check point info requests that are present in the cache.",
 	})
 )
 
-// checkPtInfoCache is a struct with 1 queue for looking up check point info by checkpoint.
+// checkPtInfoCache is a struct with 1 LRU cache for looking up check point info by checkpoint.
 type checkPtInfoCache struct {
 	cache *lru.Cache
 	lock  sync.RWMutex
 }
 
-// newCheckPointInfoCache creates a new checkpoint state cache for storing/accessing processed state.
+// newCheckPointInfoCache creates a new checkpoint info cache for storing/accessing processed check point info object.
 func newCheckPointInfoCache() *checkPtInfoCache {
-	cache, err := lru.New(maxCacheSize)
+	cache, err := lru.New(max)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +46,7 @@ func newCheckPointInfoCache() *checkPtInfoCache {
 	}
 }
 
-// get fetches info by checkpoint. Returns the reference of the CheckPtInfo, nil if doesn't exist.
+// get fetches check point info by check point. Returns the reference of the CheckPtInfo, nil if doesn't exist.
 func (c *checkPtInfoCache) get(cp *ethpb.Checkpoint) (*pb.CheckPtInfo, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -57,16 +58,16 @@ func (c *checkPtInfoCache) get(cp *ethpb.Checkpoint) (*pb.CheckPtInfo, error) {
 	item, exists := c.cache.Get(h)
 
 	if exists && item != nil {
-		cacheHit.Inc()
+		hit.Inc()
 		// Copy here is unnecessary since the return will only be used to verify attestation signature.
 		return item.(*pb.CheckPtInfo), nil
 	}
 
-	cacheMiss.Inc()
+	miss.Inc()
 	return nil, nil
 }
 
-// put adds CheckPtInfo info object to the cache. This method also trims the least
+// put adds CheckPtInfo object to the cache. This method also trims the least
 // recently added CheckPtInfo object if the cache size has ready the max cache size limit.
 func (c *checkPtInfoCache) put(cp *ethpb.Checkpoint, info *pb.CheckPtInfo) error {
 	c.lock.Lock()

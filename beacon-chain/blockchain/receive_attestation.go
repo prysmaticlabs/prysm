@@ -76,7 +76,8 @@ func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestatio
 	return s.getAttPreState(ctx, att.Data.Target)
 }
 
-// AttestationCheckPtInfo returns the pre check point info of attestation
+// AttestationCheckPtInfo returns the check point info of attestation that can be used to verify the attestation
+// contents and signatures.
 func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
 	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
 }

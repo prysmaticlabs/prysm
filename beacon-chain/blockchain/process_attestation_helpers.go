@@ -59,8 +59,11 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	return baseState, nil
 }
 
-// getAttCheckPtInfo retrieves the att check point info.
+// getAttCheckPtInfo retrieves the check point info given a check point. Check point info enables a node
+// to efficiently verify attestation signature without having to use the state. This function utilizes
+// the checkpoint info cache and will update the cache on a miss.
 func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e uint64) (*pb.CheckPtInfo, error) {
+	// Return checkpoint info if exists in cache.
 	info, err := s.checkPtInfoCache.get(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
@@ -69,11 +72,11 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 		return info, nil
 	}
 
+	// Retrieve checkpoint state to compute checkpoint info.
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
 	}
-
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
 		baseState = baseState.Copy()
 		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
@@ -99,6 +102,7 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 		pks[i] = pk[:]
 	}
 
+	// Cache and return the checkpoint info.
 	info = &pb.CheckPtInfo{
 		Fork:          f,
 		GenesisRoot:   g[:],

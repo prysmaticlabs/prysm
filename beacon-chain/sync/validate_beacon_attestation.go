@@ -100,11 +100,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	if featureconfig.Get().UseCheckPointInfoCache {
+		// Use check point info to validate unaggregated attestation.
 		c, err := s.chain.AttestationCheckPtInfo(ctx, att)
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
-
+		// Is the attestation subnet correct.
 		indices := c.ActiveIndices
 		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
 		if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
@@ -114,10 +115,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
+		// Is the attestation bitfield correct.
 		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
 			return pubsub.ValidationReject
 		}
-		if err := blocks.VerifyAttestationComposed(ctx, c, att); err != nil {
+		// Is the attestation signature correct.
+		if err := blocks.VerifyAttSigUsingCP(ctx, c, att); err != nil {
 			return pubsub.ValidationReject
 		}
 

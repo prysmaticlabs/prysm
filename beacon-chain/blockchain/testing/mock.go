@@ -353,3 +353,8 @@ func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
 func (ms *ChainService) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
 	return ms.VerifyBlkDescendantErr
 }
+
+// AttestationCheckPtInfo mocks AttestationCheckPtInfo and always returns nil.
+func (ms *ChainService) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
+	return nil, nil
+}

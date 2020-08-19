@@ -267,7 +267,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.EnableRoughtime = true
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
-		log.Warn("Using advanced check point info cache")
+		log.Warn("Using advance check point info cache")
 		cfg.UseCheckPointInfoCache = true
 	}
 	Init(cfg)

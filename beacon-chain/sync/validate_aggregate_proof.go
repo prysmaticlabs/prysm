@@ -96,6 +96,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	attSlot := signed.Message.Aggregate.Data.Slot
 
 	if featureconfig.Get().UseCheckPointInfoCache {
+		// Use check point info to validate aggregated attestation.
 		c, err := s.chain.AttestationCheckPtInfo(ctx, signed.Message.Aggregate)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
@@ -106,6 +107,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
+		// Is the aggregator part of the committee.
 		var withinCommittee bool
 		for _, i := range committee {
 			if signed.Message.AggregatorIndex == i {
@@ -116,7 +118,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if !withinCommittee {
 			return pubsub.ValidationReject
 		}
-
+		// Is the selection proof signed by the aggregator.
 		aggregator, err := helpers.IsAggregator(uint64(len(committee)), signed.Message.SelectionProof)
 		if err != nil {
 			return pubsub.ValidationReject
@@ -124,7 +126,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if !aggregator {
 			return pubsub.ValidationReject
 		}
-
+		// Are the aggregate and proof by the aggregator.
 		d, err := helpers.Domain(c.Fork, helpers.SlotToEpoch(a.Data.Slot), params.BeaconConfig().DomainSelectionProof, c.GenesisRoot)
 		if err != nil {
 			return pubsub.ValidationReject
@@ -133,6 +135,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if err := helpers.VerifySigningRoot(a.Data.Slot, pk[:], signed.Message.SelectionProof, d); err != nil {
 			return pubsub.ValidationReject
 		}
+		// Is the attestation signature correct.
 		d, err = helpers.Domain(c.Fork, helpers.SlotToEpoch(a.Data.Slot), params.BeaconConfig().DomainAggregateAndProof, c.GenesisRoot)
 		if err != nil {
 			return pubsub.ValidationReject
@@ -140,7 +143,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if err := helpers.VerifySigningRoot(a.Data.Slot, pk[:], signed.Signature, d); err != nil {
 			return pubsub.ValidationReject
 		}
-		if err := blocks.VerifyAttestationComposed(ctx, c, signed.Message.Aggregate); err != nil {
+		if err := blocks.VerifyAttSigUsingCP(ctx, c, signed.Message.Aggregate); err != nil {
 			return pubsub.ValidationReject
 		}
 

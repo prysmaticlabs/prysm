@@ -267,9 +267,8 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
-// VerifyAttestationComposed converts and attestation into an indexed attestation and verifies
-// the signature in that attestation.
-func VerifyAttestationComposed(ctx context.Context, c *pb.CheckPtInfo, att *ethpb.Attestation) error {
+// VerifyAttSigUsingCP uses the checkpoint info object to verify attestation signature.
+func VerifyAttSigUsingCP(ctx context.Context, c *pb.CheckPtInfo, att *ethpb.Attestation) error {
 	if att == nil || att.Data == nil || att.AggregationBits.Count() == 0 {
 		return fmt.Errorf("nil or missing attestation data: %v", att)
 	}
