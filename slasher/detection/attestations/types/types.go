@@ -63,21 +63,28 @@ func UnmarshalSpan(enc []byte) (Span, error) {
 	if len(enc) != int(SpannerEncodedLength) {
 		return r, errors.New("wrong data length for min max span")
 	}
-	r.MinSpan = bytesutil.FromBytes2(enc[:2])
-	r.MaxSpan = bytesutil.FromBytes2(enc[2:4])
+	r.MinSpan = uint16(enc[0]) | uint16(enc[1])<<8
+	r.MaxSpan = uint16(enc[2]) | uint16(enc[3])<<8
 	sigB := [2]byte{}
 	copy(sigB[:], enc[4:6])
 	r.SigBytes = sigB
-	r.HasAttested = bytesutil.ToBool(enc[6])
+	r.HasAttested = enc[6]&1 == 1
 	return r, nil
 }
 
 // Marshal converts the span struct into a flattened byte array.
 func (span Span) Marshal() []byte {
-	return append(append(append(
-		bytesutil.Bytes2(uint64(span.MinSpan)),
-		bytesutil.Bytes2(uint64(span.MaxSpan))...),
-		span.SigBytes[:]...),
-		bytesutil.FromBool(span.HasAttested),
-	)
+	var attested byte = 0
+	if span.HasAttested {
+		attested = 1
+	}
+	return []byte{
+		byte(span.MinSpan),
+		byte(span.MinSpan >> 8),
+		byte(span.MaxSpan),
+		byte(span.MaxSpan >> 8),
+		span.SigBytes[0],
+		span.SigBytes[1],
+		attested,
+	}
 }
