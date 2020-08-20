@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,7 +41,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	log.WithFields(logrus.Fields{
 		"slot":    req.Data.Slot,
 		"indices": req.AttestingIndices,
-	}).Debug("Server attestation detection")
+	}).Debug("Received attestation via RPC")
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}
@@ -125,7 +124,7 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	log.WithFields(logrus.Fields{
 		"slot":           req.Header.Slot,
 		"proposer_index": req.Header.ProposerIndex,
-	}).Info("Server block for detection")
+	}).Info("Received block via RPC")
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}

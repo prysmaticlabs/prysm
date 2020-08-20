@@ -190,7 +190,7 @@ func (bs *Service) restartBeaconConnection(ctx context.Context) error {
 		select {
 		case <-ticker.C:
 			if bs.conn.GetState() == connectivity.TransientFailure || bs.conn.GetState() == connectivity.Idle {
-				log.Debugf("connection status %v", bs.conn.GetState())
+				log.Debugf("Connection status %v", bs.conn.GetState())
 				log.Info("Beacon node is still down")
 				continue
 			}
