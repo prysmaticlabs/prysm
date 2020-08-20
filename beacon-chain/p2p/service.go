@@ -357,7 +357,7 @@ func (s *Service) pingPeers() {
 	for _, pid := range s.peers.Connected() {
 		go func(id peer.ID) {
 			if err := s.pingMethod(s.ctx, id); err != nil {
-				log.WithField("peer", id).WithError(err).Error("Failed to ping peer")
+				log.WithField("peer", id).WithError(err).Debug("Failed to ping peer")
 			}
 		}(pid)
 	}
