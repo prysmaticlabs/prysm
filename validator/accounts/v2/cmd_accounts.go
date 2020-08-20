@@ -131,7 +131,6 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				// if err := ExitAccounts(cliCtx, os.Stdin); err != nil {
 				if err := ExitAccountsUnimplemented(cliCtx, os.Stdin); err != nil {
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}
