@@ -289,7 +289,7 @@ func VerifyAttSigUsingCP(ctx context.Context, c *pb.CheckPtInfo, att *ethpb.Atte
 	indices := indexedAtt.AttestingIndices
 	pubkeys := []bls.PublicKey{}
 	for i := 0; i < len(indices); i++ {
-		pubkeyAtIdx := c.PubKeys[c.ActiveIndices[i]]
+		pubkeyAtIdx := c.PubKeys[indices[i]]
 		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx)
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
