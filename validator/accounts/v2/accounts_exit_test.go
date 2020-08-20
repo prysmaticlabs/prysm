@@ -16,9 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestExitAccounts_Ok(t *testing.T) {
+	logHook := logTest.NewGlobal()
+
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -57,6 +60,7 @@ func TestExitAccounts_Ok(t *testing.T) {
 	stdin.Write([]byte("Y\n"))
 
 	require.NoError(t, ExitAccounts(cliCtx, &stdin))
+	assert.LogsContain(t, logHook, "Voluntary exit was successful")
 }
 
 func TestExitAccounts_EmptyWalletReturnsError(t *testing.T) {
