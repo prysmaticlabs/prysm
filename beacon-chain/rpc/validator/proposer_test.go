@@ -387,7 +387,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash: bytesutil.PadTo([]byte("0x0"), 32),
+			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot: make([]byte, 32),
 		},
 		Eth1DepositIndex: 2,

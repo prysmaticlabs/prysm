@@ -130,10 +130,10 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	require.NoError(t, state.SetSlot(5000))
 	err = state.SetValidators([]*ethpb.Validator{
 		{
-			ActivationEpoch:   params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey:         pubKey,
+			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             pubKey,
 			WithdrawalCredentials: make([]byte, 32),
 		},
 	})
@@ -398,8 +398,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	state := testutil.NewBeaconState()
 	require.NoError(t, state.SetSlot(slot))
 	err = state.SetValidators([]*ethpb.Validator{{
-		PublicKey:         pubKey,
-		WithdrawableEpoch: epoch + 1,
+		PublicKey:             pubKey,
+		WithdrawableEpoch:     epoch + 1,
 		WithdrawalCredentials: make([]byte, 32)},
 	})
 	require.NoError(t, err)

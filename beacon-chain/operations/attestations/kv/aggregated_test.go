@@ -82,13 +82,13 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			name: "normal save",
 			att: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 				AggregationBits: bitfield.Bitlist{0b1101},
-				Signature: make([]byte, 96),
+				Signature:       make([]byte, 96),
 			},
 			count: 1,
 		},
@@ -208,7 +208,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		att := &ethpb.Attestation{
 			AggregationBits: bitfield.Bitlist{0b1111},
 			Data: &ethpb.AttestationData{
-				Slot:            2,
+				Slot: 2,
 			},
 		}
 		err := cache.DeleteAggregatedAttestation(att)
@@ -316,7 +316,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "empty cache unaggregated",
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -328,7 +328,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "single attestation in cache with exact match",
 			existing: []*ethpb.Attestation{{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -337,7 +337,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			},
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -349,7 +349,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "single attestation in cache with subset aggregation",
 			existing: []*ethpb.Attestation{{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -358,7 +358,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			},
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -370,7 +370,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "single attestation in cache with superset aggregation",
 			existing: []*ethpb.Attestation{{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -379,7 +379,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			},
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -392,7 +392,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			existing: []*ethpb.Attestation{
 				{
 					Data: &ethpb.AttestationData{
-						Slot: 1,
+						Slot:            1,
 						BeaconBlockRoot: make([]byte, 32),
 						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -401,7 +401,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 				},
 				{
 					Data: &ethpb.AttestationData{
-						Slot: 1,
+						Slot:            1,
 						BeaconBlockRoot: make([]byte, 32),
 						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -411,7 +411,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			},
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -424,7 +424,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			existing: []*ethpb.Attestation{
 				{
 					Data: &ethpb.AttestationData{
-						Slot: 1,
+						Slot:            1,
 						BeaconBlockRoot: make([]byte, 32),
 						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -433,7 +433,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 				},
 				{
 					Data: &ethpb.AttestationData{
-						Slot: 1,
+						Slot:            1,
 						BeaconBlockRoot: make([]byte, 32),
 						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -443,7 +443,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			},
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -456,7 +456,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			existing: []*ethpb.Attestation{
 				{
 					Data: &ethpb.AttestationData{
-						Slot: 2,
+						Slot:            2,
 						BeaconBlockRoot: make([]byte, 32),
 						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -465,7 +465,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 				},
 				{
 					Data: &ethpb.AttestationData{
-						Slot: 3,
+						Slot:            3,
 						BeaconBlockRoot: make([]byte, 32),
 						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -475,7 +475,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			},
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 1,
+					Slot:            1,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -488,7 +488,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			existing: []*ethpb.Attestation{
 				{
 					Data: &ethpb.AttestationData{
-						Slot: 2,
+						Slot:            2,
 						BeaconBlockRoot: make([]byte, 32),
 						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -498,7 +498,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			},
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 2,
+					Slot:            2,
 					BeaconBlockRoot: make([]byte, 32),
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},

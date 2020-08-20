@@ -137,7 +137,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 		},
 		AggregationBits: aggregationBitfield,
-		Signature: make([]byte, 96),
+		Signature:       make([]byte, 96),
 	}
 
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})

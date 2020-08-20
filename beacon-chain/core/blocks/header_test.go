@@ -39,10 +39,10 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot: 10,// Must be less than block.Slot
+		Slot:       10, // Must be less than block.Slot
 		ParentRoot: make([]byte, 32),
-		StateRoot: make([]byte, 32),
-		BodyRoot: make([]byte, 32),
+		StateRoot:  make([]byte, 32),
+		BodyRoot:   make([]byte, 32),
 	}))
 
 	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
@@ -116,11 +116,11 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:                 9,
-		ProposerIndex:        0,
-		ParentRoot:           make([]byte, 32),
-		StateRoot:            make([]byte, 32),
-		BodyRoot:             make([]byte, 32),
+		Slot:          9,
+		ProposerIndex: 0,
+		ParentRoot:    make([]byte, 32),
+		StateRoot:     make([]byte, 32),
+		BodyRoot:      make([]byte, 32),
 	}))
 
 	lbhsr, err := state.LatestBlockHeader().HashTreeRoot()

@@ -1233,13 +1233,13 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 			ActivationEpoch:   0,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey: bytesutil.PadTo([]byte("1"), 48),
+			PublicKey:         bytesutil.PadTo([]byte("1"), 48),
 		},
 		{
 			ActivationEpoch:   0,
 			ExitEpoch:         4,
 			WithdrawableEpoch: 6,
-			PublicKey: bytesutil.PadTo([]byte("2"), 48),
+			PublicKey:         bytesutil.PadTo([]byte("2"), 48),
 		},
 	}
 

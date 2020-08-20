@@ -208,7 +208,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 					Signature:             make([]byte, 96),
 				},
 			},
-			DepositRoot:     []byte("root"),
+			DepositRoot: []byte("root"),
 		},
 		{
 			Eth1BlockHeight: 12,
@@ -255,14 +255,14 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 		},
 		{
 			Eth1BlockHeight: 11,
-			Deposit:         &ethpb.Deposit{
+			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
 				},
 			},
-			DepositRoot:     []byte("root"),
+			DepositRoot: []byte("root"),
 		},
 	}
 

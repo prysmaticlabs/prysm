@@ -208,12 +208,12 @@ func TestProcessAttestations_OK(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 			BeaconBlockRoot: make([]byte, 32),
 		},
 		AggregationBits: aggBits,
-		Signature: make([]byte, 96),
+		Signature:       make([]byte, 96),
 	}
 
 	cfc := beaconState.CurrentJustifiedCheckpoint()
@@ -637,8 +637,8 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	require.NoError(t, err)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey: keys[i].PublicKey().Marshal(),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             keys[i].PublicKey().Marshal(),
 			WithdrawalCredentials: make([]byte, 32),
 		}
 	}
@@ -652,11 +652,11 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	att1 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
-			Slot:           1,
-			CommitteeIndex: 0,
+			Slot:            1,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: make([]byte, 32),
-			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
 		Signature: make([]byte, 96),
 	}
@@ -676,11 +676,11 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	att2 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
-			Slot:           1,
-			CommitteeIndex: 1,
+			Slot:            1,
+			CommitteeIndex:  1,
 			BeaconBlockRoot: make([]byte, 32),
-			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
 		Signature: make([]byte, 96),
 	}
@@ -705,8 +705,8 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	require.NoError(t, err)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey: keys[i].PublicKey().Marshal(),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             keys[i].PublicKey().Marshal(),
 			WithdrawalCredentials: make([]byte, 32),
 		}
 	}
@@ -725,11 +725,11 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	att1 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
-			Slot:           1,
-			CommitteeIndex: 0,
+			Slot:            1,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: make([]byte, 32),
-			Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
 		Signature: make([]byte, 96),
 	}
@@ -749,11 +749,11 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	att2 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
-			Slot:           1*params.BeaconConfig().SlotsPerEpoch + 1,
-			CommitteeIndex: 1,
+			Slot:            1*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  1,
 			BeaconBlockRoot: make([]byte, 32),
-			Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
 		Signature: make([]byte, 96),
 	}
@@ -817,8 +817,8 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	att2 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
-			Slot:           1,
-			CommitteeIndex: 1,
+			Slot:            1,
+			CommitteeIndex:  1,
 			BeaconBlockRoot: make([]byte, 32),
 			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},

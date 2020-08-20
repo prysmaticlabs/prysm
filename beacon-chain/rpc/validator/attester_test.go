@@ -355,7 +355,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = slot
 	block2 := testutil.NewBeaconBlock()
-	block2.Block.Slot = slot-1
+	block2.Block.Slot = slot - 1
 	targetBlock := testutil.NewBeaconBlock()
 	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
 	justifiedBlock := testutil.NewBeaconBlock()
