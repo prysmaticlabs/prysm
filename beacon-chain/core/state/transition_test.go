@@ -727,7 +727,7 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, InclusionDelay: 1}}
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &pb.BeaconState{
 		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -735,9 +735,9 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Validators:                 []*ethpb.Validator{},
 	}
 	s, err := beaconstate.InitializeFromProto(base)

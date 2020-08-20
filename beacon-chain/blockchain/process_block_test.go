@@ -162,7 +162,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	require.NoError(t, err)
 	service.genesisTime = time.Now()
 
-	update, err := service.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{})
+	update, err := service.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: make([]byte, 32)})
 	require.NoError(t, err)
 	assert.Equal(t, true, update, "Should be able to update justified")
 	lastJustifiedBlk := testutil.NewBeaconBlock()
@@ -310,7 +310,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
-	service.finalizedCheckpt = &ethpb.Checkpoint{}
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: make([]byte, 32)}
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])

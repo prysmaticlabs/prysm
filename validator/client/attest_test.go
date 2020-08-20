@@ -65,8 +65,8 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
 		BeaconBlockRoot: []byte{},
-		Target:          &ethpb.Checkpoint{},
-		Source:          &ethpb.Checkpoint{},
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}, nil)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx

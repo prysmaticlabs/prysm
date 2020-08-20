@@ -49,7 +49,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
-	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
+	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}}
 	r.blkRootToPendingAtts[[32]byte{'A'}] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
 	testutil.AssertLogsContain(t, hook, "Requesting block for pending attestation")
@@ -76,7 +76,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{}}}}
+				Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}}
 
 	b := testutil.NewBeaconBlock()
 	r32, err := stateutil.BlockRoot(b.Block)

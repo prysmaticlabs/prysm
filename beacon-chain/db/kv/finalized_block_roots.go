@@ -48,7 +48,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
-	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
+	previousFinalizedCheckpoint := &ethpb.Checkpoint{Root: make([]byte, 32)}
 	if b := bkt.Get(previousFinalizedCheckpointKey); b != nil {
 		if err := decode(ctx, b, previousFinalizedCheckpoint); err != nil {
 			traceutil.AnnotateError(span, err)

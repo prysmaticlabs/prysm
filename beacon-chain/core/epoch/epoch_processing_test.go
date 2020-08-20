@@ -20,7 +20,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
-			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{},
+			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
@@ -77,7 +77,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 	atts := make([]*pb.PendingAttestation, 5)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
-			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{},
+			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Target: &ethpb.Checkpoint{Epoch: 0}},
 			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
 		}
@@ -119,8 +119,8 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{},
-				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Slot:   uint64(i),
 			},
 			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -374,7 +374,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 			params.BeaconConfig().MaxEffectiveBalance,
 			params.BeaconConfig().MaxEffectiveBalance,
 		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 	state, err := state.InitializeFromProto(base)
 	if err != nil {
@@ -439,7 +439,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().MaxSeedLookahead,
 				ActivationEpoch: 5 + params.BeaconConfig().MaxSeedLookahead + 1},
 		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 	state, err := state.InitializeFromProto(base)
 	if err != nil {
@@ -470,7 +470,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().EjectionBalance - 1,
 			},
 		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 	state, err := state.InitializeFromProto(base)
 	if err != nil {
@@ -502,7 +502,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 				ExitEpoch:         exitEpoch,
 				WithdrawableEpoch: exitEpoch + minWithdrawalDelay},
 		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 	state, err := state.InitializeFromProto(base)
 	if err != nil {

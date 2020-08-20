@@ -25,7 +25,7 @@ func (kv *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, er
 			checkpoint = &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 			return nil
 		}
-		checkpoint = &ethpb.Checkpoint{}
+		checkpoint = &ethpb.Checkpoint{Root: make([]byte, 32)}
 		return decode(ctx, enc, checkpoint)
 	})
 	return checkpoint, err
@@ -43,7 +43,7 @@ func (kv *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, er
 			checkpoint = &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 			return nil
 		}
-		checkpoint = &ethpb.Checkpoint{}
+		checkpoint = &ethpb.Checkpoint{Root: make([]byte, 32)}
 		return decode(ctx, enc, checkpoint)
 	})
 	return checkpoint, err

@@ -385,7 +385,7 @@ func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   params.BeaconConfig().SlotsPerEpoch,
-			Target: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
 	}
 	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)

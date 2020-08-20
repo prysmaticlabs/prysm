@@ -295,13 +295,13 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	s := &Service{
 		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
-		finalizedCheckpt: &ethpb.Checkpoint{},
+		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		beaconDB:         db,
 	}
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
 	r, err := stateutil.BlockRoot(block.Block)
 	require.NoError(t, err)
-	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}
+	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	state, err := beaconstate.InitializeFromProto(bs)
 	require.NoError(t, err)
 	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, state))
@@ -332,13 +332,13 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	db, _ := testDB.SetupDB(b)
 	s := &Service{
 		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
-		finalizedCheckpt: &ethpb.Checkpoint{},
+		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		beaconDB:         db,
 	}
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
 	r, err := stateutil.BlockRoot(block.Block)
 	require.NoError(b, err)
-	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}
+	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	state, err := beaconstate.InitializeFromProto(bs)
 	require.NoError(b, err)
 	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, state))

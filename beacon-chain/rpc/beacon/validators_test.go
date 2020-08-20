@@ -1233,13 +1233,13 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 			ActivationEpoch:   0,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey:         []byte("1"),
+			PublicKey: bytesutil.PadTo([]byte("1"), 48),
 		},
 		{
 			ActivationEpoch:   0,
 			ExitEpoch:         4,
 			WithdrawableEpoch: 6,
-			PublicKey:         []byte("2"),
+			PublicKey: bytesutil.PadTo([]byte("2"), 48),
 		},
 	}
 
@@ -1470,8 +1470,8 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{},
-				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,

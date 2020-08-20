@@ -77,7 +77,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	}{
 		{
 			name:          "attestation's data slot not aligned with target vote",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{}}},
+			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "data slot is not in the same epoch as target 1 != 0",
@@ -266,7 +266,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 		ctx,
 		0,
 		params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
-		&ethpb.Checkpoint{}); err != nil {
+		&ethpb.Checkpoint{Root: make([]byte, 32)}); err != nil {
 		t.Error(err)
 	}
 }
@@ -300,7 +300,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 		ctx,
 		0,
 		2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
-		&ethpb.Checkpoint{}); !strings.Contains(err.Error(),
+		&ethpb.Checkpoint{Root: make([]byte, 32)}); !strings.Contains(err.Error(),
 		"target epoch 0 does not match current epoch 2 or prev epoch 1") {
 		t.Error("Did not receive wanted error")
 	}
