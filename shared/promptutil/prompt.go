@@ -3,6 +3,7 @@ package promptutil
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -29,12 +30,12 @@ const (
 )
 
 // ValidatePrompt requests the user for text and expects it to fulfil la provided validation function.
-func ValidatePrompt(promptText string, validateFunc func(string) error) (string, error) {
+func ValidatePrompt(r io.Reader, promptText string, validateFunc func(string) error) (string, error) {
 	var responseValid bool
 	var response string
 	for !responseValid {
 		fmt.Printf("%s:\n", au.Bold(promptText))
-		scanner := bufio.NewScanner(os.Stdin)
+		scanner := bufio.NewScanner(r)
 		if ok := scanner.Scan(); ok {
 			item := scanner.Text()
 			response = strings.TrimRight(item, "\r\n")

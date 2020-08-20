@@ -3,6 +3,7 @@ package v2
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -16,10 +17,11 @@ import (
 )
 
 const (
-	importKeysDirPromptText        = "Enter the directory or filepath where your keystores to import are located"
-	walletDirPromptText            = "Enter a wallet directory"
-	selectAccountsDeletePromptText = "Select the account(s) you would like to delete"
-	selectAccountsBackupPromptText = "Select the account(s) you wish to backup"
+	importKeysDirPromptText               = "Enter the directory or filepath where your keystores to import are located"
+	walletDirPromptText                   = "Enter a wallet directory"
+	selectAccountsDeletePromptText        = "Select the account(s) you would like to delete"
+	selectAccountsBackupPromptText        = "Select the account(s) you wish to backup"
+	selectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
 )
 
 var au = aurora.NewAurora(true)
@@ -79,25 +81,37 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	log.Info("Input desired configuration")
 	var err error
 	if addr == "" {
-		addr, err = promptutil.ValidatePrompt("Remote gRPC address (such as host.example.com:4000)", promptutil.NotEmpty)
+		addr, err = promptutil.ValidatePrompt(
+			os.Stdin,
+			"Remote gRPC address (such as host.example.com:4000)",
+			promptutil.NotEmpty)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if crt == "" {
-		crt, err = promptutil.ValidatePrompt("Path to TLS crt (such as /path/to/client.crt)", validateCertPath)
+		crt, err = promptutil.ValidatePrompt(
+			os.Stdin,
+			"Path to TLS crt (such as /path/to/client.crt)",
+			validateCertPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if key == "" {
-		key, err = promptutil.ValidatePrompt("Path to TLS key (such as /path/to/client.key)", validateCertPath)
+		key, err = promptutil.ValidatePrompt(
+			os.Stdin,
+			"Path to TLS key (such as /path/to/client.key)",
+			validateCertPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if ca == "" {
-		ca, err = promptutil.ValidatePrompt("Path to certificate authority (CA) crt (such as /path/to/ca.crt)", validateCertPath)
+		ca, err = promptutil.ValidatePrompt(
+			os.Stdin,
+			"Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
+			validateCertPath)
 		if err != nil {
 			return nil, err
 		}
