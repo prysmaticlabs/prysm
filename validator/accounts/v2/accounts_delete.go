@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -58,7 +59,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		if len(filteredPubKeys) == 1 {
 			promptText := "Are you sure you want to delete 1 account? (%s) Y/N"
 			resp, err := promptutil.ValidatePrompt(
-				fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+				os.Stdin, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
 			)
 			if err != nil {
 				return err
@@ -73,7 +74,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 			} else {
 				promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
 			}
-			resp, err := promptutil.ValidatePrompt(promptText, promptutil.ValidateYesOrNo)
+			resp, err := promptutil.ValidatePrompt(os.Stdin, promptText, promptutil.ValidateYesOrNo)
 			if err != nil {
 				return err
 			}
