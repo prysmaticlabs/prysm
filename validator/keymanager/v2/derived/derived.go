@@ -101,7 +101,7 @@ func NewKeymanager(
 	cfg *Config,
 	skipMnemonicConfirm bool,
 ) (*Keymanager, error) {
-	walletFiles, err := wallet.ListDirs()
+	walletExists, err := wallet.Exists()
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func NewKeymanager(
 	// If the user does not have any accounts in their wallet, we ask them to
 	// set a new wallet password, which will be used for encrypting/decrypting
 	// their wallet secret to and from disk.
-	if len(walletFiles) == 0 {
+	if !walletExists {
 		accountsPassword, err = inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,
