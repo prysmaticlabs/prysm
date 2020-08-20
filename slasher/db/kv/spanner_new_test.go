@@ -1,13 +1,12 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"flag"
-	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/urfave/cli/v2"
@@ -62,16 +61,10 @@ func TestValidatorSpans_NilDB(t *testing.T) {
 
 	validatorIdx := uint64(1)
 	es, err := db.EpochSpans(ctx, validatorIdx, false)
-	if err != nil {
-		t.Fatalf("Nil EpochSpansMap should not return error: %v", err)
-	}
+	require.NoError(t, err, "Nil EpochSpansMap should not return error")
 	cleanStore, err := types.NewEpochStore([]byte{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(es, cleanStore) {
-		t.Fatal("EpochSpans should return empty byte array if no record exists in the db")
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, es, cleanStore, "EpochSpans should return empty byte array if no record exists in the db")
 }
 
 func TestStore_SaveReadEpochSpans(t *testing.T) {
@@ -83,39 +76,25 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 	for _, tt := range spanNewTests {
 		t.Run(tt.name, func(t *testing.T) {
 			spans, err := hex.DecodeString(tt.spansHex)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			es, err := types.NewEpochStore(spans)
-			if err != tt.err {
-				t.Fatalf("Failed to get the right error expected: %v got: %v", tt.err, err)
+			if tt.err != nil {
+				require.ErrorContains(t, tt.err.Error(), err)
+			} else {
+				require.NoError(t, err)
 			}
-			if err = db.SaveEpochSpans(ctx, tt.epoch, es, false); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveEpochSpans(ctx, tt.epoch, es, false))
 			sm, err := db.EpochSpans(ctx, tt.epoch, false)
-			if err != nil {
-				t.Fatalf("Failed to get validator spans: %v", err)
-			}
+			require.NoError(t, err, "Failed to get validator spans")
 			spansResult, err := hex.DecodeString(tt.spansResultHex)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			esr, err := types.NewEpochStore(spansResult)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(sm, esr) {
-				t.Fatalf("Get should return validator spans: %v got: %v", spansResult, sm)
-			}
+			require.NoError(t, err)
+			require.DeepEqual(t, sm, esr, "Get should return validator spans: %v", spansResult)
 
 			s, err := es.GetValidatorSpan(1)
-			if err != nil {
-				t.Fatalf("Failed to get validator 1 span: %v", err)
-			}
-			if !reflect.DeepEqual(s, tt.validator1Span) {
-				t.Fatalf("Get should return validator span for validator 2: %v got: %v", tt.validator1Span, s)
-			}
+			require.NoError(t, err, "Failed to get validator 1 span")
+			require.DeepEqual(t, tt.validator1Span, s, "Get should return validator span for validator 2: %v", tt.validator1Span)
 		})
 	}
 }
@@ -135,30 +114,18 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 		100:   {MinSpan: 49, MaxSpan: 96, SigBytes: [2]byte{11, 98}, HasAttested: true},
 	}
 	epochStore, err := types.EpochStoreFromMap(spansToSave)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	epoch := uint64(9)
-	if err := db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseCache); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseCache))
 
 	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.UseCache)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(epochStore.Bytes(), esFromCache.Bytes()) {
-		t.Fatalf("Expected store from DB to be %#x, received %#x", epochStore.Bytes(), esFromCache.Bytes())
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, epochStore.Bytes(), esFromCache.Bytes())
 
 	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.UseDB)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(esFromDB.Bytes(), esFromCache.Bytes()) {
-		t.Fatalf("Expected store asked from DB to use cache, \nreceived %#x, \nexpected %#x", esFromDB.Bytes(), esFromCache.Bytes())
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, esFromDB.Bytes(), esFromCache.Bytes())
 }
 
 func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
@@ -176,29 +143,17 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 		100:    {MinSpan: 49, MaxSpan: 96, SigBytes: [2]byte{11, 98}, HasAttested: true},
 	}
 	epochStore, err := types.EpochStoreFromMap(spansToSave)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	epoch := uint64(9)
-	if err := db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseDB); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseDB))
 
 	// Expect cache to retrieve from DB if its not in cache.
 	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.UseCache)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(esFromCache.Bytes(), epochStore.Bytes()) {
-		t.Fatalf("Expected cache request to be %#x, expected %#x", epochStore.Bytes(), esFromCache.Bytes())
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, esFromCache.Bytes(), epochStore.Bytes())
 
 	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.UseDB)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(epochStore.Bytes(), esFromDB.Bytes()) {
-		t.Fatalf("Expected store from DB to be %#x, received %#x", epochStore.Bytes(), esFromDB.Bytes())
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, epochStore.Bytes(), esFromDB.Bytes())
 }

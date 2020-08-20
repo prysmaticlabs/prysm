@@ -11,7 +11,7 @@ import (
 type Wallet interface {
 	// Methods to retrieve wallet and accounts metadata.
 	AccountsDir() string
-	ListDirs() ([]string, error)
+	Exists() (bool, error)
 	// Read methods for important wallet and accounts-related files.
 	ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error)
 	ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error)

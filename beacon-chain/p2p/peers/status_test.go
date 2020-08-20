@@ -612,6 +612,31 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	assert.Equal(t, maxPeers, len(pids), "Wrong number of peers returned")
 }
 
+func TestStatus_BestNonFinalized(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: 2,
+			},
+		},
+	})
+
+	peerSlots := []uint64{32, 32, 32, 32, 235, 233, 258, 268, 270}
+	for i, headSlot := range peerSlots {
+		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
+		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
+		p.SetChainState(peer.ID(i), &pb.Status{
+			HeadSlot: headSlot,
+		})
+	}
+
+	expectedEpoch := uint64(8)
+	retEpoch, pids := p.BestNonFinalized(3, 5)
+	assert.Equal(t, expectedEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
+	assert.Equal(t, 3, len(pids), "Unexpected number of peers")
+}
+
 func TestStatus_CurrentEpoch(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
