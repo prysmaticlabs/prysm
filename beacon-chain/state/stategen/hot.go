@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -11,6 +13,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+)
+
+var (
+	replayBlockCount = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "replay_blocks_count",
+			Help:    "The number of blocks to replay to generate a state",
+			Buckets: []float64{64, 256, 1024, 2048, 4096},
+		},
+	)
 )
 
 // HasState returns true if the state exists in cache or in DB.
@@ -112,6 +124,8 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 	}
 
+	replayBlockCount.Observe(float64(len(blks)))
+
 	return s.ReplayBlocks(ctx, startState, blks, targetSlot)
 }
 
@@ -180,9 +194,9 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 			return s.beaconDB.GenesisState(ctx)
 		}
 
-		// Does the state exist in finalized info cache.
-		if s.isFinalizedRoot(parentRoot) {
-			return s.finalizedState(), nil
+		// Does the state exist in hot state cache.
+		if s.hotStateCache.Has(parentRoot) {
+			return s.hotStateCache.Get(parentRoot), nil
 		}
 
 		// Does the state exist in epoch boundary cache.
@@ -198,6 +212,12 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 		if s.beaconDB.HasState(ctx, parentRoot) {
 			return s.beaconDB.State(ctx, parentRoot)
 		}
+
+		// Does the state exist in finalized info cache.
+		if s.isFinalizedRoot(parentRoot) {
+			return s.finalizedState(), nil
+		}
+
 		b, err = s.beaconDB.Block(ctx, parentRoot)
 		if err != nil {
 			return nil, err
