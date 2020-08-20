@@ -194,6 +194,11 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 			return s.beaconDB.GenesisState(ctx)
 		}
 
+		// Does the state exist in the hot state cache.
+		if s.hotStateCache.Has(parentRoot) {
+			return s.hotStateCache.Get(parentRoot), nil
+		}
+
 		// Does the state exist in finalized info cache.
 		if s.isFinalizedRoot(parentRoot) {
 			return s.finalizedState(), nil
