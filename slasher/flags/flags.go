@@ -55,6 +55,6 @@ var (
 	SpanCacheSize = &cli.IntFlag{
 		Name:  "spans-cache-size",
 		Usage: "Sets the span cache size.",
-		Value: 256,
+		Value: 1500,
 	}
 )
