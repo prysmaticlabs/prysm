@@ -24,8 +24,8 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, skipMnemonicConfirm)
+
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -36,7 +36,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 	if len(validatingPublicKeys) == 0 {
 		return errors.New("wallet is empty, no accounts to delete")
 	}
-	// Allow the user to interactively select the accounts to backup or optionally
+	// Allow the user to interactively select the accounts to delete or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings.
 	filteredPubKeys, err := filterPublicKeysFromUserInput(
 		cliCtx,

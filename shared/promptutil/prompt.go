@@ -29,7 +29,7 @@ const (
 	ConfirmPass
 )
 
-// ValidatePrompt requests the user for text and expects it to fulfil la provided validation function.
+// ValidatePrompt requests the user for text and expects the user to fulfill the provided validation function.
 func ValidatePrompt(r io.Reader, promptText string, validateFunc func(string) error) (string, error) {
 	var responseValid bool
 	var response string
