@@ -35,7 +35,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "validator index exceeds validator set length")
 	}
-	if err := blocks.VerifyExit(val, helpers.StartSlot(req.Exit.Epoch), s.Fork(), req, s.GenesisValidatorRoot()); err != nil {
+	if err := blocks.VerifyExitAndSignature(val, helpers.StartSlot(req.Exit.Epoch), s.Fork(), req, s.GenesisValidatorRoot()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
