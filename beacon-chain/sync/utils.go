@@ -49,6 +49,19 @@ func (s *Service) dedupBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][
 	return newBlks, newRoots, nil
 }
 
+func (s *Service) dedupRoots(roots [][32]byte) [][32]byte {
+	newRoots := make([][32]byte, 0, len(roots))
+	rootMap := make(map[[32]byte]bool, len(roots))
+	for i, r := range roots {
+		if rootMap[r] {
+			continue
+		}
+		rootMap[r] = true
+		newRoots = append(newRoots, roots[i])
+	}
+	return newRoots
+}
+
 // sort the provided blocks and roots in ascending order. This method assumes that the size of
 // block slice and root slice is equal.
 func (s *Service) sortBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte) {
