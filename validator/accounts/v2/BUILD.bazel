@@ -8,6 +8,7 @@ go_library(
         "accounts_create.go",
         "accounts_delete.go",
         "accounts_exit.go",
+        "accounts_helper.go",
         "accounts_import.go",
         "accounts_list.go",
         "cmd_accounts.go",

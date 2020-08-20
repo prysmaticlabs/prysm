@@ -25,8 +25,8 @@ func CreateAccount(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, skipMnemonicConfirm)
+
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}
