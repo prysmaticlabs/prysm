@@ -11,6 +11,9 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"gopkg.in/d4l3k/messagediff.v1"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -18,8 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
@@ -64,7 +65,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte{},
+		BeaconBlockRoot: make([]byte, 32),
 		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}, nil)
@@ -116,7 +117,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: []byte{}}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -140,7 +141,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Signature:       make([]byte, 96),
 	}
 
-	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})
+	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
 	sig, err := validator.keyManager.Sign(validatorPubKey, root)
@@ -296,9 +297,9 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 2},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 1},
+		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
+		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32), Epoch: 2},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 1},
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
@@ -354,9 +355,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B")},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
+		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -390,8 +391,9 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Root: []byte("B")},
-		Source: &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
+		BeaconBlockRoot: make([]byte, 32),
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(

@@ -51,7 +51,7 @@ func init() {
 		ExitPool:     nil,
 		SlashingPool: nil,
 		Chain: &mock.ChainService{
-			Root:                []byte("root"),
+			Root:                bytesutil.PadTo([]byte("root"), 32),
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 			Fork:                &pb.Fork{CurrentVersion: []byte("foo")},
 		},

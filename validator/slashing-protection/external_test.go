@@ -61,9 +61,9 @@ func TestService_CommitBlock(t *testing.T) {
 		Header: &eth.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
-			ParentRoot:    []byte("parent"),
-			StateRoot:     []byte("state"),
-			BodyRoot:      []byte("body"),
+			ParentRoot:    bytesutil.PadTo([]byte("parent"), 32),
+			StateRoot:     bytesutil.PadTo([]byte("state"), 32),
+			BodyRoot:      bytesutil.PadTo([]byte("body"), 32),
 		},
 	}
 	assert.Equal(t, false, s.CommitBlock(context.Background(), blk), "Expected commit block to fail verification")
@@ -76,9 +76,9 @@ func TestService_VerifyBlock(t *testing.T) {
 	blk := &eth.BeaconBlockHeader{
 		Slot:          0,
 		ProposerIndex: 0,
-		ParentRoot:    []byte("parent"),
-		StateRoot:     []byte("state"),
-		BodyRoot:      []byte("body"),
+		ParentRoot:    bytesutil.PadTo([]byte("parent"), 32),
+		StateRoot:     bytesutil.PadTo([]byte("state"), 32),
+		BodyRoot:      bytesutil.PadTo([]byte("body"), 32),
 	}
 	assert.Equal(t, false, s.CheckBlockSafety(context.Background(), blk), "Expected verify block to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}

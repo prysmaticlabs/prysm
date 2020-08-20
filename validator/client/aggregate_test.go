@@ -50,12 +50,16 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			}},
-			SelectionProof: nil,
+			Aggregate: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, 32),
+					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				},
+				Signature:       make([]byte, 96),
+				AggregationBits: make([]byte, 1),
+			},
+			SelectionProof: make([]byte, 96),
 		},
 	}, nil)
 
@@ -67,7 +71,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
-	).Return(&ethpb.SignedAggregateSubmitResponse{}, nil)
+	).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
 }

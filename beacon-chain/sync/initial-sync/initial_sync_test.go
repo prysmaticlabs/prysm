@@ -226,7 +226,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
 			FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
 			FinalizedEpoch: datum.finalizedEpoch,
-			HeadRoot:       []byte("head_root"),
+			HeadRoot:       bytesutil.PadTo([]byte("head_root"), 32),
 			HeadSlot:       datum.headSlot,
 		})
 	}

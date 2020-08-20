@@ -208,7 +208,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 					Signature:             make([]byte, 96),
 				},
 			},
-			DepositRoot: []byte("root"),
+			DepositRoot: bytesutil.PadTo([]byte("root"), 32),
 		},
 		{
 			Eth1BlockHeight: 12,
@@ -251,7 +251,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 					Signature:             make([]byte, 96),
 				},
 			},
-			DepositRoot: []byte("root"),
+			DepositRoot: bytesutil.PadTo([]byte("root"), 32),
 		},
 		{
 			Eth1BlockHeight: 11,
@@ -262,7 +262,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 					Signature:             make([]byte, 96),
 				},
 			},
-			DepositRoot: []byte("root"),
+			DepositRoot: bytesutil.PadTo([]byte("root"), 32),
 		},
 	}
 
