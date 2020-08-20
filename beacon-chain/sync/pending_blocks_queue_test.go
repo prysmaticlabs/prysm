@@ -329,6 +329,8 @@ func TestService_BatchRootRequest(t *testing.T) {
 	b4Root, err := ssz.HashTreeRoot(b4)
 	require.NoError(t, err)
 
+	// Send in duplicated roots to also test deduplicaton.
+	sentRoots := [][32]byte{b2Root, b2Root, b3Root, b3Root, b4Root, b5Root}
 	expectedRoots := [][32]byte{b2Root, b3Root, b4Root, b5Root}
 
 	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
@@ -350,7 +352,7 @@ func TestService_BatchRootRequest(t *testing.T) {
 		assert.NoError(t, stream.Close())
 	})
 
-	require.NoError(t, r.sendBatchRootRequest(context.Background(), expectedRoots, rand.NewGenerator()))
+	require.NoError(t, r.sendBatchRootRequest(context.Background(), sentRoots, rand.NewGenerator()))
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
