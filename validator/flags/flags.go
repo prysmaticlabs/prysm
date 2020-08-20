@@ -157,10 +157,10 @@ var (
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
 		Value: filepath.Join(DefaultValidatorDir(), WalletDefaultDirName),
 	}
-	// AccountPasswordFileFlag is path to a file containing a password for a new validator account.
+	// AccountPasswordFileFlag is path to a file containing a password for a validator account.
 	AccountPasswordFileFlag = &cli.StringFlag{
 		Name:  "account-password-file",
-		Usage: "Path to a plain-text, .txt file containing a password for a new validator account",
+		Usage: "Path to a plain-text, .txt file containing a password for a validator account",
 	}
 	// WalletPasswordFileFlag is the path to a file containing your wallet password.
 	WalletPasswordFileFlag = &cli.StringFlag{
@@ -176,11 +176,6 @@ var (
 	MnemonicFileFlag = &cli.StringFlag{
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
-	}
-	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
-	SkipMnemonicConfirmFlag = &cli.BoolFlag{
-		Name:  "skip-mnemonic-confirm",
-		Usage: "Skip the withdrawal key mnemonic phrase prompt confirmation",
 	}
 	// ShowDepositDataFlag for accounts-v2.
 	ShowDepositDataFlag = &cli.BoolFlag{
@@ -206,6 +201,14 @@ var (
 	BackupPublicKeysFlag = &cli.StringFlag{
 		Name:  "backup-public-keys",
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
+		Value: "",
+	}
+	// VoluntaryExitPublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts on which a user wants to perform a voluntary exit.
+	VoluntaryExitPublicKeysFlag = &cli.StringFlag{
+		Name: "voluntary-exit-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify on which validator accounts to perform " +
+			"a voluntary exit",
 		Value: "",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
