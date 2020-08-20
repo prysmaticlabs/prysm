@@ -39,18 +39,19 @@ func init() {
 }
 
 type testWalletConfig struct {
-	walletDir           string
-	passwordsDir        string
-	backupDir           string
-	keysDir             string
-	deletePublicKeys    string
-	backupPublicKeys    string
-	backupPasswordFile  string
-	walletPasswordFile  string
-	accountPasswordFile string
-	privateKeyFile      string
-	numAccounts         int64
-	keymanagerKind      v2keymanager.Kind
+	walletDir               string
+	passwordsDir            string
+	backupDir               string
+	keysDir                 string
+	deletePublicKeys        string
+	voluntaryExitPublicKeys string
+	backupPublicKeys        string
+	backupPasswordFile      string
+	walletPasswordFile      string
+	accountPasswordFile     string
+	privateKeyFile          string
+	numAccounts             int64
+	keymanagerKind          v2keymanager.Kind
 }
 
 func setupWalletCtx(
@@ -64,6 +65,7 @@ func setupWalletCtx(
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
 	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
 	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
 	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
@@ -80,6 +82,7 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
 	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
 	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))
