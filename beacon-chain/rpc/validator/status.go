@@ -180,7 +180,10 @@ func (vs *Server) validatorStatus(
 		}
 		// Mark a validator as DEPOSITED if their deposit is visible.
 		resp.Status = ethpb.ValidatorStatus_DEPOSITED
-
+		// Check if 32 ETH was deposited. If less assign PARTIALLY_DEPOSITED status.
+		if deposit.Data.Amount < params.BeaconConfig().MaxEffectiveBalance {
+			resp.Status = ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
+		}
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
 		depositBlockSlot, err := vs.depositBlockSlot(ctx, headState, eth1BlockNumBigInt)
@@ -189,8 +192,8 @@ func (vs *Server) validatorStatus(
 		}
 		resp.DepositInclusionSlot = depositBlockSlot
 		return resp, nonExistentIndex
-	// Deposited and Pending mean the validator has been put into the state.
-	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING:
+	// Deposited, Pending or Partialy Deposited mean the validator has been put into the state.
+	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED:
 		var lastActivatedValidatorIdx uint64
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
 			val, err := headState.ValidatorAtIndexReadOnly(uint64(j))
@@ -238,6 +241,9 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 		return ethpb.ValidatorStatus_DEPOSITED
 	}
 	if currentEpoch < validator.ActivationEpoch() {
+		if validator.EffectiveBalance() < params.BeaconConfig().MaxEffectiveBalance {
+			return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
+		}
 		return ethpb.ValidatorStatus_PENDING
 	}
 	if validator.ExitEpoch() == farFutureEpoch {
