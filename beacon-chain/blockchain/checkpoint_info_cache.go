@@ -15,15 +15,15 @@ var (
 	// This defines the max number of checkpoint info this cache can store.
 	// Each cache is calculated at 3MB(30K validators), the total cache size is around 100MB.
 	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
-	max = 32
+	maxInfoSize = 32
 
 	// This tracks the number of check point info requests that aren't present in the cache.
-	miss = promauto.NewCounter(prometheus.CounterOpts{
+	infoMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "check_point_info_cache_miss",
 		Help: "The number of check point info requests that aren't present in the cache.",
 	})
 	// This tracks the number of check point info requests that are in the cache.
-	hit = promauto.NewCounter(prometheus.CounterOpts{
+	infoHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "check_point_info_cache_hit",
 		Help: "The number of check point info requests that are present in the cache.",
 	})
@@ -37,7 +37,7 @@ type checkPtInfoCache struct {
 
 // newCheckPointInfoCache creates a new checkpoint info cache for storing/accessing processed check point info object.
 func newCheckPointInfoCache() *checkPtInfoCache {
-	cache, err := lru.New(max)
+	cache, err := lru.New(maxInfoSize)
 	if err != nil {
 		panic(err)
 	}
@@ -58,13 +58,13 @@ func (c *checkPtInfoCache) get(cp *ethpb.Checkpoint) (*pb.CheckPtInfo, error) {
 	item, exists := c.cache.Get(h)
 
 	if exists && item != nil {
-		hit.Inc()
+		infoHit.Inc()
 		// Copy here is unnecessary since the returned check point info object
 		// will only be used to verify attestation signature.
 		return item.(*pb.CheckPtInfo), nil
 	}
 
-	miss.Inc()
+	infoMiss.Inc()
 	return nil, nil
 }
 
