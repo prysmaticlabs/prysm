@@ -10,6 +10,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var hashFn = hashutil.HashProto
@@ -32,7 +33,8 @@ type AttCaches struct {
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of attestations.
 func NewAttCaches() *AttCaches {
-	c := cache.New(10*time.Minute, 15*time.Minute)
+	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	c := cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
 	pool := &AttCaches{
 		unAggregatedAtt:   make(map[[32]byte]*ethpb.Attestation),
 		aggregatedAtt:     make(map[[32]byte][]*ethpb.Attestation),
