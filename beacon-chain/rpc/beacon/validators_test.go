@@ -1386,7 +1386,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 				Root: make([]byte, 32),
 			},
 		},
-		InclusionDelay: 1,
+		InclusionDelay:  1,
 		AggregationBits: bitfield.NewBitlist(2),
 	}}
 	headState := testutil.NewBeaconState()

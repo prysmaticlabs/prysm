@@ -76,7 +76,13 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}}
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				BeaconBlockRoot: make([]byte, 32),
+			},
+		},
+		SelectionProof: make([]byte, 96),
+	}
 
 	b := testutil.NewBeaconBlock()
 	r32, err := stateutil.BlockRoot(b.Block)
@@ -85,7 +91,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	require.NoError(t, r.db.SaveBlock(context.Background(), b))
 	require.NoError(t, r.db.SaveState(context.Background(), s, r32))
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a, Signature: make([]byte, 96)}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
 
 	assert.Equal(t, 1, len(r.attPool.UnaggregatedAttestations()), "Did not save unaggregated att")

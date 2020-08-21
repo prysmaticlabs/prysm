@@ -290,7 +290,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			BeaconBlockRoot: make([]byte, 32),
 		},
 		AggregationBits: bitfield.NewBitlist(3),
-		Signature: bls.RandKey().Sign([]byte("foo")).Marshal(),
+		Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
 	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)

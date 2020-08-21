@@ -133,9 +133,11 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -143,7 +145,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		Aggregate:       att,
 		AggregatorIndex: 0,
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, 96)}
 
 	c, err := lru.New(10)
 	require.NoError(t, err)
@@ -202,12 +204,14 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
+		Signature:       make([]byte, 96),
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		Aggregate: att,
+		Aggregate:      att,
+		SelectionProof: make([]byte, 96),
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, 96)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
@@ -217,8 +221,10 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
-			State: beaconState},
+		chain: &mock.ChainService{
+			Genesis: time.Now(),
+			State:   beaconState,
+		},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),
@@ -284,12 +290,14 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
+		Signature:       make([]byte, 96),
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		Aggregate: att,
+		Aggregate:      att,
+		SelectionProof: make([]byte, 96),
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, 96)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 	c, err := lru.New(10)

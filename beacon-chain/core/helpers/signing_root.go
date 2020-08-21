@@ -49,6 +49,9 @@ func ComputeDomainAndSign(state *state.BeaconState, epoch uint64, obj interface{
 //        domain=domain,
 //    ))
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
+	if object == nil {
+		return [32]byte{}, errors.New("cannot compute signing root of nil")
+	}
 	return signingData(func() ([32]byte, error) {
 		if v, ok := object.(fssz.HashRoot); ok {
 			return v.HashTreeRoot()
