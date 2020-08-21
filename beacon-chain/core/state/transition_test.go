@@ -56,7 +56,8 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
-		DepositRoot:  []byte{2},
+		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		BlockHash:    make([]byte, 32),
 	}
 	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1); err != nil {
 		t.Fatal(err)
@@ -66,7 +67,12 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	if err := beaconState.SetEth1Data(e); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}); err != nil {
+	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:       beaconState.Slot(),
+		ParentRoot: make([]byte, 32),
+		StateRoot:  make([]byte, 32),
+		BodyRoot:   make([]byte, 32),
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}); err != nil {
@@ -102,17 +108,12 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          beaconState.Slot() + 1,
-			ParentRoot:    parentRoot[:],
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: randaoReveal,
-				Eth1Data:     eth1Data,
-			},
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.ProposerIndex = proposerIdx
+	block.Block.Slot = beaconState.Slot() + 1
+	block.Block.ParentRoot = parentRoot[:]
+	block.Block.Body.RandaoReveal = randaoReveal
+	block.Block.Body.Eth1Data = eth1Data
 
 	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
@@ -284,10 +285,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AggregationBits: bitfield.NewBitlist(3),
+		Signature: bls.RandKey().Sign([]byte("foo")).Marshal(),
 	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)

@@ -1245,7 +1245,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetValidators(validators))
-	require.NoError(t, headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 0}))
+	require.NoError(t, headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)}))
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -1256,7 +1256,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)
 	wanted := [][]byte{
-		[]byte("2"),
+		bytesutil.PadTo([]byte("2"), 48),
 	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
 	require.NoError(t, err)
@@ -1387,6 +1387,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 			},
 		},
 		InclusionDelay: 1,
+		AggregationBits: bitfield.NewBitlist(2),
 	}}
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
