@@ -105,8 +105,13 @@ func BackupAccounts(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		_ = km
+		keystoresToBackup, err = km.ExtractKeystores(ctx, filteredPubKeys, backupsPassword)
+		if err != nil {
+			return errors.Wrap(err, "could not backup accounts for derived keymanager")
+		}
 		return nil
+	case v2keymanager.Remote:
+		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
 		return errors.New("keymanager kind not supported")
 	}
