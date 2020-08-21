@@ -166,7 +166,6 @@ func (s *Service) Stop() error {
 	defer func() {
 		if s.rateLimiter != nil {
 			s.rateLimiter.free()
-			s.rateLimiter = nil
 		}
 	}()
 	defer s.cancel()
