@@ -33,7 +33,7 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 					BeaconBlockRoot: []byte{0b0},
 				},
 			},
-			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
+			wantErrString: "incorrect fixed bytes marshalling",
 		},
 		{
 			name: "normal save",
