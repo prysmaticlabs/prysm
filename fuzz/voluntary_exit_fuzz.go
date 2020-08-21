@@ -23,7 +23,7 @@ func BeaconFuzzVoluntaryExit(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessVoluntaryExitsNoVerify(st, &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.SignedVoluntaryExit{{Exit: input.VoluntaryExit}}})
+	post, err := blocks.ProcessVoluntaryExitsNoVerifySignature(st, &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.SignedVoluntaryExit{{Exit: input.VoluntaryExit}}})
 	if err != nil {
 		return fail(err)
 	}

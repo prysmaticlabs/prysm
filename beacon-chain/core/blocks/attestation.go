@@ -67,23 +67,23 @@ func ProcessAttestation(
 	beaconState *stateTrie.BeaconState,
 	att *ethpb.Attestation,
 ) (*stateTrie.BeaconState, error) {
-	beaconState, err := ProcessAttestationNoVerify(ctx, beaconState, att)
+	beaconState, err := ProcessAttestationNoVerifySignature(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
 	}
-	return beaconState, VerifyAttestation(ctx, beaconState, att)
+	return beaconState, VerifyAttestationSignature(ctx, beaconState, att)
 }
 
-// ProcessAttestationsNoVerify applies processing operations to a block's inner attestation
+// ProcessAttestationsNoVerifySignature applies processing operations to a block's inner attestation
 // records. The only difference would be that the attestation signature would not be verified.
-func ProcessAttestationsNoVerify(
+func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
 	var err error
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestationNoVerify(ctx, beaconState, attestation)
+		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -91,14 +91,14 @@ func ProcessAttestationsNoVerify(
 	return beaconState, nil
 }
 
-// ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
+// ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
 // method is used to validate attestations whose signatures have already been verified.
-func ProcessAttestationNoVerify(
+func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
 	att *ethpb.Attestation,
 ) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerify")
+	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
 	if att == nil || att.Data == nil || att.Data.Target == nil {
@@ -199,13 +199,13 @@ func ProcessAttestationNoVerify(
 	return beaconState, nil
 }
 
-// VerifyAttestations will verify the signatures of the provided attestations. This method performs
+// VerifyAttestationsSignatures will verify the signatures of the provided attestations. This method performs
 // a single BLS verification call to verify the signatures of all of the provided attestations. All
 // of the provided attestations must have valid signatures or this method will return an error.
 // This method does not determine which attestation signature is invalid, only that one or more
 // attestation signatures were not valid.
-func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestations")
+func VerifyAttestationsSignatures(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationsSignatures")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("attestations", int64(len(atts))))
 
@@ -234,7 +234,7 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 		if err != nil {
 			return err
 		}
-		if err := verifyAttestationsWithDomain(ctx, beaconState, preForkAtts, prevDomain); err != nil {
+		if err := verifyAttestationsSigWithDomain(ctx, beaconState, preForkAtts, prevDomain); err != nil {
 			return err
 		}
 	} else if len(preForkAtts) > 0 {
@@ -249,12 +249,12 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 		return err
 	}
 
-	return verifyAttestationsWithDomain(ctx, beaconState, postForkAtts, currDomain)
+	return verifyAttestationsSigWithDomain(ctx, beaconState, postForkAtts, currDomain)
 }
 
-// VerifyAttestation converts and attestation into an indexed attestation and verifies
+// VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
+func VerifyAttestationSignature(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
 	if att == nil || att.Data == nil || att.AggregationBits.Count() == 0 {
 		return fmt.Errorf("nil or missing attestation data: %v", att)
 	}
@@ -308,7 +308,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 
 // Inner method to verify attestations. This abstraction allows for the domain to be provided as an
 // argument.
-func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) error {
+func verifyAttestationsSigWithDomain(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) error {
 	if len(atts) == 0 {
 		return nil
 	}
