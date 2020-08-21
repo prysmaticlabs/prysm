@@ -474,63 +474,63 @@ func tree1(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.Slot = 0
 	b0.Block.ParentRoot = genesisRoot
-	r0, err := b0.HashTreeRoot()
+	r0, err := b0.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = r0[:]
-	r1, err := b1.HashTreeRoot()
+	r1, err := b1.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 2
 	b2.Block.ParentRoot = r1[:]
-	r2, err := b2.HashTreeRoot()
+	r2, err := b2.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 3
 	b3.Block.ParentRoot = r1[:]
-	r3, err := b3.HashTreeRoot()
+	r3, err := b3.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b4 := testutil.NewBeaconBlock()
 	b4.Block.Slot = 4
 	b4.Block.ParentRoot = r2[:]
-	r4, err := b4.HashTreeRoot()
+	r4, err := b4.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b5 := testutil.NewBeaconBlock()
 	b5.Block.Slot = 5
 	b5.Block.ParentRoot = r3[:]
-	r5, err := b5.HashTreeRoot()
+	r5, err := b5.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b6 := testutil.NewBeaconBlock()
 	b6.Block.Slot = 6
 	b6.Block.ParentRoot = r4[:]
-	r6, err := b6.HashTreeRoot()
+	r6, err := b6.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b7 := testutil.NewBeaconBlock()
 	b7.Block.Slot = 7
 	b7.Block.ParentRoot = r6[:]
-	r7, err := b7.HashTreeRoot()
+	r7, err := b7.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b8 := testutil.NewBeaconBlock()
 	b8.Block.Slot = 8
 	b8.Block.ParentRoot = r6[:]
-	r8, err := b8.HashTreeRoot()
+	r8, err := b8.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -562,14 +562,14 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.Slot = 0
 	b0.Block.ParentRoot = genesisRoot
-	r0, err := b0.HashTreeRoot()
+	r0, err := b0.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = r0[:]
-	r1, err := b1.HashTreeRoot()
+	r1, err := b1.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -577,7 +577,7 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b21.Block.Slot = 2
 	b21.Block.ParentRoot = r1[:]
 	b21.Block.StateRoot = bytesutil.PadTo([]byte{'A'}, 32)
-	r21, err := b21.HashTreeRoot()
+	r21, err := b21.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -585,7 +585,7 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b22.Block.Slot = 2
 	b22.Block.ParentRoot = r1[:]
 	b22.Block.StateRoot = bytesutil.PadTo([]byte{'B'}, 32)
-	r22, err := b22.HashTreeRoot()
+	r22, err := b22.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -593,7 +593,7 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b23.Block.Slot = 2
 	b23.Block.ParentRoot = r1[:]
 	b23.Block.StateRoot = bytesutil.PadTo([]byte{'C'}, 32)
-	r23, err := b23.HashTreeRoot()
+	r23, err := b23.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -601,14 +601,14 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b24.Block.Slot = 2
 	b24.Block.ParentRoot = r1[:]
 	b24.Block.StateRoot = bytesutil.PadTo([]byte{'D'}, 32)
-	r24, err := b24.HashTreeRoot()
+	r24, err := b24.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 3
 	b3.Block.ParentRoot = r24[:]
-	r3, err := b3.HashTreeRoot()
+	r3, err := b3.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -641,14 +641,14 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.Slot = 0
 	b0.Block.ParentRoot = genesisRoot
-	r0, err := b0.HashTreeRoot()
+	r0, err := b0.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = r0[:]
-	r1, err := b1.HashTreeRoot()
+	r1, err := b1.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -656,7 +656,7 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b21.Block.Slot = 2
 	b21.Block.ParentRoot = r1[:]
 	b21.Block.StateRoot = bytesutil.PadTo([]byte{'A'}, 32)
-	r21, err := b21.HashTreeRoot()
+	r21, err := b21.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -664,7 +664,7 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b22.Block.Slot = 2
 	b22.Block.ParentRoot = r1[:]
 	b22.Block.StateRoot = bytesutil.PadTo([]byte{'B'}, 32)
-	r22, err := b22.HashTreeRoot()
+	r22, err := b22.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -672,7 +672,7 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b23.Block.Slot = 2
 	b23.Block.ParentRoot = r1[:]
 	b23.Block.StateRoot = bytesutil.PadTo([]byte{'C'}, 32)
-	r23, err := b23.HashTreeRoot()
+	r23, err := b23.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -680,7 +680,7 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b24.Block.Slot = 2
 	b24.Block.ParentRoot = r1[:]
 	b24.Block.StateRoot = bytesutil.PadTo([]byte{'D'}, 32)
-	r24, err := b24.HashTreeRoot()
+	r24, err := b24.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -714,7 +714,7 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.Slot = 0
 	b0.Block.ParentRoot = genesisRoot
-	r0, err := b0.HashTreeRoot()
+	r0, err := b0.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -722,7 +722,7 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b21.Block.Slot = 2
 	b21.Block.ParentRoot = r0[:]
 	b21.Block.StateRoot = bytesutil.PadTo([]byte{'A'}, 32)
-	r21, err := b21.HashTreeRoot()
+	r21, err := b21.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -730,7 +730,7 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b22.Block.Slot = 2
 	b22.Block.ParentRoot = r0[:]
 	b22.Block.StateRoot = bytesutil.PadTo([]byte{'B'}, 32)
-	r22, err := b22.HashTreeRoot()
+	r22, err := b22.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -738,7 +738,7 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b23.Block.Slot = 2
 	b23.Block.ParentRoot = r0[:]
 	b23.Block.StateRoot = bytesutil.PadTo([]byte{'C'}, 32)
-	r23, err := b23.HashTreeRoot()
+	r23, err := b23.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -746,7 +746,7 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.SignedBeaco
 	b24.Block.Slot = 2
 	b24.Block.ParentRoot = r0[:]
 	b24.Block.StateRoot = bytesutil.PadTo([]byte{'D'}, 32)
-	r24, err := b24.HashTreeRoot()
+	r24, err := b24.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
