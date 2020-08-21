@@ -226,7 +226,6 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		return err
 	}
 	s.clearInitSyncBlocks()
-	s.attPool.ClearSeenAtts()
 
 	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
