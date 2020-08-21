@@ -208,6 +208,14 @@ var (
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
 		Value: "",
 	}
+	// VoluntaryExitPublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts on which a user wants to perform a voluntary exit.
+	VoluntaryExitPublicKeysFlag = &cli.StringFlag{
+		Name: "voluntary-exit-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify on which validator accounts to perform " +
+			"a voluntary exit",
+		Value: "",
+	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
 		Name:  "backup-password-file",
