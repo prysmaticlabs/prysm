@@ -58,6 +58,7 @@ type Span struct {
 var SpannerEncodedLength = uint64(7)
 
 // UnmarshalSpan returns a span from an encoded, flattened byte array.
+// Note: This is a very often used function, so it is as optimized as possible.
 func UnmarshalSpan(enc []byte) (Span, error) {
 	r := Span{}
 	if len(enc) != int(SpannerEncodedLength) {
@@ -73,6 +74,7 @@ func UnmarshalSpan(enc []byte) (Span, error) {
 }
 
 // Marshal converts the span struct into a flattened byte array.
+// Note: This is a very often used function, so it is as optimized as possible.
 func (span Span) Marshal() []byte {
 	var attested byte = 0
 	if span.HasAttested {

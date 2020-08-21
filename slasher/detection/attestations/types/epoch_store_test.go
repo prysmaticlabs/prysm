@@ -235,40 +235,6 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 	})
 }
 
-func BenchmarkSpan_Marshal(b *testing.B) {
-	span := &types.Span{
-		MinSpan:     40,
-		MaxSpan:     60,
-		SigBytes:    [2]byte{5, 10},
-		HasAttested: true,
-	}
-	b.ReportAllocs()
-	var bytes []byte
-	for i := 0; i < b.N; i++ {
-		bytes = span.Marshal()
-	}
-	fmt.Println(bytes)
-}
-
-func BenchmarkSpan_Unmarshal(b *testing.B) {
-	span := types.Span{
-		MinSpan:     40,
-		MaxSpan:     60,
-		SigBytes:    [2]byte{5, 10},
-		HasAttested: true,
-	}
-	marshaled := span.Marshal()
-	b.ReportAllocs()
-	var err error
-	for i := 0; i < b.N; i++ {
-		span, err = types.UnmarshalSpan(marshaled)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-	fmt.Println(span)
-}
-
 func generateEpochStore(t testing.TB, n uint64) (*types.EpochStore, map[uint64]types.Span) {
 	epochStore, err := types.NewEpochStore([]byte{})
 	require.NoError(t, err)
