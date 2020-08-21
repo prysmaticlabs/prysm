@@ -211,7 +211,7 @@ func (s *Service) processBlock(
 	if err != nil {
 		return err
 	}
-	if s.isProcessedBlock(ctx, blk) {
+	if s.isProcessedBlock(ctx, blk, blkRoot) {
 		return errors.Wrapf(errBlockAlreadyProcessed, "slot: %d , root %#x", blk.Block.Slot, blkRoot)
 	}
 
@@ -233,16 +233,20 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return errors.New("0 blocks provided into method")
 	}
 	firstBlock := blks[0]
-	for s.lastProcessedSlot >= firstBlock.Block.Slot && s.isProcessedBlock(ctx, firstBlock) {
+	blkRoot, err := stateutil.BlockRoot(firstBlock.Block)
+	if err != nil {
+		return err
+	}
+	for s.lastProcessedSlot >= firstBlock.Block.Slot && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
 		if len(blks) == 1 {
 			return errors.New("no good blocks in batch")
 		}
 		blks = blks[1:]
 		firstBlock = blks[0]
-	}
-	blkRoot, err := stateutil.BlockRoot(firstBlock.Block)
-	if err != nil {
-		return err
+		blkRoot, err = stateutil.BlockRoot(firstBlock.Block)
+		if err != nil {
+			return err
+		}
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
 	parentRoot := bytesutil.ToBytes32(firstBlock.Block.ParentRoot)
@@ -287,11 +291,9 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
 }
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
-func (s *Service) isProcessedBlock(ctx context.Context, blk *eth.SignedBeaconBlock) bool {
-	if blkRoot, err := stateutil.BlockRoot(blk.Block); err == nil {
-		if blk.Block.Slot <= s.lastProcessedSlot && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
-			return true
-		}
+func (s *Service) isProcessedBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blkRoot [32]byte) bool {
+	if blk.Block.Slot <= s.lastProcessedSlot && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
+		return true
 	}
 	return false
 }
