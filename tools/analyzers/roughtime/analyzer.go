@@ -1,12 +1,11 @@
 package roughtime
 
 import (
-	"errors"
 	"go/ast"
 
+	"github.com/prysmaticlabs/prysm/tools/analyzers"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/ast/inspector"
 )
 
 // Doc explaining the tool.
@@ -23,16 +22,16 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-	if !ok {
-		return nil, errors.New("analyzer is not type *inspector.Inspector")
+	inspector, err := analyzers.GetInspector(pass)
+	if err != nil {
+		return nil, err
 	}
 
 	nodeFilter := []ast.Node{
 		(*ast.CallExpr)(nil),
 	}
 
-	inspect.Preorder(nodeFilter, func(node ast.Node) {
+	inspector.Preorder(nodeFilter, func(node ast.Node) {
 		if ce, ok := node.(*ast.CallExpr); ok {
 			if isPkgDot(ce.Fun, "time", "Now") {
 				pass.Reportf(node.Pos(), "Do not use time.Now(), use "+

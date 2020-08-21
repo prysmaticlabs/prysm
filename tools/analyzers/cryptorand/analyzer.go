@@ -6,9 +6,9 @@ import (
 	"go/ast"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/tools/analyzers"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/ast/inspector"
 )
 
 // Doc explaining the tool.
@@ -25,9 +25,9 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-	if !ok {
-		return nil, errors.New("analyzer is not type *inspector.Inspector")
+	inspector, err := analyzers.GetInspector(pass)
+	if err != nil {
+		return nil, err
 	}
 
 	nodeFilter := []ast.Node{
@@ -40,7 +40,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	disallowedFns := []string{"NewSource", "New", "Seed", "Int63", "Uint32", "Uint64", "Int31", "Int",
 		"Int63n", "Int31n", "Intn", "Float64", "Float32", "Perm", "Shuffle", "Read"}
 
-	inspect.Preorder(nodeFilter, func(node ast.Node) {
+	inspector.Preorder(nodeFilter, func(node ast.Node) {
 		switch stmt := node.(type) {
 		case *ast.File:
 			// Reset aliases (per file).
