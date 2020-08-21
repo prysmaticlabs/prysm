@@ -14,37 +14,41 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/sirupsen/logrus"
-
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
-func (dr *Keymanager) SendDepositTx() error {
-	var rpcClient *rpc.Client
-	var err error
-	var txOps *bind.TransactOpts
-	privKeyString := "hello"
-	passwordFile := "h"
-	keystoreUTCPath := "h"
-	depositDelay := time.Second
+// SendDepositConfig contains all the required information for
+// the derived keymanager to submit a 32 ETH deposit from the user's
+// eth1 wallet to an eth1 RPC endpoint.
+type SendDepositConfig struct {
+	DepositContractAddress   string
+	DepositDelaySeconds      time.Duration
+	DepositPublicKeys        string
+	Eth1KeystoreUTCFile      string
+	Eth1KeystorePasswordFile string
+	Eth1PrivateKeyFile       string
+	Web3Provider             string
+}
 
-	// Uses HTTP-RPC if IPC is not set
-	//if ipcPath == "" {
-	rpcClient, err = rpc.Dial("https://goerli.prylabs.net")
-	//} else {
-	//	rpcClient, err = rpc.Dial(ipcPath)
-	//}
+// SendDepositTx to the validator deposit contract on the eth1 chain
+// using a defined configuration by first unlocking the user's eth1 wallet,
+// then generating the deposit data for a desired validator account, finally
+// submitting the transaction via an eth1 web3 endpoint.
+func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
+	var txOps *bind.TransactOpts
+	rpcClient, err := rpc.Dial(conf.Web3Provider)
 	if err != nil {
 		return err
 	}
 	client := ethclient.NewClient(rpcClient)
 	depositAmountInGwei := params.BeaconConfig().MinDepositAmount
 
-	if privKeyString != "" {
+	if conf.Eth1PrivateKeyFile != "" {
 		// User inputs private key, sign tx with private key
-		privKey, err := crypto.HexToECDSA(privKeyString)
+		privKey, err := crypto.HexToECDSA(conf.Eth1PrivateKeyFile)
 		if err != nil {
 			return err
 		}
@@ -52,10 +56,10 @@ func (dr *Keymanager) SendDepositTx() error {
 		txOps.Value = new(big.Int).Mul(big.NewInt(int64(depositAmountInGwei)), big.NewInt(1e9))
 	} else {
 		// User inputs keystore json file, sign tx with keystore json
-		password := loadTextFromFile(passwordFile)
+		password := loadTextFromFile(conf.Eth1KeystorePasswordFile)
 
 		// #nosec - Inclusion of file via variable is OK for this tool.
-		keyJSON, err := ioutil.ReadFile(keystoreUTCPath)
+		keyJSON, err := ioutil.ReadFile(conf.Eth1KeystoreUTCFile)
 		if err != nil {
 			return err
 		}
@@ -69,12 +73,13 @@ func (dr *Keymanager) SendDepositTx() error {
 		txOps.GasLimit = 500000
 	}
 
-	depositContract, err := contracts.NewDepositContract(common.HexToAddress(""), client)
+	depositContract, err := contracts.NewDepositContract(common.HexToAddress(conf.DepositContractAddress), client)
 	if err != nil {
 		return err
 	}
 	keyCounter := int64(0)
 	for _, validatorKey := range dr.keysCache {
+		// TODO: Use a withdrawal key.
 		data, depositRoot, err := depositutil.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
 		if err != nil {
 			log.Errorf("Could not generate deposit input data: %v", err)
@@ -97,10 +102,10 @@ func (dr *Keymanager) SendDepositTx() error {
 		}).Infof(
 			"Deposit %d sent to contract address %v for validator with a public key %#x",
 			keyCounter,
-			"",
+			conf.DepositContractAddress,
 			validatorKey.PublicKey().Marshal(),
 		)
-		time.Sleep(time.Duration(depositDelay) * time.Second)
+		time.Sleep(conf.DepositDelaySeconds * time.Second)
 		keyCounter++
 	}
 	return nil

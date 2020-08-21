@@ -146,11 +146,18 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.HTTPWeb3ProviderFlag,
+				flags.Eth1KeystoreUTCPathFlag,
+				flags.Eth1KeystorePasswordFileFlag,
+				flags.Eth1KeystorePasswordFileFlag,
+				flags.Eth1PrivateKeyFileFlag,
+				flags.DepositDelaySecondsFlag,
+				flags.DepositContractAddressFlag,
+				flags.DepositPublicKeysFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
 				if err := SendDeposit(cliCtx); err != nil {
-					log.Fatalf("Could not send validator deposit: %v", err)
+					log.Fatalf("Could not send validator deposit(s): %v", err)
 				}
 				return nil
 			},

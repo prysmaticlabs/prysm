@@ -35,7 +35,7 @@ func SendDeposit(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := km.SendDepositTx(); err != nil {
+		if err := km.SendDepositTx(cliCtx); err != nil {
 			return err
 		}
 	default:

@@ -261,14 +261,14 @@ var (
 		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
-	// Eth1KeystoreUTCPath defines the path to an eth1 utc keystore containing eth1 private keys.
-	Eth1KeystoreUTCPath = &cli.StringFlag{
+	// Eth1KeystoreUTCPathFlag defines the path to an eth1 utc keystore containing eth1 private keys.
+	Eth1KeystoreUTCPathFlag = &cli.StringFlag{
 		Name:  "eth1-keystore-utc-path",
 		Usage: "Path to an eth1 utc keystore containing eth1 private keys",
 		Value: "",
 	}
-	// Eth1KeystorePasswordFile to unlock
-	Eth1KeystorePasswordFile = &cli.StringFlag{
+	// Eth1KeystorePasswordFileFlag to unlock an eth1 keystores.
+	Eth1KeystorePasswordFileFlag = &cli.StringFlag{
 		Name:  "eth1-keystore-password-file",
 		Value: "",
 		Usage: "Password file for unlock account",
@@ -279,21 +279,25 @@ var (
 		Usage: "An eth1 web3 provider string http endpoint",
 		Value: "https://goerli.prylabs.net",
 	}
-	Eth1PrivateKey = &cli.StringFlag{
+	// Eth1PrivateKeyFileFlag containing a hex string for sending deposit transactions from eth1.
+	Eth1PrivateKeyFileFlag = &cli.StringFlag{
 		Name:  "eth1-private-key-file",
 		Usage: "File containing a private key for sending deposit transactions from eth1",
 		Value: "",
 	}
-	DepositDelaySeconds = &cli.Int64Flag{
+	// DepositDelaySecondsFlag to delay sending deposit transactions by a fixed interval.
+	DepositDelaySecondsFlag = &cli.Int64Flag{
 		Name:  "deposit-delay-seconds",
 		Usage: "The time delay between sending the deposits to the contract (in seconds)",
 		Value: 5,
 	}
-	DepositContractAddress = &cli.StringFlag{
+	// DepositContractAddressFlag for the validator deposit contract on eth1.
+	DepositContractAddressFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
 		Usage: "Address of the deposit contract",
-		Value: "",
+		Value: "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", // Medalla deposit contract address.
 	}
+	// DepositPublicKeysFlag for validating public keys a user wishes to deposit for.
 	DepositPublicKeysFlag = &cli.StringFlag{
 		Name:  "deposit-public-keys",
 		Usage: "Comma-separated list of validating public key hex strings to specify which validator accounts to deposit",
