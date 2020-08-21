@@ -20,11 +20,11 @@ func (p *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
 			return errors.New("could not convert to bitlist type")
 		}
 		seenBits = append(seenBits, att.AggregationBits)
-		p.seenAggregatedAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration)
+		p.seenAggregatedAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
 		return nil
 	}
 
-	p.seenAggregatedAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration)
+	p.seenAggregatedAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
 	return nil
 }
 
