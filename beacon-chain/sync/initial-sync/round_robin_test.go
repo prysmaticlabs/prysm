@@ -171,24 +171,24 @@ func TestService_roundRobinSync(t *testing.T) {
 				{
 					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 				},
 				{
 					blocks:         makeSequence(1, 320),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 					failureSlots:   makeSequence(1, 320),
 				},
 				{
 					blocks:         makeSequence(1, 320),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 					failureSlots:   makeSequence(1, 320),
 				},
 				{
 					blocks:         makeSequence(1, 320),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 					failureSlots:   makeSequence(1, 320),
 				},
 			},
@@ -202,12 +202,12 @@ func TestService_roundRobinSync(t *testing.T) {
 				{
 					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 10,
-					headSlot:       320,
+					headSlot:       384,
 				},
 				{
 					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 10,
-					headSlot:       320,
+					headSlot:       384,
 				},
 				{
 					blocks:         makeSequence(1, 256),
