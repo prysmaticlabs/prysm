@@ -43,6 +43,9 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 	if err != nil {
 		return nil, err
 	}
+	if web3Provider == "" {
+		web3Provider = cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)
+	}
 	depositDelaySeconds := cliCtx.Int(flags.DepositDelaySecondsFlag.Name)
 	config := &derived.SendDepositConfig{
 		DepositContractAddress: cliCtx.String(flags.DepositContractAddressFlag.Name),

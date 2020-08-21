@@ -147,7 +147,6 @@ this command outputs a deposit data string which is required to become a validat
 				flags.HTTPWeb3ProviderFlag,
 				flags.Eth1KeystoreUTCPathFlag,
 				flags.Eth1KeystorePasswordFileFlag,
-				flags.Eth1KeystorePasswordFileFlag,
 				flags.Eth1PrivateKeyFileFlag,
 				flags.DepositDelaySecondsFlag,
 				flags.DepositContractAddressFlag,

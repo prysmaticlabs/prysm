@@ -1,6 +1,7 @@
 package derived
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -10,10 +11,15 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
+	util "github.com/wealdtech/go-eth2-util"
 )
 
 // SendDepositConfig contains all the required information for
@@ -75,38 +81,57 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 	if err != nil {
 		return err
 	}
-	_ = depositContract
-	keyCounter := int64(0)
-	for _, validatorKey := range dr.keysCache {
-		_ = validatorKey
-		// TODO: Use a withdrawal key.
-		//data, depositRoot, err := depositutil.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
-		//if err != nil {
-		//	log.Errorf("Could not generate deposit input data: %v", err)
-		//	continue
-		//}
-		//tx, err := depositContract.Deposit(
-		//	txOps,
-		//	data.PublicKey,
-		//	data.WithdrawalCredentials,
-		//	data.Signature,
-		//	depositRoot,
-		//)
-		//if err != nil {
-		//	log.Errorf("unable to send transaction to contract: %v", err)
-		//	continue
-		//}
-		//
-		//log.WithFields(logrus.Fields{
-		//	"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
-		//}).Infof(
-		//	"Deposit %d sent to contract address %v for validator with a public key %#x",
-		//	keyCounter,
-		//	conf.DepositContractAddress,
-		//	validatorKey.PublicKey().Marshal(),
-		//)
+	wantedPubKeys := make(map[[48]byte]bool, len(conf.DepositPublicKeys))
+	for _, pk := range conf.DepositPublicKeys {
+		wantedPubKeys[bytesutil.ToBytes48(pk.Marshal())] = true
+	}
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to read validating key for account %d", i)
+		}
+		if ok := wantedPubKeys[bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())]; !ok {
+			continue
+		}
+		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
+		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to read withdrawal key for account %d", i)
+		}
+		validatingKeyBLS, err := bls.SecretKeyFromBytes(validatingKey.Marshal())
+		if err != nil {
+			return err
+		}
+		withdrawalKeyBLS, err := bls.SecretKeyFromBytes(withdrawalKey.Marshal())
+		if err != nil {
+			return err
+		}
+		data, depositRoot, err := depositutil.DepositInput(validatingKeyBLS, withdrawalKeyBLS, depositAmountInGwei)
+		if err != nil {
+			log.Errorf("Could not generate deposit input data: %v", err)
+			continue
+		}
+		tx, err := depositContract.Deposit(
+			txOps,
+			data.PublicKey,
+			data.WithdrawalCredentials,
+			data.Signature,
+			depositRoot,
+		)
+		if err != nil {
+			log.Errorf("unable to send transaction to contract: %v", err)
+			continue
+		}
+		log.WithFields(logrus.Fields{
+			"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
+		}).Infof(
+			"Deposit %d sent to contract address %v for validator with a public key %#x",
+			i,
+			conf.DepositContractAddress,
+			validatingKey.PublicKey().Marshal(),
+		)
 		time.Sleep(conf.DepositDelaySeconds)
-		keyCounter++
 	}
 	return nil
 }
