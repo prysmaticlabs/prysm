@@ -114,7 +114,7 @@
     "exclude_files": {
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
-      "tools/analyzers/comparesame/analyzer_test.go": "Analyzer tests have to break rules"
+      "tools/analyzers/comparesame/testdata/compare_len.go": "Analyzer testdata has to break rules"
     }
   }
 }
