@@ -88,8 +88,10 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
 
-	assert.Equal(t, 1, len(r.attPool.UnaggregatedAttestations()), "Did not save unaggregated att")
-	assert.DeepEqual(t, a.Aggregate, r.attPool.UnaggregatedAttestations()[0], "Incorrect saved att")
+	atts, err := r.attPool.UnaggregatedAttestations()
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(atts), "Did not save unaggregated att")
+	assert.DeepEqual(t, a.Aggregate, atts[0], "Incorrect saved att")
 	assert.Equal(t, 0, len(r.attPool.AggregatedAttestations()), "Did save aggregated att")
 	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
@@ -173,7 +175,9 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	assert.Equal(t, 1, len(r.attPool.AggregatedAttestations()), "Did not save aggregated att")
 	assert.DeepEqual(t, att, r.attPool.AggregatedAttestations()[0], "Incorrect saved att")
-	assert.Equal(t, 0, len(r.attPool.UnaggregatedAttestations()), "Did save unaggregated att")
+	atts, err := r.attPool.UnaggregatedAttestations()
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(atts), "Did save unaggregated att")
 	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
 

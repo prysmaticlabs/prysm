@@ -678,7 +678,10 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 	// If there is any room left in the block, consider unaggregated attestations as well.
 	numAtts := uint64(len(atts))
 	if numAtts < params.BeaconConfig().MaxAttestations {
-		uAtts := vs.AttPool.UnaggregatedAttestations()
+		uAtts, err := vs.AttPool.UnaggregatedAttestations()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get unaggregated attestations")
+		}
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
 		atts = append(atts, uAtts...)
 
