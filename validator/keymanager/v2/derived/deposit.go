@@ -1,11 +1,7 @@
 package derived
 
 import (
-	"bufio"
-	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -15,9 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 // SendDepositConfig contains all the required information for
@@ -26,10 +22,10 @@ import (
 type SendDepositConfig struct {
 	DepositContractAddress   string
 	DepositDelaySeconds      time.Duration
-	DepositPublicKeys        string
+	DepositPublicKeys        []bls.PublicKey
 	Eth1KeystoreUTCFile      string
 	Eth1KeystorePasswordFile string
-	Eth1PrivateKeyFile       string
+	Eth1PrivateKey           string
 	Web3Provider             string
 }
 
@@ -46,9 +42,9 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 	client := ethclient.NewClient(rpcClient)
 	depositAmountInGwei := params.BeaconConfig().MinDepositAmount
 
-	if conf.Eth1PrivateKeyFile != "" {
+	if conf.Eth1PrivateKey != "" {
 		// User inputs private key, sign tx with private key
-		privKey, err := crypto.HexToECDSA(conf.Eth1PrivateKeyFile)
+		privKey, err := crypto.HexToECDSA(conf.Eth1PrivateKey)
 		if err != nil {
 			return err
 		}
@@ -56,14 +52,16 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 		txOps.Value = new(big.Int).Mul(big.NewInt(int64(depositAmountInGwei)), big.NewInt(1e9))
 	} else {
 		// User inputs keystore json file, sign tx with keystore json
-		password := loadTextFromFile(conf.Eth1KeystorePasswordFile)
-
-		// #nosec - Inclusion of file via variable is OK for this tool.
-		keyJSON, err := ioutil.ReadFile(conf.Eth1KeystoreUTCFile)
+		password, err := fileutil.ReadFileAsBytes(conf.Eth1KeystorePasswordFile)
 		if err != nil {
 			return err
 		}
-		privKey, err := keystore.DecryptKey(keyJSON, password)
+		// #nosec - Inclusion of file via variable is OK for this tool.
+		keyJSON, err := fileutil.ReadFileAsBytes(conf.Eth1KeystoreUTCFile)
+		if err != nil {
+			return err
+		}
+		privKey, err := keystore.DecryptKey(keyJSON, string(password))
 		if err != nil {
 			return err
 		}
@@ -77,49 +75,38 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 	if err != nil {
 		return err
 	}
+	_ = depositContract
 	keyCounter := int64(0)
 	for _, validatorKey := range dr.keysCache {
+		_ = validatorKey
 		// TODO: Use a withdrawal key.
-		data, depositRoot, err := depositutil.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
-		if err != nil {
-			log.Errorf("Could not generate deposit input data: %v", err)
-			continue
-		}
-		tx, err := depositContract.Deposit(
-			txOps,
-			data.PublicKey,
-			data.WithdrawalCredentials,
-			data.Signature,
-			depositRoot,
-		)
-		if err != nil {
-			log.Errorf("unable to send transaction to contract: %v", err)
-			continue
-		}
-
-		log.WithFields(logrus.Fields{
-			"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
-		}).Infof(
-			"Deposit %d sent to contract address %v for validator with a public key %#x",
-			keyCounter,
-			conf.DepositContractAddress,
-			validatorKey.PublicKey().Marshal(),
-		)
-		time.Sleep(conf.DepositDelaySeconds * time.Second)
+		//data, depositRoot, err := depositutil.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
+		//if err != nil {
+		//	log.Errorf("Could not generate deposit input data: %v", err)
+		//	continue
+		//}
+		//tx, err := depositContract.Deposit(
+		//	txOps,
+		//	data.PublicKey,
+		//	data.WithdrawalCredentials,
+		//	data.Signature,
+		//	depositRoot,
+		//)
+		//if err != nil {
+		//	log.Errorf("unable to send transaction to contract: %v", err)
+		//	continue
+		//}
+		//
+		//log.WithFields(logrus.Fields{
+		//	"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
+		//}).Infof(
+		//	"Deposit %d sent to contract address %v for validator with a public key %#x",
+		//	keyCounter,
+		//	conf.DepositContractAddress,
+		//	validatorKey.PublicKey().Marshal(),
+		//)
+		time.Sleep(conf.DepositDelaySeconds)
 		keyCounter++
 	}
 	return nil
-}
-
-func loadTextFromFile(filepath string) string {
-	// #nosec - Inclusion of file via variable is OK for this tool.
-	file, err := os.Open(filepath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanWords)
-	scanner.Scan()
-	return scanner.Text()
 }
