@@ -38,7 +38,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	for i := 1; i < 11; i++ {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.Slot = uint64(i)
-		root, err := blk.HashTreeRoot()
+		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), blk))
 		blkRoots = append(blkRoots, root)

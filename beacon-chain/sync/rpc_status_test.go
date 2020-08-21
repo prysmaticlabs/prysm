@@ -114,6 +114,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 			},
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
+			Root: make([]byte, 32),
 		}}
 	pcl := protocol.ID("/testing")
 	topic := string(pcl)
@@ -437,16 +438,22 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := (&ethpb.BeaconBlock{Slot: 111}).HashTreeRoot()
+	head := testutil.NewBeaconBlock()
+	head.Block.Slot = 111
+	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := (&ethpb.BeaconBlock{Slot: blkSlot}).HashTreeRoot()
+	finalized := testutil.NewBeaconBlock()
+	finalized.Block.Slot = blkSlot
+	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
-	require.NoError(t, db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: blkSlot}}))
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = blkSlot
+	require.NoError(t, db.SaveBlock(context.Background(), blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
