@@ -15,6 +15,45 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// SendDeposit transaction for user specified accounts via an interactive
+// CLI process or via command-line flags.
+func SendDeposit(cliCtx *cli.Context) error {
+	// Read the wallet from the specified path.
+	wallet, err := OpenWallet(cliCtx)
+	if errors.Is(err, ErrNoWalletFound) {
+		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
+	} else if err != nil {
+		return errors.Wrap(err, "could not open wallet")
+	}
+	keymanager, err := wallet.InitializeKeymanager(
+		cliCtx,
+		true, /* skip mnemonic confirm */
+	)
+	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+		return errors.New("wrong wallet password entered")
+	}
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	switch wallet.KeymanagerKind() {
+	case v2keymanager.Derived:
+		km, ok := keymanager.(*derived.Keymanager)
+		if !ok {
+			return errors.New("could not assert keymanager interface to concrete type")
+		}
+		depositConfig, err := createDepositConfig(cliCtx, km)
+		if err != nil {
+			return err
+		}
+		if err := km.SendDepositTx(depositConfig); err != nil {
+			return err
+		}
+	default:
+		return errors.New("only Prysm HD wallets support sending deposits at the moment")
+	}
+	return nil
+}
+
 func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.SendDepositConfig, error) {
 	pubKeys, err := km.FetchValidatingPublicKeys(context.Background())
 	if err != nil {
@@ -54,6 +93,8 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 		Web3Provider:           web3Provider,
 	}
 
+	// If the user passes any of the specified flags, we read them and return the
+	// config struct directly, bypassing any CLI input.
 	hasPrivateKey := cliCtx.IsSet(flags.Eth1PrivateKeyFileFlag.Name)
 	hasEth1Keystore := cliCtx.IsSet(flags.Eth1KeystoreUTCPathFlag.Name)
 	if hasPrivateKey || hasEth1Keystore {
@@ -80,19 +121,18 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 	if err != nil {
 		return nil, err
 	}
+	// If the user wants to proceed by inputting their private key directly, ask for it securely.
 	if selection == usePrivateKeyPrompt {
-		eth1PrivateKeyString, err := promptutil.DefaultAndValidatePrompt(
+		eth1PrivateKeyString, err := promptutil.PasswordPrompt(
 			"Enter the hex string value of your eth1 private key",
-			"",
-			func(input string) error {
-				return nil
-			},
+			promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, err
 		}
 		config.Eth1PrivateKey = eth1PrivateKeyString
 	} else if selection == useEth1KeystorePrompt {
+		// Otherwise, ask the user for paths to their keystore UTC file and its password.
 		eth1KeystoreUTCFile, err := promptutil.DefaultAndValidatePrompt(
 			"Enter the file path for your encrypted, eth1 keystore-utc file",
 			cliCtx.String(flags.Eth1KeystoreUTCPathFlag.Name),
@@ -115,42 +155,4 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 		config.Eth1KeystorePasswordFile = eth1KeystorePasswordFile
 	}
 	return config, nil
-}
-
-// SendDeposit transaction.
-func SendDeposit(cliCtx *cli.Context) error {
-	// Read the wallet from the specified path.
-	wallet, err := OpenWallet(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
-	} else if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	keymanager, err := wallet.InitializeKeymanager(
-		cliCtx,
-		true, /* skip mnemonic confirm */
-	)
-	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-		return errors.New("wrong wallet password entered")
-	}
-	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
-	}
-	switch wallet.KeymanagerKind() {
-	case v2keymanager.Derived:
-		km, ok := keymanager.(*derived.Keymanager)
-		if !ok {
-			return errors.New("could not assert keymanager interface to concrete type")
-		}
-		depositConfig, err := createDepositConfig(cliCtx, km)
-		if err != nil {
-			return err
-		}
-		if err := km.SendDepositTx(depositConfig); err != nil {
-			return err
-		}
-	default:
-		return errors.New("only Prysm HD wallets support sending deposits at the moment")
-	}
-	return nil
 }
