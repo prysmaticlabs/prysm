@@ -32,7 +32,7 @@ type AttCaches struct {
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of attestations.
 func NewAttCaches() *AttCaches {
-	c := cache.New(5*time.Minute, 10*time.Minute)
+	c := cache.New(10*time.Minute, 15*time.Minute)
 	pool := &AttCaches{
 		unAggregatedAtt:   make(map[[32]byte]*ethpb.Attestation),
 		aggregatedAtt:     make(map[[32]byte][]*ethpb.Attestation),

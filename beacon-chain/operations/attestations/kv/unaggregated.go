@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -128,6 +129,22 @@ func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error 
 	p.unAggregateAttLock.Lock()
 	defer p.unAggregateAttLock.Unlock()
 	delete(p.unAggregatedAtt, r)
+
+	r, err = hashFn(att.Data)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash attestation data")
+	}
+	v, ok := p.seenAggregatedAtt.Get(string(r[:]))
+	if ok {
+		seenBits, ok := v.([]bitfield.Bitlist)
+		if !ok {
+			return errors.New("could not convert to bitlist type")
+		}
+		seenBits = append(seenBits, att.AggregationBits)
+		p.seenAggregatedAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration)
+	} else {
+		p.seenAggregatedAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration)
+	}
 
 	return nil
 }
