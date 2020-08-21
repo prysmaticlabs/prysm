@@ -1,4 +1,4 @@
-package direct
+package derived
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestDirectKeymanager_ExtractKeystores(t *testing.T) {
+func TestDerivedKeymanager_ExtractKeystores(t *testing.T) {
 	dr := &Keymanager{
 		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
