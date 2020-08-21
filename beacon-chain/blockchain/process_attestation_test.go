@@ -71,28 +71,24 @@ func TestStore_OnAttestation(t *testing.T) {
 	tests := []struct {
 		name          string
 		a             *ethpb.Attestation
-		s             *pb.BeaconState
 		wantErr       bool
 		wantErrString string
 	}{
 		{
 			name:          "attestation's data slot not aligned with target vote",
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
-			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "data slot is not in the same epoch as target 1 != 0",
 		},
 		{
 			name:          "attestation's target root not in db",
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}},
-			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "target root does not exist in db",
 		},
 		{
 			name:          "no pre state for attestations's target block",
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
-			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "could not get pre state for slot 0",
 		},
@@ -100,30 +96,32 @@ func TestStore_OnAttestation(t *testing.T) {
 			name: "process attestation doesn't match current epoch",
 			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
 				Root: BlkWithStateBadAttRoot[:]}}},
-			s:             &pb.BeaconState{Slot: 100 * params.BeaconConfig().SlotsPerEpoch},
 			wantErr:       true,
 			wantErrString: "target epoch 100 does not match current epoch",
 		},
 		{
-			name:          "process nil field (a.Target) in attestation",
+			name:          "process nil attestation",
 			a:             nil,
-			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "nil attestation",
 		},
 		{
 			name:          "process nil field (a.Data) in attestation",
 			a:             &ethpb.Attestation{},
-			s:             &pb.BeaconState{},
 			wantErr:       true,
 			wantErrString: "nil attestation.Data field",
 		},
 		{
 			name: "process nil field (a.Target) in attestation",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{BeaconBlockRoot: make([]byte, 32),
-				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
-			s:             &pb.BeaconState{},
+			a: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, 32),
+					Target:          nil,
+					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				},
+				AggregationBits: make([]byte, 1),
+				Signature:       make([]byte, 96),
+			},
 			wantErr:       true,
 			wantErrString: "nil attestation.Data.Target field",
 		},
