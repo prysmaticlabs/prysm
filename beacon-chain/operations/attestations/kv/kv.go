@@ -27,7 +27,7 @@ type AttCaches struct {
 	forkchoiceAtt      map[[32]byte]*ethpb.Attestation
 	blockAttLock       sync.RWMutex
 	blockAtt           map[[32]byte][]*ethpb.Attestation
-	seenAggregatedAtt  *cache.Cache
+	seenAtt            *cache.Cache
 }
 
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
@@ -36,11 +36,11 @@ func NewAttCaches() *AttCaches {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	c := cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
 	pool := &AttCaches{
-		unAggregatedAtt:   make(map[[32]byte]*ethpb.Attestation),
-		aggregatedAtt:     make(map[[32]byte][]*ethpb.Attestation),
-		forkchoiceAtt:     make(map[[32]byte]*ethpb.Attestation),
-		blockAtt:          make(map[[32]byte][]*ethpb.Attestation),
-		seenAggregatedAtt: c,
+		unAggregatedAtt: make(map[[32]byte]*ethpb.Attestation),
+		aggregatedAtt:   make(map[[32]byte][]*ethpb.Attestation),
+		forkchoiceAtt:   make(map[[32]byte]*ethpb.Attestation),
+		blockAtt:        make(map[[32]byte][]*ethpb.Attestation),
+		seenAtt:         c,
 	}
 
 	return pool

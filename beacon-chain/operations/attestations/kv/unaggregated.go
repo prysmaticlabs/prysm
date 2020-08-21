@@ -58,7 +58,7 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not tree hash attestation")
 		}
-		v, ok := p.seenAggregatedAtt.Get(string(r[:]))
+		v, ok := p.seenAtt.Get(string(r[:]))
 		if ok {
 			seenBits, ok := v.([]bitfield.Bitlist)
 			if !ok {

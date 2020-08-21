@@ -13,18 +13,18 @@ func (p *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
 		return err
 	}
 
-	v, ok := p.seenAggregatedAtt.Get(string(r[:]))
+	v, ok := p.seenAtt.Get(string(r[:]))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {
 			return errors.New("could not convert to bitlist type")
 		}
 		seenBits = append(seenBits, att.AggregationBits)
-		p.seenAggregatedAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
+		p.seenAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
 		return nil
 	}
 
-	p.seenAggregatedAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
+	p.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
 	return nil
 }
 
@@ -34,7 +34,7 @@ func (p *AttCaches) hasSeenBit(att *ethpb.Attestation) (bool, error) {
 		return false, err
 	}
 
-	v, ok := p.seenAggregatedAtt.Get(string(r[:]))
+	v, ok := p.seenAtt.Get(string(r[:]))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {

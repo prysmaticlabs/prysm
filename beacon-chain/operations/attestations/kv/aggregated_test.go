@@ -102,7 +102,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			cache.seenAggregatedAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
+			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
 			if len(cache.unAggregatedAtt) != 0 {
 				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 			}
