@@ -1,12 +1,13 @@
 package maligned
 
 import (
+	"errors"
 	"go/ast"
 	"go/types"
 
-	"github.com/prysmaticlabs/prysm/tools/analyzers"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
 )
 
 // Doc explaining the tool.
@@ -21,16 +22,16 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspector, err := analyzers.GetInspector(pass)
-	if err != nil {
-		return nil, err
+	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		return nil, errors.New("analyzer is not type *inspector.Inspector")
 	}
 
 	nodeFilter := []ast.Node{
 		(*ast.StructType)(nil),
 	}
 
-	inspector.Preorder(nodeFilter, func(node ast.Node) {
+	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		if s, ok := node.(*ast.StructType); ok {
 			if err := malign(node.Pos(), pass.TypesInfo.Types[s].Type.(*types.Struct)); err != nil {
 				pass.Reportf(node.Pos(), err.Error())

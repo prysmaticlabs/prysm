@@ -3,14 +3,15 @@
 package errcheck
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
 
-	"github.com/prysmaticlabs/prysm/tools/analyzers"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
 )
 
 // Doc explaining the tool.
@@ -62,9 +63,9 @@ func init() {
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspector, err := analyzers.GetInspector(pass)
-	if err != nil {
-		return nil, err
+	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		return nil, errors.New("analyzer is not type *inspector.Inspector")
 	}
 
 	nodeFilter := []ast.Node{
@@ -75,7 +76,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.AssignStmt)(nil),
 	}
 
-	inspector.Preorder(nodeFilter, func(node ast.Node) {
+	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		switch stmt := node.(type) {
 		case *ast.ExprStmt:
 			if call, ok := stmt.X.(*ast.CallExpr); ok {
