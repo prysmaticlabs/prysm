@@ -4,10 +4,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/urfave/cli/v2"
 )
 
 // SendDeposit transaction.
@@ -35,11 +34,19 @@ func SendDeposit(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := km.SendDepositTx(cliCtx); err != nil {
+		depositConfig, err := createDepositConfig(cliCtx)
+		if err != nil {
+			return err
+		}
+		if err := km.SendDepositTx(depositConfig); err != nil {
 			return err
 		}
 	default:
 		return errors.New("only Prysm HD wallets support sending deposits at the moment")
 	}
 	return nil
+}
+
+func createDepositConfig(cliCtx *cli.Context) (*derived.SendDepositConfig, error) {
+	return nil, nil
 }
