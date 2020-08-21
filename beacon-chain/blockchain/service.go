@@ -295,7 +295,10 @@ func (s *Service) Stop() error {
 	defer s.cancel()
 
 	if s.stateGen != nil && s.head != nil && s.head.state != nil {
-		return s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root)
+		if err := s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
+			return errors.Wrap(err, "could not force a checkpoint")
+		}
+		return nil
 	}
 	return nil
 }
