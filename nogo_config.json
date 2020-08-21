@@ -113,7 +113,8 @@
   "comparesame": {
     "exclude_files": {
       "external/.*": "Third party code",
-      "rules_go_work-.*": "Third party code"
+      "rules_go_work-.*": "Third party code",
+      "tools/analyzers/comparesame/analyzer_test.go": "Analyzer tests have to break rules"
     }
   }
 }

@@ -36,7 +36,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
-		expr := node.(*ast.BinaryExpr)
+		expr, ok := node.(*ast.BinaryExpr)
+		if !ok {
+			return
+		}
+
 		switch expr.Op {
 		case token.EQL, token.NEQ, token.GEQ, token.LEQ, token.GTR, token.LSS:
 			var xBuf, yBuf bytes.Buffer
