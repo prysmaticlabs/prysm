@@ -59,7 +59,7 @@ func (bs *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch ch
 					}).Info("Found a valid attester slashing! Submitting to beacon node")
 				} else if strings.Contains(err.Error(), helpers.ErrSigFailedToVerify.Error()) {
 					log.WithError(err).Errorf("Could not submit attester slashing with indices %v", slashableIndices)
-				} else {
+				} else if !strings.Contains(err.Error(), "could not slash") {
 					log.WithError(err).Errorf("Could not slash validators with indices %v", slashableIndices)
 				}
 			}
