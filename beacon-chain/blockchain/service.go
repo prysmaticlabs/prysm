@@ -298,7 +298,6 @@ func (s *Service) Stop() error {
 		if err := s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
 			return errors.Wrap(err, "could not force a checkpoint")
 		}
-		return nil
 	}
 	return nil
 }
