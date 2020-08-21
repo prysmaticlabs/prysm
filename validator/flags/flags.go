@@ -261,6 +261,44 @@ var (
 		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
+	// Eth1KeystoreUTCPath defines the path to an eth1 utc keystore containing eth1 private keys.
+	Eth1KeystoreUTCPath = &cli.StringFlag{
+		Name:  "eth1-keystore-utc-path",
+		Usage: "Path to an eth1 utc keystore containing eth1 private keys",
+		Value: "",
+	}
+	// Eth1KeystorePasswordFile to unlock
+	Eth1KeystorePasswordFile = &cli.StringFlag{
+		Name:  "eth1-keystore-password-file",
+		Value: "",
+		Usage: "Password file for unlock account",
+	}
+	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
+	HTTPWeb3ProviderFlag = &cli.StringFlag{
+		Name:  "http-web3provider",
+		Usage: "An eth1 web3 provider string http endpoint",
+		Value: "https://goerli.prylabs.net",
+	}
+	Eth1PrivateKey = &cli.StringFlag{
+		Name:  "eth1-private-key-file",
+		Usage: "File containing a private key for sending deposit transactions from eth1",
+		Value: "",
+	}
+	DepositDelaySeconds = &cli.Int64Flag{
+		Name:  "deposit-delay-seconds",
+		Usage: "The time delay between sending the deposits to the contract (in seconds)",
+		Value: 5,
+	}
+	DepositContractAddress = &cli.StringFlag{
+		Name:  "deposit-contract",
+		Usage: "Address of the deposit contract",
+		Value: "",
+	}
+	DepositPublicKeysFlag = &cli.StringFlag{
+		Name:  "deposit-public-keys",
+		Usage: "Comma-separated list of validating public key hex strings to specify which validator accounts to deposit",
+		Value: "",
+	}
 )
 
 // Deprecated flags list.
