@@ -108,6 +108,7 @@ nogo(
         "//tools/analyzers/cryptorand:go_tool_library",
         "//tools/analyzers/errcheck:go_tool_library",
         "//tools/analyzers/featureconfig:go_tool_library",
+        "//tools/analyzers/comparesame:go_tool_library",
     ] + select({
         # nogo checks that fail with coverage enabled.
         ":coverage_enabled": [],
