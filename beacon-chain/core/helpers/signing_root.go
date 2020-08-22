@@ -232,10 +232,10 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //        genesis_validators_root=genesis_validators_root,
 //    ))
 func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
-	r, err := ssz.HashTreeRoot(&pb.ForkData{
+	r, err := (&pb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
-	})
+	}).HashTreeRoot()
 	if err != nil {
 		return [32]byte{}, err
 	}

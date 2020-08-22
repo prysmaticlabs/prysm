@@ -177,7 +177,7 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 
 		bkt = tx.Bucket(checkpointBucket)
 		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{Root: make([]byte, 32)}
+		checkpoint := &ethpb.Checkpoint{}
 		if enc == nil {
 			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
 		} else if err := decode(ctx, enc, checkpoint); err != nil {

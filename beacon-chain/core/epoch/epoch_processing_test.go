@@ -455,6 +455,5 @@ func buildState(slot uint64, validatorCount uint64) *state.BeaconState {
 	if err := s.SetValidators(validators); err != nil {
 		panic(err)
 	}
-
 	return s
 }

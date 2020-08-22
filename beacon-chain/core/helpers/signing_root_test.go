@@ -20,7 +20,6 @@ func TestSigningRoot_ComputeOK(t *testing.T) {
 }
 
 func TestComputeDomain_OK(t *testing.T) {
-
 	tests := []struct {
 		epoch      uint64
 		domainType [4]byte
@@ -35,8 +34,8 @@ func TestComputeDomain_OK(t *testing.T) {
 	for _, tt := range tests {
 		if got, err := helpers.ComputeDomain(tt.domainType, nil, nil); !bytes.Equal(got, tt.domain) {
 			t.Errorf("wanted domain version: %d, got: %d", tt.domain, got)
-		} else if err != nil {
-			t.Error(err)
+		} else {
+			require.NoError(t, err)
 		}
 	}
 }
