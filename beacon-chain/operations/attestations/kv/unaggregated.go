@@ -3,7 +3,6 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
@@ -58,22 +57,14 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not tree hash attestation")
 		}
-		v, ok := p.seenAtt.Get(string(r[:]))
-		if ok {
-			seenBits, ok := v.([]bitfield.Bitlist)
-			if !ok {
-				return nil, errors.New("could not convert to bitlist type")
-			}
-			for _, bit := range seenBits {
-				if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
-					r, err := hashFn(att)
-					if err != nil {
-						return nil, errors.Wrap(err, "could not tree hash attestation")
-					}
-					delete(p.unAggregatedAtt, r)
-					continue
-				}
-			}
+
+		seen, err := p.hasSeenBit(att)
+		if err != nil {
+			return nil, err
+		}
+		if seen {
+			delete(p.unAggregatedAtt, r)
+			continue
 		}
 
 		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
