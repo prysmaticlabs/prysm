@@ -4,6 +4,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "backup.go",
         "deposit.go",
         "derived.go",
         "mnemonic.go",
@@ -26,6 +27,7 @@ go_library(
         "//shared/rand:go_default_library",
         "//validator/accounts/v2/iface:go_default_library",
         "//validator/flags:go_default_library",
+        "//validator/keymanager/v2:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
@@ -45,6 +47,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "backup_test.go",
         "derived_test.go",
         "mnemonic_test.go",
     ],
