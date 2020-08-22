@@ -73,7 +73,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 	// Allow the user to interactively select the accounts to backup or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings. If the user has
 	// selected to deposit all accounts, we skip this part.
-	if !cliCtx.Bool(flags.DepositAllAccountsFlag.Name) {
+	if !cliCtx.IsSet(flags.DepositPublicKeysFlag.Name) {
 		pubKeys, err = filterPublicKeysFromUserInput(
 			cliCtx,
 			flags.DepositPublicKeysFlag,
