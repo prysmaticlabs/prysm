@@ -61,7 +61,7 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 		return false
 	}
 
-	if err := blocks.VerifyAttestation(ctx, baseState, att); err != nil {
+	if err := blocks.VerifyAttestationSignature(ctx, baseState, att); err != nil {
 		log.WithError(err).Error("Failed to validate attestation")
 		return false
 	}
