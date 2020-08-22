@@ -228,6 +228,11 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	if passphrase == "" {
 		log.Info("Please enter the password for your private keys")
 		enteredPassphrase, err := cmd.EnterPassword(confirmPassword, cmd.StdInPasswordReader{})
+		// Log a message is the user is running in non-interactive terminal.
+		if errors.Cause(err) == cmd.ErrNonInteractiveTerminal {
+			log.Errorf("Unable to read password from terminal in non-interactive "+
+				"environment. Please run with flag --%s=/path/to/password.txt", flags.PasswordFlag.Name)
+		}
 		if err != nil {
 			return path, enteredPassphrase, errors.Wrap(err, "could not read entered passphrase")
 		}
