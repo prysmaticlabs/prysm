@@ -194,9 +194,14 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 			return s.beaconDB.GenesisState(ctx)
 		}
 
-		// Does the state exist in hot state cache.
+		// Does the state exist in the hot state cache.
 		if s.hotStateCache.Has(parentRoot) {
 			return s.hotStateCache.Get(parentRoot), nil
+		}
+
+		// Does the state exist in finalized info cache.
+		if s.isFinalizedRoot(parentRoot) {
+			return s.finalizedState(), nil
 		}
 
 		// Does the state exist in epoch boundary cache.
@@ -211,11 +216,6 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 		// Does the state exists in DB.
 		if s.beaconDB.HasState(ctx, parentRoot) {
 			return s.beaconDB.State(ctx, parentRoot)
-		}
-
-		// Does the state exist in finalized info cache.
-		if s.isFinalizedRoot(parentRoot) {
-			return s.finalizedState(), nil
 		}
 
 		b, err = s.beaconDB.Block(ctx, parentRoot)

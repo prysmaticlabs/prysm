@@ -1,26 +1,27 @@
 package v2
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestDeleteAccounts_Noninteractive(t *testing.T) {
+func TestExitAccounts_Ok(t *testing.T) {
+	logHook := logTest.NewGlobal()
+
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -28,16 +29,9 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
 
-	// Create 3 keystore files in the keys directory we can then
-	// import from in our wallet.
-	k1, _ := createKeystore(t, keysDir)
+	// Create keystore file in the keys directory we can then import from in our wallet.
+	keystore, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
-	k2, _ := createKeystore(t, keysDir)
-	time.Sleep(time.Second)
-	k3, _ := createKeystore(t, keysDir)
-	generatedPubKeys := []string{k1.Pubkey, k2.Pubkey, k3.Pubkey}
-	// Only delete keys 0 and 1.
-	deletePublicKeys := strings.Join(generatedPubKeys[0:2], ",")
 
 	// We initialize a wallet with a direct keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
@@ -46,10 +40,10 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		keymanagerKind:      v2keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
-		// Flags required for ImportAccounts to work.
+		// Flag required for ImportAccounts to work.
 		keysDir: keysDir,
-		// Flags required for DeleteAccounts to work.
-		deletePublicKeys: deletePublicKeys,
+		// Flag required for ExitAccounts to work.
+		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
 	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
@@ -59,22 +53,33 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
-	// We attempt to import accounts.
 	require.NoError(t, ImportAccounts(cliCtx))
 
-	// We attempt to delete the accounts specified.
-	require.NoError(t, DeleteAccount(cliCtx))
+	// Prepare user input for final confirmation step
+	var stdin bytes.Buffer
+	stdin.Write([]byte("Y\n"))
 
-	keymanager, err := direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		direct.DefaultConfig(),
-	)
+	require.NoError(t, ExitAccounts(cliCtx, &stdin))
+	assert.LogsContain(t, logHook, "Voluntary exit was successful")
+}
+
+func TestExitAccounts_EmptyWalletReturnsError(t *testing.T) {
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		keymanagerKind:      v2keymanager.Direct,
+		walletPasswordFile:  passwordFilePath,
+		accountPasswordFile: passwordFilePath,
+	})
+	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
 	require.NoError(t, err)
-	remainingAccounts, err := keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, wallet.SaveWallet())
+
+	ctx := context.Background()
+	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
 	require.NoError(t, err)
-	require.Equal(t, len(remainingAccounts), 1)
-	remainingPublicKey, err := hex.DecodeString(k3.Pubkey)
-	require.NoError(t, err)
-	assert.DeepEqual(t, remainingAccounts[0], bytesutil.ToBytes48(remainingPublicKey))
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+
+	err = ExitAccounts(cliCtx, os.Stdin)
+	assert.ErrorContains(t, "wallet is empty, no accounts to perform voluntary exit", err)
 }

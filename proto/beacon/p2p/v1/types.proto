@@ -101,14 +101,14 @@ message SignedAggregateAndProof {
 }
 
 message CheckPtInfo {
-  // The randao seed of the check point, this will be used for shuffling.
+  // The randao seed which the check point refers to, this will be used to retrieve shuffled indices.
   bytes seed = 1;
-  // The genesis root of the check point. This ensures same seed can't happen on different chain.
+  // The genesis root which the check point refers to. This ensures same seed can't happen on different chain.
   bytes genesis_root = 2;
-  // Validators that are active for that check point duration.
+  // Validators that were active at that check point.
   repeated uint64 active_indices = 3;
-  // Validators public keys for that check point duration.
+  // Validators public keys at that check point.
   repeated bytes pub_keys = 4;
-  // The fork data for that check point duration. This will be used to verify signatures.
+  // The fork data at that check point. This will be used to verify signatures.
   Fork fork = 5;
 }
