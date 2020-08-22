@@ -3,6 +3,7 @@ package derived
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -46,7 +47,7 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 		return err
 	}
 	client := ethclient.NewClient(rpcClient)
-	depositAmountInGwei := params.BeaconConfig().MinDepositAmount
+	depositAmountInGwei := params.BeaconConfig().MaxEffectiveBalance
 
 	if conf.Eth1PrivateKey != "" {
 		// User inputs private key, sign tx with private key
@@ -67,7 +68,7 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 		if err != nil {
 			return err
 		}
-		privKey, err := keystore.DecryptKey(keyJSON, string(password))
+		privKey, err := keystore.DecryptKey(keyJSON, strings.TrimRight(string(password), "\r\n"))
 		if err != nil {
 			return err
 		}
@@ -131,7 +132,13 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 			conf.DepositContractAddress,
 			validatingKey.PublicKey().Marshal(),
 		)
+		log.Infof(
+			"You can monitor your transaction on Etherscan here https://goerli.etherscan.io/tx/0x%x",
+			tx.Hash(),
+		)
+		log.Infof("Waiting for a short delay of %v seconds...", conf.DepositDelaySeconds)
 		time.Sleep(conf.DepositDelaySeconds)
 	}
+	log.Infof("Successfully sent all validator deposits!")
 	return nil
 }

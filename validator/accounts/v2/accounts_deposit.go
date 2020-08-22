@@ -2,12 +2,16 @@ package v2
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -55,42 +59,71 @@ func SendDeposit(cliCtx *cli.Context) error {
 }
 
 func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.SendDepositConfig, error) {
-	pubKeys, err := km.FetchValidatingPublicKeys(context.Background())
+	pubKeysBytes, err := km.FetchValidatingPublicKeys(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch validating public keys")
 	}
+	pubKeys := make([]bls.PublicKey, len(pubKeysBytes))
+	for i, pk := range pubKeysBytes {
+		pubKeys[i], err = bls.PublicKeyFromBytes(pk[:])
+		if err != nil {
+			return nil, err
+		}
+	}
 	// Allow the user to interactively select the accounts to backup or optionally
-	// provide them via cli flags as a string of comma-separated, hex strings.
-	filteredPubKeys, err := filterPublicKeysFromUserInput(
-		cliCtx,
-		flags.DepositPublicKeysFlag,
-		pubKeys,
-		selectAccountsDepositPromptText,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not filter validating public keys for deposit")
+	// provide them via cli flags as a string of comma-separated, hex strings. If the user has
+	// selected to deposit all accounts, we skip this part.
+	if !cliCtx.Bool(flags.DepositAllAccountsFlag.Name) {
+		pubKeys, err = filterPublicKeysFromUserInput(
+			cliCtx,
+			flags.DepositPublicKeysFlag,
+			pubKeysBytes,
+			selectAccountsDepositPromptText,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not filter validating public keys for deposit")
+		}
 	}
 
+	web3Provider := cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)
 	// Enter the web3provider information.
-	web3Provider, err := promptutil.DefaultAndValidatePrompt(
-		"Enter the HTTP address of your eth1 endpoint for the Goerli testnet",
-		cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
-		func(input string) error {
-			return nil
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
 	if web3Provider == "" {
-		web3Provider = cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)
+		web3Provider, err = promptutil.DefaultAndValidatePrompt(
+			"Enter the HTTP address of your eth1 endpoint for the Goerli testnet",
+			cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
+			func(input string) error {
+				return nil
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 	depositDelaySeconds := cliCtx.Int(flags.DepositDelaySecondsFlag.Name)
 	config := &derived.SendDepositConfig{
 		DepositContractAddress: cliCtx.String(flags.DepositContractAddressFlag.Name),
 		DepositDelaySeconds:    time.Duration(depositDelaySeconds) * time.Second,
-		DepositPublicKeys:      filteredPubKeys,
+		DepositPublicKeys:      pubKeys,
 		Web3Provider:           web3Provider,
+	}
+
+	if !cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name) {
+		confirmDepositPrompt := "You are about to send %d ETH into contract address %s for %d eth2 validator accounts. " +
+			"Are you sure you want to do this? Enter the words 'yes I do' to continue"
+		gweiPerEth := params.BeaconConfig().GweiPerEth
+		ethDepositTotal := uint64(len(pubKeys)) * params.BeaconConfig().MaxEffectiveBalance / gweiPerEth
+		if _, err := promptutil.ValidatePrompt(
+			os.Stdin,
+			fmt.Sprintf(confirmDepositPrompt, ethDepositTotal, config.DepositContractAddress, len(pubKeys)),
+			func(input string) error {
+				if input != "yes I do" {
+					return errors.New("Please enter 'yes I do' or exit")
+				}
+				return nil
+			},
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	// If the user passes any of the specified flags, we read them and return the
@@ -103,7 +136,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			if err != nil {
 				return nil, err
 			}
-			config.Eth1PrivateKey = string(fileBytes)
+			config.Eth1PrivateKey = strings.TrimRight(string(fileBytes), "\r\n")
 		}
 		return config, nil
 	}
@@ -130,7 +163,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 		if err != nil {
 			return nil, err
 		}
-		config.Eth1PrivateKey = eth1PrivateKeyString
+		config.Eth1PrivateKey = strings.TrimRight(eth1PrivateKeyString, "\r\n")
 	} else if selection == useEth1KeystorePrompt {
 		// Otherwise, ask the user for paths to their keystore UTC file and its password.
 		eth1KeystoreUTCFile, err := promptutil.DefaultAndValidatePrompt(

@@ -151,6 +151,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.DepositDelaySecondsFlag,
 				flags.DepositContractAddressFlag,
 				flags.DepositPublicKeysFlag,
+				flags.SkipDepositConfirmationFlag,
+				flags.DepositAllAccountsFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)

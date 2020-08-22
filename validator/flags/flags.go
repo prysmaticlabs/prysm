@@ -303,6 +303,18 @@ var (
 		Usage: "Comma-separated list of validating public key hex strings to specify which validator accounts to deposit",
 		Value: "",
 	}
+	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.
+	SkipDepositConfirmationFlag = &cli.BoolFlag{
+		Name:  "skip-deposit-confirmation",
+		Usage: "Skips the y/n confirmation prompt for sending a deposit to the deposit contract",
+		Value: false,
+	}
+	// DepositAllAccountsFlag is an easy way for a user to send deposit transactions for all accounts in their wallet.
+	DepositAllAccountsFlag = &cli.BoolFlag{
+		Name:  "deposit-all-accounts",
+		Usage: "Sends a 32 ETH deposit for each of a user's validator accounts in their wallet",
+		Value: false,
+	}
 )
 
 // Deprecated flags list.
