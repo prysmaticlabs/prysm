@@ -314,6 +314,53 @@ func TestChainService_Stop(t *testing.T) {
 	require.NoError(t, c.Stop())
 }
 
+func TestChainService_Stop_Panic(t *testing.T) {
+	db, sc := testDB.SetupDB(t)
+	ctx := context.Background()
+
+	genesis := testutil.NewBeaconBlock()
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, db.SaveBlock(ctx, genesis))
+
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
+	headBlock := testutil.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot
+	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headState := testutil.NewBeaconState()
+	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	headRoot, err := stateutil.BlockRoot(headBlock.Block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, headState, headRoot))
+	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
+	require.NoError(t, db.SaveBlock(ctx, headBlock))
+	if err := db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
+		Epoch: helpers.SlotToEpoch(finalizedSlot),
+		Root:  headRoot[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	head := &head{
+		slot:  headBlock.Block.Slot,
+		root:  headRoot,
+		block: headBlock,
+		state: headState,
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	c := &Service{
+		ctx:      ctx,
+		cancel:   cancel,
+		beaconDB: db,
+		stateGen: stategen.New(db, sc),
+		head:     head,
+	}
+	require.NoError(t, c.initializeChainInfo(ctx))
+	c.cancel()
+	require.NoError(t, c.Stop())
+}
+
 func TestChainService_SaveHeadNoDB(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	ctx := context.Background()

@@ -292,12 +292,11 @@ func (s *Service) initializeBeaconChain(
 
 // Stop the blockchain service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
-	defer s.cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
 	if s.stateGen != nil && s.head != nil && s.head.state != nil {
-		if err := s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
-			return errors.Wrap(err, "could not force a checkpoint")
-		}
+		return s.stateGen.ForceCheckpoint(ctx, s.head.state.FinalizedCheckpoint().Root)
 	}
 	return nil
 }
