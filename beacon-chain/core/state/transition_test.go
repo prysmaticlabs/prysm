@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -59,51 +60,26 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
 		BlockHash:    make([]byte, 32),
 	}
-	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
 	e := beaconState.Eth1Data()
 	e.DepositCount = 100
-	if err := beaconState.SetEth1Data(e); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:       beaconState.Slot(),
-		ParentRoot: make([]byte, 32),
-		StateRoot:  make([]byte, 32),
-		BodyRoot:   make([]byte, 32),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetEth1Data(e))
+	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}))
+	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	oldMix, err := beaconState.RandaoMixAtIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
-	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := helpers.CurrentEpoch(beaconState)
 	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
 	nextSlotState := beaconState.Copy()
-	if err := nextSlotState.SetSlot(beaconState.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	if err != nil {
 		t.Error(err)
@@ -116,31 +92,21 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	block.Block.Body.Eth1Data = eth1Data
 
 	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
 
 	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
-	if beaconState.Slot() != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Unexpected Slot number, expected: 64, received: %d", beaconState.Slot())
-	}
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, beaconState.Slot(), "Unexpected Slot number")
 
 	mix, err := beaconState.RandaoMixAtIndex(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if bytes.Equal(mix, oldMix) {
 		t.Errorf("Did not expect new and old randao mix to equal, %#x == %#x", mix, oldMix)
 	}
@@ -154,45 +120,25 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
 		BlockHash:    make([]byte, 32),
 	}
-	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
 	e := beaconState.Eth1Data()
 	e.DepositCount = 100
-	if err := beaconState.SetEth1Data(e); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetEth1Data(e))
+	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}))
+	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
-	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := helpers.CurrentEpoch(beaconState)
 	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
 	nextSlotState := beaconState.Copy()
-	if err := nextSlotState.SetSlot(beaconState.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
@@ -201,39 +147,26 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.Body.Eth1Data = eth1Data
 
 	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
 
 	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
 	set, beaconState, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	verified, err := set.Verify()
-	if err != nil {
-		t.Error(err)
-	}
-	if !verified {
-		t.Error("Could not verify signature set")
-	}
-
+	assert.NoError(t, err)
+	assert.Equal(t, true, verified, "Could not verify signature set")
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	slashing := &ethpb.ProposerSlashing{
 		Header_1: &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
@@ -256,28 +189,18 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 	block.Block.Body.ProposerSlashings = []*ethpb.ProposerSlashing{slashing}
 
-	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	want := "could not process block proposer slashing"
 	_, err = state.ProcessBlock(context.Background(), beaconState, block)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
@@ -294,33 +217,21 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block.Block.Body.Attestations = []*ethpb.Attestation{att}
-	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	want := "could not process block attestations"
+	want := "could not verify attestations"
 	_, err = state.ProcessBlock(context.Background(), beaconState, block)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
@@ -374,9 +285,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
@@ -391,9 +300,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
