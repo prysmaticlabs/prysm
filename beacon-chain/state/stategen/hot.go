@@ -126,11 +126,7 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 
 	replayBlockCount.Observe(float64(len(blks)))
 
-	replayedState, err := s.ReplayBlocks(ctx, startState, blks, targetSlot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not replay blocks")
-	}
-	return replayedState, nil
+	return s.ReplayBlocks(ctx, startState, blks, targetSlot)
 }
 
 // This loads a hot state by slot where the slot lies between the epoch boundary points.
