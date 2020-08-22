@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	util "github.com/wealdtech/go-eth2-util"
 )
@@ -86,6 +88,7 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 	for _, pk := range conf.DepositPublicKeys {
 		wantedPubKeys[bytesutil.ToBytes48(pk.Marshal())] = true
 	}
+	bar := initializeProgressBar(int(dr.seedCfg.NextAccount), "Sending deposit transactions...")
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
@@ -137,8 +140,29 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 			tx.Hash(),
 		)
 		log.Infof("Waiting for a short delay of %v seconds...", conf.DepositDelaySeconds)
+		if err := bar.Add(1); err != nil {
+			log.Errorf("Could not increase progress bar percentage: %v", err)
+		}
 		time.Sleep(conf.DepositDelaySeconds)
 	}
 	log.Infof("Successfully sent all validator deposits!")
 	return nil
+}
+
+func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
+	return progressbar.NewOptions(
+		numItems,
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		progressbar.OptionSetDescription(msg),
+	)
 }
