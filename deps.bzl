@@ -45,8 +45,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:qLZC3oQLJ5eb18EZS3yDcnX7zmlEt8WTWlQR7x5wS5I=",
-        version = "v0.0.0-20200728110133-0b6e349af87a",
+        sum = "h1:maoKvILdMk6CSWHanFcUdxXIZGKD9YpWIaVbUQ/4kfg=",
+        version = "v0.0.0-20200514094935-99fccaf93472",
     )
     go_repository(
         name = "com_github_prysmaticlabs_bazel_go_ethereum",
