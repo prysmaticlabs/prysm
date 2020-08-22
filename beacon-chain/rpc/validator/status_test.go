@@ -70,6 +70,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 
 	pubKey1 := pubKey(1)
 	depData := &ethpb.Deposit_Data{
+		Amount:                params.BeaconConfig().MaxEffectiveBalance,
 		PublicKey:             pubKey1,
 		Signature:             []byte("hi"),
 		WithdrawalCredentials: []byte("hey"),
@@ -113,6 +114,58 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	require.NoError(t, err, "Could not get validator status")
 	assert.Equal(t, ethpb.ValidatorStatus_DEPOSITED, resp.Status)
+}
+
+func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
+	db, _ := dbutil.SetupDB(t)
+	ctx := context.Background()
+
+	pubKey1 := pubKey(1)
+	depData := &ethpb.Deposit_Data{
+		Amount:                params.BeaconConfig().MinDepositAmount,
+		PublicKey:             pubKey1,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+	}
+	deposit := &ethpb.Deposit{
+		Data: depData,
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err, "Could not setup deposit trie")
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
+			0: uint64(height),
+		},
+	}
+	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				PublicKey:                  pubKey1,
+				ActivationEligibilityEpoch: 1,
+			},
+		},
+	})
+	require.NoError(t, err)
+	vs := &Server{
+		BeaconDB:       db,
+		DepositFetcher: depositCache,
+		BlockFetcher:   p,
+		HeadFetcher: &mockChain.ChainService{
+			State: stateObj,
+		},
+		Eth1InfoFetcher: p,
+	}
+	req := &ethpb.ValidatorStatusRequest{
+		PublicKey: pubKey1,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	require.NoError(t, err, "Could not get validator status")
+	assert.Equal(t, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED, resp.Status)
 }
 
 func TestValidatorStatus_Pending(t *testing.T) {
@@ -486,6 +539,7 @@ func TestActivationStatus_OK(t *testing.T) {
 				ActivationEligibilityEpoch: 700,
 				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 				PublicKey:                  pubKeys[3],
+				EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			},
 		},
 	})
@@ -795,6 +849,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 				ActivationEligibilityEpoch: 700,
 				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 				PublicKey:                  pubKeys[3],
+				EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			},
 		},
 	})
@@ -879,6 +934,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 				ActivationEligibilityEpoch: 700,
 				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 				PublicKey:                  pubKeys[2],
+				EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			},
 			{
 				Slashed:   true,
