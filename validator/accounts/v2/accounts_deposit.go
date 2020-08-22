@@ -47,7 +47,7 @@ func SendDeposit(cliCtx *cli.Context) error {
 		}
 		depositConfig, err := createDepositConfig(cliCtx, km)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not initialize deposit config")
 		}
 		if err := km.SendDepositTx(depositConfig); err != nil {
 			return err
@@ -67,7 +67,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 	for i, pk := range pubKeysBytes {
 		pubKeys[i], err = bls.PublicKeyFromBytes(pk[:])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not parse BLS public key")
 		}
 	}
 	// Allow the user to interactively select the accounts to backup or optionally
@@ -96,7 +96,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			},
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not validate web3 provider endpoint")
 		}
 	}
 	depositDelaySeconds := cliCtx.Int(flags.DepositDelaySecondsFlag.Name)
@@ -122,7 +122,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 				return nil
 			},
 		); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not confirm deposit acknowledgement")
 		}
 	}
 
@@ -161,7 +161,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			promptutil.NotEmpty,
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not read eth1 private key string")
 		}
 		config.Eth1PrivateKey = strings.TrimRight(eth1PrivateKeyString, "\r\n")
 	} else if selection == useEth1KeystorePrompt {
@@ -174,7 +174,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			},
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not read eth1 keystore UTC path")
 		}
 		eth1KeystorePasswordFile, err := inputWeakPassword(
 			cliCtx,
@@ -182,7 +182,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			"Enter the file path a .txt file containing your eth1 keystore password",
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not read eth1 keystore password file path")
 		}
 		config.Eth1KeystoreUTCFile = eth1KeystoreUTCFile
 		config.Eth1KeystorePasswordFile = eth1KeystorePasswordFile

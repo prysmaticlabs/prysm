@@ -124,7 +124,7 @@ func (dr *Keymanager) SendDepositTx(conf *SendDepositConfig) error {
 			depositRoot,
 		)
 		if err != nil {
-			log.Errorf("unable to send transaction to contract: %v", err)
+			log.Errorf("Unable to send transaction to contract: %v", err)
 			continue
 		}
 		log.WithFields(logrus.Fields{
