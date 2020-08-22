@@ -37,7 +37,6 @@ func TestHeadRoot_Nil(t *testing.T) {
 	if !bytes.Equal(headRoot, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
 	}
-
 }
 
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
