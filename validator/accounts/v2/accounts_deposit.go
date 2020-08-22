@@ -117,7 +117,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			fmt.Sprintf(confirmDepositPrompt, ethDepositTotal, config.DepositContractAddress, len(pubKeys)),
 			func(input string) error {
 				if input != "yes I do" {
-					return errors.New("Please enter 'yes I do' or exit")
+					return errors.New("please enter 'yes I do' or exit")
 				}
 				return nil
 			},
