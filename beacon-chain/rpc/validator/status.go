@@ -233,16 +233,19 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+	validatorBalance := validator.EffectiveBalance()
 
 	if validator == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
 	if currentEpoch < validator.ActivationEligibilityEpoch() {
+		if validatorBalance < params.BeaconConfig().MaxEffectiveBalance {
+			return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
+		}
 		return ethpb.ValidatorStatus_DEPOSITED
 	}
 	if currentEpoch < validator.ActivationEpoch() {
-		balance := validator.EffectiveBalance()
-		if balance > 0 && balance < params.BeaconConfig().MaxEffectiveBalance {
+		if validatorBalance > 0 && validatorBalance < params.BeaconConfig().MaxEffectiveBalance {
 			return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 		}
 		return ethpb.ValidatorStatus_PENDING
