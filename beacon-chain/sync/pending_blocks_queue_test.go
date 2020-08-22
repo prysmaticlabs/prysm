@@ -94,6 +94,7 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 		chain: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
+				Root:  make([]byte, 32),
 			},
 		},
 		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
@@ -102,11 +103,13 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 	err := r.initCaches()
 	require.NoError(t, err)
 
-	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b0 := testutil.NewBeaconBlock()
 	b0r := [32]byte{'a'}
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = b0Root[:]
 	b1r := [32]byte{'b'}
 
 	r.insertBlockToPendingQueue(b0.Block.Slot, b0, b0r)
@@ -202,22 +205,22 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 	b4Root, err := b4.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	r.insertBlockToPendingQueue(b4.Slot, &ethpb.SignedBeaconBlock{Block: b4}, b4Root)
-	r.insertBlockToPendingQueue(b5.Slot, &ethpb.SignedBeaconBlock{Block: b5}, b5Root)
+	r.insertBlockToPendingQueue(b4.Block.Slot, b4, b4Root)
+	r.insertBlockToPendingQueue(b5.Block.Slot, b5, b5Root)
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 2, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b3 to the cache
-	r.insertBlockToPendingQueue(b3.Slot, &ethpb.SignedBeaconBlock{Block: b3}, b3Root)
-	require.NoError(t, r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b3}))
+	r.insertBlockToPendingQueue(b3.Block.Slot, b3, b3Root)
+	require.NoError(t, r.db.SaveBlock(context.Background(), b3))
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 3, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b2 to the cache
-	r.insertBlockToPendingQueue(b2.Slot, &ethpb.SignedBeaconBlock{Block: b2}, b2Root)
+	r.insertBlockToPendingQueue(b2.Block.Slot, b2, b2Root)
 
 	require.NoError(t, r.db.SaveBlock(context.Background(), b2))
 	require.NoError(t, r.processPendingBlocks(context.Background()))
@@ -283,10 +286,10 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	b4Root, err := b4.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	r.insertBlockToPendingQueue(b2.Slot, &ethpb.SignedBeaconBlock{Block: b2}, b2Root)
-	r.insertBlockToPendingQueue(b3.Slot, &ethpb.SignedBeaconBlock{Block: b3}, b3Root)
-	r.insertBlockToPendingQueue(b4.Slot, &ethpb.SignedBeaconBlock{Block: b4}, b4Root)
-	r.insertBlockToPendingQueue(b5.Slot, &ethpb.SignedBeaconBlock{Block: b5}, b5Root)
+	r.insertBlockToPendingQueue(b2.Block.Slot, b2, b2Root)
+	r.insertBlockToPendingQueue(b3.Block.Slot, b3, b3Root)
+	r.insertBlockToPendingQueue(b4.Block.Slot, b4, b4Root)
+	r.insertBlockToPendingQueue(b5.Block.Slot, b5, b5Root)
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 0, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
@@ -322,6 +325,7 @@ func TestService_BatchRootRequest(t *testing.T) {
 		chain: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 1,
+				Root:  make([]byte, 32),
 			},
 		},
 		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
@@ -334,26 +338,36 @@ func TestService_BatchRootRequest(t *testing.T) {
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{FinalizedEpoch: 2})
 
-	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := stateutil.BlockRoot(b0.Block)
 	require.NoError(t, err)
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = b0Root[:]
 	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
 	b1Root, err := stateutil.BlockRoot(b1.Block)
 	require.NoError(t, err)
 
-	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, err := ssz.HashTreeRoot(b2)
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ParentRoot = b1Root[:]
+	b2Root, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, err := ssz.HashTreeRoot(b5)
+	b5 := testutil.NewBeaconBlock()
+	b5.Block.Slot = 5
+	b5.Block.ParentRoot = b2Root[:]
+	b5Root, err := b5.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, err := ssz.HashTreeRoot(b3)
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 3
+	b3.Block.ParentRoot = b0Root[:]
+	b3Root, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, err := ssz.HashTreeRoot(b4)
+	b4 := testutil.NewBeaconBlock()
+	b4.Block.Slot = 4
+	b4.Block.ParentRoot = b3Root[:]
+	b4Root, err := b4.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	// Send in duplicated roots to also test deduplicaton.
@@ -368,8 +382,7 @@ func TestService_BatchRootRequest(t *testing.T) {
 		out := [][32]byte{}
 		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
 		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
-		response := []*ethpb.SignedBeaconBlock{{Block: b2},
-			{Block: b3}, {Block: b4}, {Block: b5}}
+		response := []*ethpb.SignedBeaconBlock{b2, b3, b4, b5}
 		for _, blk := range response {
 			_, err := stream.Write([]byte{responseCodeSuccess})
 			assert.NoError(t, err, "Failed to write to stream")

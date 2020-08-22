@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -514,10 +513,10 @@ func TestService_blockProviderScoring(t *testing.T) {
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 0}})
+	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 
-	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
+	st := testutil.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -525,6 +524,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 		DB:    beaconDB,
 		FinalizedCheckPoint: &eth.Checkpoint{
 			Epoch: 0,
+			Root:  make([]byte, 32),
 		},
 	} // no-op mock
 	s := &Service{

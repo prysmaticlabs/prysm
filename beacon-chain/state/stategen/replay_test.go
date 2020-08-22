@@ -776,10 +776,11 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 	s := &State{
 		beaconDB: db,
 	}
-	gBlock := &ethpb.SignedBeaconBlock{}
+	gBlock := testutil.NewBeaconBlock()
 	gRoot, err := stateutil.BlockRoot(gBlock.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, gBlock))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, [32]byte{}))
 	roots, _, err := tree1(db, gRoot[:])
 	require.NoError(t, err)
 

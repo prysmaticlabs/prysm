@@ -82,9 +82,13 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			name: "already seen",
 			att: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot: 100,
+					Slot:            100,
+					BeaconBlockRoot: make([]byte, 32),
+					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 				AggregationBits: bitfield.Bitlist{0b11101001},
+				Signature:       make([]byte, 96),
 			},
 			count: 0,
 		},
@@ -104,7 +108,10 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		},
 	}
 	r, err := hashFn(&ethpb.AttestationData{
-		Slot: 100,
+		Slot:            100,
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		BeaconBlockRoot: make([]byte, 32),
 	})
 	require.NoError(t, err)
 
