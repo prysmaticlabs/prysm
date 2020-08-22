@@ -53,16 +53,15 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 	unAggregatedAtts := p.unAggregatedAtt
 	atts := make([]*ethpb.Attestation, 0, len(unAggregatedAtts))
 	for _, att := range unAggregatedAtts {
-		r, err := hashFn(att.Data)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not tree hash attestation")
-		}
-
 		seen, err := p.hasSeenBit(att)
 		if err != nil {
 			return nil, err
 		}
 		if seen {
+			r, err := hashFn(att)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not tree hash attestation")
+			}
 			delete(p.unAggregatedAtt, r)
 			continue
 		}
