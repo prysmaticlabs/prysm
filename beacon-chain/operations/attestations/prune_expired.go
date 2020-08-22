@@ -35,7 +35,11 @@ func (s *Service) pruneExpiredAtts() {
 		}
 	}
 
-	unAggregatedAtts := s.pool.UnaggregatedAttestations()
+	unAggregatedAtts, err := s.pool.UnaggregatedAttestations()
+	if err != nil {
+		log.WithError(err).Error("Could not get unaggregated attestations")
+		return
+	}
 	for _, att := range unAggregatedAtts {
 		if s.expired(att.Data.Slot) {
 			if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
@@ -62,8 +66,5 @@ func (s *Service) expired(slot uint64) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
 	expirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(roughtime.Now().Unix())
-	if currentTime >= expirationTime {
-		return true
-	}
-	return false
+	return currentTime >= expirationTime
 }

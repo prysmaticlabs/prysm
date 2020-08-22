@@ -113,7 +113,7 @@ func (s *Service) Start() {
 		}
 		stateSub.Unsubscribe()
 	} else {
-		genesis = time.Unix(int64(headState.GenesisTime()), 0)
+		genesis = time.Unix(int64(helpers.GenesisTime(headState)), 0)
 	}
 
 	if genesis.After(roughtime.Now()) {
@@ -196,7 +196,7 @@ func (s *Service) Resync() error {
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state")
 	}
-	genesis := time.Unix(int64(headState.GenesisTime()), 0)
+	genesis := time.Unix(int64(helpers.GenesisTime(headState)), 0)
 
 	s.waitForMinimumPeers()
 	err = s.roundRobinSync(genesis)
@@ -214,7 +214,7 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
+		_, peers := s.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.chain.FinalizedCheckpt().Epoch)
 		if len(peers) >= required {
 			break
 		}

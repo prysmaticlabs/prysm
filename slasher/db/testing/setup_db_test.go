@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	slasherDB "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 )
@@ -16,24 +17,14 @@ import (
 func TestClearDB(t *testing.T) {
 	// Setting up manually is required, since SetupDB() will also register a teardown procedure.
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		t.Fatalf("Could not generate random file path: %v", err)
-	}
+	require.NoError(t, err, "Could not generate random file path")
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	if err := os.RemoveAll(p); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
+	require.NoError(t, os.RemoveAll(p), "Failed to remove directory")
 	cfg := &kv.Config{}
 	db, err := slasherDB.NewDB(p, cfg)
-	if err != nil {
-		t.Fatalf("Failed to instantiate DB: %v", err)
-	}
+	require.NoError(t, err, "Failed to instantiate DB")
 	db.EnableSpanCache(false)
-	if err := db.ClearDB(); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := os.Stat(db.DatabasePath()); !os.IsNotExist(err) {
-		t.Fatalf("db wasnt cleared %v", err)
-	}
+	require.NoError(t, db.ClearDB())
+	_, err = os.Stat(db.DatabasePath())
+	require.Equal(t, true, os.IsNotExist(err), "Db wasnt cleared %v", err)
 }

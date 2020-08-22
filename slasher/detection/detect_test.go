@@ -7,6 +7,8 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
@@ -171,26 +173,16 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 				slasherDB:          db,
 				minMaxSpanDetector: attestations.NewSpanDetector(db),
 			}
-			if err := db.SaveIndexedAttestations(ctx, tt.savedAtts); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveIndexedAttestations(ctx, tt.savedAtts))
 			for _, att := range tt.savedAtts {
-				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, att); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, ds.minMaxSpanDetector.UpdateSpans(ctx, att))
 			}
 
 			slashings, err := ds.DetectAttesterSlashings(ctx, tt.incomingAtt)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(slashings) != tt.slashingsFound {
-				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			attsl, err := db.AttesterSlashings(ctx, status.Active)
-			if len(attsl) != tt.slashingsFound {
-				t.Fatalf("Didnt save slashing to db")
-			}
+			require.Equal(t, tt.slashingsFound, len(attsl), "Didnt save slashing to db")
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
 				slashingAtt2 := ss.Attestation_2
@@ -331,26 +323,16 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				slasherDB:          db,
 				minMaxSpanDetector: attestations.NewSpanDetector(db),
 			}
-			if err := db.SaveIndexedAttestations(ctx, tt.savedAtts); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveIndexedAttestations(ctx, tt.savedAtts))
 			for _, att := range tt.savedAtts {
-				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, att); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, ds.minMaxSpanDetector.UpdateSpans(ctx, att))
 			}
 
 			slashings, err := ds.DetectAttesterSlashings(ctx, tt.incomingAtt)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(slashings) != tt.slashingsFound {
-				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			savedSlashings, err := db.AttesterSlashings(ctx, status.Active)
-			if len(savedSlashings) != tt.slashingsFound {
-				t.Fatalf("Did not save slashing to db")
-			}
+			require.Equal(t, tt.slashingsFound, len(savedSlashings), "Did not save slashing to db")
 
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
@@ -363,7 +345,6 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					)
 				}
 			}
-
 		})
 	}
 }
@@ -376,17 +357,11 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 		slashing    *ethpb.ProposerSlashing
 	}
 	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	sigBlk2slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	sigBlk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tests := []testStruct{
 		{
 			name:        "same block sig dont slash",
@@ -416,20 +391,14 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 				slasherDB:         db,
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
-			if err := db.SaveBlockHeader(ctx, tt.blk); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveBlockHeader(ctx, tt.blk))
 
 			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, tt.incomingBlk)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(slashing, tt.slashing) {
-				t.Errorf("Wanted: %v, received %v", tt.slashing, slashing)
-			}
+			require.NoError(t, err)
+			assert.DeepEqual(t, tt.slashing, slashing)
 			savedSlashings, err := db.ProposalSlashingsByStatus(ctx, status.Active)
-			if tt.slashing != nil && len(savedSlashings) != 1 {
-				t.Fatalf("Did not save slashing to db")
+			if tt.slashing != nil {
+				require.Equal(t, 1, len(savedSlashings), "Did not save slashing to db")
 			}
 
 			if slashing != nil && !isDoublePropose(slashing.Header_1, slashing.Header_2) {
@@ -439,7 +408,6 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 					slashing.Header_2,
 				)
 			}
-
 		})
 	}
 }
@@ -451,28 +419,18 @@ func TestDetect_detectProposerSlashingNoUpdate(t *testing.T) {
 		slashable   bool
 	}
 	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blk1slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blk2slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	diffRoot := [32]byte{1, 1, 1}
 	blk2slot0.ParentRoot = diffRoot[:]
 	blk3slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blk3slot0.StateRoot = diffRoot[:]
 	blk4slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	blk4slot0.BodyRoot = diffRoot[:]
 	tests := []testStruct{
 		{
@@ -509,17 +467,11 @@ func TestDetect_detectProposerSlashingNoUpdate(t *testing.T) {
 				slasherDB:         db,
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
-			if err := db.SaveBlockHeader(ctx, tt.blk); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveBlockHeader(ctx, tt.blk))
 
 			slashble, err := ds.proposalsDetector.DetectDoubleProposeNoUpdate(ctx, tt.noUpdtaeBlk)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if slashble != tt.slashable {
-				t.Errorf("Wanted slashbale: %v, received slashable: %v", tt.slashable, slashble)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.slashable, slashble)
 		})
 	}
 }
@@ -598,15 +550,11 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 		},
 	}
 	for _, atts := range expectedResultsToAtts {
-		if err := ds.slasherDB.SaveIndexedAttestations(ctx, atts); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, ds.slasherDB.SaveIndexedAttestations(ctx, atts))
 	}
 
 	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !reflect.DeepEqual(expectedResultsToAtts, resultsToAtts) {
 		t.Error("Expected map:")
 		for key, value := range resultsToAtts {

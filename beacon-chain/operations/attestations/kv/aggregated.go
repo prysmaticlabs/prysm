@@ -14,7 +14,10 @@ import (
 // It tracks the unaggregated attestations that weren't able to aggregate to prevent
 // the deletion of unaggregated attestations in the pool.
 func (p *AttCaches) AggregateUnaggregatedAttestations() error {
-	unaggregatedAtts := p.UnaggregatedAttestations()
+	unaggregatedAtts, err := p.UnaggregatedAttestations()
+	if err != nil {
+		return err
+	}
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
@@ -82,11 +85,18 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return nil
 	}
 
+	seen, err := p.hasSeenBit(att)
+	if err != nil {
+		return err
+	}
+	if seen {
+		return nil
+	}
+
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
-
 	copiedAtt := stateTrie.CopyAttestation(att)
 	p.aggregatedAttLock.Lock()
 	defer p.aggregatedAttLock.Unlock()
@@ -157,6 +167,10 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation data")
+	}
+
+	if err := p.insertSeenBit(att); err != nil {
+		return err
 	}
 
 	p.aggregatedAttLock.Lock()

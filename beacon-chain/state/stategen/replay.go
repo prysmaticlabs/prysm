@@ -116,6 +116,7 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 	if err != nil {
 		return nil, err
 	}
+
 	blockRoots, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -327,24 +328,49 @@ func (s *State) processStateUpTo(ctx context.Context, state *state.BeaconState, 
 	if state.Slot() >= slot {
 		return state, nil
 	}
-
-	lastBlockRoot, lastBlockSlot, err := s.lastSavedBlock(ctx, slot)
+	_, lastBlockSlot, err := s.lastSavedBlock(ctx, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get last saved block")
 	}
+
 	// Short circuit if no block was saved, replay using slots only.
 	if lastBlockSlot == 0 {
 		return s.ReplayBlocks(ctx, state, []*ethpb.SignedBeaconBlock{}, slot)
 	}
 
-	blks, err := s.LoadBlocks(ctx, state.Slot()+1, lastBlockSlot, lastBlockRoot)
+	blks, err := s.loadFinalizedBlocks(ctx, state.Slot()+1, lastBlockSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load blocks")
 	}
+
 	state, err = s.ReplayBlocks(ctx, state, blks, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not replay blocks")
 	}
 
 	return state, nil
+}
+
+// Given the start slot and the end slot, this returns the finalized beacon blocks in between.
+// Since hot states don't have finalized blocks, this should ONLY be used for replaying cold state.
+func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot uint64, endSlot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+	bs, err := s.beaconDB.Blocks(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	bRoots, err := s.beaconDB.BlockRoots(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	if len(bs) != len(bRoots) {
+		return nil, errors.New("length of blocks and roots don't match")
+	}
+	fbs := make([]*ethpb.SignedBeaconBlock, 0, len(bs))
+	for i := len(bs) - 1; i >= 0; i-- {
+		if s.beaconDB.IsFinalizedBlock(ctx, bRoots[i]) {
+			fbs = append(fbs, bs[i])
+		}
+	}
+	return fbs, nil
 }

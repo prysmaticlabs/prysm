@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestShufflingMinimal(t *testing.T) {
@@ -25,25 +26,17 @@ func TestShufflingMainnet(t *testing.T) {
 }
 
 func runShuffleTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "shuffling/core/shuffle")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			testCaseFile, err := testutil.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
-			if err != nil {
-				t.Fatalf("could not read YAML tests directory: %v", err)
-			}
+			require.NoError(t, err, "Could not read YAML tests directory")
 
 			testCase := &ShuffleTestCase{}
-			if err := yaml.Unmarshal(testCaseFile, testCase); err != nil {
-				t.Fatalf("could not unmarshal YAML file into test struct: %v", err)
-			}
-			if err := runShuffleTest(testCase); err != nil {
-				t.Fatalf("shuffle test failed: %v", err)
-			}
+			require.NoError(t, yaml.Unmarshal(testCaseFile, testCase), "Could not unmarshal YAML file into test struct")
+			require.NoError(t, runShuffleTest(testCase), "Shuffle test failed")
 		})
 	}
 }
@@ -57,7 +50,7 @@ func runShuffleTest(testCase *ShuffleTestCase) error {
 	}
 
 	seed := common.BytesToHash(baseSeed)
-	testIndices := make([]uint64, testCase.Count, testCase.Count)
+	testIndices := make([]uint64, testCase.Count)
 	for i := uint64(0); i < testCase.Count; i++ {
 		testIndices[i] = i
 	}

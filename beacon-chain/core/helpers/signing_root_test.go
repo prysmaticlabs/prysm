@@ -9,14 +9,14 @@ import (
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSigningRoot_ComputeOK(t *testing.T) {
 	emptyBlock := testutil.NewBeaconBlock()
 	_, err := helpers.ComputeSigningRoot(emptyBlock, bytesutil.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
-	if err != nil {
-		t.Errorf("Could not compute signing root of block: %v", err)
-	}
+	assert.NoError(t, err, "Could not compute signing root of block")
 }
 
 func TestComputeDomain_OK(t *testing.T) {
@@ -53,12 +53,8 @@ func TestComputeForkDigest_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		digest, err := helpers.ComputeForkDigest(tt.version, tt.root[:])
-		if err != nil {
-			t.Error(err)
-		}
-		if digest != tt.result {
-			t.Errorf("wanted domain version: %#x, got: %#x", digest, tt.result)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.result, digest, "Wanted domain version: %#x, got: %#x", digest, tt.result)
 	}
 }
 

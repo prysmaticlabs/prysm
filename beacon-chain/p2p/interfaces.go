@@ -73,7 +73,7 @@ type PeerManager interface {
 	Host() host.Host
 	ENR() *enr.Record
 	RefreshENR()
-	FindPeersWithSubnet(index uint64) (bool, error)
+	FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error)
 	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
 }
 

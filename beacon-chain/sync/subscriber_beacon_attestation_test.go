@@ -92,7 +92,8 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 
 	time.Sleep(time.Second * 1)
 
-	ua := r.attPool.UnaggregatedAttestations()
+	ua, err := r.attPool.UnaggregatedAttestations()
+	require.NoError(t, err)
 	if len(ua) == 0 {
 		t.Error("No attestations put into pool")
 	}

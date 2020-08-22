@@ -33,7 +33,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	assert.Equal(t, true, service.beaconDB.HasArchivedPoint(ctx, 1), "Did not save cold state")
 	assert.Equal(t, r, service.beaconDB.ArchivedPointRoot(ctx, 1), "Did not get wanted root")
 
-	testutil.AssertLogsContain(t, hook, "Saved full state on archived point")
+	require.LogsContain(t, hook, "Saved full state on archived point")
 }
 
 func TestSaveState_HotStateCanBeSaved(t *testing.T) {
@@ -74,7 +74,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	// Should not save the state and state summary.
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
 	assert.Equal(t, false, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")
-	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 }
 
 func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {

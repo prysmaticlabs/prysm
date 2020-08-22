@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
@@ -69,7 +68,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		walletPassword: password,
+		accountsPassword: password,
 	}
 	ctx := context.Background()
 	accountName, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
@@ -91,7 +90,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	assert.Equal(t, uint64(1), seedConfig.NextAccount, "Wrong value for next account")
 
 	// Ensure the new account information is displayed to stdout.
-	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
+	require.LogsContain(t, hook, "Successfully created new validator account")
 }
 
 func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
@@ -105,8 +104,8 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		seed:           make([]byte, 32),
-		walletPassword: "hello world",
+		seed:             make([]byte, 32),
+		accountsPassword: "hello world",
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -154,7 +153,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		walletPassword: "hello world",
+		accountsPassword: "hello world",
 	}
 
 	// First, generate some accounts.

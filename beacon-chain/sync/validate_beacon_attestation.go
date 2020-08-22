@@ -69,8 +69,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
-	// Verify this the first attestation received for the participating validator for the target epoch.
-	if s.hasSeenCommitteeIndicesEpoch(att.Data.Target.Epoch, att.Data.CommitteeIndex, att.AggregationBits) {
+	// Verify this the first attestation received for the participating validator for the slot.
+	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return pubsub.ValidationIgnore
 	}
 	// Reject an attestation if it references an invalid block.
@@ -100,7 +100,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve pre state")
+		log.Error("Failed to retrieve pre state")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -131,35 +131,35 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Attestation's signature is a valid BLS signature and belongs to correct public key..
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestation(ctx, preState, att); err != nil {
+		if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
 			log.WithError(err).Error("Could not verify attestation")
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 	}
 
-	s.setSeenCommitteeIndicesEpoch(att.Data.Target.Epoch, att.Data.CommitteeIndex, att.AggregationBits)
+	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
 
 	msg.ValidatorData = att
 
 	return pubsub.ValidationAccept
 }
 
-// Returns true if the attestation was already seen for the participating validator for the target epoch.
-func (s *Service) hasSeenCommitteeIndicesEpoch(epoch uint64, committeeID uint64, aggregateBits []byte) bool {
+// Returns true if the attestation was already seen for the participating validator for the slot.
+func (s *Service) hasSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, aggregateBits []byte) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(committeeID)...)
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
 	_, seen := s.seenAttestationCache.Get(string(b))
 	return seen
 }
 
-// Set committee's indices and target epoch as seen for incoming attestations.
-func (s *Service) setSeenCommitteeIndicesEpoch(epoch uint64, committeeID uint64, aggregateBits []byte) {
+// Set committee's indices and slot as seen for incoming attestations.
+func (s *Service) setSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, aggregateBits []byte) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(committeeID)...)
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
 	s.seenAttestationCache.Add(string(b), true)
 }

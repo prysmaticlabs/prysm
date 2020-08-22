@@ -389,7 +389,7 @@ func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
 		},
 	}
 	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)
-	_, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
+	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -420,7 +420,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	_, err = blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
+	_, err = blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.NoError(t, err)
 }
 
@@ -445,7 +445,7 @@ func TestProcessAttestationsNoVerify_BadAttIdx(t *testing.T) {
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
-	_, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att)
+	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
 }
 
@@ -629,6 +629,48 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	assert.ErrorContains(t, want, err)
 }
 
+func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
+	beaconState, keys := testutil.DeterministicGenesisState(t, 1000)
+
+	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
+	list := bitfield.Bitlist{0b11111111}
+	atts := []*ethpb.Attestation{}
+	for i := uint64(0); i < 1000; i++ {
+		atts = append(atts, &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				CommitteeIndex: 1,
+				Slot:           1,
+			},
+			Signature:       sig.Marshal(),
+			AggregationBits: list,
+		})
+	}
+
+	want := "nil or missing indexed attestation data"
+	_, err := blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	assert.ErrorContains(t, want, err)
+
+	atts = []*ethpb.Attestation{}
+	list = bitfield.Bitlist{0b00000000}
+	for i := uint64(0); i < 1000; i++ {
+		atts = append(atts, &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				CommitteeIndex: 1,
+				Slot:           1,
+				Target: &ethpb.Checkpoint{
+					Root: []byte{},
+				},
+			},
+			Signature:       sig.Marshal(),
+			AggregationBits: list,
+		})
+	}
+
+	want = "expected non-empty attesting indices"
+	_, err = blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	assert.ErrorContains(t, want, err)
+}
+
 func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	ctx := context.Background()
 	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
@@ -693,7 +735,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	require.NoError(t, blocks.VerifyAttestations(ctx, st, []*ethpb.Attestation{att1, att2}))
+	require.NoError(t, blocks.VerifyAttestationsSignatures(ctx, st, []*ethpb.Attestation{att1, att2}))
 }
 
 func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
@@ -767,7 +809,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	require.NoError(t, blocks.VerifyAttestations(ctx, st, []*ethpb.Attestation{att1, att2}))
+	require.NoError(t, blocks.VerifyAttestationsSignatures(ctx, st, []*ethpb.Attestation{att1, att2}))
 }
 
 func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing.T) {

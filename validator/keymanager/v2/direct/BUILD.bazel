@@ -4,6 +4,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "backup.go",
         "direct.go",
         "doc.go",
         "import.go",
@@ -18,6 +19,7 @@ go_library(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
         "//validator/accounts/v2/iface:go_default_library",
@@ -37,6 +39,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "backup_test.go",
         "direct_test.go",
         "import_test.go",
     ],

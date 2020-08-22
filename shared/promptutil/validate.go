@@ -3,6 +3,7 @@ package promptutil
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"unicode"
 
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
@@ -40,6 +41,15 @@ func ValidateNumber(input string) error {
 func ValidateConfirmation(input string) error {
 	if input != "Y" && input != "y" {
 		return errors.New("please confirm the above text")
+	}
+	return nil
+}
+
+// ValidateYesOrNo ensures the user input either Y, y or N, n.
+func ValidateYesOrNo(input string) error {
+	lowercase := strings.ToLower(input)
+	if lowercase != "y" && lowercase != "n" {
+		return errors.New("please enter y or n")
 	}
 	return nil
 }

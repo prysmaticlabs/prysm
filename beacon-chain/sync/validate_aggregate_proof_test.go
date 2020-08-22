@@ -606,7 +606,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	err = r.initCaches()
 	require.NoError(t, err)
 	// Set beacon block as bad.
-	r.setBadBlock(root)
+	r.setBadBlock(context.Background(), root)
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)

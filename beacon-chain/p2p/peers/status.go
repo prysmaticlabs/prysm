@@ -436,6 +436,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
 	pidEpoch := make(map[peer.ID]uint64, len(connected))
+	pidHead := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -443,6 +444,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 			finalizedEpochVotes[peerChainState.FinalizedEpoch]++
 			pidEpoch[pid] = peerChainState.FinalizedEpoch
 			potentialPIDs = append(potentialPIDs, pid)
+			pidHead[pid] = peerChainState.HeadSlot
 		}
 	}
 
@@ -458,7 +460,8 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 
 	// Sort PIDs by finalized epoch, in decreasing order.
 	sort.Slice(potentialPIDs, func(i, j int) bool {
-		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]]
+		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]] &&
+			pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
 	})
 
 	// Trim potential peers to those on or after target epoch.
@@ -472,6 +475,51 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	// Trim potential peers to at most maxPeers.
 	if len(potentialPIDs) > maxPeers {
 		potentialPIDs = potentialPIDs[:maxPeers]
+	}
+
+	return targetEpoch, potentialPIDs
+}
+
+// BestNonFinalized returns the highest known epoch, which is higher than ours, and is shared
+// by at least minPeers.
+func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
+	connected := p.Connected()
+	epochVotes := make(map[uint64]uint64)
+	pidEpoch := make(map[peer.ID]uint64, len(connected))
+	pidHead := make(map[peer.ID]uint64, len(connected))
+	potentialPIDs := make([]peer.ID, 0, len(connected))
+
+	ourFinalizedSlot := helpers.StartSlot(ourFinalizedEpoch)
+	for _, pid := range connected {
+		peerChainState, err := p.ChainState(pid)
+		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourFinalizedSlot {
+			epoch := helpers.SlotToEpoch(peerChainState.HeadSlot)
+			epochVotes[epoch]++
+			pidEpoch[pid] = epoch
+			pidHead[pid] = peerChainState.HeadSlot
+			potentialPIDs = append(potentialPIDs, pid)
+		}
+	}
+
+	// Select the target epoch, which has enough peers' votes (>= minPeers).
+	var targetEpoch uint64
+	for epoch, votes := range epochVotes {
+		if votes >= uint64(minPeers) && targetEpoch < epoch {
+			targetEpoch = epoch
+		}
+	}
+
+	// Sort PIDs by head slot, in decreasing order.
+	sort.Slice(potentialPIDs, func(i, j int) bool {
+		return pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
+	})
+
+	// Trim potential peers to those on or after target epoch.
+	for i, pid := range potentialPIDs {
+		if pidEpoch[pid] < targetEpoch {
+			potentialPIDs = potentialPIDs[:i]
+			break
+		}
 	}
 
 	return targetEpoch, potentialPIDs

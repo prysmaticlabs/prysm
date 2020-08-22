@@ -56,11 +56,11 @@ func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 		if v, ok := object.(fssz.HashRoot); ok {
 			return v.HashTreeRoot()
 		}
-		switch object.(type) {
+		switch t := object.(type) {
 		case *ethpb.BeaconBlock:
-			return stateutil.BlockRoot(object.(*ethpb.BeaconBlock))
+			return stateutil.BlockRoot(t)
 		case *ethpb.AttestationData:
-			return stateutil.AttestationDataRoot(object.(*ethpb.AttestationData))
+			return stateutil.AttestationDataRoot(t)
 		default:
 			// utilise generic ssz library
 			return ssz.HashTreeRoot(object)

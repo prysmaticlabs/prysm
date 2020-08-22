@@ -15,6 +15,10 @@ func TestInitFeatureConfig(t *testing.T) {
 	Init(cfg)
 	c := Get()
 	assert.Equal(t, true, c.SkipBLSVerify)
+
+	// Reset back to false for the follow up tests.
+	cfg = &Flags{SkipBLSVerify: false}
+	Init(cfg)
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {

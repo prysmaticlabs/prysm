@@ -3608,3 +3608,9 @@ def prysm_deps():
         sum = "h1:QS7JPTys1Fsg01oQDOZLNRwGJZTYHr1Eyb0TKmHI6SY=",
         version = "v0.3.1",
     )
+    go_repository(
+        name = "com_github_gofrs_flock",
+        importpath = "github.com/gofrs/flock",
+        sum = "h1:DP+LD/t0njgoPBvT5MJLeliUIVQR03hiKR6vezdwHlc=",
+        version = "v0.7.1",
+    )

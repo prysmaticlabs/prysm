@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,14 +32,6 @@ func RecoverWallet(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not create new wallet")
 	}
 	ctx := context.Background()
-	seedConfig, err := derived.SeedFileFromMnemonic(ctx, mnemonic, wallet.walletPassword)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize new wallet seed file")
-	}
-	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
-	}
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -49,10 +42,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
-		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
-	}
-	keymanager, err := wallet.InitializeKeymanager(ctx, true)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, true)
 	if err != nil {
 		return err
 	}
@@ -60,7 +50,9 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if !ok {
 		return errors.New("not a derived keymanager")
 	}
-
+	if err := km.WriteEncryptedSeedToWallet(ctx, mnemonic); err != nil {
+		return err
+	}
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
@@ -118,6 +110,7 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 	}
 	sort.Strings(languages)
 	selectedLanguage, err := promptutil.ValidatePrompt(
+		os.Stdin,
 		fmt.Sprintf("Enter the language of your seed phrase: %s", strings.Join(languages, ", ")),
 		func(input string) error {
 			if _, ok := allowedLanguages[input]; !ok {
@@ -130,7 +123,10 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 		return "", fmt.Errorf("could not get mnemonic language: %v", err)
 	}
 	bip39.SetWordList(allowedLanguages[selectedLanguage])
-	mnemonicPhrase, err := promptutil.ValidatePrompt("Enter the seed phrase for the wallet you would like to recover", validateMnemonic)
+	mnemonicPhrase, err := promptutil.ValidatePrompt(
+		os.Stdin,
+		"Enter the seed phrase for the wallet you would like to recover",
+		validateMnemonic)
 	if err != nil {
 		return "", fmt.Errorf("could not get mnemonic phrase: %v", err)
 	}
