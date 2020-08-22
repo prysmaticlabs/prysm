@@ -364,17 +364,17 @@ func TestLastSavedState_Genesis(t *testing.T) {
 		finalizedInfo: &finalizedInfo{slot: 128},
 	}
 
-	gBlk := testutil.NewBeaconBlock()
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gState := testutil.NewBeaconState()
 	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	require.NoError(t, err)
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, gBlk))
 	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, s.beaconDB.SaveState(ctx, gState, gRoot))
 
-	savedRoot, err := s.lastSavedState(ctx, 0)
+	savedState, err := s.lastSavedState(ctx, 0)
 	require.NoError(t, err)
-	if savedRoot != savedRoot {
-		t.Error("Did not save genesis root")
-	}
+	require.DeepEqual(t, gState.InnerStateUnsafe(), savedState.InnerStateUnsafe())
 }
 
 func TestLastSavedState_CanGet(t *testing.T) {

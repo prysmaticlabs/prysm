@@ -176,7 +176,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -248,7 +248,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -340,7 +340,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
@@ -455,7 +455,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   cache.NewStateSummaryCache(),
 	}
@@ -592,7 +592,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -665,7 +665,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -711,4 +711,17 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	// Expect block with bad parent to fail too
 	result = r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 	assert.Equal(t, false, result)
+}
+
+func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
+	s := Service{}
+	require.NoError(t, s.initCaches())
+
+	root := [32]byte{'b', 'a', 'd'}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	s.setBadBlock(ctx, root)
+	if s.hasBadBlock(root) {
+		t.Error("Set bad root with cancelled context")
+	}
 }

@@ -188,11 +188,11 @@ func (w *Wallet) InitializeKeymanager(
 	return keymanager, nil
 }
 
-// ListDirs in wallet accounts path.
-func (w *Wallet) ListDirs() ([]string, error) {
+// Exists returns if the wallet provided exists or not.
+func (w *Wallet) Exists() (bool, error) {
 	accountsDir, err := os.Open(w.AccountsDir())
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	defer func() {
 		if err := accountsDir.Close(); err != nil {
@@ -204,19 +204,11 @@ func (w *Wallet) ListDirs() ([]string, error) {
 
 	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.AccountsDir())
+		return false, errors.Wrapf(err, "could not read files in directory: %s", w.AccountsDir())
 	}
-	dirNames := make([]string, 0)
-	for _, item := range list {
-		ok, err := fileutil.HasDir(filepath.Join(w.AccountsDir(), item))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not parse directory: %v", err)
-		}
-		if ok {
-			dirNames = append(dirNames, item)
-		}
-	}
-	return dirNames, nil
+	// There are 2 files for derived and non-derived wallets if a wallet is properly setup.
+	walletExists := len(list) >= 2
+	return walletExists, nil
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.

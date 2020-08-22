@@ -227,6 +227,10 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	}
 	s.clearInitSyncBlocks()
 
+	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
+		return err
+	}
+
 	s.prevFinalizedCheckpt = s.finalizedCheckpt
 	s.finalizedCheckpt = cp
 
@@ -235,9 +239,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		return errors.Wrap(err, "could not migrate to cold")
 	}
 
-	s.attPool.ClearSeenAtts()
-
-	return s.beaconDB.SaveFinalizedCheckpoint(ctx, cp)
+	return nil
 }
 
 // ancestor returns the block root of an ancestry block from the input block root.

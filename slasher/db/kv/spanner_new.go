@@ -46,9 +46,6 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 // Returns span byte array, and error in case of db error.
 // returns empty byte array if no entry for this epoch exists in db.
 func (db *Store) EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (*types.EpochStore, error) {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpans")
-	defer span.End()
-
 	// Get from the cache if it exists or is requested, if not, go to DB.
 	if fromCache && db.flatSpanCache.Has(epoch) || db.flatSpanCache.Has(epoch) {
 		spans, _ := db.flatSpanCache.Get(epoch)
@@ -77,9 +74,6 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
 func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpans")
-	defer span.End()
-
 	if len(es.Bytes())%int(types.SpannerEncodedLength) != 0 {
 		return types.ErrWrongSize
 	}

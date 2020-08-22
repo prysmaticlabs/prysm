@@ -1940,7 +1940,9 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)))
 	assert.Equal(t, 0, len(s.AttPool.AggregatedAttestations()), "Did not delete aggregated attestation")
-	assert.Equal(t, 0, len(s.AttPool.UnaggregatedAttestations()), "Did not delete unaggregated attestation")
+	atts, err := s.AttPool.UnaggregatedAttestations()
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(atts), "Did not delete unaggregated attestation")
 }
 
 func TestSortProfitableAtts(t *testing.T) {

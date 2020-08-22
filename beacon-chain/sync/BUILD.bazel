@@ -154,6 +154,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

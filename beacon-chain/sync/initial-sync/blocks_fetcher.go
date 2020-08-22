@@ -249,8 +249,15 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 		return response
 	}
 
-	headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
-	finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	var targetEpoch uint64
+	var peers []peer.ID
+	if f.mode == modeStopOnFinalizedEpoch {
+		headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
+		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	} else {
+		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+	}
 	if len(peers) == 0 {
 		response.err = errNoPeersAvailable
 		return response
@@ -258,7 +265,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	if f.mode == modeStopOnFinalizedEpoch {
-		highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
+		highestFinalizedSlot := helpers.StartSlot(targetEpoch + 1)
 		if start > highestFinalizedSlot {
 			response.err = fmt.Errorf("%v, slot: %d, highest finalized slot: %d",
 				errSlotIsTooHigh, start, highestFinalizedSlot)
@@ -346,7 +353,7 @@ func (f *blocksFetcher) requestBlocks(
 	}
 	defer func() {
 		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Errorf("Failed to close stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Failed to close stream with protocol %s", stream.Protocol())
 		}
 	}()
 
