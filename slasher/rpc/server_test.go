@@ -43,7 +43,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	}
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 
 	savedAttestation := &ethpb.IndexedAttestation{
@@ -124,7 +124,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	).Return(wantedValidators1, nil)
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	savedAttestation := &ethpb.IndexedAttestation{
@@ -199,7 +199,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	).Return(wantedValidators, nil).AnyTimes()
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
 	savedBlock := &ethpb.SignedBeaconBlockHeader{
@@ -275,7 +275,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	).Return(wantedValidators, nil)
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	savedBlock := &ethpb.SignedBeaconBlockHeader{
