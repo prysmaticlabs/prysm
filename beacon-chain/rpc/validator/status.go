@@ -241,7 +241,8 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 		return ethpb.ValidatorStatus_DEPOSITED
 	}
 	if currentEpoch < validator.ActivationEpoch() {
-		if validator.EffectiveBalance() < params.BeaconConfig().MaxEffectiveBalance {
+		balance := validator.EffectiveBalance()
+		if balance > 0 && balance < params.BeaconConfig().MaxEffectiveBalance {
 			return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 		}
 		return ethpb.ValidatorStatus_PENDING
