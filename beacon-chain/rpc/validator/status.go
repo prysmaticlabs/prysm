@@ -194,6 +194,20 @@ func (vs *Server) validatorStatus(
 		return resp, nonExistentIndex
 	// Deposited, Pending or Partialy Deposited mean the validator has been put into the state.
 	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED:
+		if resp.Status == ethpb.ValidatorStatus_PENDING {
+			if vs.DepositFetcher == nil {
+				log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit.")
+			} else {
+				// Check if there was a deposit deposit.
+				deposit, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+				if eth1BlockNumBigInt != nil && deposit.Data.Amount >= params.BeaconConfig().MaxEffectiveBalance {
+					resp.Status = ethpb.ValidatorStatus_DEPOSITED
+				} else if eth1BlockNumBigInt != nil && deposit.Data.Amount > 0 {
+					resp.Status = ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
+				}
+			}
+		}
+
 		var lastActivatedValidatorIdx uint64
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
 			val, err := headState.ValidatorAtIndexReadOnly(uint64(j))
@@ -239,16 +253,19 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
 	if currentEpoch < validator.ActivationEligibilityEpoch() {
-		if validatorBalance < params.BeaconConfig().MaxEffectiveBalance {
-			return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
+		if validatorBalance == 0 {
+			return ethpb.ValidatorStatus_PENDING
 		}
-		return ethpb.ValidatorStatus_DEPOSITED
+		if validatorBalance >= params.BeaconConfig().MaxEffectiveBalance {
+			return ethpb.ValidatorStatus_DEPOSITED
+		}
+		return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 	}
 	if currentEpoch < validator.ActivationEpoch() {
-		if validatorBalance > 0 && validatorBalance < params.BeaconConfig().MaxEffectiveBalance {
-			return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
+		if validatorBalance == 0 {
+			return ethpb.ValidatorStatus_PENDING
 		}
-		return ethpb.ValidatorStatus_PENDING
+		return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 	}
 	if validator.ExitEpoch() == farFutureEpoch {
 		return ethpb.ValidatorStatus_ACTIVE
