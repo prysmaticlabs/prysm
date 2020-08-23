@@ -26,7 +26,7 @@ func NewRegularSyncFuzz(cfg *Config) *Service {
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
 		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks:  make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
