@@ -41,7 +41,9 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			postSSZExists := true
 			if err != nil && strings.Contains(err.Error(), "could not locate file") {
 				postSSZExists = false
-			} else require.NoError(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 
 			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.
 			beaconState, err := blocks.ProcessBlockHeaderNoVerify(preBeaconState, block)
