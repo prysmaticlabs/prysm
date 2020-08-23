@@ -20,8 +20,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher: mc,
-		p2p:         p2p,
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
 	})
 
 	t.Run("stop without start", func(t *testing.T) {
@@ -29,6 +30,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
@@ -39,6 +41,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -49,6 +52,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -61,6 +65,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -85,6 +90,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -98,6 +104,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -110,6 +117,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -230,12 +238,14 @@ func TestBlocksQueueLoop(t *testing.T) {
 			defer cancel()
 
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-				headFetcher: mc,
-				p2p:         p2p,
+				headFetcher:         mc,
+				finalizationFetcher: mc,
+				p2p:                 p2p,
 			})
 			queue := newBlocksQueue(ctx, &blocksQueueConfig{
 				blocksFetcher:       fetcher,
 				headFetcher:         mc,
+				finalizationFetcher: mc,
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())

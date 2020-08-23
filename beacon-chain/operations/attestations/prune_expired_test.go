@@ -53,7 +53,9 @@ func TestPruneExpired_Ticker(t *testing.T) {
 
 	done := make(chan struct{}, 1)
 	runutil.RunEvery(ctx, 500*time.Millisecond, func() {
-		for _, attestation := range s.pool.UnaggregatedAttestations() {
+		atts, err := s.pool.UnaggregatedAttestations()
+		require.NoError(t, err)
+		for _, attestation := range atts {
 			if attestation.Data.Slot == 0 {
 				return
 			}

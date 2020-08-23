@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	c "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -93,8 +94,8 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			cache.seenAggregatedAtt[r] = []bitfield.Bitlist{{0xff}}
-			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool")
+			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
+			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
 			err := cache.SaveAggregatedAttestation(tt.att)
 			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestKeymanager_ExtractKeystores(t *testing.T) {
+func TestDirectKeymanager_ExtractKeystores(t *testing.T) {
 	dr := &Keymanager{
 		keysCache: make(map[[48]byte]bls.SecretKey),
 	}

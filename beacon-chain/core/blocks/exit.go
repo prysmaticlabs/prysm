@@ -50,7 +50,7 @@ func ProcessVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		if err := VerifyExit(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorRoot()); err != nil {
+		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorRoot()); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
@@ -61,9 +61,10 @@ func ProcessVoluntaryExits(
 	return beaconState, nil
 }
 
-// ProcessVoluntaryExitsNoVerify processes all the voluntary exits in
+// ProcessVoluntaryExitsNoVerifySignature processes all the voluntary exits in
 // a block body, without verifying their BLS signatures.
-func ProcessVoluntaryExitsNoVerify(
+// This function is here to satisfy fuzz tests.
+func ProcessVoluntaryExitsNoVerifySignature(
 	beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
@@ -93,7 +94,7 @@ func ProcessVoluntaryExitsNoVerify(
 	return beaconState, nil
 }
 
-// VerifyExit implements the spec defined validation for voluntary exits.
+// VerifyExitAndSignature implements the spec defined validation for voluntary exits.
 //
 // Spec pseudocode definition:
 //   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
@@ -112,7 +113,7 @@ func ProcessVoluntaryExitsNoVerify(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExit(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
+func VerifyExitAndSignature(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}

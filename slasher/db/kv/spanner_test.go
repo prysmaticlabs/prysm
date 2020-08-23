@@ -57,7 +57,7 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	validatorIdx := uint64(1)
 	vsm, _, err := db.EpochSpansMap(ctx, validatorIdx)
 	require.NoError(t, err, "Nil EpochSpansMap should not return error")
-	require.DeepEqual(t, map[uint64]types.Span{}, vsm, "EpochSpansMap should return nil")
+	require.DeepEqual(t, map[uint64]types.Span{}, vsm, "EpochSpansMap should return empty map")
 }
 
 func TestStore_SaveSpans(t *testing.T) {
@@ -225,6 +225,6 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(spanTests), len(res), "Unexpected number of elements")
 	for _, tt := range spanTests {
-		assert.DeepEqual(t, tt.spanMap, res[tt.epoch], "Unexpected snap map")
+		assert.DeepEqual(t, tt.spanMap, res[tt.epoch], "Unexpected span map")
 	}
 }

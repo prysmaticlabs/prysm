@@ -36,7 +36,7 @@ func TestNodeClose_OK(t *testing.T) {
 	context := cli.NewContext(&app, set, nil)
 
 	node, err := NewSlasherNode(context)
-	require.NoError(t, err, "Failed to create SlasherNode")
+	require.NoError(t, err, "Failed to create slasher node")
 
 	node.Close()
 

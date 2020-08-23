@@ -1,6 +1,8 @@
 package v2
 
 import (
+	"os"
+
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
@@ -112,6 +114,25 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.ConfigureValidator(cliCtx)
 				if err := ImportAccounts(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
+				}
+				return nil
+			},
+		},
+		{
+			Name:        "voluntary-exit",
+			Description: "Performs a voluntary exit on selected accounts",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				flags.VoluntaryExitPublicKeysFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := ExitAccountsUnimplemented(cliCtx, os.Stdin); err != nil {
+					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}
 				return nil
 			},
