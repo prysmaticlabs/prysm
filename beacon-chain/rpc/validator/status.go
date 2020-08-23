@@ -180,8 +180,10 @@ func (vs *Server) validatorStatus(
 		}
 		// Mark a validator as DEPOSITED if their deposit is visible.
 		resp.Status = ethpb.ValidatorStatus_DEPOSITED
-		// Check if 32 ETH was deposited. If less assign PARTIALLY_DEPOSITED status.
-		if deposit.Data.Amount < params.BeaconConfig().MaxEffectiveBalance {
+		// Check if 32 ETH was deposited. If less assign PENDING or PARTIALLY_DEPOSITED status.
+		if deposit.Data.Amount == 0 {
+			resp.Status = ethpb.ValidatorStatus_PENDING
+		} else if deposit.Data.Amount < params.BeaconConfig().MaxEffectiveBalance {
 			resp.Status = ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 		}
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
