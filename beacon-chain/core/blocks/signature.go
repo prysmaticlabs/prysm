@@ -144,6 +144,9 @@ func createAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.B
 			return nil, err
 		}
 		ia := attestationutil.ConvertToIndexed(ctx, a, c)
+		if err := attestationutil.IsValidAttestationIndices(ctx, ia); err != nil {
+			return nil, err
+		}
 		indices := ia.AttestingIndices
 		var pk bls.PublicKey
 		for i := 0; i < len(indices); i++ {

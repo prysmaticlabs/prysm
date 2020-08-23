@@ -34,9 +34,7 @@ type sourceStoresHistory struct {
 func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	directory := testutil.TempDir() + "/testkeystore"
 	defer func() {
-		if err := os.RemoveAll(directory); err != nil {
-			t.Errorf("Could not remove directory: %v", err)
-		}
+		assert.NoError(t, os.RemoveAll(directory))
 	}()
 	validatorKey, err := keystore.NewKey()
 	require.NoError(t, err, "Cannot create new key")

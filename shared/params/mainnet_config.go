@@ -31,6 +31,8 @@ var mainnetNetworkConfig = &NetworkConfig{
 	AttSubnetKey:                      "attnets",
 	ContractDeploymentBlock:           0,
 	DepositContractAddress:            "0x", // To be updated once the mainnet contract is deployed.
+	ChainID:                           1,    // Chain ID of eth1 mainnet.
+	NetworkID:                         1,    // Network ID of eth1 mainnet.
 	BootstrapNodes:                    []string{},
 }
 

@@ -10,29 +10,20 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // setupDB instantiates and returns a Store instance.
 func setupDB(t testing.TB) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		t.Fatalf("Could not generate random file path: %v", err)
-	}
+	require.NoError(t, err, "Could not generate random file path")
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	if err := os.RemoveAll(p); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
+	require.NoError(t, os.RemoveAll(p), "Failed to remove directory")
 	db, err := NewKVStore(p, cache.NewStateSummaryCache())
-	if err != nil {
-		t.Fatalf("Failed to instantiate DB: %v", err)
-	}
+	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed to close database: %v", err)
-		}
-		if err := os.RemoveAll(db.DatabasePath()); err != nil {
-			t.Fatalf("Failed to remove directory: %v", err)
-		}
+		require.NoError(t, db.Close(), "Failed to close database")
+		require.NoError(t, os.RemoveAll(db.DatabasePath()), "Failed to remove directory")
 	})
 	return db
 }

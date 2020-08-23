@@ -3,9 +3,11 @@ package kv
 import (
 	"testing"
 
+	c "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
@@ -31,18 +33,38 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 					BeaconBlockRoot: []byte{0b0},
 				},
 			},
-			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
+			wantErrString: "incorrect fixed bytes marshalling",
 		},
 		{
-			name:  "normal save",
-			att:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}},
+			name: "normal save",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 100,
+				},
+				AggregationBits: bitfield.Bitlist{0b0001},
+			},
 			count: 1,
 		},
+		{
+			name: "already seen",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 100,
+				},
+				AggregationBits: bitfield.Bitlist{0b10000001},
+			},
+			count: 0,
+		},
 	}
+	r, err := hashFn(&ethpb.AttestationData{
+		Slot: 100,
+	})
+	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
+			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
 			if len(cache.unAggregatedAtt) != 0 {
 				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 			}
@@ -150,7 +172,8 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		returned := cache.UnaggregatedAttestations()
+		returned, err := cache.UnaggregatedAttestations()
+		require.NoError(t, err)
 		assert.DeepEqual(t, []*ethpb.Attestation{}, returned)
 	})
 }

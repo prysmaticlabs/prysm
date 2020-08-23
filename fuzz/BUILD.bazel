@@ -71,7 +71,6 @@ test_suite(
         ":deposit_fuzz_test_with_libfuzzer",
         ":proposer_slashing_fuzz_test_with_libfuzzer",
         ":rpc_status_fuzz_test_with_libfuzzer",
-        ":ssz_cache_fuzz_test_with_libfuzzer",
         ":voluntary_exit_fuzz_test_with_libfuzzer",
     ],
 )
@@ -200,21 +199,6 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
-    name = "ssz_cache_fuzz_test",
-    srcs = [
-        "ssz_cache_fuzz.go",
-    ] + COMMON_SRCS,
-    corpus = "@sigp_beacon_fuzz_corpora//:0_11_0_mainnet_beaconstate",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/beaconstate",
-    func = "BeaconFuzzSSZCache",
-    importpath = IMPORT_PATH,
-    deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
-    ] + COMMON_DEPS,
-)
-
-go_fuzz_test(
     name = "voluntary_exit_fuzz_test",
     srcs = [
         "voluntary_exit_fuzz.go",
@@ -242,7 +226,6 @@ go_library(
         "deposit_fuzz.go",
         "inputs.go",
         "rpc_status_fuzz.go",
-        "ssz_cache_fuzz.go",
         "voluntary_exit_fuzz.go",
         ":ssz_generated_files",  # keep
     ],

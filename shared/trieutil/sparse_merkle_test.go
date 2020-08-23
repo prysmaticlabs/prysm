@@ -1,7 +1,6 @@
 package trieutil
 
 import (
-	"reflect"
 	"strconv"
 	"testing"
 
@@ -24,14 +23,11 @@ func TestMarshalDepositWithProof(t *testing.T) {
 		[]byte("FFFFFF"),
 		[]byte("GGGGGGG"),
 	}
-	m, err := GenerateTrieFromItems(items, 32)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err)
-
 	proof, err := m.MerkleProof(2)
 	require.NoError(t, err)
-	if len(proof) != 33 {
-		t.Errorf("Received len %d, wanted 33", len(proof))
-	}
+	require.Equal(t, len(proof), int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	someRoot := [32]byte{1, 2, 3, 4}
 	someSig := [96]byte{1, 2, 3, 4}
 	someKey := [48]byte{1, 2, 3, 4}
@@ -48,9 +44,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 	require.NoError(t, err)
 	dec := &ethpb.Deposit{}
 	require.NoError(t, dec.UnmarshalSSZ(enc))
-	if !reflect.DeepEqual(dec, dep) {
-		t.Errorf("Wanted %v, received %v", dep, dec)
-	}
+	require.DeepEqual(t, dec, dep)
 }
 
 func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
@@ -82,13 +76,11 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 
 	depRoot, err := testAccount.Contract.GetDepositRoot(&bind.CallOpts{})
 	require.NoError(t, err)
-	if depRoot != trie.HashTreeRoot() {
-		t.Errorf("Trie root for an empty trie isn't as expected. Expected: %#x but got %#x", depRoot, trie.Root())
-	}
+	require.DeepEqual(t, depRoot, trie.HashTreeRoot())
 }
 
 func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
-	if _, err := GenerateTrieFromItems(nil, 32); err == nil {
+	if _, err := GenerateTrieFromItems(nil, int(params.BeaconConfig().DepositContractTreeDepth)); err == nil {
 		t.Error("Expected error when providing nil items received nil")
 	}
 }
@@ -104,25 +96,19 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 		[]byte("G"),
 		[]byte("H"),
 	}
-	m, err := GenerateTrieFromItems(items, 32)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
-	if len(proof) != 33 {
-		t.Errorf("Received len %d, wanted 33", len(proof))
-	}
+	require.Equal(t, int(params.BeaconConfig().DepositContractTreeDepth)+1, len(proof))
 	root := m.Root()
 	if ok := VerifyMerkleBranch(root[:], items[0], 0, proof); !ok {
 		t.Error("First Merkle proof did not verify")
 	}
 	proof, err = m.MerkleProof(3)
 	require.NoError(t, err)
-	if ok := VerifyMerkleBranch(root[:], items[3], 3, proof); !ok {
-		t.Error("Second Merkle proof did not verify")
-	}
-	if ok := VerifyMerkleBranch(root[:], []byte("buzz"), 3, proof); ok {
-		t.Error("Item not in tree should fail to verify")
-	}
+	require.Equal(t, true, VerifyMerkleBranch(root[:], items[3], 3, proof))
+	require.Equal(t, false, VerifyMerkleBranch(root[:], []byte("buzz"), 3, proof))
 }
 
 func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
@@ -132,14 +118,12 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 		{3},
 		{4},
 	}
-	m, err := GenerateTrieFromItems(items, 33)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
 	root := m.Root()
-	if ok := VerifyMerkleBranch(root[:], items[0], 0, proof); !ok {
-		t.Error("First Merkle proof did not verify")
-	}
+	require.Equal(t, true, VerifyMerkleBranch(root[:], items[0], 0, proof), 3, proof)
 
 	// Now we update the trie.
 	m.Insert([]byte{5}, 3)
@@ -164,16 +148,15 @@ func TestRoundtripProto_OK(t *testing.T) {
 		{3},
 		{4},
 	}
-	m, err := GenerateTrieFromItems(items, 33)
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	require.NoError(t, err)
+
 	protoTrie := m.ToProto()
 	depositRoot := m.HashTreeRoot()
 
 	newTrie := CreateTrieFromProto(protoTrie)
+	require.DeepEqual(t, depositRoot, newTrie.HashTreeRoot())
 
-	if newTrie.HashTreeRoot() != depositRoot {
-		t.Errorf("Wanted a deposit trie root of %#x but got %#x", depositRoot, newTrie.HashTreeRoot())
-	}
 }
 
 func TestCopy_OK(t *testing.T) {
@@ -183,19 +166,15 @@ func TestCopy_OK(t *testing.T) {
 		{3},
 		{4},
 	}
-	source, err := GenerateTrieFromItems(items, 33)
+	source, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	require.NoError(t, err)
-
 	copy := source.Copy()
 
 	if copy == source {
 		t.Errorf("Original trie returned.")
 	}
-	sourceHash := source.HashTreeRoot()
 	copyHash := copy.HashTreeRoot()
-	if sourceHash != copyHash {
-		t.Errorf("Trie not copied correctly. Got root hash %x vs expected %x", copyHash, sourceHash)
-	}
+	require.DeepEqual(t, copyHash, copy.HashTreeRoot())
 }
 
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
@@ -209,7 +188,7 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 		[]byte("GGGGGGG"),
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := GenerateTrieFromItems(items, 32); err != nil {
+		if _, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)); err != nil {
 			b.Fatalf("Could not generate Merkle trie from items: %v", err)
 		}
 	}
@@ -223,10 +202,9 @@ func BenchmarkInsertTrie_Optimized(b *testing.B) {
 		someRoot := bytesutil.ToBytes32([]byte(strconv.Itoa(i)))
 		items[i] = someRoot[:]
 	}
-	tr, err := GenerateTrieFromItems(items, 32)
-	if err != nil {
-		b.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
+	tr, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(b, err)
+
 	someItem := bytesutil.ToBytes32([]byte("hello-world"))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -245,10 +223,9 @@ func BenchmarkGenerateProof(b *testing.B) {
 		[]byte("FFFFFF"),
 		[]byte("GGGGGGG"),
 	}
-	normalTrie, err := GenerateTrieFromItems(items, 32)
-	if err != nil {
-		b.Fatal(err)
-	}
+	normalTrie, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(b, err)
+
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if _, err := normalTrie.MerkleProof(3); err != nil {
@@ -268,14 +245,11 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 		[]byte("FFFFFF"),
 		[]byte("GGGGGGG"),
 	}
-	m, err := GenerateTrieFromItems(items, 32)
-	if err != nil {
-		b.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
+	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(b, err)
 	proof, err := m.MerkleProof(2)
-	if err != nil {
-		b.Fatalf("Could not generate Merkle proof: %v", err)
-	}
+	require.NoError(b, err)
+
 	root := m.Root()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {

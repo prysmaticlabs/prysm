@@ -48,7 +48,6 @@ go_library(
 ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
-        "archive.proto",
         "messages.proto",
         "types.proto",
     ],

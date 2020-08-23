@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -27,13 +28,9 @@ func TestMerge(t *testing.T) {
 	secondStore := setupDB(t, secondStorePubKeys)
 
 	storeHistory1, err := prepareStore(firstStore, firstStorePubKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	storeHistory2, err := prepareStore(secondStore, secondStorePubKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	mergedProposals := make(map[[48]byte]bitfield.Bitlist)
 	for k, v := range storeHistory1.Proposals {
 		mergedProposals[k] = v
@@ -55,19 +52,13 @@ func TestMerge(t *testing.T) {
 
 	targetDirectory := testutil.TempDir() + "/target"
 	t.Cleanup(func() {
-		if err := os.RemoveAll(targetDirectory); err != nil {
-			t.Errorf("Could not remove target directory : %v", err)
-		}
+		assert.NoError(t, os.RemoveAll(targetDirectory), "Could not remove target directory")
 	})
 
 	err = Merge(context.Background(), []*Store{firstStore, secondStore}, targetDirectory)
-	if err != nil {
-		t.Fatalf("Merging failed: %v", err)
-	}
+	require.NoError(t, err, "Merging failed")
 	mergedStore, err := GetKVStore(targetDirectory)
-	if err != nil {
-		t.Fatalf("Retrieving the merged store failed: %v", err)
-	}
+	require.NoError(t, err, "Retrieving the merged store failed")
 
 	assertStore(
 		t,
@@ -82,42 +73,26 @@ func TestSplit(t *testing.T) {
 	sourceStore := setupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	storeHistory1, err := prepareStore(sourceStore, [][48]byte{pubKey1})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	storeHistory2, err := prepareStore(sourceStore, [][48]byte{pubKey2})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	targetDirectory := testutil.TempDir() + "/target"
 	t.Cleanup(func() {
-		if err := os.RemoveAll(targetDirectory); err != nil {
-			t.Errorf("Could not remove target directory: %v", err)
-		}
+		assert.NoError(t, os.RemoveAll(targetDirectory), "Could not remove target directory")
 	})
 
-	if err := Split(context.Background(), sourceStore, targetDirectory); err != nil {
-		t.Fatalf("Splitting failed: %v", err)
-	}
+	require.NoError(t, Split(context.Background(), sourceStore, targetDirectory), "Splitting failed")
 
 	encodedKey1 := hex.EncodeToString(pubKey1[:])[:12]
 	keyStore1, err := GetKVStore(filepath.Join(targetDirectory, encodedKey1))
-	if err != nil {
-		t.Fatalf("Retrieving the store for public key %v failed: %v", encodedKey1, err)
-	}
-	if keyStore1 == nil {
-		t.Fatalf("No store created for public key %v", encodedKey1)
-	}
+	require.NoError(t, err, "Retrieving the store for public key %v failed", encodedKey1)
+	require.NotNil(t, keyStore1, "No store created for public key %v", encodedKey1)
 
 	encodedKey2 := hex.EncodeToString(pubKey2[:])[:12]
 	keyStore2, err := GetKVStore(filepath.Join(targetDirectory, encodedKey2))
-	if err != nil {
-		t.Fatalf("Retrieving the store for public key %v failed: %v", encodedKey2, err)
-	}
-	if keyStore2 == nil {
-		t.Fatalf("No store created for public key %v", encodedKey2)
-	}
+	require.NoError(t, err, "Retrieving the store for public key %v failed", encodedKey2)
+	require.NotNil(t, keyStore2, "No store created for public key %v", encodedKey2)
 
 	if err := keyStore1.view(func(tx *bolt.Tx) error {
 		otherKeyProposalsBucket := tx.Bucket(historicProposalsBucket).Bucket(pubKey2[:])
@@ -158,35 +133,24 @@ func TestSplit_AttestationsWithoutMatchingProposalsAreSplit(t *testing.T) {
 	sourceStore := setupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	_, err := prepareStoreProposals(sourceStore, [][48]byte{pubKey1})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	attestationHistory, err := prepareStoreAttestations(sourceStore, [][48]byte{pubKey1, pubKey2})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	targetDirectory := testutil.TempDir() + "/target"
 	t.Cleanup(func() {
-		if err := os.RemoveAll(targetDirectory); err != nil {
-			t.Errorf("Could not remove target directory : %v", err)
-		}
+		assert.NoError(t, os.RemoveAll(targetDirectory), "Could not remove target directory")
 	})
 
-	if err := Split(context.Background(), sourceStore, targetDirectory); err != nil {
-		t.Fatalf("Splitting failed: %v", err)
-	}
+	require.NoError(t, Split(context.Background(), sourceStore, targetDirectory), "Splitting failed")
 
 	encodedKey1 := hex.EncodeToString(pubKey1[:])[:12]
 	encodedKey2 := hex.EncodeToString(pubKey2[:])[:12]
 
 	attestationsOnlyKeyStore, err := GetKVStore(filepath.Join(targetDirectory, encodedKey2))
-	if err != nil {
-		t.Fatalf("Retrieving the store failed: %v", err)
-	}
-	if attestationsOnlyKeyStore == nil {
-		t.Fatalf("No store created for public key %v", encodedKey2)
-	}
+	require.NoError(t, err, "Retrieving the store failed")
+	require.NotNil(t, attestationsOnlyKeyStore, "No store created for public key %v", encodedKey2)
+
 	if err := attestationsOnlyKeyStore.view(func(tx *bolt.Tx) error {
 		otherKeyProposalsBucket := tx.Bucket(historicProposalsBucket).Bucket(pubKey1[:])
 		if otherKeyProposalsBucket != nil {
@@ -204,15 +168,8 @@ func TestSplit_AttestationsWithoutMatchingProposalsAreSplit(t *testing.T) {
 
 	splitAttestationsHistory, err :=
 		attestationsOnlyKeyStore.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey2})
-	if err != nil {
-		t.Fatalf("Retrieving attestation history failed for public key %v", encodedKey2)
-	}
-	if splitAttestationsHistory[pubKey2].TargetToSource[0] != attestationHistory[pubKey2][0] {
-		t.Fatalf(
-			"Attestations not merged correctly: expected %v vs received %v",
-			attestationHistory[pubKey2][0],
-			splitAttestationsHistory[pubKey2].TargetToSource[0])
-	}
+	require.NoError(t, err, "Retrieving attestation history failed for public key %v", encodedKey2)
+	require.Equal(t, attestationHistory[pubKey2][0], splitAttestationsHistory[pubKey2].TargetToSource[0], "Attestations not merged correctly")
 }
 
 func prepareStore(store *Store, pubKeys [][48]byte) (*storeHistory, error) {
@@ -268,28 +225,16 @@ func prepareStoreAttestations(store *Store, pubKeys [][48]byte) (map[[48]byte]ma
 
 func assertStore(t *testing.T, store *Store, pubKeys [][48]byte, expectedHistory *storeHistory) {
 	for _, key := range pubKeys {
-		proposalHistory, err := store.ProposalHistoryForEpoch(
-			context.Background(), key[:], 0)
-		if err != nil {
-			t.Fatalf("Retrieving proposal history failed for public key %v", key)
-		}
+		proposalHistory, err := store.ProposalHistoryForEpoch(context.Background(), key[:], 0)
+		require.NoError(t, err, "Retrieving proposal history failed for public key %v", key)
 		expectedProposals := expectedHistory.Proposals[key]
-		if !bytes.Equal(proposalHistory, expectedProposals) {
-			t.Fatalf("Proposals are incorrect: expected %v vs received %v", expectedProposals, proposalHistory)
-		}
+		require.DeepEqual(t, expectedProposals, proposalHistory, "Proposals are incorrect")
 	}
 
 	attestationHistory, err := store.AttestationHistoryForPubKeys(context.Background(), pubKeys)
-	if err != nil {
-		t.Fatalf("Retrieving attestation history failed")
-	}
+	require.NoError(t, err, "Retrieving attestation history failed")
 	for _, key := range pubKeys {
 		expectedAttestations := expectedHistory.Attestations[key]
-		if attestationHistory[key].TargetToSource[0] != expectedAttestations[0] {
-			t.Fatalf(
-				"Attestations are incorrect: expected %v vs received %v",
-				expectedAttestations[0],
-				attestationHistory[key].TargetToSource[0])
-		}
+		require.Equal(t, expectedAttestations[0], attestationHistory[key].TargetToSource[0], "Attestations are incorrect")
 	}
 }

@@ -52,16 +52,10 @@ loop:
 	for want := 0; want < 10; want++ {
 		select {
 		case got := <-channel:
-			if got != want {
-				t.Fatalf("wrong int %d, want %d", got, want)
-			}
+			require.Equal(t, want, got)
 		case err := <-sub.Err():
-			if err != errInts {
-				t.Fatalf("wrong error: got %q, want %q", err, errInts)
-			}
-			if want != 2 {
-				t.Fatalf("got errInts at int %d, should be received at 2", want)
-			}
+			require.Equal(t, errInts, err)
+			require.Equal(t, 2, want)
 			break loop
 		}
 	}
@@ -94,9 +88,7 @@ func TestResubscribe(t *testing.T) {
 	})
 
 	<-sub.Err()
-	if i != nfails {
-		t.Fatalf("resubscribe function called %d times, want %d times", i, nfails)
-	}
+	require.Equal(t, nfails, i)
 }
 
 func TestResubscribeAbort(t *testing.T) {

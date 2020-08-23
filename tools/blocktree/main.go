@@ -17,11 +17,9 @@ import (
 
 	"github.com/emicklei/dot"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -68,8 +66,6 @@ func main() {
 		}
 		m[r] = &node{score: make(map[uint64]bool)}
 
-		// Gather votes from the attestations voted for this block
-		atts, err := db.Attestations(context.Background(), filters.NewFilter().SetHeadBlockRoot(r[:]))
 		state, err := db.State(context.Background(), r)
 		if err != nil {
 			panic(err)
@@ -92,21 +88,10 @@ func main() {
 				panic(err)
 			}
 		}
-		// Retrieve attestation indices
-		for _, att := range atts {
-			committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-			if err != nil {
-				panic(err)
-			}
-			indices := attestationutil.AttestingIndices(att.AggregationBits, committee)
-			for _, i := range indices {
-				m[r].score[i] = true
-			}
-		}
 
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
-		label := "slot: " + strconv.Itoa(int(b.Block.Slot)) + "\n root: " + rStr + "\n votes: " + strconv.Itoa(len(m[r].score))
+		label := "slot: " + strconv.Itoa(int(b.Block.Slot)) + "\n root: " + rStr
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{

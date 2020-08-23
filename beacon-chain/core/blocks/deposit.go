@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -178,10 +179,8 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
-	} else {
-		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-			return nil, err
-		}
+	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
+		return nil, err
 	}
 
 	return beaconState, nil
@@ -218,30 +217,7 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
 func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain []byte) error {
-	publicKey, err := bls.PublicKeyFromBytes(pub)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
-	}
-	sig, err := bls.SignatureFromBytes(signature)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
-	}
-	root, err := ssz.SigningRoot(obj)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root")
-	}
-	signingData := &pb.SigningData{
-		ObjectRoot: root[:],
-		Domain:     domain,
-	}
-	ctrRoot, err := ssz.HashTreeRoot(signingData)
-	if err != nil {
-		return errors.Wrap(err, "could not get container root")
-	}
-	if !sig.Verify(publicKey, ctrRoot[:]) {
-		return helpers.ErrSigFailedToVerify
-	}
-	return nil
+	return depositutil.VerifyDepositSignature(obj, domain)
 }
 
 func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain []byte) error {

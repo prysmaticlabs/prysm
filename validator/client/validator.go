@@ -34,7 +34,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type validatorRole int8
+// reconnectPeriod is the frequency that we try to restart our
+// slasher connection when the slasher client connection is not ready.
+var reconnectPeriod = 5 * time.Second
+
+// ValidatorRole defines the validator role.
+type ValidatorRole int8
 
 const (
 	roleUnknown = iota
@@ -55,7 +60,12 @@ type validator struct {
 	keyManager                         keymanager.KeyManager
 	keyManagerV2                       v2keymanager.IKeymanager
 	startBalances                      map[[48]byte]uint64
+	prevBalanceLock                    sync.RWMutex
 	prevBalance                        map[[48]byte]uint64
+	indicesLock                        sync.RWMutex
+	indexToPubkey                      map[uint64][48]byte
+	pubkeyToIndex                      map[[48]byte]uint64
+	pubkeyToStatus                     map[[48]byte]ethpb.ValidatorStatus
 	voteStats                          voteStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
@@ -87,14 +97,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
-	for {
-		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
-		chainStartRes, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		// If context is canceled we stop the loop.
+
+	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
+	chainStartRes, err := stream.Recv()
+	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
@@ -102,8 +108,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
-		break
 	}
+
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
@@ -152,14 +158,10 @@ func (v *validator) WaitForSynced(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain Synced streaming client")
 	}
-	for {
-		log.Info("Waiting for chainstart to occur and the beacon node to be fully synced")
-		syncedRes, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		// If context is canceled we stop the loop.
+
+	log.Info("Waiting for chainstart to occur and the beacon node to be fully synced")
+	syncedRes, err := stream.Recv()
+	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
@@ -167,12 +169,42 @@ func (v *validator) WaitForSynced(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive Synced from stream")
 		}
 		v.genesisTime = syncedRes.GenesisTime
-		break
 	}
+
 	// Once the Synced log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Chain has started and the beacon node is synced")
+	return nil
+}
+
+// SlasherReady checks if slasher that was configured as external protection
+// is reachable.
+func (v *validator) SlasherReady(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
+	defer span.End()
+	if featureconfig.Get().SlasherProtection {
+		err := v.protector.Status()
+		if err == nil {
+			return nil
+		}
+		ticker := time.NewTicker(reconnectPeriod)
+		for {
+			select {
+			case <-ticker.C:
+				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
+				err = v.protector.Status()
+				if err != nil {
+					continue
+				}
+				log.Info("Slasher connection is ready")
+				return nil
+			case <-ctx.Done():
+				log.Debug("Context closed, exiting reconnect external protection")
+				return errors.New("context closed, no longer attempting to restart external protection")
+			}
+		}
+	}
 	return nil
 }
 
@@ -277,6 +309,8 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			validatorActivated = true
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
+		case ethpb.ValidatorStatus_INVALID:
+			log.Warn("Invalid Eth1 deposit")
 		default:
 			log.WithFields(logrus.Fields{
 				"activationEpoch": status.Status.ActivationEpoch,
@@ -354,6 +388,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range v.duties.Duties {
+		pk := bytesutil.ToBytes48(duty.PublicKey)
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
@@ -363,7 +398,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, pk)
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -375,6 +410,18 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
+
+		v.indicesLock.Lock()
+		if _, ok := v.indexToPubkey[duty.ValidatorIndex]; !ok {
+			v.indexToPubkey[duty.ValidatorIndex] = pk
+		}
+		if _, ok := v.pubkeyToIndex[pk]; !ok {
+			v.pubkeyToIndex[pk] = duty.ValidatorIndex
+		}
+		if _, ok := v.pubkeyToStatus[pk]; !ok {
+			v.pubkeyToStatus[pk] = duty.Status
+		}
+		v.indicesLock.Unlock()
 	}
 
 	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
@@ -419,11 +466,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid validatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
-	rolesAt := make(map[[48]byte][]validatorRole)
+// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
+	rolesAt := make(map[[48]byte][]ValidatorRole)
 	for _, duty := range v.duties.Duties {
-		var roles []validatorRole
+		var roles []ValidatorRole
 
 		if duty == nil {
 			continue
@@ -532,6 +579,34 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
+}
+
+// BalancesByPubkeys returns the validator balances keyed by validator public keys.
+func (v *validator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
+	v.prevBalanceLock.RLock()
+	defer v.prevBalanceLock.RUnlock()
+	return v.prevBalance
+}
+
+// IndicesToPubkeys returns the validator public keys keyed by validator indices.
+func (v *validator) IndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
+	v.indicesLock.RLock()
+	defer v.indicesLock.RUnlock()
+	return v.indexToPubkey
+}
+
+// PubkeysToIndices returns the validator indices keyed by validator public keys.
+func (v *validator) PubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
+	v.indicesLock.RLock()
+	defer v.indicesLock.RUnlock()
+	return v.pubkeyToIndex
+}
+
+// PubkeysToStatuses returns the validator statues keyed by validator public keys.
+func (v *validator) PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+	v.indicesLock.RLock()
+	defer v.indicesLock.RUnlock()
+	return v.pubkeyToStatus
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

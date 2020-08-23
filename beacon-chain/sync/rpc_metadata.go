@@ -16,7 +16,7 @@ import (
 func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
@@ -56,7 +56,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 		return nil, err
 	}
 	if code != 0 {
-		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
 	msg := new(pb.MetaData)

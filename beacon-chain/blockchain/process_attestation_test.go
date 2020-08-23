@@ -358,7 +358,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -379,7 +379,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 

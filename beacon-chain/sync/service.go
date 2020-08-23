@@ -39,6 +39,7 @@ const seenAttSize = 10000
 const seenExitSize = 100
 const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
+const badBlockSize = 1000
 
 const syncMetricsInterval = 10 * time.Second
 
@@ -81,7 +82,7 @@ type Service struct {
 	exitPool                  *voluntaryexits.Pool
 	slashingPool              *slashings.Pool
 	chain                     blockchainService
-	slotToPendingBlocks       map[uint64]*ethpb.SignedBeaconBlock
+	slotToPendingBlocks       map[uint64][]*ethpb.SignedBeaconBlock
 	seenPendingBlocks         map[[32]byte]bool
 	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	pendingAttsLock           sync.RWMutex
@@ -103,6 +104,8 @@ type Service struct {
 	seenProposerSlashingCache *lru.Cache
 	seenAttesterSlashingLock  sync.RWMutex
 	seenAttesterSlashingCache *lru.Cache
+	badBlockCache             *lru.Cache
+	badBlockLock              sync.RWMutex
 	stateSummaryCache         *cache.StateSummaryCache
 	stateGen                  *stategen.State
 }
@@ -122,7 +125,7 @@ func NewRegularSync(cfg *Config) *Service {
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
 		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks:  make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
@@ -163,7 +166,6 @@ func (s *Service) Stop() error {
 	defer func() {
 		if s.rateLimiter != nil {
 			s.rateLimiter.free()
-			s.rateLimiter = nil
 		}
 	}()
 	defer s.cancel()
@@ -172,16 +174,17 @@ func (s *Service) Stop() error {
 
 // Status of the currently running regular sync service.
 func (s *Service) Status() error {
-	if s.chainStarted {
-		if s.initialSync.Syncing() {
-			return errors.New("waiting for initial sync")
-		}
-		// If our head slot is on a previous epoch and our peers are reporting their head block are
-		// in the most recent epoch, then we might be out of sync.
-		if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
-			headEpoch+1 < s.p2p.Peers().HighestEpoch() {
-			return errors.New("out of sync")
-		}
+	if !s.chainStarted {
+		return errors.New("chain not yet started")
+	}
+	if s.initialSync.Syncing() {
+		return errors.New("waiting for initial sync")
+	}
+	// If our head slot is on a previous epoch and our peers are reporting their head block are
+	// in the most recent epoch, then we might be out of sync.
+	if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
+		headEpoch+1 < s.p2p.Peers().HighestEpoch() {
+		return errors.New("out of sync")
 	}
 	return nil
 }
@@ -209,11 +212,16 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
+	badBlockCache, err := lru.New(badBlockSize)
+	if err != nil {
+		return err
+	}
 	s.seenBlockCache = blkCache
 	s.seenAttestationCache = attCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = attesterSlashingCache
 	s.seenProposerSlashingCache = proposerSlashingCache
+	s.badBlockCache = badBlockCache
 
 	return nil
 }
@@ -223,7 +231,7 @@ func (s *Service) registerHandlers() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	for s.chainStarted == false {
+	for !s.chainStarted {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -149,6 +150,49 @@ func TestService_ReceiveBlock(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_ReceiveBlockUpdateHead(t *testing.T) {
+	ctx := context.Background()
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	db, stateSummaryCache := testDB.SetupDB(t)
+	genesisBlockRoot := bytesutil.ToBytes32(nil)
+	require.NoError(t, db.SaveState(ctx, genesis, genesisBlockRoot))
+	cfg := &Config{
+		BeaconDB: db,
+		ForkChoiceStore: protoarray.New(
+			0, // justifiedEpoch
+			0, // finalizedEpoch
+			genesisBlockRoot,
+		),
+		AttPool:       attestations.NewPool(),
+		ExitPool:      voluntaryexits.NewPool(),
+		StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
+		StateGen:      stategen.New(db, stateSummaryCache),
+	}
+	s, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+	require.NoError(t, s.saveGenesisData(ctx, genesis))
+	gBlk, err := s.beaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+	root, err := stateutil.BlockRoot(b.Block)
+	require.NoError(t, err)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		require.NoError(t, s.ReceiveBlock(ctx, b, root))
+		wg.Done()
+	}()
+	wg.Wait()
+	if recvd := len(s.stateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
+		t.Errorf("Received %d state notifications, expected at least 1", recvd)
+	}
+	// Verify fork choice has processed the block. (Genesis block and the new block)
+	assert.Equal(t, 2, len(s.forkChoiceStore.Nodes()))
 }
 
 func TestService_ReceiveBlockInitialSync(t *testing.T) {

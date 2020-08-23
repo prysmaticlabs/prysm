@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"errors"
 	"sort"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -28,7 +29,11 @@ func (s sortedObj) Len() int {
 }
 
 // removes duplicates from provided blocks and roots.
-func (s *Service) dedupBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte) {
+func (s *Service) dedupBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
+	if len(blks) != len(roots) {
+		return nil, nil, errors.New("input blks and roots are diff lengths")
+	}
+
 	// Remove duplicate blocks received
 	rootMap := make(map[[32]byte]bool, len(blks))
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
@@ -41,7 +46,20 @@ func (s *Service) dedupBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][
 		newRoots = append(newRoots, roots[i])
 		newBlks = append(newBlks, blks[i])
 	}
-	return newBlks, newRoots
+	return newBlks, newRoots, nil
+}
+
+func (s *Service) dedupRoots(roots [][32]byte) [][32]byte {
+	newRoots := make([][32]byte, 0, len(roots))
+	rootMap := make(map[[32]byte]bool, len(roots))
+	for i, r := range roots {
+		if rootMap[r] {
+			continue
+		}
+		rootMap[r] = true
+		newRoots = append(newRoots, roots[i])
+	}
+	return newRoots
 }
 
 // sort the provided blocks and roots in ascending order. This method assumes that the size of

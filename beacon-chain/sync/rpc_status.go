@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,14 +36,14 @@ func (s *Service) maintainPeerStatuses() {
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
 					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
 					if err := s.p2p.Disconnect(id); err != nil {
-						log.Errorf("Error when disconnecting with peer: %v", err)
+						log.Debugf("Error when disconnecting with peer: %v", err)
 					}
 					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
 				}
 				if s.p2p.Peers().IsBad(id) {
 					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
-						log.Errorf("Error when disconnecting with bad peer: %v", err)
+						log.Debugf("Error when disconnecting with bad peer: %v", err)
 					}
 					return
 				}
@@ -54,8 +55,8 @@ func (s *Service) maintainPeerStatuses() {
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
 					if err := s.reValidatePeer(s.ctx, id); err != nil {
-						log.WithField("peer", id).WithError(err).Error("Failed to revalidate peer")
-						s.p2p.Peers().Scorer().IncrementBadResponses(id)
+						log.WithField("peer", id).WithError(err).Debug("Failed to revalidate peer")
+						s.p2p.Peers().Scorers().BadResponsesScorer().Increment(id)
 					}
 				}
 			}(pid)
@@ -72,7 +73,7 @@ func (s *Service) resyncIfBehind() {
 	runutil.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
-			highestEpoch, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
+			highestEpoch, _ := s.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > s.chain.HeadSlot() {
 				log.WithFields(logrus.Fields{
 					"currentEpoch": helpers.SlotToEpoch(s.chain.CurrentSlot()),
@@ -137,7 +138,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	if code != 0 {
-		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 
@@ -149,7 +150,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 
 	err = s.validateStatusMessage(ctx, msg)
 	if err != nil {
-		s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
 		if err == errWrongForkDigestVersion {
 			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
@@ -176,7 +177,7 @@ func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
@@ -208,7 +209,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 				return err
 			}
 			if err := stream.Close(); err != nil { // Close before disconnecting.
-				log.WithError(err).Error("Failed to close stream")
+				log.WithError(err).Debug("Failed to close stream")
 			}
 			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
@@ -216,25 +217,23 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			return nil
 		default:
 			respCode = responseCodeInvalidRequest
-			s.p2p.Peers().Scorer().IncrementBadResponses(stream.Conn().RemotePeer())
+			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 
 		originalErr := err
 		resp, err := s.generateErrorResponse(respCode, err.Error())
 		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
-		} else {
-			if _, err := stream.Write(resp); err != nil {
-				// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
-				log.WithError(err).Debug("Failed to write to stream")
-			}
+			log.WithError(err).Debug("Failed to generate a response error")
+		} else if _, err := stream.Write(resp); err != nil {
+			// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
+			log.WithError(err).Debug("Failed to write to stream")
 		}
 		if err := stream.Close(); err != nil { // Close before disconnecting.
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		time.Sleep(flushDelay)
 		if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
-			log.WithError(err).Error("Failed to disconnect from peer")
+			log.WithError(err).Debug("Failed to disconnect from peer")
 		}
 		return originalErr
 	}
@@ -262,7 +261,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		log.WithError(err).Error("Failed to write to stream")
+		log.WithError(err).Debug("Failed to write to stream")
 	}
 	_, err = s.p2p.Encoding().EncodeWithMaxLength(stream, resp)
 	return err
@@ -299,7 +298,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
-	if !s.db.IsFinalizedBlock(context.Background(), bytesutil.ToBytes32(msg.FinalizedRoot)) {
+	if !s.db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
 		return errInvalidFinalizedRoot
 	}
 	blk, err := s.db.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))

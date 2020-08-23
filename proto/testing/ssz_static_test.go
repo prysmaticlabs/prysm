@@ -2,6 +2,7 @@ package testing
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"path"
@@ -10,10 +11,11 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // SSZRoots --
@@ -56,7 +58,9 @@ func runSSZStaticTests(t *testing.T, config string) {
 				var htr func(interface{}) ([32]byte, error)
 				if _, ok := object.(*pb.BeaconState); ok {
 					htr = func(s interface{}) ([32]byte, error) {
-						return stateutil.HashTreeRootState(s.(*pb.BeaconState))
+						beaconState, err := state.InitializeFromProto(s.(*pb.BeaconState))
+						require.NoError(t, err)
+						return beaconState.HashTreeRoot(context.Background())
 					}
 				} else {
 					htr = ssz.HashTreeRoot

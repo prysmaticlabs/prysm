@@ -139,10 +139,13 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
 	service.hotStateCache.Put(r, beaconState)
 
-	loadedState, err := service.StateByRoot(ctx, r)
+	loadedState, err := service.StateByRootInitialSync(ctx, r)
 	require.NoError(t, err)
 	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
 		t.Error("Did not correctly cache state")
+	}
+	if service.hotStateCache.Has(r) {
+		t.Error("Hot state cache was not invalidated")
 	}
 }
 

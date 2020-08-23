@@ -29,7 +29,9 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 		m.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 			PeerLimit: 30,
 			ScorerParams: &peers.PeerScorerConfig{
-				BadResponsesThreshold: 5,
+				BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+					Threshold: 5,
+				},
 			},
 		})
 		// Pretend we are connected to two peers

@@ -1,188 +1,209 @@
 package direct
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"strconv"
+	"fmt"
 	"strings"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-type mockMnemonicGenerator struct {
-	generatedMnemonics []string
-}
-
-func (m *mockMnemonicGenerator) Generate(data []byte) (string, error) {
-	newMnemonic, err := bip39.NewMnemonic(data)
-	if err != nil {
-		return "", err
-	}
-	m.generatedMnemonics = append(m.generatedMnemonics, newMnemonic)
-	return newMnemonic, nil
-}
-
-func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
-	return nil
-}
-
-func TestKeymanager_CreateAccount(t *testing.T) {
+func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
+	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files:            make(map[string]map[string][]byte),
-		AccountPasswords: make(map[string]string),
-	}
-	mnemonicGenerator := &mockMnemonicGenerator{
-		generatedMnemonics: make([]string, 0),
+		Files: make(map[string]map[string][]byte),
 	}
 	dr := &Keymanager{
-		wallet:            wallet,
-		mnemonicGenerator: mnemonicGenerator,
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
 	}
 	ctx := context.Background()
-	password := "secretPassw0rd$1999"
-	accountName, err := dr.CreateAccount(ctx, password)
-	if err != nil {
-		t.Fatal(err)
-	}
+	accountName, err := dr.CreateAccount(ctx)
+	require.NoError(t, err)
 
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
-	encodedKeystore, ok := wallet.Files[accountName][KeystoreFileName]
-	if !ok {
-		t.Fatalf("Expected to have stored %s in wallet", KeystoreFileName)
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
 	}
+	require.NotNil(t, encodedKeystore, "could not find keystore file")
 	keystoreFile := &v2keymanager.Keystore{}
-	if err := json.Unmarshal(encodedKeystore, keystoreFile); err != nil {
-		t.Fatalf("Could not decode keystore json: %v", err)
-	}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
-	// We extract the validator signing private key from the keystore
-	// by utilizing the password and initialize a new BLS secret key from
-	// its raw bytes.
+	// We extract the accounts from the keystore.
 	decryptor := keystorev4.New()
-	rawSigningKey, err := decryptor.Decrypt(keystoreFile.Crypto, []byte(password))
-	if err != nil {
-		t.Fatalf("Could not decrypt validator signing key: %v", err)
-	}
-	validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
-	if err != nil {
-		t.Fatalf("Could not instantiate bls secret key from bytes: %v", err)
-	}
+	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+	require.NoError(t, err, "Could not decrypt validator accounts")
+	store := &AccountStore{}
+	require.NoError(t, json.Unmarshal(encodedAccounts, store))
 
-	// Decode the deposit_data.ssz file and confirm
-	// the public key matches the public key from the
-	// account's decrypted keystore.
-	encodedDepositData, ok := wallet.Files[accountName][depositDataFileName]
-	if !ok {
-		t.Fatalf("Expected to have stored %s in wallet", depositDataFileName)
-	}
-	depositData := &ethpb.Deposit_Data{}
-	if err := ssz.Unmarshal(encodedDepositData, depositData); err != nil {
-		t.Fatal(err)
-	}
-
-	depositPublicKey := depositData.PublicKey
-	publicKey := validatorSigningKey.PublicKey().Marshal()
-	if !bytes.Equal(depositPublicKey, publicKey) {
-		t.Errorf(
-			"Expected deposit data public key %#x to match public key from keystore %#x",
-			depositPublicKey,
-			publicKey,
-		)
-	}
-
-	// We ensure the mnemonic phrase has successfully been generated.
-	if len(mnemonicGenerator.generatedMnemonics) != 1 {
-		t.Fatal("Expected to have generated new mnemonic for private key")
-	}
-	mnemonicPhrase := mnemonicGenerator.generatedMnemonics[0]
-	rawWithdrawalBytes, err := bip39.EntropyFromMnemonic(mnemonicPhrase)
-	if err != nil {
-		t.Fatal(err)
-	}
-	validatorWithdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalBytes)
-	if err != nil {
-		t.Fatalf("Could not instantiate bls secret key from bytes: %v", err)
-	}
-
-	// We then verify the withdrawal hash created from the recovered withdrawal key
-	// given the mnemonic phrase does indeed verify with the deposit data that was persisted on disk.
-	withdrawalHash := depositutil.WithdrawalCredentialsHash(validatorWithdrawalKey)
-	if !bytes.Equal(withdrawalHash, depositData.WithdrawalCredentials) {
-		t.Errorf(
-			"Expected matching withdrawal credentials, got %#x, received %#x",
-			withdrawalHash,
-			depositData.WithdrawalCredentials,
-		)
-	}
-	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
+	require.Equal(t, 1, len(store.PublicKeys))
+	require.Equal(t, 1, len(store.PrivateKeys))
+	privKey, err := bls.SecretKeyFromBytes(store.PrivateKeys[0])
+	require.NoError(t, err)
+	pubKey := privKey.PublicKey().Marshal()
+	assert.DeepEqual(t, pubKey, store.PublicKeys[0])
+	require.LogsContain(t, hook, accountName)
+	require.LogsContain(t, hook, "Successfully created new validator account")
 }
 
-func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
+	hook := logTest.NewGlobal()
+	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files:            make(map[string]map[string][]byte),
-		AccountPasswords: make(map[string]string),
+		Files: make(map[string]map[string][]byte),
 	}
 	dr := &Keymanager{
-		wallet:    wallet,
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
+	}
+	numAccounts := 5
+	ctx := context.Background()
+	for i := 0; i < numAccounts; i++ {
+		_, err := dr.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+	accounts, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, numAccounts, len(accounts))
+
+	accountToRemove := uint64(2)
+	accountPubKey := accounts[accountToRemove]
+	// Remove an account from the keystore.
+	require.NoError(t, dr.DeleteAccounts(ctx, [][]byte{accountPubKey[:]}))
+	// Ensure the keystore file was written to the wallet
+	// and ensure we can decrypt it using the EIP-2335 standard.
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	require.NotNil(t, encodedKeystore, "could not find keystore file")
+	keystoreFile := &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+
+	// We extract the accounts from the keystore.
+	decryptor := keystorev4.New()
+	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+	require.NoError(t, err, "Could not decrypt validator accounts")
+	store := &AccountStore{}
+	require.NoError(t, json.Unmarshal(encodedAccounts, store))
+
+	require.Equal(t, numAccounts-1, len(store.PublicKeys))
+	require.Equal(t, numAccounts-1, len(store.PrivateKeys))
+	require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
+	require.LogsContain(t, hook, "Successfully deleted validator account")
+}
+
+func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+	password := "secretPassw0rd$1999"
+	wallet := &mock.Wallet{
+		Files: make(map[string]map[string][]byte),
+	}
+	dr := &Keymanager{
+		wallet:           wallet,
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		accountsStore:    &AccountStore{},
+		accountsPassword: password,
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
-	numAccounts := 20
-	wantedPublicKeys := generateAccounts(t, numAccounts, dr)
-	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		t.Fatal(err)
+	numAccounts := 10
+	wantedPubKeys := make([][48]byte, numAccounts)
+	for i := 0; i < numAccounts; i++ {
+		privKey := bls.RandKey()
+		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
+		dr.keysCache[pubKey] = privKey
+		wantedPubKeys[i] = pubKey
+		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pubKey[:])
+		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, privKey.Marshal())
 	}
+
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
 	// The results are not guaranteed to be ordered, so we ensure each
 	// key we expect exists in the results via a map.
 	keysMap := make(map[[48]byte]bool)
 	for _, key := range publicKeys {
 		keysMap[key] = true
 	}
-	for _, wanted := range wantedPublicKeys {
+	for _, wanted := range wantedPubKeys {
 		if _, ok := keysMap[wanted]; !ok {
 			t.Errorf("Could not find expected public key %#x in results", wanted)
 		}
 	}
 }
 
-func TestKeymanager_Sign(t *testing.T) {
+func TestDirectKeymanager_Sign(t *testing.T) {
+	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}
 	dr := &Keymanager{
-		wallet:    wallet,
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		wallet:           wallet,
+		accountsStore:    &AccountStore{},
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		accountsPassword: password,
 	}
 
 	// First, generate accounts and their keystore.json files.
-	numAccounts := 2
-	generateAccounts(t, numAccounts, dr)
 	ctx := context.Background()
-	if err := dr.initializeSecretKeysCache(); err != nil {
-		t.Fatal(err)
+	numAccounts := 10
+	for i := 0; i < numAccounts; i++ {
+		_, err := dr.CreateAccount(ctx)
+		require.NoError(t, err)
 	}
+
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	keystoreFile := &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+
+	// We extract the validator signing private key from the keystore
+	// by utilizing the password and initialize a new BLS secret key from
+	// its raw bytes.
+	decryptor := keystorev4.New()
+	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.accountsPassword)
+	require.NoError(t, err)
+	store := &AccountStore{}
+	require.NoError(t, json.Unmarshal(enc, store))
+	require.Equal(t, len(store.PublicKeys), len(store.PrivateKeys))
+	require.NotEqual(t, 0, len(store.PublicKeys))
+
+	for i := 0; i < len(store.PublicKeys); i++ {
+		privKey, err := bls.SecretKeyFromBytes(store.PrivateKeys[i])
+		require.NoError(t, err)
+		dr.keysCache[bytesutil.ToBytes48(store.PublicKeys[i])] = privKey
+	}
+	dr.accountsStore = store
+
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.Equal(t, len(publicKeys), len(store.PublicKeys))
 
 	// We prepare naive data to sign.
 	data := []byte("hello world")
@@ -191,17 +212,11 @@ func TestKeymanager_Sign(t *testing.T) {
 		SigningRoot: data,
 	}
 	sig, err := dr.Sign(ctx, signRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubKey, err := bls.PublicKeyFromBytes(publicKeys[0][:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wrongPubKey, err := bls.PublicKeyFromBytes(publicKeys[1][:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !sig.Verify(pubKey, data) {
 		t.Fatalf("Expected sig to verify for pubkey %#x and data %v", pubKey.Marshal(), data)
 	}
@@ -209,21 +224,17 @@ func TestKeymanager_Sign(t *testing.T) {
 		t.Fatalf("Expected sig not to verify for pubkey %#x and data %v", wrongPubKey.Marshal(), data)
 	}
 }
-func TestKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
+
+func TestDirectKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: nil,
 	}
 	dr := &Keymanager{}
 	_, err := dr.Sign(context.Background(), req)
-	if err == nil {
-		t.Error("Expected error, received nil")
-	}
-	if !strings.Contains(err.Error(), "nil public key") {
-		t.Errorf("Unexpected error: %v", err)
-	}
+	assert.ErrorContains(t, "nil public key", err)
 }
 
-func TestKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
+func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
@@ -231,54 +242,5 @@ func TestKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	_, err := dr.Sign(context.Background(), req)
-	if err == nil {
-		t.Error("Expected error, received nil")
-	}
-	if !strings.Contains(err.Error(), "no signing key found in keys cache") {
-		t.Errorf("Unexpected error: %v", err)
-	}
-}
-
-func BenchmarkKeymanager_FetchValidatingPublicKeys(b *testing.B) {
-	b.StopTimer()
-	wallet := &mock.Wallet{
-		Files:            make(map[string]map[string][]byte),
-		AccountPasswords: make(map[string]string),
-	}
-	dr := &Keymanager{
-		wallet:    wallet,
-		keysCache: make(map[[48]byte]bls.SecretKey),
-	}
-	// First, generate accounts and their keystore.json files.
-	numAccounts := 1000
-	generateAccounts(b, numAccounts, dr)
-	ctx := context.Background()
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		if _, err := dr.FetchValidatingPublicKeys(ctx); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte {
-	ctx := context.Background()
-	wantedPublicKeys := make([][48]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		validatingKey := bls.RandKey()
-		wantedPublicKeys[i] = bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())
-		password := strconv.Itoa(i)
-		encoded, err := dr.generateKeystoreFile(validatingKey, password)
-		if err != nil {
-			t.Fatal(err)
-		}
-		accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := dr.wallet.WriteFileForAccount(ctx, accountName, KeystoreFileName, encoded); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return wantedPublicKeys
+	assert.ErrorContains(t, "no signing key found in keys cache", err)
 }

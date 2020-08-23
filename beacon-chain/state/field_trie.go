@@ -109,13 +109,8 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 		}
 	}
 	dstFieldTrie := make([][]*[32]byte, len(f.fieldLayers))
-
 	for i, layer := range f.fieldLayers {
-		if len(dstFieldTrie[i]) < len(layer) {
-			diffSlice := make([]*[32]byte, len(layer)-len(dstFieldTrie[i]))
-			dstFieldTrie[i] = append(dstFieldTrie[i], diffSlice...)
-		}
-		dstFieldTrie[i] = dstFieldTrie[i][:len(layer)]
+		dstFieldTrie[i] = make([]*[32]byte, len(layer))
 		copy(dstFieldTrie[i], layer)
 	}
 	return &FieldTrie{
@@ -180,7 +175,11 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 }
 
 func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
-	roots := [][32]byte{}
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
 	rootCreater := func(input []byte) {
 		newRoot := bytesutil.ToBytes32(input)
 		roots = append(roots, newRoot)
@@ -198,7 +197,11 @@ func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 }
 
 func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
-	roots := [][32]byte{}
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreater := func(input *ethpb.Eth1Data) error {
 		newRoot, err := stateutil.Eth1Root(hasher, input)
@@ -227,7 +230,11 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 }
 
 func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
-	roots := [][32]byte{}
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreater := func(input *ethpb.Validator) error {
 		newRoot, err := stateutil.ValidatorRoot(hasher, input)
@@ -256,7 +263,11 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 }
 
 func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
-	roots := [][32]byte{}
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *pb.PendingAttestation) error {
 		newRoot, err := stateutil.PendingAttestationRoot(hasher, input)

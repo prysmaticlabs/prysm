@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -34,4 +35,35 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain[:]})
 	require.NoError(t, err)
 	assert.Equal(t, true, sig.Verify(k1.PublicKey(), root[:]))
+}
+
+func TestVerifyDepositSignature_ValidSig(t *testing.T) {
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	deposit := deposits[0]
+	domain, err := helpers.ComputeDomain(
+		params.BeaconConfig().DomainDeposit,
+		params.BeaconConfig().GenesisForkVersion,
+		params.BeaconConfig().ZeroHash[:],
+	)
+	require.NoError(t, err)
+	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
+	require.NoError(t, err)
+}
+
+func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	deposit := deposits[0]
+	domain, err := helpers.ComputeDomain(
+		params.BeaconConfig().DomainDeposit,
+		params.BeaconConfig().GenesisForkVersion,
+		params.BeaconConfig().ZeroHash[:],
+	)
+	require.NoError(t, err)
+	deposit.Data.Signature = deposit.Data.Signature[1:]
+	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
+	if err == nil {
+		t.Fatal("Deposit Verification succeeds with a invalid signature")
+	}
 }

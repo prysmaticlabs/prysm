@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -22,19 +23,24 @@ type Validator interface {
 	WaitForSync(ctx context.Context) error
 	WaitForSynced(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
 	UpdateProtections(ctx context.Context, slot uint64) error
-	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) // validator pubKey -> roles
+	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
 	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
+	BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64
+	IndicesToPubkeys(ctx context.Context) map[uint64][48]byte
+	PubkeysToIndices(ctx context.Context) map[[48]byte]uint64
+	PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -49,6 +55,11 @@ type Validator interface {
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
 	defer v.Done()
+	if featureconfig.Get().SlasherProtection {
+		if err := v.SlasherReady(ctx); err != nil {
+			log.Fatalf("Slasher is not ready: %v", err)
+		}
+	}
 	if featureconfig.Get().WaitForSynced {
 		if err := v.WaitForSynced(ctx); err != nil {
 			log.Fatalf("Could not determine if chain started and beacon node is synced: %v", err)
@@ -120,7 +131,7 @@ func run(ctx context.Context, v Validator) {
 			for pubKey, roles := range allRoles {
 				wg.Add(len(roles))
 				for _, role := range roles {
-					go func(role validatorRole, pubKey [48]byte) {
+					go func(role ValidatorRole, pubKey [48]byte) {
 						defer wg.Done()
 						switch role {
 						case roleAttester:

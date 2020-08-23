@@ -10,7 +10,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -35,7 +34,9 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 
 	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	r2, err := stateutil.HashTreeRootState(genesis)
+	beaconState, err := stateTrie.InitializeFromProto(genesis)
+	require.NoError(t, err)
+	r2, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, r1, r2, "Mismatched roots")
 
@@ -46,7 +47,9 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	r1, err = customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis.Balances = balances
-	r2, err = stateutil.HashTreeRootState(genesis)
+	beaconState, err = stateTrie.InitializeFromProto(genesis)
+	require.NoError(t, err)
+	r2, err = beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, r1, r2, "Mismatched roots")
 }

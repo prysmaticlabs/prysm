@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSetupRegistrationContract_OK(t *testing.T) {
@@ -103,17 +104,11 @@ func TestValidatorRegister_OK(t *testing.T) {
 		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx[:])
 	}
 
-	if merkleTreeIndex[0] != 0 {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", 1, merkleTreeIndex[0])
-	}
+	require.Equal(t, 0, merkleTreeIndex[0])
 
-	if merkleTreeIndex[1] != 1 {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", 2, merkleTreeIndex[1])
-	}
+	require.Equal(t, 1, merkleTreeIndex[1])
 
-	if merkleTreeIndex[2] != 2 {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", 3, merkleTreeIndex[2])
-	}
+	require.Equal(t, 2, merkleTreeIndex[2])
 }
 
 func TestDrain(t *testing.T) {
@@ -148,9 +143,7 @@ func TestDrain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bal.Cmp(depositcontract.Amount32Eth()) != 0 {
-		t.Fatal("deposit didnt work")
-	}
+	require.Equal(t, 0, bal.Cmp(depositcontract.Amount32Eth()))
 
 	testAccount.TxOpts.Value = big.NewInt(0)
 	if _, err := testAccount.Contract.Drain(testAccount.TxOpts); err != nil {
@@ -163,7 +156,5 @@ func TestDrain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if big.NewInt(0).Cmp(bal) != 0 {
-		t.Errorf("Drain did not drain balance: %v", bal)
-	}
+	require.Equal(t, 0, big.NewInt(0).Cmp(bal))
 }

@@ -20,7 +20,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},
 		ValidatorFlags: []string{},
-		EpochsToRun:    3,
+		EpochsToRun:    4,
 		TestSync:       false,
 		TestSlasher:    true,
 		TestDeposits:   false,

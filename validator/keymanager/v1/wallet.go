@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -81,6 +82,7 @@ func NewWallet(input string) (KeyManager, string, error) {
 	} else {
 		store = filesystem.New(filesystem.WithLocation(opts.Location))
 	}
+	ctx := context.Background()
 	for _, path := range opts.Accounts {
 		parts := strings.Split(path, "/")
 		if len(parts[0]) == 0 {
@@ -95,13 +97,18 @@ func NewWallet(input string) (KeyManager, string, error) {
 			accountSpecifier = fmt.Sprintf("^%s$", parts[1])
 		}
 		re := regexp.MustCompile(accountSpecifier)
-		for account := range wallet.Accounts() {
+		for account := range wallet.Accounts(ctx) {
 			log := log.WithField("account", fmt.Sprintf("%s/%s", wallet.Name(), account.Name()))
 			if re.Match([]byte(account.Name())) {
 				pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
 				unlocked := false
 				for _, passphrase := range opts.Passphrases {
-					if err := account.Unlock([]byte(passphrase)); err != nil {
+					locker, ok := account.(e2wtypes.AccountLocker)
+					if !ok {
+						log.WithError(err).Trace("Account does not implement the AccountLocker interface")
+						continue
+					}
+					if err := locker.Unlock(ctx, []byte(passphrase)); err != nil {
 						log.WithError(err).Trace("Failed to unlock account with one of the supplied passphrases")
 					} else {
 						km.accounts[pubKey] = account
@@ -140,7 +147,11 @@ func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error) {
 		return nil, ErrNoSuchKey
 	}
 	// TODO(#4817) Update with new library to remove domain here.
-	sig, err := account.Sign(root[:])
+	signer, ok := account.(e2wtypes.AccountSigner)
+	if !ok {
+		return nil, errors.New("account does not implement the AccountSigner interface")
+	}
+	sig, err := signer.Sign(context.Background(), root[:])
 	if err != nil {
 		return nil, err
 	}

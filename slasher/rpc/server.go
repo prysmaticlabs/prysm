@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"sync"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,10 +24,12 @@ import (
 // Server defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Server struct {
-	ctx          context.Context
-	detector     *detection.Service
-	slasherDB    db.Database
-	beaconClient *beaconclient.Service
+	ctx             context.Context
+	detector        *detection.Service
+	slasherDB       db.Database
+	beaconClient    *beaconclient.Service
+	attestationLock sync.Mutex
+	proposeLock     sync.Mutex
 }
 
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
@@ -34,6 +38,10 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
 
+	log.WithFields(logrus.Fields{
+		"slot":    req.Data.Slot,
+		"indices": req.AttestingIndices,
+	}).Debug("Received attestation via RPC")
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}
@@ -85,6 +93,10 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		log.WithError(err).Error("failed to verify indexed attestation signature")
 		return nil, status.Errorf(codes.Internal, "could not verify indexed attestation signature: %v: %v", req, err)
 	}
+
+	ss.attestationLock.Lock()
+	defer ss.attestationLock.Unlock()
+
 	slashings, err := ss.detector.DetectAttesterSlashings(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not detect attester slashings for attestation: %v: %v", req, err)
@@ -109,6 +121,10 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableBlock")
 	defer span.End()
 
+	log.WithFields(logrus.Fields{
+		"slot":           req.Header.Slot,
+		"proposer_index": req.Header.ProposerIndex,
+	}).Info("Received block via RPC")
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request provided")
 	}
@@ -137,6 +153,10 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 		req.Header, pkMap[req.Header.ProposerIndex], req.Signature, domain); err != nil {
 		return nil, err
 	}
+
+	ss.proposeLock.Lock()
+	defer ss.proposeLock.Unlock()
+
 	slashing, err := ss.detector.DetectDoubleProposals(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not detect proposer slashing for block: %v: %v", req, err)

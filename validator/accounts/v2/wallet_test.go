@@ -3,18 +3,34 @@ package v2
 import (
 	"context"
 	"crypto/rand"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
+	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	mock "github.com/prysmaticlabs/prysm/validator/keymanager/v2/testing"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+)
+
+const (
+	walletDirName    = "wallet"
+	passwordDirName  = "walletpasswords"
+	exportDirName    = "export"
+	passwordFileName = "password.txt"
+	password         = "OhWOWthisisatest42!$"
+	mnemonicFileName = "mnemonic.txt"
+	mnemonic         = "garage car helmet trade salmon embrace market giant movie wet same champion dawn chair shield drill amazing panther accident puzzle garden mosquito kind arena"
 )
 
 func init() {
@@ -22,52 +38,128 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-func setupWalletDir(t testing.TB) (string, string) {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	walletDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-	passwordsDir := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	})
-	return walletDir, passwordsDir
+type testWalletConfig struct {
+	walletDir               string
+	passwordsDir            string
+	backupDir               string
+	keysDir                 string
+	deletePublicKeys        string
+	voluntaryExitPublicKeys string
+	backupPublicKeys        string
+	backupPasswordFile      string
+	walletPasswordFile      string
+	accountPasswordFile     string
+	privateKeyFile          string
+	numAccounts             int64
+	keymanagerKind          v2keymanager.Kind
 }
 
-func TestCreateAndReadWallet(t *testing.T) {
+func setupWalletCtx(
+	tb testing.TB,
+	cfg *testWalletConfig,
+) *cli.Context {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
+	set.String(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir, "")
+	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
+	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
+	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
+	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
+	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
+	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
+	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
+	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
+	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	if cfg.privateKeyFile != "" {
+		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
+		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
+	}
+	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(tb, set.Set(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir))
+	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
+	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
+	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
+	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))
+	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
+	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
+	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
+	return cli.NewContext(&app, set, nil)
+}
+
+func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
+	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
+	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
+	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwordFile")
+	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
+	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
+	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
+		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
+	})
+	return walletDir, passwordsDir, passwordFilePath
+}
+
+func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
+	path := testutil.TempDir()
+	walletDir := filepath.Join(path, "test")
+	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+	got, err := isEmptyWallet(path)
+	require.NoError(t, err)
+	assert.Equal(t, true, got)
+
+	walletDir = filepath.Join(path, "direct")
+	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+	got, err = isEmptyWallet(path)
+	require.NoError(t, err)
+	assert.Equal(t, false, got)
+	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+}
+
+func Test_LockUnlockFile(t *testing.T) {
+	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
+	numAccounts := int64(5)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		passwordsDir:        passwordsDir,
+		walletPasswordFile:  passwordFile,
+		accountPasswordFile: passwordFile,
+		keymanagerKind:      v2keymanager.Derived,
+		numAccounts:         numAccounts,
+	})
+
+	// We attempt to create the wallet.
+	_, err := CreateWallet(cliCtx)
+	require.NoError(t, err)
+
+	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	if _, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir: "",
-		WalletDir:    "",
-	}); err == nil {
-		t.Error("Expected error when passing in empty directories, received nil")
-	}
-	walletDir, passwordsDir := setupWalletDir(t)
-	keymanagerKind := v2keymanager.Direct
-	wallet, err := NewWallet(ctx, &WalletConfig{
-		PasswordsDir:   passwordsDir,
-		WalletDir:      walletDir,
-		KeymanagerKind: keymanagerKind,
-	})
+	wallet, err := OpenWallet(cliCtx)
+	defer unlock(t, wallet)
+	_, err = wallet.InitializeKeymanager(cliCtx, true)
 	require.NoError(t, err)
+	assert.NoError(t, err)
+	err = wallet.LockConfigFile(ctx)
+	assert.NoError(t, err)
+	err = wallet.LockConfigFile(ctx)
+	assert.ErrorContains(t, "failed to lock wallet config file", err)
+	unlock(t, wallet)
+	err = wallet.LockConfigFile(ctx)
+	assert.NoError(t, err)
 
-	keymanager := &mock.MockKeymanager{
-		ConfigFileContents: []byte("hello-world"),
-	}
-	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
-	require.NoError(t, err, "Could not marshal keymanager config file")
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig), "Could not write keymanager config file to disk")
+}
 
-	walletPath := path.Join(walletDir, keymanagerKind.String())
-	configFilePath := path.Join(walletPath, KeymanagerConfigFileName)
-	require.Equal(t, true, fileExists(configFilePath), "Expected config file to have been created at path: %s", configFilePath)
-
-	// We should be able to now read the wallet as well.
-	_, err = NewWallet(ctx, &WalletConfig{
-		PasswordsDir: passwordsDir,
-		WalletDir:    walletDir,
-	})
-	require.NoError(t, err)
+func unlock(tb assertions.AssertionTestingTB, wallet *Wallet) {
+	err := wallet.UnlockWalletConfigFile()
+	require.NoError(tb, err)
 }

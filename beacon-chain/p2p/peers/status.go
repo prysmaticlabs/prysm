@@ -61,9 +61,9 @@ var (
 
 // Status is the structure holding the peer status information.
 type Status struct {
-	ctx    context.Context
-	scorer *PeerScorer
-	store  *peerDataStore
+	ctx     context.Context
+	scorers *PeerScorerManager
+	store   *peerDataStore
 }
 
 // StatusConfig represents peer status service params.
@@ -80,15 +80,15 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		maxPeers: maxLimitBuffer + config.PeerLimit,
 	})
 	return &Status{
-		ctx:    ctx,
-		store:  store,
-		scorer: newPeerScorer(ctx, store, config.ScorerParams),
+		ctx:     ctx,
+		store:   store,
+		scorers: newPeerScorerManager(ctx, store, config.ScorerParams),
 	}
 }
 
-// Scorer exposes peer scoring service.
-func (p *Status) Scorer() *PeerScorer {
-	return p.scorer
+// Scorers exposes peer scoring management service.
+func (p *Status) Scorers() *PeerScorerManager {
+	return p.scorers
 }
 
 // MaxPeerLimit returns the max peer limit stored in the current peer store.
@@ -284,7 +284,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 // IsBad states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	return p.scorer.IsBadPeer(pid)
+	return p.scorers.BadResponsesScorer().IsBadPeer(pid)
 }
 
 // Connecting returns the peers that are connecting.
@@ -367,7 +367,7 @@ func (p *Status) Inactive() []peer.ID {
 
 // Bad returns the peers that are bad.
 func (p *Status) Bad() []peer.ID {
-	return p.scorer.BadPeers()
+	return p.scorers.BadResponsesScorer().BadPeers()
 }
 
 // All returns all the peers regardless of state.
@@ -398,10 +398,10 @@ func (p *Status) Prune() {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.peers {
-		if peerData.connState == PeerDisconnected && !p.scorer.isBadPeer(pid) {
+		if peerData.connState == PeerDisconnected && !p.scorers.BadResponsesScorer().isBadPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
-				badResp: p.store.peers[pid].badResponsesCount,
+				badResp: p.store.peers[pid].badResponses,
 			})
 		}
 	}
@@ -436,6 +436,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
 	pidEpoch := make(map[peer.ID]uint64, len(connected))
+	pidHead := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -443,6 +444,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 			finalizedEpochVotes[peerChainState.FinalizedEpoch]++
 			pidEpoch[pid] = peerChainState.FinalizedEpoch
 			potentialPIDs = append(potentialPIDs, pid)
+			pidHead[pid] = peerChainState.HeadSlot
 		}
 	}
 
@@ -458,7 +460,8 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 
 	// Sort PIDs by finalized epoch, in decreasing order.
 	sort.Slice(potentialPIDs, func(i, j int) bool {
-		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]]
+		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]] &&
+			pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
 	})
 
 	// Trim potential peers to those on or after target epoch.
@@ -472,6 +475,51 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	// Trim potential peers to at most maxPeers.
 	if len(potentialPIDs) > maxPeers {
 		potentialPIDs = potentialPIDs[:maxPeers]
+	}
+
+	return targetEpoch, potentialPIDs
+}
+
+// BestNonFinalized returns the highest known epoch, which is higher than ours, and is shared
+// by at least minPeers.
+func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
+	connected := p.Connected()
+	epochVotes := make(map[uint64]uint64)
+	pidEpoch := make(map[peer.ID]uint64, len(connected))
+	pidHead := make(map[peer.ID]uint64, len(connected))
+	potentialPIDs := make([]peer.ID, 0, len(connected))
+
+	ourFinalizedSlot := helpers.StartSlot(ourFinalizedEpoch)
+	for _, pid := range connected {
+		peerChainState, err := p.ChainState(pid)
+		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourFinalizedSlot {
+			epoch := helpers.SlotToEpoch(peerChainState.HeadSlot)
+			epochVotes[epoch]++
+			pidEpoch[pid] = epoch
+			pidHead[pid] = peerChainState.HeadSlot
+			potentialPIDs = append(potentialPIDs, pid)
+		}
+	}
+
+	// Select the target epoch, which has enough peers' votes (>= minPeers).
+	var targetEpoch uint64
+	for epoch, votes := range epochVotes {
+		if votes >= uint64(minPeers) && targetEpoch < epoch {
+			targetEpoch = epoch
+		}
+	}
+
+	// Sort PIDs by head slot, in decreasing order.
+	sort.Slice(potentialPIDs, func(i, j int) bool {
+		return pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
+	})
+
+	// Trim potential peers to those on or after target epoch.
+	for i, pid := range potentialPIDs {
+		if pidEpoch[pid] < targetEpoch {
+			potentialPIDs = potentialPIDs[:i]
+			break
+		}
 	}
 
 	return targetEpoch, potentialPIDs

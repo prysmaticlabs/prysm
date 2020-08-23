@@ -22,13 +22,13 @@ import (
 
 // POWChain defines a properly functioning mock for the powchain service.
 type POWChain struct {
-	ChainFeed           *event.Feed
-	LatestBlockNumber   *big.Int
-	HashesByHeight      map[int][]byte
-	TimesByHeight       map[int]uint64
-	BlockNumberByHeight map[uint64]*big.Int
-	Eth1Data            *ethpb.Eth1Data
-	GenesisEth1Block    *big.Int
+	ChainFeed         *event.Feed
+	LatestBlockNumber *big.Int
+	HashesByHeight    map[int][]byte
+	TimesByHeight     map[int]uint64
+	BlockNumberByTime map[uint64]*big.Int
+	Eth1Data          *ethpb.Eth1Data
+	GenesisEth1Block  *big.Int
 }
 
 // Eth2GenesisPowchainInfo --
@@ -78,7 +78,7 @@ func (m *POWChain) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64
 
 // BlockNumberByTimestamp --
 func (m *POWChain) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.Int, error) {
-	return m.BlockNumberByHeight[time], nil
+	return m.BlockNumberByTime[time], nil
 }
 
 // DepositRoot --

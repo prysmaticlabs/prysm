@@ -3,7 +3,9 @@ package slashingprotection
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -14,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
@@ -30,6 +33,7 @@ type Service struct {
 	grpcRetries        uint
 	grpcHeaders        []string
 	slasherClient      ethsl.SlasherClient
+	grpcRetryDelay     time.Duration
 }
 
 // Config for the validator service.
@@ -38,6 +42,7 @@ type Config struct {
 	CertFlag                   string
 	GrpcMaxCallRecvMsgSizeFlag int
 	GrpcRetriesFlag            uint
+	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
 }
 
@@ -52,6 +57,7 @@ func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*Service, e
 		withCert:           cfg.CertFlag,
 		maxCallRecvMsgSize: cfg.GrpcMaxCallRecvMsgSizeFlag,
 		grpcRetries:        cfg.GrpcRetriesFlag,
+		grpcRetryDelay:     cfg.GrpcRetryDelay,
 		grpcHeaders:        strings.Split(cfg.GrpcHeadersFlag, ","),
 	}, nil
 }
@@ -94,6 +100,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 		dialOpt,
 		grpc.WithDefaultCallOptions(
 			grpc_retry.WithMax(s.grpcRetries),
+			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(s.grpcRetryDelay)),
 			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
@@ -130,12 +137,14 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status ...
-//
-// WIP - not done.
+// Status checks if the connection to slasher server is ready,
+// returns error otherwise.
 func (s *Service) Status() error {
 	if s.conn == nil {
 		return errors.New("no connection to slasher RPC")
+	}
+	if s.conn.GetState() != connectivity.Ready {
+		return fmt.Errorf("can`t connect to slasher server at: %v connection status: %v ", s.endpoint, s.conn.GetState())
 	}
 	return nil
 }

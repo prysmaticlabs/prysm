@@ -63,9 +63,21 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return pubsub.ValidationIgnore
+	}
+	// Reject an attestation if it references an invalid block.
+	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Source.Root)) {
+		return pubsub.ValidationReject
 	}
 
 	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
@@ -88,7 +100,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve pre state")
+		log.Error("Failed to retrieve pre state")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -117,15 +129,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-
 	// Attestation's signature is a valid BLS signature and belongs to correct public key..
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestation(ctx, preState, att); err != nil {
+		if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
 			log.WithError(err).Error("Could not verify attestation")
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject

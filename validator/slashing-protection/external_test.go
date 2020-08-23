@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -26,13 +27,9 @@ func TestService_VerifyAttestation(t *testing.T) {
 			},
 		},
 	}
-	if s.CheckAttestationSafety(context.Background(), att) {
-		t.Error("Expected verify attestation to fail verification")
-	}
+	assert.Equal(t, false, s.CheckAttestationSafety(context.Background(), att), "Expected verify attestation to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashAttestation: false}}
-	if !s.CheckAttestationSafety(context.Background(), att) {
-		t.Error("Expected verify attestation to pass verification")
-	}
+	assert.Equal(t, true, s.CheckAttestationSafety(context.Background(), att), "Expected verify attestation to pass verification")
 }
 
 func TestService_CommitAttestation(t *testing.T) {
@@ -53,13 +50,9 @@ func TestService_CommitAttestation(t *testing.T) {
 			},
 		},
 	}
-	if s.CommitAttestation(context.Background(), att) {
-		t.Error("Expected commit attestation to fail verification")
-	}
+	assert.Equal(t, false, s.CommitAttestation(context.Background(), att), "Expected commit attestation to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashAttestation: false}}
-	if !s.CommitAttestation(context.Background(), att) {
-		t.Error("Expected commit attestation to pass verification")
-	}
+	assert.Equal(t, true, s.CommitAttestation(context.Background(), att), "Expected commit attestation to pass verification")
 }
 
 func TestService_CommitBlock(t *testing.T) {
@@ -73,13 +66,9 @@ func TestService_CommitBlock(t *testing.T) {
 			BodyRoot:      []byte("body"),
 		},
 	}
-	if s.CommitBlock(context.Background(), blk) {
-		t.Error("Expected commit block to fail verification")
-	}
+	assert.Equal(t, false, s.CommitBlock(context.Background(), blk), "Expected commit block to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}
-	if !s.CommitBlock(context.Background(), blk) {
-		t.Error("Expected commit block to pass verification")
-	}
+	assert.Equal(t, true, s.CommitBlock(context.Background(), blk), "Expected commit block to pass verification")
 }
 
 func TestService_VerifyBlock(t *testing.T) {
@@ -91,11 +80,7 @@ func TestService_VerifyBlock(t *testing.T) {
 		StateRoot:     []byte("state"),
 		BodyRoot:      []byte("body"),
 	}
-	if s.CheckBlockSafety(context.Background(), blk) {
-		t.Error("Expected verify block to fail verification")
-	}
+	assert.Equal(t, false, s.CheckBlockSafety(context.Background(), blk), "Expected verify block to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}
-	if !s.CheckBlockSafety(context.Background(), blk) {
-		t.Error("Expected verify block to pass verification")
-	}
+	assert.Equal(t, true, s.CheckBlockSafety(context.Background(), blk), "Expected verify block to pass verification")
 }

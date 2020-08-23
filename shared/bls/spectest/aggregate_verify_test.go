@@ -34,9 +34,7 @@ func TestAggregateVerifyYaml(t *testing.T) {
 			for _, msg := range test.Input.Messages {
 				msgBytes, err := hex.DecodeString(msg[2:])
 				require.NoError(t, err)
-				if len(msgBytes) != 32 {
-					t.Fatalf("Message: %#x is not 32 bytes", msgBytes)
-				}
+				require.Equal(t, 32, len(msgBytes))
 				msgs = append(msgs, bytesutil.ToBytes32(msgBytes))
 			}
 			sigBytes, err := hex.DecodeString(test.Input.Signature[2:])

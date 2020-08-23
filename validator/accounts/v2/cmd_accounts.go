@@ -1,6 +1,9 @@
 package v2
 
 import (
+	"os"
+
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -13,49 +16,126 @@ var AccountCommands = &cli.Command{
 	Subcommands: []*cli.Command{
 		// AccountCommands for accounts-v2 for Prysm validators.
 		{
-			Name: "new",
-			Description: `creates a new validator account for eth2. If no account exists at the wallet path, creates a new wallet for a user based on
+			Name: "create",
+			Description: `creates a new validator account for eth2. If no wallet exists at the given wallet path, creates a new wallet for a user based on
 specified input, capable of creating a direct, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
-				flags.PasswordFileFlag,
-				flags.SkipMnemonicConfirmFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				flags.NumAccountsFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
-			Action: NewAccount,
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := CreateAccount(cliCtx); err != nil {
+					log.Fatalf("Could not create new account: %v", err)
+				}
+				return nil
+			},
+		},
+		{
+			Name:        "delete",
+			Description: `deletes the selected accounts from a users wallet.`,
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				flags.DeletePublicKeysFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := DeleteAccount(cliCtx); err != nil {
+					log.Fatalf("Could not delete account: %v", err)
+				}
+				return nil
+			},
 		},
 		{
 			Name:        "list",
 			Description: "Lists all validator accounts in a user's wallet directory",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
+				flags.WalletPasswordFileFlag,
 				flags.ShowDepositDataFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
-			Action: ListAccounts,
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := ListAccounts(cliCtx); err != nil {
+					log.Fatalf("Could not list accounts: %v", err)
+				}
+				return nil
+			},
 		},
 		{
-			Name:        "export",
-			Description: `exports the account of a given directory into a zip of the provided output path. This zip can be used to later import the account to another directory`,
+			Name: "backup",
+			Description: "backup accounts into EIP-2335 compliant keystore.json files zipped into a backup.zip file " +
+				"at a desired output directory. Accounts to backup can also " +
+				"be specified programmatically via a --backup-for-public-keys flag which specifies a comma-separated " +
+				"list of hex string public keys",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
-				flags.AccountsFlag,
+				flags.BackupDirFlag,
+				flags.BackupPublicKeysFlag,
+				flags.BackupPasswordFile,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
 			},
-			Action: ExportAccount,
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := BackupAccounts(cliCtx); err != nil {
+					log.Fatalf("Could not backup accounts: %v", err)
+				}
+				return nil
+			},
 		},
 		{
 			Name:        "import",
-			Description: `imports the accounts from a given zip file to the provided wallet path. This zip can be created using the export command`,
+			Description: `imports eth2 validator accounts stored in EIP-2335 keystore.json files from an external directory`,
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
-				flags.BackupPathFlag,
-				flags.PasswordFileFlag,
+				flags.KeysDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				flags.ImportPrivateKeyFileFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
-			Action: ImportAccount,
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := ImportAccounts(cliCtx); err != nil {
+					log.Fatalf("Could not import accounts: %v", err)
+				}
+				return nil
+			},
+		},
+		{
+			Name:        "voluntary-exit",
+			Description: "Performs a voluntary exit on selected accounts",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.AccountPasswordFileFlag,
+				flags.VoluntaryExitPublicKeysFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := ExitAccountsUnimplemented(cliCtx, os.Stdin); err != nil {
+					log.Fatalf("Could not perform voluntary exit: %v", err)
+				}
+				return nil
+			},
 		},
 	},
 }

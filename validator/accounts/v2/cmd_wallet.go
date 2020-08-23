@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -17,14 +18,22 @@ var WalletCommands = &cli.Command{
 				"either on-disk (direct), derived, or using remote credentials",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
-				flags.WalletPasswordsDirFlag,
 				flags.KeymanagerKindFlag,
 				flags.GrpcRemoteAddressFlag,
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+				flags.WalletPasswordFileFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
-			Action: CreateWallet,
+			Action: func(cliCtx *cli.Context) error {
+				if _, err := CreateWallet(cliCtx); err != nil {
+					log.Fatalf("Could not create a wallet: %v", err)
+				}
+				return nil
+			},
 		},
 		{
 			Name:  "edit-config",
@@ -35,8 +44,35 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
 			},
-			Action: EditWalletConfiguration,
+			Action: func(cliCtx *cli.Context) error {
+				if err := EditWalletConfiguration(cliCtx); err != nil {
+					log.Fatalf("Could not edit wallet configuration: %v", err)
+				}
+				return nil
+			},
+		},
+		{
+			Name:  "recover",
+			Usage: "uses a derived wallet seed recovery phase to recreate an existing HD wallet",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.MnemonicFileFlag,
+				flags.WalletPasswordFileFlag,
+				flags.NumAccountsFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				flags.DeprecatedPasswordsDirFlag,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := RecoverWallet(cliCtx); err != nil {
+					log.Fatalf("Could not recover wallet: %v", err)
+				}
+				return nil
+			},
 		},
 	},
 }

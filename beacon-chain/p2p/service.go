@@ -6,12 +6,14 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
+	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -21,6 +23,8 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -53,7 +57,7 @@ const maxBadResponses = 5
 const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
 // maxDialTimeout is the timeout for a single peer dial.
-const maxDialTimeout = 30 * time.Second
+var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -64,11 +68,15 @@ type Service struct {
 	cfg                   *Config
 	peers                 *peers.Status
 	addrFilter            *filter.Filters
+	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
 	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
+	joinedTopicsLock      sync.Mutex
+	subnetsLock           map[uint64]*sync.RWMutex
+	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -101,6 +109,7 @@ func NewService(cfg *Config) (*Service, error) {
 		exclusionList: cache,
 		isPreGenesis:  true,
 		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
+		subnetsLock:   make(map[uint64]*sync.RWMutex),
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -123,6 +132,8 @@ func NewService(cfg *Config) (*Service, error) {
 		log.WithError(err).Error("Failed to create address filter")
 		return nil, err
 	}
+	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
+
 	opts := s.buildOptions(ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
@@ -141,6 +152,8 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithStrictSignatureVerification(false),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
+	// Set the pubsub global parameters that we require.
+	setPubSubParameters()
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
@@ -152,9 +165,11 @@ func NewService(cfg *Config) (*Service, error) {
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: int(s.cfg.MaxPeers),
 		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesThreshold:     maxBadResponses,
-			BadResponsesWeight:        -100,
-			BadResponsesDecayInterval: time.Hour,
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold:     maxBadResponses,
+				Weight:        -100,
+				DecayInterval: time.Hour,
+			},
 		},
 	})
 
@@ -342,7 +357,7 @@ func (s *Service) pingPeers() {
 	for _, pid := range s.peers.Connected() {
 		go func(id peer.ID) {
 			if err := s.pingMethod(s.ctx, id); err != nil {
-				log.WithField("peer", id).WithError(err).Error("Failed to ping peer")
+				log.WithField("peer", id).WithError(err).Debug("Failed to ping peer")
 			}
 		}(pid)
 	}
@@ -380,24 +395,27 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	for _, info := range addrInfos {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
-			if err := s.connectWithPeer(info); err != nil {
+			if err := s.connectWithPeer(s.ctx, info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(info)
 	}
 }
 
-func (s *Service) connectWithPeer(info peer.AddrInfo) error {
+func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.connectWithPeer")
+	defer span.End()
+
 	if info.ID == s.host.ID() {
 		return nil
 	}
 	if s.Peers().IsBad(info.ID) {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
+	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 	if err := s.host.Connect(ctx, info); err != nil {
-		s.Peers().Scorer().IncrementBadResponses(info.ID)
+		s.Peers().Scorers().BadResponsesScorer().Increment(info.ID)
 		return err
 	}
 	return nil

@@ -5,6 +5,7 @@ package powchain
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"reflect"
 	"runtime/debug"
@@ -55,6 +56,9 @@ var (
 
 // time to wait before trying to reconnect with the eth1 node.
 var backOffPeriod = 6 * time.Second
+
+// Amount of times before we log the status of the eth1 dial attempt.
+var logThreshold = 20
 
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
@@ -362,8 +366,19 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 	httpClient := ethclient.NewClient(httpRPCClient)
 
 	// Make a simple call to ensure we are actually connected to a working node.
-	if _, err := httpClient.ChainID(s.ctx); err != nil {
+	cID, err := httpClient.ChainID(s.ctx)
+	if err != nil {
 		return nil, nil, err
+	}
+	nID, err := httpClient.NetworkID(s.ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if cID.Uint64() != params.BeaconNetworkConfig().ChainID {
+		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconNetworkConfig().ChainID)
+	}
+	if nID.Uint64() != params.BeaconNetworkConfig().NetworkID {
+		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconNetworkConfig().NetworkID)
 	}
 
 	return httpClient, httpRPCClient, nil
@@ -399,18 +414,28 @@ func (s *Service) waitForConnection() {
 	if errConnect != nil {
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 	}
+	// Use a custom logger to only log errors
+	// once in  a while.
+	logCounter := 0
+	errorLogger := func(err error, msg string) {
+		if logCounter > logThreshold {
+			log.WithError(err).Error(msg)
+			logCounter = 0
+		}
+		logCounter++
+	}
 	ticker := time.NewTicker(backOffPeriod)
 	for {
 		select {
 		case <-ticker.C:
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
-				log.WithError(errConnect).Error("Could not connect to powchain endpoint")
+				errorLogger(errConnect, "Could not connect to powchain endpoint")
 				continue
 			}
 			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
-				log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+				errorLogger(errSynced, "Could not check sync status of eth1 chain")
 				continue
 			}
 			if synced {
@@ -464,7 +489,7 @@ func (s *Service) initDataFromContract() error {
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
-	if ctrs == nil || len(ctrs) == 0 {
+	if len(ctrs) == 0 {
 		return nil
 	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)

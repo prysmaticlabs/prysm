@@ -61,7 +61,12 @@ var appFlags = []cli.Flag{
 	flags.UnencryptedKeysFlag,
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
+	flags.RPCHost,
+	flags.RPCPort,
+	flags.GRPCGatewayPort,
+	flags.GRPCGatewayHost,
 	flags.GrpcRetriesFlag,
+	flags.GrpcRetryDelayFlag,
 	flags.GrpcHeadersFlag,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
@@ -70,7 +75,8 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
-	flags.WalletPasswordsDirFlag,
+	flags.DeprecatedPasswordsDirFlag,
+	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -126,11 +132,12 @@ contract in order to activate the validator client`,
 							cmd.ChainConfigFileFlag,
 						}...),
 					Action: func(cliCtx *cli.Context) error {
+						featureconfig.ConfigureValidator(cliCtx)
+
 						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 							params.LoadChainConfigFile(chainConfigFileName)
 						}
-						featureconfig.ConfigureValidator(cliCtx)
 
 						keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
@@ -170,6 +177,7 @@ contract in order to activate the validator client`,
 						flags.CertFlag,
 						flags.GrpcHeadersFlag,
 						flags.GrpcRetriesFlag,
+						flags.GrpcRetryDelayFlag,
 						flags.KeyManager,
 						flags.KeyManagerOpts,
 					},
@@ -200,6 +208,7 @@ contract in order to activate the validator client`,
 							cliCtx.String(flags.CertFlag.Name),
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
 							cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+							cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
 							grpc.WithBlock())
 						endpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 						conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
@@ -296,6 +305,7 @@ contract in order to activate the validator client`,
 				return err
 			}
 		}
+		flags.ComplainOnDeprecatedFlags(ctx)
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {

@@ -15,10 +15,12 @@ import (
 const genericError = "internal service error"
 const rateLimitedError = "rate limited"
 const stepError = "invalid range or step"
+const seqError = "invalid sequence number provided"
 
 var errWrongForkDigestVersion = errors.New("wrong fork digest version")
 var errInvalidEpoch = errors.New("invalid epoch")
 var errInvalidFinalizedRoot = errors.New("invalid finalized root")
+var errInvalidSequenceNum = errors.New(seqError)
 var errGeneric = errors.New(genericError)
 
 var responseCodeSuccess = byte(0x00)
@@ -61,11 +63,9 @@ func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (ui
 func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream, encoder p2p.EncodingProvider) {
 	resp, err := createErrorResponse(responseCode, reason, encoder)
 	if err != nil {
-		log.WithError(err).Error("Failed to generate a response error")
-	} else {
-		if _, err := stream.Write(resp); err != nil {
-			log.WithError(err).Errorf("Failed to write to stream")
-		}
+		log.WithError(err).Debug("Failed to generate a response error")
+	} else if _, err := stream.Write(resp); err != nil {
+		log.WithError(err).Debugf("Failed to write to stream")
 	}
 }
 

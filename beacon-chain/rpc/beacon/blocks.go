@@ -226,7 +226,7 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.BlockProcessed {
-				res, err := bs.chainHeadRetrieval(bs.Ctx)
+				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
 				}

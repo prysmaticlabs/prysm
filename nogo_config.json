@@ -107,8 +107,14 @@
     "exclude_files": {
       ".*/.*_test\\.go": "Tests are OK to use weak crypto",
       "shared/rand/rand\\.go": "Abstracts CSPRNGs for common use",
-      "shared/aggregation/testing/bitlistutils.go": "Test-only package",
-      "shared/petnames/names.go": "Needs deterministic randomness"
+      "shared/aggregation/testing/bitlistutils.go": "Test-only package"
+    }
+  },
+  "comparesame": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code",
+      "tools/analyzers/comparesame/testdata/compare_len.go": "Analyzer testdata has to break rules"
     }
   }
 }
