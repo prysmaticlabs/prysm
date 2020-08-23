@@ -940,7 +940,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4), pubKey(5), pubKey(6)}
+	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4), pubKey(5), pubKey(6), pubKey(7)}
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -974,7 +974,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 			{
 				ActivationEligibilityEpoch: 700,
 				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
-				PublicKey:                  pubKeys[2],
+				PublicKey:                  pubKeys[5],
 			},
 		},
 	}
@@ -1015,8 +1015,8 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		},
 	}
 
-	// Note: Index 4 should be skipped.
-	req := &ethpb.MultipleValidatorStatusRequest{Indices: []int64{0, 1, 2, 3, 4}}
+	// Note: Index 6 should be skipped.
+	req := &ethpb.MultipleValidatorStatusRequest{Indices: []int64{0, 1, 2, 3, 4, 5, 6}}
 	response, err := vs.MultipleValidatorStatus(context.Background(), req)
 	require.NoError(t, err)
 
