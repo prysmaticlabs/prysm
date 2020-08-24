@@ -3,7 +3,6 @@ package blocks_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -12,28 +11,29 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att1 := &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 1},
-		Source: &ethpb.Checkpoint{Root: []byte{'A'}},
+		Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
+		BeaconBlockRoot: make([]byte, 32),
 	}
 	att2 := &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 1},
-		Source: &ethpb.Checkpoint{Root: []byte{'B'}},
+		Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'B'}, 32)},
+		BeaconBlockRoot: make([]byte, 32),
 	}
-	if !blocks.IsSlashableAttestationData(att1, att2) {
-		t.Error("atts should have been slashable")
-	}
+	assert.Equal(t, true, blocks.IsSlashableAttestationData(att1, att2), "Atts should have been slashable")
 	att1.Target.Epoch = 4
 	att1.Source.Epoch = 2
 	att2.Source.Epoch = 3
-	if !blocks.IsSlashableAttestationData(att1, att2) {
-		t.Error("atts should have been slashable")
-	}
+	assert.Equal(t, true, blocks.IsSlashableAttestationData(att1, att2), "Atts should have been slashable")
 }
 
 func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
@@ -41,15 +41,19 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0},
-					Target: &ethpb.Checkpoint{Epoch: 0},
+					Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
 				},
+				Signature: make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1},
-					Target: &ethpb.Checkpoint{Epoch: 1},
+					Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
 				},
+				Signature: make([]byte, 96),
 			},
 		},
 	}
@@ -60,20 +64,15 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		Validators: registry,
 		Slot:       currentSlot,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			AttesterSlashings: slashings,
 		},
 	}
 	want := fmt.Sprint("attestations are not slashable")
-
 	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T) {
@@ -84,25 +83,27 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		Validators: registry,
 		Slot:       currentSlot,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	slashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1},
-					Target: &ethpb.Checkpoint{Epoch: 0},
+					Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
 				},
 				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
+				Signature:        make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0},
-					Target: &ethpb.Checkpoint{Epoch: 0},
+					Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
 				},
 				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
+				Signature:        make([]byte, 96),
 			},
 		},
 	}
@@ -115,9 +116,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 
 	want := fmt.Sprint("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE")
 	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body)
-	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
+	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
@@ -128,19 +127,16 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 1},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	sig0 := privKeys[0].Sign(signingRoot[:])
 	sig1 := privKeys[1].Sign(signingRoot[:])
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
@@ -148,15 +144,14 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
 	signingRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	sig0 = privKeys[0].Sign(signingRoot[:])
 	sig1 = privKeys[1].Sign(signingRoot[:])
 	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
@@ -170,9 +165,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	if err := beaconState.SetSlot(currentSlot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(currentSlot))
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -181,9 +174,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, block.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	newRegistry := newState.Validators()
 
 	// Given the intersection of slashable indices is [1], only validator

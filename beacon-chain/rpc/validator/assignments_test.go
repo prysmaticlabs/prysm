@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -266,7 +265,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
@@ -325,7 +324,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
@@ -399,7 +398,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
-	receivedTime := exp.Round(time.Second).Sub(time.Now())
+	receivedTime := time.Until(exp.Round(time.Second))
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -19,14 +20,16 @@ import (
 // ListAccounts displays all available validator accounts in a Prysm wallet.
 func ListAccounts(cliCtx *cli.Context) error {
 	// Read the wallet from the specified path.
-	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
 	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, true /* skip mnemonic confirm */)
+	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+		return errors.New("wrong wallet password entered")
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -115,10 +118,6 @@ func listDerivedKeymanagerAccounts(
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
-	fmt.Println(
-		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
-			"by running `validator accounts-v2 list --show-deposit-data"),
-	)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.Config().DerivedPathStructure).Bold())
 	ctx := context.Background()
@@ -169,7 +168,7 @@ func listDerivedKeymanagerAccounts(
 			return errors.Wrapf(err, "could not deposit data for account: %s", accountNames[i])
 		}
 		fmt.Printf(`
-======================SSZ Deposit Data=====================
+======================Eth1 Deposit Transaction Data=====================
 
 %#x
 

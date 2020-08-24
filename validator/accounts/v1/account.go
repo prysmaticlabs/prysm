@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -190,7 +190,7 @@ func PrintPublicAndPrivateKeys(path string, passphrase string) error {
 // DefaultValidatorDir returns OS-specific default keystore directory.
 func DefaultValidatorDir() string {
 	// Try to place the data folder in the user's home dir
-	home := homeDir()
+	home := fileutil.HomeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2Validators")
@@ -334,17 +334,6 @@ func changePasswordForKeyType(keystorePath string, filePrefix string, oldPasswor
 	}
 
 	return nil
-}
-
-// homeDir returns home directory path.
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
-	return ""
 }
 
 // ExtractPublicKeysFromKeyStore extracts only the public keys from the decrypted keys from the keystore.

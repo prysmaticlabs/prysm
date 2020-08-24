@@ -9,11 +9,9 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/schollz/progressbar/v3"
@@ -22,31 +20,41 @@ import (
 )
 
 // ImportKeystores into the direct keymanager from an external source.
-func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keymanager.Keystore) error {
+func (dr *Keymanager) ImportKeystores(
+	cliCtx *cli.Context,
+	keystores []*v2keymanager.Keystore,
+	useAccountsPassword bool,
+) error {
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(keystores))
 	pubKeys := make([][]byte, len(keystores))
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	var password string
 	var err error
-	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return err
-		}
-		password = string(data)
+	if useAccountsPassword {
+		password = dr.accountsPassword
 	} else {
-		password, err = promptutil.PasswordPrompt(
-			"Enter the password for your imported accounts", promptutil.NotEmpty,
-		)
-		if err != nil {
-			return fmt.Errorf("could not read account password: %v", err)
+		if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
+			passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
+			data, err := ioutil.ReadFile(passwordFilePath)
+			if err != nil {
+				return err
+			}
+			password = string(data)
+		} else {
+			password, err = promptutil.PasswordPrompt(
+				"Enter the password for your imported accounts", promptutil.NotEmpty,
+			)
+			if err != nil {
+				return fmt.Errorf("could not read account password: %v", err)
+			}
 		}
 	}
 	fmt.Println("Importing accounts, this may take a while...")
+	var privKeyBytes []byte
+	var pubKeyBytes []byte
 	for i := 0; i < len(keystores); i++ {
-		privKeyBytes, pubKeyBytes, err := dr.attemptDecryptKeystore(decryptor, keystores[i], password)
+		privKeyBytes, pubKeyBytes, password, err = dr.attemptDecryptKeystore(decryptor, keystores[i], password)
 		if err != nil {
 			return err
 		}
@@ -55,10 +63,6 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 		if err := bar.Add(1); err != nil {
 			return errors.Wrap(err, "could not add to progress bar")
 		}
-		fmt.Printf(
-			"Successfully imported account with public key %#x\n",
-			aurora.BrightMagenta(bytesutil.Trunc(pubKeyBytes)),
-		)
 	}
 	// Write the accounts to disk into a single keystore.
 	ctx := context.Background()
@@ -70,8 +74,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 	if err != nil {
 		return err
 	}
-	fileName := fmt.Sprintf(accountsKeystoreFileNameFormat, roughtime.Now().Unix())
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, fileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
 }
 
 // Retrieves the private key and public key from an EIP-2335 keystore file
@@ -79,7 +82,7 @@ func (dr *Keymanager) ImportKeystores(cliCtx *cli.Context, keystores []*v2keyman
 // it prompts the user for the correct password until it confirms.
 func (dr *Keymanager) attemptDecryptKeystore(
 	enc *keystorev4.Encryptor, keystore *v2keymanager.Keystore, password string,
-) ([]byte, []byte, error) {
+) ([]byte, []byte, string, error) {
 	// Attempt to decrypt the keystore with the specifies password.
 	var privKeyBytes []byte
 	var err error
@@ -87,18 +90,29 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		privKeyBytes, err = dr.askUntilPasswordConfirms(enc, keystore)
+		privKeyBytes, password, err = dr.askUntilPasswordConfirms(enc, keystore)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not confirm password via prompt")
+			return nil, nil, "", errors.Wrap(err, "could not confirm password via prompt")
 		}
 	} else if err != nil {
-		return nil, nil, errors.Wrap(err, "could not decrypt keystore")
+		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 	}
-	pubKeyBytes, err := hex.DecodeString(keystore.Pubkey)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not decode pubkey from keystore")
+	var pubKeyBytes []byte
+	// Attempt to use the pubkey present in the keystore itself as a field. If unavailable,
+	// then utilize the public key directly from the private key.
+	if keystore.Pubkey != "" {
+		pubKeyBytes, err = hex.DecodeString(keystore.Pubkey)
+		if err != nil {
+			return nil, nil, "", errors.Wrap(err, "could not decode pubkey from keystore")
+		}
+	} else {
+		privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
+		if err != nil {
+			return nil, nil, "", errors.Wrap(err, "could not initialize private key from bytes")
+		}
+		pubKeyBytes = privKey.PublicKey().Marshal()
 	}
-	return privKeyBytes, pubKeyBytes, nil
+	return privKeyBytes, pubKeyBytes, password, nil
 }
 
 func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {

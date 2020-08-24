@@ -119,7 +119,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 		eth1BlocktimesMutex: &sync.RWMutex{},
 		currentEpoch:        headState.Slot() / params.BeaconConfig().SlotsPerEpoch,
 		stream:              stream,
-		genesisTime:         headState.GenesisTime(),
+		genesisTime:         helpers.GenesisTime(headState),
 	}
 	defer infostream.stateSub.Unsubscribe()
 
@@ -210,9 +210,7 @@ func (is *infostream) handleAddValidatorKeys(reqPubKeys [][]byte) error {
 func (is *infostream) handleSetValidatorKeys(reqPubKeys [][]byte) error {
 	is.pubKeysMutex.Lock()
 	is.pubKeys = make([][]byte, 0, len(reqPubKeys))
-	for _, pubKey := range reqPubKeys {
-		is.pubKeys = append(is.pubKeys, pubKey)
-	}
+	is.pubKeys = append(is.pubKeys, reqPubKeys...)
 	is.pubKeysMutex.Unlock()
 	// Send immediate info for the new validators.
 	return is.sendValidatorsInfo(is.pubKeys)

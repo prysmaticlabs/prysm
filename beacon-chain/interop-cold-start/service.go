@@ -35,7 +35,6 @@ type Service struct {
 	genesisTime        uint64
 	numValidators      uint64
 	beaconDB           db.HeadAccessDatabase
-	powchain           powchain.Service
 	depositCache       *depositcache.DepositCache
 	genesisPath        string
 	chainStartDeposits []*ethpb.Deposit

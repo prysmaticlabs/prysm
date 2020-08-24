@@ -51,21 +51,21 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	for i := len(nodes) - 1; i >= 0; i-- {
 		// Construct label for each node.
-		slot := fmt.Sprintf("%d", nodes[i].Slot)
-		weight := fmt.Sprintf("%d", nodes[i].Weight/1e9) // Convert unit Gwei to unit ETH.
-		votes := fmt.Sprintf("%d", nodes[i].Weight/1e9/avgBalance)
+		slot := fmt.Sprintf("%d", nodes[i].Slot())
+		weight := fmt.Sprintf("%d", nodes[i].Weight()/1e9) // Convert unit Gwei to unit ETH.
+		votes := fmt.Sprintf("%d", nodes[i].Weight()/1e9/avgBalance)
 		index := fmt.Sprintf("%d", i)
-		g := nodes[i].Graffiti[:]
+		g := nodes[i].Graffiti()
 		graffiti := hex.EncodeToString(g[:8])
 		label := "slot: " + slot + "\n votes: " + votes + "\n weight: " + weight + "\n graffiti: " + graffiti
 		var dotN dot.Node
-		if nodes[i].Parent != ^uint64(0) {
+		if nodes[i].Parent() != ^uint64(0) {
 			dotN = graph.Node(index).Box().Attr("label", label)
 		}
 
-		if nodes[i].Slot == s.headSlot() &&
-			nodes[i].BestDescendant == ^uint64(0) &&
-			nodes[i].Parent != ^uint64(0) {
+		if nodes[i].Slot() == s.headSlot() &&
+			nodes[i].BestDescendant() == ^uint64(0) &&
+			nodes[i].Parent() != ^uint64(0) {
 			dotN = dotN.Attr("color", "green")
 		}
 
@@ -73,8 +73,8 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i := len(nodes) - 1; i >= 0; i-- {
-		if nodes[i].Parent != ^uint64(0) && nodes[i].Parent < uint64(len(dotNodes)) {
-			graph.Edge(*dotNodes[i], *dotNodes[nodes[i].Parent])
+		if nodes[i].Parent() != ^uint64(0) && nodes[i].Parent() < uint64(len(dotNodes)) {
+			graph.Edge(*dotNodes[i], *dotNodes[nodes[i].Parent()])
 		}
 	}
 

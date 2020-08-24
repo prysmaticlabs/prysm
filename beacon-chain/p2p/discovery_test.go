@@ -17,6 +17,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -149,9 +150,9 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 	defer listener.Close()
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
-	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
-	testutil.AssertLogsDoNotContain(t, hook, "Invalid port, the tcp port of the node is a reserved port")
-	testutil.AssertLogsDoNotContain(t, hook, "Could not get multiaddr")
+	require.LogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
+	require.LogsDoNotContain(t, hook, "Invalid port, the tcp port of the node is a reserved port")
+	require.LogsDoNotContain(t, hook, "Could not get multiaddr")
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
@@ -204,4 +205,25 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
+}
+
+func TestHostIsResolved(t *testing.T) {
+	// As defined in RFC 2606 , example.org is a
+	// reserved example domain name.
+	exampleHost := "example.org"
+	exampleIP := "93.184.216.34"
+
+	s := &Service{
+		cfg: &Config{
+			HostDNS: exampleHost,
+		},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+	}
+	ip, key := createAddrAndPrivKey(t)
+	list, err := s.createListener(ip, key)
+	require.NoError(t, err)
+
+	newIP := list.Self().IP()
+	assert.Equal(t, exampleIP, newIP.String(), "Did not resolve to expected IP")
 }

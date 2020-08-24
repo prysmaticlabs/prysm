@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func Test_encode_handlesNilFromFunction(t *testing.T) {
@@ -12,7 +13,5 @@ func Test_encode_handlesNilFromFunction(t *testing.T) {
 		return nil
 	}
 	_, err := encode(context.Background(), foo())
-	if err == nil || err.Error() != "cannot encode nil message" {
-		t.Fatalf("Wrong error %v", err)
-	}
+	require.ErrorContains(t, "cannot encode nil message", err)
 }

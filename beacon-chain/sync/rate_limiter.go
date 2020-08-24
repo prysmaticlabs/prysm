@@ -81,7 +81,7 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 			log.Debug("Disconnecting bad peer")
 			defer func() {
 				if err := l.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
-					log.WithError(err).Error("Failed to disconnect peer")
+					log.WithError(err).Debug("Failed to disconnect peer")
 				}
 			}()
 		}

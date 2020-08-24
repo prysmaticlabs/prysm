@@ -6,7 +6,6 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -16,11 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
 
 var p *p2p.Service
-var s network.Stream
 var h host.Host
 
 func init() {
@@ -53,8 +52,8 @@ func init() {
 		ExitPool:     nil,
 		SlashingPool: nil,
 		Chain: &mock.ChainService{
-			Root:                []byte("root"),
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4},
+			Root:                bytesutil.PadTo([]byte("root"), 32),
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 			Fork:                &pb.Fork{CurrentVersion: []byte("foo")},
 		},
 		StateNotifier:       (&mock.ChainService{}).StateNotifier(),

@@ -8,35 +8,10 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
-
-func TestCheckpointStateCacheKeyFn_OK(t *testing.T) {
-	cp := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Slot: 64,
-	})
-	require.NoError(t, err)
-
-	info := &CheckpointState{
-		Checkpoint: cp,
-		State:      st,
-	}
-	key, err := checkpointState(info)
-	require.NoError(t, err)
-
-	wantedKey, err := hashutil.HashProto(cp)
-	require.NoError(t, err)
-	assert.Equal(t, string(wantedKey[:]), key)
-}
-
-func TestCheckpointStateCacheKeyFn_InvalidObj(t *testing.T) {
-	_, err := checkpointState("bad")
-	assert.Equal(t, ErrNotCheckpointState, err)
-}
 
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
@@ -48,20 +23,16 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	info1 := &CheckpointState{
-		Checkpoint: cp1,
-		State:      st,
-	}
 	state, err := cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 	assert.Equal(t, (*stateTrie.BeaconState)(nil), state, "Expected state not to exist in empty cache")
 
-	require.NoError(t, cache.AddCheckpointState(info1))
+	require.NoError(t, cache.AddCheckpointState(cp1, st))
 
 	state, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
-	if !proto.Equal(state.InnerStateUnsafe(), info1.State.InnerStateUnsafe()) {
+	if !proto.Equal(state.InnerStateUnsafe(), st.InnerStateUnsafe()) {
 		t.Error("incorrectly cached state")
 	}
 
@@ -70,20 +41,15 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 		Slot: 128,
 	})
 	require.NoError(t, err)
-
-	info2 := &CheckpointState{
-		Checkpoint: cp2,
-		State:      st2,
-	}
-	require.NoError(t, cache.AddCheckpointState(info2))
+	require.NoError(t, cache.AddCheckpointState(cp2, st2))
 
 	state, err = cache.StateByCheckpoint(cp2)
 	require.NoError(t, err)
-	assert.DeepEqual(t, info2.State.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st2.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
 
 	state, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
-	assert.DeepEqual(t, info1.State.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
 }
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
@@ -93,15 +59,10 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	for i := uint64(0); i < maxCheckpointStateSize+100; i++ {
+	for i := uint64(0); i < uint64(maxCheckpointStateSize+100); i++ {
 		require.NoError(t, st.SetSlot(i))
-
-		info := &CheckpointState{
-			Checkpoint: &ethpb.Checkpoint{Epoch: i},
-			State:      st,
-		}
-		require.NoError(t, c.AddCheckpointState(info))
+		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: i, Root: make([]byte, 32)}, st))
 	}
 
-	assert.Equal(t, maxCheckpointStateSize, uint64(len(c.cache.ListKeys())))
+	assert.Equal(t, maxCheckpointStateSize, len(c.cache.Keys()))
 }

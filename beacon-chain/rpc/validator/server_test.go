@@ -20,6 +20,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -118,9 +119,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
-				ActivationEpoch: 0,
-				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				PublicKey:       pubKey1,
+				ActivationEpoch:       0,
+				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+				PublicKey:             pubKey1,
+				WithdrawalCredentials: make([]byte, 32),
 			},
 		},
 	}
@@ -129,7 +131,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
-		WithdrawalCredentials: []byte("hey"),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             make([]byte, 96),
 	}
 	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)
@@ -377,7 +380,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	}
 
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending genesis time")
+	require.LogsContain(t, hook, "Sending genesis time")
 }
 
 func TestWaitForSynced_ContextClosed(t *testing.T) {
@@ -481,5 +484,5 @@ func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	}
 
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending genesis time")
+	require.LogsContain(t, hook, "Sending genesis time")
 }

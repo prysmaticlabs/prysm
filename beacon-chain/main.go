@@ -50,6 +50,8 @@ var appFlags = []cli.Flag{
 	flags.SlotsPerArchivedPoint,
 	flags.EnableDebugRPCEndpoints,
 	flags.HistoricalSlasherNode,
+	flags.ChainID,
+	flags.NetworkID,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,

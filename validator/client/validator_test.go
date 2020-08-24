@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -347,7 +346,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		nil,
 	)
 	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
-	testutil.AssertLogsContain(t, hook, "Validator activated")
+	require.LogsContain(t, hook, "Validator activated")
 }
 
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
@@ -411,7 +410,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
-	testutil.AssertLogsContain(t, hook, "Validator activated")
+	require.LogsContain(t, hook, "Validator activated")
 }
 
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
@@ -577,6 +576,9 @@ func TestUpdateDuties_OK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
+		indexToPubkey:   make(map[uint64][48]byte),
+		pubkeyToIndex:   make(map[[48]byte]uint64),
+		pubkeyToStatus:  make(map[[48]byte]ethpb.ValidatorStatus),
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
@@ -739,22 +741,22 @@ func TestRolesAt_OK(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
-	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1])
-	assert.Equal(t, validatorRole(roleAggregator), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1])
+	assert.Equal(t, ValidatorRole(roleAggregator), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
@@ -792,14 +794,14 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)
 
-	assert.Equal(t, validatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, validatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
@@ -910,7 +912,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 
 			active := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
 			require.Equal(t, test.active, active, "Expected key to be active")
-			testutil.AssertLogsContain(t, hook, test.log)
+			require.LogsContain(t, hook, test.log)
 		})
 	}
 }

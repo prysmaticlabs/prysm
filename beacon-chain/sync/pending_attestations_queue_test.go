@@ -44,15 +44,15 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{Genesis: roughtime.Now()},
+		chain:                &mock.ChainService{Genesis: roughtime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
-	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
+	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}}
 	r.blkRootToPendingAtts[[32]byte{'A'}] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
-	testutil.AssertLogsContain(t, hook, "Requesting block for pending attestation")
+	require.LogsContain(t, hook, "Requesting block for pending attestation")
 }
 
 func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
@@ -76,22 +76,30 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{}}}}
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				BeaconBlockRoot: make([]byte, 32),
+			},
+		},
+		SelectionProof: make([]byte, 96),
+	}
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	r32, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b))
 	require.NoError(t, r.db.SaveState(context.Background(), s, r32))
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a, Signature: make([]byte, 96)}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
 
-	assert.Equal(t, 1, len(r.attPool.UnaggregatedAttestations()), "Did not save unaggregated att")
-	assert.DeepEqual(t, a.Aggregate, r.attPool.UnaggregatedAttestations()[0], "Incorrect saved att")
+	atts, err := r.attPool.UnaggregatedAttestations()
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(atts), "Did not save unaggregated att")
+	assert.DeepEqual(t, a.Aggregate, atts[0], "Incorrect saved att")
 	assert.Equal(t, 0, len(r.attPool.AggregatedAttestations()), "Did save aggregated att")
-	testutil.AssertLogsContain(t, hook, "Verified and saved pending attestations to pool")
+	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
 
 func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
@@ -102,7 +110,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	sb := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	sb := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), sb))
 	root, err := stateutil.BlockRoot(sb.Block)
 	require.NoError(t, err)
@@ -161,7 +169,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
-	sb = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	sb = testutil.NewBeaconBlock()
 	r32, err := stateutil.BlockRoot(sb.Block)
 	require.NoError(t, err)
 	require.NoError(t, r.db.SaveBlock(context.Background(), sb))
@@ -173,8 +181,10 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	assert.Equal(t, 1, len(r.attPool.AggregatedAttestations()), "Did not save aggregated att")
 	assert.DeepEqual(t, att, r.attPool.AggregatedAttestations()[0], "Incorrect saved att")
-	assert.Equal(t, 0, len(r.attPool.UnaggregatedAttestations()), "Did save unaggregated att")
-	testutil.AssertLogsContain(t, hook, "Verified and saved pending attestations to pool")
+	atts, err := r.attPool.UnaggregatedAttestations()
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(atts), "Did save unaggregated att")
+	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
 
 func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
