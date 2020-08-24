@@ -12,7 +12,6 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -541,7 +540,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 		insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
 		for _, dep := range upToEth1DataDeposits {
-			depHash, err := ssz.HashTreeRoot(dep.Data)
+			depHash, err := dep.Data.HashTreeRoot()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not hash deposit data")
 			}
@@ -555,7 +554,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
-		depHash, err := ssz.HashTreeRoot(dep.Data)
+		depHash, err := dep.Data.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash deposit data")
 		}

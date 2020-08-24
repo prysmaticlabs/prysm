@@ -40,13 +40,10 @@ import (
 func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
 	db, _ := dbtest.SetupDB(t)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       1,
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: bytesutil.PadTo([]byte("fake"), 96),
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.Slot = 1
+	msg.Block.ParentRoot = testutil.Random32Bytes(t)
+	msg.Signature = bytesutil.PadTo([]byte("fake"), 96)
 
 	p := p2ptest.NewTestP2P(t)
 
@@ -88,12 +85,9 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	ctx := context.Background()
 
 	p := p2ptest.NewTestP2P(t)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       100,
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.Slot = 100
+	msg.Block.ParentRoot = testutil.Random32Bytes(t)
 	require.NoError(t, db.SaveBlock(context.Background(), msg))
 
 	c, err := lru.New(10)
@@ -133,12 +127,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	parentBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 0,
-			Slot:          0,
-		},
-	}
+	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	require.NoError(t, err)
@@ -148,13 +137,10 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	require.NoError(t, copied.SetSlot(1))
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          1,
-			ParentRoot:    bRoot[:],
-		},
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -167,7 +153,9 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
-		}}
+			Root:  make([]byte, 32),
+		},
+	}
 	r := &Service{
 		db:                  db,
 		p2p:                 p,
@@ -202,12 +190,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	parentBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 0,
-			Slot:          0,
-		},
-	}
+	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	require.NoError(t, err)
@@ -220,13 +203,10 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          blkSlot,
-			ParentRoot:    bRoot[:],
-		},
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.Slot = blkSlot
+	msg.Block.ParentRoot = bRoot[:]
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -277,12 +257,9 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: sk.Sign([]byte("data")).Marshal(),
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.ParentRoot = testutil.Random32Bytes(t)
+	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -319,13 +296,10 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-			Slot:       1000,
-		},
-		Signature: sk.Sign([]byte("data")).Marshal(),
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.Slot = 1000
+	msg.Block.ParentRoot = testutil.Random32Bytes(t)
+	msg.Signature = sk.Sign([]byte("data")).Marshal()
 
 	c, err := lru.New(10)
 	require.NoError(t, err)
@@ -367,13 +341,10 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	ctx := context.Background()
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-			Slot:       10,
-		},
-		Signature: sk.Sign([]byte("data")).Marshal(),
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.ParentRoot = testutil.Random32Bytes(t)
+	msg.Block.Slot = 10
+	msg.Signature = sk.Sign([]byte("data")).Marshal()
 
 	genesisTime := time.Now()
 	c, err := lru.New(10)
@@ -384,7 +355,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 		Genesis: time.Unix(genesisTime.Unix()-1000, 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 1,
-		}}
+		},
+	}
 	r := &Service{
 		db:             db,
 		p2p:            p,
@@ -415,12 +387,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	parentBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 0,
-			Slot:          0,
-		},
-	}
+	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	require.NoError(t, err)
@@ -428,13 +395,10 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	require.NoError(t, err)
 
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          1,
-			ParentRoot:    bRoot[:],
-		},
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.ParentRoot = bRoot[:]
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -446,7 +410,9 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
-		}}
+			Root:  make([]byte, 32),
+		},
+	}
 	r := &Service{
 		db:                  db,
 		p2p:                 p,
@@ -482,7 +448,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
-	parent := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	parent := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), parent))
 	parentRoot, err := stateutil.BlockRoot(parent.Block)
 	require.NoError(t, err)
@@ -505,9 +471,9 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 		initialSync:    &mockSync.Sync{IsSyncing: false},
 	}
 
-	b := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:], Body: &ethpb.BeaconBlockBody{}},
-	}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 1
+	b.Block.ParentRoot = parentRoot[:]
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, b)
 	require.NoError(t, err)
@@ -547,12 +513,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	parentBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 0,
-			Slot:          0,
-		},
-	}
+	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	require.NoError(t, err)
@@ -562,13 +523,10 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	require.NoError(t, copied.SetSlot(1))
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          1,
-			ParentRoot:    bRoot[:],
-		},
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.ParentRoot = bRoot[:]
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -581,6 +539,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
+			Root:  make([]byte, 32),
 		},
 		VerifyBlkDescendantErr: errors.New("not part of finalized chain"),
 	}
@@ -617,12 +576,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	parentBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 0,
-			Slot:          0,
-		},
-	}
+	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
 	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	require.NoError(t, err)
@@ -632,13 +586,10 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	require.NoError(t, copied.SetSlot(1))
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          1,
-			ParentRoot:    bRoot[:],
-		},
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.Slot = 1
+	msg.Block.ParentRoot = bRoot[:]
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -688,13 +639,10 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	proposerIdx, err = helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
 
-	msg = &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          2,
-			ParentRoot:    currBlockRoot[:],
-		},
-	}
+	msg = testutil.NewBeaconBlock()
+	msg.Block.Slot = 2
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.ParentRoot = currBlockRoot[:]
 
 	buf = new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)

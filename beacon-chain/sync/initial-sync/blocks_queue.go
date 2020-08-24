@@ -23,11 +23,11 @@ const (
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
-	// noFinalizedPeersErrMaxRetries defines number of retries when no finalized peers are found.
-	noFinalizedPeersErrMaxRetries = 1000
-	// noFinalizedPeersErrRefreshInterval defines interval for which queue will be paused before
+	// noRequiredPeersErrMaxRetries defines number of retries when no required peers are found.
+	noRequiredPeersErrMaxRetries = 1000
+	// noRequiredPeersErrRefreshInterval defines interval for which queue will be paused before
 	// making the next attempt to obtain data.
-	noFinalizedPeersErrRefreshInterval = 15 * time.Second
+	noRequiredPeersErrRefreshInterval = 15 * time.Second
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
 	errInvalidInitialState        = errors.New("invalid initial state")
 	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
-	errNoPeersWithFinalizedBlocks = errors.New("no peers with finalized blocks are found")
+	errNoRequiredPeers            = errors.New("no peers with required blocks are found")
 )
 
 const (
@@ -68,7 +68,7 @@ type blocksQueue struct {
 	highestExpectedSlot uint64
 	mode                syncMode
 	exitConditions      struct {
-		noFinalizedPeersErrRetries int
+		noRequiredPeersErrRetries int
 	}
 	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
 	quit        chan struct{}                // termination notifier
@@ -194,21 +194,21 @@ func (q *blocksQueue) loop() {
 				fsm := q.smm.machines[key]
 				if err := fsm.trigger(eventTick, nil); err != nil {
 					log.WithFields(logrus.Fields{
-						"highestExpectedSlot":        q.highestExpectedSlot,
-						"noFinalizedPeersErrRetries": q.exitConditions.noFinalizedPeersErrRetries,
-						"event":                      eventTick,
-						"epoch":                      helpers.SlotToEpoch(fsm.start),
-						"start":                      fsm.start,
-						"error":                      err.Error(),
+						"highestExpectedSlot":       q.highestExpectedSlot,
+						"noRequiredPeersErrRetries": q.exitConditions.noRequiredPeersErrRetries,
+						"event":                     eventTick,
+						"epoch":                     helpers.SlotToEpoch(fsm.start),
+						"start":                     fsm.start,
+						"error":                     err.Error(),
 					}).Debug("Can not trigger event")
-					if err == errNoPeersWithFinalizedBlocks {
-						forceExit := q.exitConditions.noFinalizedPeersErrRetries > noFinalizedPeersErrMaxRetries
+					if err == errNoRequiredPeers {
+						forceExit := q.exitConditions.noRequiredPeersErrRetries > noRequiredPeersErrMaxRetries
 						if q.mode == modeStopOnFinalizedEpoch || forceExit {
 							q.cancel()
 						} else {
-							q.exitConditions.noFinalizedPeersErrRetries++
+							q.exitConditions.noRequiredPeersErrRetries++
 							log.Debug("Waiting for finalized peers")
-							time.Sleep(noFinalizedPeersErrRefreshInterval)
+							time.Sleep(noRequiredPeersErrRefreshInterval)
 						}
 						continue
 					}
@@ -379,11 +379,11 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		// Check if we have enough peers to progress, or sync needs to halt (due to no peers available).
 		if q.mode == modeStopOnFinalizedEpoch {
 			if q.blocksFetcher.bestFinalizedSlot() <= q.headFetcher.HeadSlot() {
-				return stateSkipped, errNoPeersWithFinalizedBlocks
+				return stateSkipped, errNoRequiredPeers
 			}
 		} else {
 			if q.blocksFetcher.bestNonFinalizedSlot() <= q.headFetcher.HeadSlot() {
-				return stateSkipped, errNoPeersWithFinalizedBlocks
+				return stateSkipped, errNoRequiredPeers
 			}
 		}
 

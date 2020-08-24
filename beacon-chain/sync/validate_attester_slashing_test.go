@@ -35,10 +35,12 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 1},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: []uint64{0, 1},
+		Signature:        make([]byte, 96),
 	}
 	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	require.NoError(t, err)
@@ -51,10 +53,12 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AttestingIndices: []uint64{0, 1},
+		Signature:        make([]byte, 96),
 	}
 	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err)

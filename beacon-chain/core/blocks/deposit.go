@@ -197,7 +197,7 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 	}
 
 	receiptRoot := eth1Data.DepositRoot
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := deposit.Data.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
@@ -253,7 +253,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 			ObjectRoot: root[:],
 			Domain:     domain,
 		}
-		ctrRoot, err := ssz.HashTreeRoot(signingData)
+		ctrRoot, err := signingData.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not get container root")
 		}

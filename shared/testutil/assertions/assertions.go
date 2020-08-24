@@ -20,8 +20,8 @@ type assertionLoggerFn func(string, ...interface{})
 
 // Equal compares values using comparison operator.
 func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	errMsg := parseMsg("Values are not equal", msg...)
 	if expected != actual {
+		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %[4]v (%[4]T), got: %[5]v (%[5]T)", filepath.Base(file), line, errMsg, expected, actual)
 	}
@@ -29,8 +29,8 @@ func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...inte
 
 // NotEqual compares values using comparison operator.
 func NotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	errMsg := parseMsg("Values are equal", msg...)
 	if expected == actual {
+		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, both values are equal: %[4]v (%[4]T)", filepath.Base(file), line, errMsg, expected)
 	}
@@ -38,8 +38,17 @@ func NotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...i
 
 // DeepEqual compares values using DeepEqual.
 func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	errMsg := parseMsg("Values are not equal", msg...)
 	if !reflect.DeepEqual(expected, actual) {
+		errMsg := parseMsg("Values are not equal", msg...)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
+	}
+}
+
+// DeepNotEqual compares values using DeepEqual.
+func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
+	if reflect.DeepEqual(expected, actual) {
+		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
 	}
@@ -47,8 +56,8 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 
 // NoError asserts that error is nil.
 func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
-	errMsg := parseMsg("Unexpected error", msg...)
 	if err != nil {
+		errMsg := parseMsg("Unexpected error", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
 	}
@@ -56,8 +65,8 @@ func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 
 // ErrorContains asserts that actual error contains wanted message.
 func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...interface{}) {
-	errMsg := parseMsg("Expected error not returned", msg...)
 	if err == nil || !strings.Contains(err.Error(), want) {
+		errMsg := parseMsg("Expected error not returned", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, got: %v, want: %s", filepath.Base(file), line, errMsg, err, want)
 	}
@@ -65,8 +74,8 @@ func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...in
 
 // NotNil asserts that passed value is not nil.
 func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...interface{}) {
-	errMsg := parseMsg("Unexpected nil value", msg...)
 	if obj == nil {
+		errMsg := parseMsg("Unexpected nil value", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s", filepath.Base(file), line, errMsg)
 	}
