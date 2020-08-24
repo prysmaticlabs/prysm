@@ -289,7 +289,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	// Verify randao is correctly updated in the right position.
 	mix, err := newS.RandaoMixAtIndex(ne)
 	assert.NoError(t, err)
-	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
+	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
 
 	// Verify historical root accumulator was appended.
 	assert.Equal(t, 1, len(newS.HistoricalRoots()), "Unexpected slashed balance")
