@@ -13,7 +13,7 @@ const fileBase = "0-11-0/mainnet/beaconstate"
 const fileBaseENV = "BEACONSTATES_PATH"
 
 // GetBeaconFuzzState returns a beacon state by ID using the beacon-fuzz corpora.
-func GetBeaconFuzzState(ID uint16) (*pb.BeaconState, error) {
+func GetBeaconFuzzState(ID uint64) (*pb.BeaconState, error) {
 	base := fileBase
 	// Using an environment variable allows a host image to specify the path when only the binary
 	// executable was uploaded (without the runfiles). i.e. fuzzit's platform.
