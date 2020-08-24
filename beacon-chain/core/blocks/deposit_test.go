@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -57,12 +58,11 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
-			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, 48),
-			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
+			PublicKey: []byte{1, 2, 3},
+			Signature: make([]byte, 96),
 		},
 	}
-	leaf, err := deposit.Data.HashTreeRoot()
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	require.NoError(t, err)
 
 	// We then create a merkle branch for the test.
@@ -132,17 +132,15 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	sk := bls.RandKey()
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
-			PublicKey:             sk.PublicKey().Marshal(),
-			Amount:                1000,
-			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
+			PublicKey: sk.PublicKey().Marshal(),
+			Amount:    1000,
 		},
 	}
-	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
+	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 8))
 	require.NoError(t, err)
 	sig := sk.Sign(sr[:])
 	deposit.Data.Signature = sig.Marshal()
-	leaf, err := deposit.Data.HashTreeRoot()
+	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	require.NoError(t, err)
 
 	// We then create a merkle branch for the test.

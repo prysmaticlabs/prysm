@@ -137,5 +137,30 @@ this command outputs a deposit data string which is required to become a validat
 				return nil
 			},
 		},
+		{
+			Name: "deposit",
+			Description: "Submits a deposit to the eth2 deposit contract for a validator key by connecting " +
+				"to an eth1 endpoint to submit a transaction. Requires signing the transaction with an eth1 private key",
+			Flags: []cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.HTTPWeb3ProviderFlag,
+				flags.Eth1KeystoreUTCPathFlag,
+				flags.Eth1KeystorePasswordFileFlag,
+				flags.Eth1PrivateKeyFileFlag,
+				flags.DepositDelaySecondsFlag,
+				flags.DepositContractAddressFlag,
+				flags.DepositPublicKeysFlag,
+				flags.SkipDepositConfirmationFlag,
+				flags.DepositAllAccountsFlag,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := SendDeposit(cliCtx); err != nil {
+					log.Fatalf("Could not send validator deposit(s): %v", err)
+				}
+				return nil
+			},
+		},
 	},
 }
