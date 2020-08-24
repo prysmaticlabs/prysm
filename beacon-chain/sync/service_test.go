@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -67,12 +66,9 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: sk.Sign([]byte("data")).Marshal(),
-	}
+	msg := testutil.NewBeaconBlock()
+	msg.Block.ParentRoot = testutil.Random32Bytes(t)
+	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
 	time.Sleep(400 * time.Millisecond)
