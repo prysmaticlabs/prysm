@@ -76,6 +76,10 @@ var (
 		Name: "current_eth1_data_deposit_count",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
 	})
+	stateTrieReferences = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "field_references",
+		Help: "The number of states a particular field is shared with.",
+	}, []string{"state"})
 	totalEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "total_eligible_balances",
 		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
@@ -201,6 +205,10 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 	if precompute.Balances != nil {
 		totalEligibleBalances.Set(float64(precompute.Balances.ActivePrevEpoch))
 		totalVotedTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttested))
+	}
+	refMap := state.FieldReferencesCount()
+	for name, val := range refMap {
+		stateTrieReferences.WithLabelValues(name).Set(float64(val))
 	}
 }
 
