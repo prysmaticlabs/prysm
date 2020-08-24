@@ -104,7 +104,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
 		rateLimiter:         newRateLimiter(p1),

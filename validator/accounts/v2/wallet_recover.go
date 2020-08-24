@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -109,6 +110,7 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 	}
 	sort.Strings(languages)
 	selectedLanguage, err := promptutil.ValidatePrompt(
+		os.Stdin,
 		fmt.Sprintf("Enter the language of your seed phrase: %s", strings.Join(languages, ", ")),
 		func(input string) error {
 			if _, ok := allowedLanguages[input]; !ok {
@@ -121,7 +123,10 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 		return "", fmt.Errorf("could not get mnemonic language: %v", err)
 	}
 	bip39.SetWordList(allowedLanguages[selectedLanguage])
-	mnemonicPhrase, err := promptutil.ValidatePrompt("Enter the seed phrase for the wallet you would like to recover", validateMnemonic)
+	mnemonicPhrase, err := promptutil.ValidatePrompt(
+		os.Stdin,
+		"Enter the seed phrase for the wallet you would like to recover",
+		validateMnemonic)
 	if err != nil {
 		return "", fmt.Errorf("could not get mnemonic phrase: %v", err)
 	}

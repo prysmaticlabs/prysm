@@ -98,12 +98,12 @@ func NewKeymanager(
 		accountsStore: &AccountStore{},
 	}
 
-	walletFiles, err := wallet.ListDirs()
+	walletExists, err := wallet.Exists()
 	if err != nil {
 		return nil, err
 	}
 	var accountsPassword string
-	if len(walletFiles) == 0 {
+	if !walletExists {
 		accountsPassword, err = inputPassword(
 			cliCtx,
 			flags.WalletPasswordFileFlag,

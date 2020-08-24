@@ -156,7 +156,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	// The context should have been canceled.
 	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
-	testutil.AssertLogsContain(t, hook, "data already exists")
+	require.LogsContain(t, hook, "data already exists")
 }
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {

@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -13,13 +15,29 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// HasState returns true if the state exists in cache or in DB.
-func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
-	if s.hotStateCache.Has(blockRoot) {
-		return true
-	}
+var (
+	replayBlockCount = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "replay_blocks_count",
+			Help:    "The number of blocks to replay to generate a state",
+			Buckets: []float64{64, 256, 1024, 2048, 4096},
+		},
+	)
+)
 
-	return s.beaconDB.HasState(ctx, blockRoot)
+// HasState returns true if the state exists in cache or in DB.
+func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	if s.hotStateCache.Has(blockRoot) {
+		return true, nil
+	}
+	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return false, err
+	}
+	if has {
+		return true, nil
+	}
+	return s.beaconDB.HasState(ctx, blockRoot), nil
 }
 
 // SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
@@ -106,6 +124,8 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 	}
 
+	replayBlockCount.Observe(float64(len(blks)))
+
 	return s.ReplayBlocks(ctx, startState, blks, targetSlot)
 }
 
@@ -172,6 +192,11 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
 		if parentRoot == params.BeaconConfig().ZeroHash {
 			return s.beaconDB.GenesisState(ctx)
+		}
+
+		// Does the state exist in the hot state cache.
+		if s.hotStateCache.Has(parentRoot) {
+			return s.hotStateCache.Get(parentRoot), nil
 		}
 
 		// Does the state exist in finalized info cache.

@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/sirupsen/logrus"
@@ -39,18 +40,25 @@ const (
 	// nonSkippedSlotsFullSearchEpochs how many epochs to check in full, before resorting to random
 	// sampling of slots once per epoch
 	nonSkippedSlotsFullSearchEpochs = 10
+	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
+	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
+	peerFilterCapacityWeight = 0.2
 )
 
 var (
-	errNoPeersAvailable = errors.New("no peers available, waiting for reconnect")
-	errFetcherCtxIsDone = errors.New("fetcher's context is done, reinitialize")
-	errSlotIsTooHigh    = errors.New("slot is higher than the finalized slot")
+	errNoPeersAvailable      = errors.New("no peers available, waiting for reconnect")
+	errFetcherCtxIsDone      = errors.New("fetcher's context is done, reinitialize")
+	errSlotIsTooHigh         = errors.New("slot is higher than the finalized slot")
+	errBlockAlreadyProcessed = errors.New("block is already processed")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
-	headFetcher blockchain.HeadFetcher
-	p2p         p2p.P2P
+	headFetcher              blockchain.HeadFetcher
+	finalizationFetcher      blockchain.FinalizationFetcher
+	p2p                      p2p.P2P
+	peerFilterCapacityWeight float64
+	mode                     syncMode
 }
 
 // blocksFetcher is a service to fetch chain data from peers.
@@ -58,17 +66,20 @@ type blocksFetcherConfig struct {
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
 	sync.Mutex
-	ctx             context.Context
-	cancel          context.CancelFunc
-	rand            *rand.Rand
-	headFetcher     blockchain.HeadFetcher
-	p2p             p2p.P2P
-	blocksPerSecond uint64
-	rateLimiter     *leakybucket.Collector
-	peerLocks       map[peer.ID]*peerLock
-	fetchRequests   chan *fetchRequestParams
-	fetchResponses  chan *fetchRequestResponse
-	quit            chan struct{} // termination notifier
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	rand                *rand.Rand
+	headFetcher         blockchain.HeadFetcher
+	finalizationFetcher blockchain.FinalizationFetcher
+	p2p                 p2p.P2P
+	blocksPerSecond     uint64
+	rateLimiter         *leakybucket.Collector
+	peerLocks           map[peer.ID]*peerLock
+	fetchRequests       chan *fetchRequestParams
+	fetchResponses      chan *fetchRequestResponse
+	capacityWeight      float64       // how remaining capacity affects peer selection
+	mode                syncMode      // allows to use fetcher in different sync scenarios
+	quit                chan struct{} // termination notifier
 }
 
 // peerLock restricts fetcher actions on per peer basis. Currently, used for rate limiting.
@@ -102,19 +113,26 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		float64(blocksPerSecond), int64(allowedBlocksBurst-blocksPerSecond),
 		false /* deleteEmptyBuckets */)
 
+	capacityWeight := cfg.peerFilterCapacityWeight
+	if capacityWeight >= 1 {
+		capacityWeight = peerFilterCapacityWeight
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &blocksFetcher{
-		ctx:             ctx,
-		cancel:          cancel,
-		rand:            rand.NewGenerator(),
-		headFetcher:     cfg.headFetcher,
-		p2p:             cfg.p2p,
-		blocksPerSecond: uint64(blocksPerSecond),
-		rateLimiter:     rateLimiter,
-		peerLocks:       make(map[peer.ID]*peerLock),
-		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
-		fetchResponses:  make(chan *fetchRequestResponse, maxPendingRequests),
-		quit:            make(chan struct{}),
+		ctx:                 ctx,
+		cancel:              cancel,
+		rand:                rand.NewGenerator(),
+		headFetcher:         cfg.headFetcher,
+		finalizationFetcher: cfg.finalizationFetcher,
+		p2p:                 cfg.p2p,
+		blocksPerSecond:     uint64(blocksPerSecond),
+		rateLimiter:         rateLimiter,
+		peerLocks:           make(map[peer.ID]*peerLock),
+		fetchRequests:       make(chan *fetchRequestParams, maxPendingRequests),
+		fetchResponses:      make(chan *fetchRequestResponse, maxPendingRequests),
+		capacityWeight:      capacityWeight,
+		quit:                make(chan struct{}),
 	}
 }
 
@@ -231,19 +249,28 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 		return response
 	}
 
-	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	var targetEpoch uint64
+	var peers []peer.ID
+	if f.mode == modeStopOnFinalizedEpoch {
+		headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
+		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	} else {
+		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+	}
 	if len(peers) == 0 {
 		response.err = errNoPeersAvailable
 		return response
 	}
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
-	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
-	if start > highestFinalizedSlot {
-		response.err = fmt.Errorf("%v, slot: %d, higest finilized slot: %d",
-			errSlotIsTooHigh, start, highestFinalizedSlot)
-		return response
+	if f.mode == modeStopOnFinalizedEpoch {
+		highestFinalizedSlot := helpers.StartSlot(targetEpoch + 1)
+		if start > highestFinalizedSlot {
+			response.err = fmt.Errorf("%v, slot: %d, highest finalized slot: %d",
+				errSlotIsTooHigh, start, highestFinalizedSlot)
+			return response
+		}
 	}
 
 	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
@@ -261,7 +288,11 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 
 	var blocks []*eth.SignedBeaconBlock
 	var err error
-	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	if featureconfig.Get().EnablePeerScorer {
+		peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	} else {
+		peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	}
 	if err != nil {
 		return blocks, "", err
 	}
@@ -272,6 +303,9 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	}
 	for i := 0; i < len(peers); i++ {
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
+			if featureconfig.Get().EnablePeerScorer {
+				f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+			}
 			return blocks, peers[i], err
 		}
 	}
@@ -298,6 +332,7 @@ func (f *blocksFetcher) requestBlocks(
 		"count":    req.Count,
 		"step":     req.Step,
 		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
@@ -318,7 +353,7 @@ func (f *blocksFetcher) requestBlocks(
 	}
 	defer func() {
 		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Errorf("Failed to close stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Failed to close stream with protocol %s", stream.Protocol())
 		}
 	}()
 

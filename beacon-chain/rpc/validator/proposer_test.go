@@ -1930,8 +1930,9 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	}
 
 	sig := bls.RandKey().Sign([]byte("foo")).Marshal()
-	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
-	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
+	d := &ethpb.AttestationData{}
+	aggregatedAtts := []*ethpb.Attestation{{Data: d, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {Data: d, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
+	unaggregatedAtts := []*ethpb.Attestation{{Data: d, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {Data: d, AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
 
 	require.NoError(t, s.AttPool.SaveAggregatedAttestations(aggregatedAtts))
 	require.NoError(t, s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts))
@@ -1940,7 +1941,9 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)))
 	assert.Equal(t, 0, len(s.AttPool.AggregatedAttestations()), "Did not delete aggregated attestation")
-	assert.Equal(t, 0, len(s.AttPool.UnaggregatedAttestations()), "Did not delete unaggregated attestation")
+	atts, err := s.AttPool.UnaggregatedAttestations()
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(atts), "Did not delete unaggregated attestation")
 }
 
 func TestSortProfitableAtts(t *testing.T) {

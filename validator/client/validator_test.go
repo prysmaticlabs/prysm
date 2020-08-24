@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -347,7 +346,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		nil,
 	)
 	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
-	testutil.AssertLogsContain(t, hook, "Validator activated")
+	require.LogsContain(t, hook, "Validator activated")
 }
 
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
@@ -411,7 +410,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
-	testutil.AssertLogsContain(t, hook, "Validator activated")
+	require.LogsContain(t, hook, "Validator activated")
 }
 
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
@@ -913,7 +912,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 
 			active := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
 			require.Equal(t, test.active, active, "Expected key to be active")
-			testutil.AssertLogsContain(t, hook, test.log)
+			require.LogsContain(t, hook, test.log)
 		})
 	}
 }

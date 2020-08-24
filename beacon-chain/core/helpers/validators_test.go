@@ -128,7 +128,8 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			slashableValidator := IsSlashableValidator(test.validator, test.epoch)
+			slashableValidator := IsSlashableValidator(test.validator.ActivationEpoch,
+				test.validator.WithdrawableEpoch, test.validator.Slashed, test.epoch)
 			assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
 		})
 	}

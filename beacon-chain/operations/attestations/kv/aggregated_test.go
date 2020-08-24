@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	c "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -73,6 +74,16 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
 		},
 		{
+			name: "already seen",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 100,
+				},
+				AggregationBits: bitfield.Bitlist{0b11101001},
+			},
+			count: 0,
+		},
+		{
 			name: "normal save",
 			att: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
@@ -83,10 +94,15 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			count: 1,
 		},
 	}
+	r, err := hashFn(&ethpb.AttestationData{
+		Slot: 100,
+	})
+	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
+			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
 			if len(cache.unAggregatedAtt) != 0 {
 				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 			}

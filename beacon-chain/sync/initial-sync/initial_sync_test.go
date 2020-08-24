@@ -57,6 +57,7 @@ func TestMain(m *testing.M) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 		NewStateMgmt:     true,
 		BatchBlockVerify: true,
+		EnablePeerScorer: true,
 	})
 	defer resetCfg()
 
@@ -91,6 +92,9 @@ func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: 0,
+		},
 	}, p, beaconDB
 }
 

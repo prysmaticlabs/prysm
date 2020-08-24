@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -30,15 +28,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
 
-	// Write a directory where we will backup accounts to.
-	backupDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "backupDir")
-	require.NoError(t, os.MkdirAll(backupDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(backupDir), "Failed to remove directory")
-	})
-
-	// Create 2 keystore files in the keys directory we can then
+	// Create 3 keystore files in the keys directory we can then
 	// import from in our wallet.
 	k1, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
@@ -48,15 +38,6 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	generatedPubKeys := []string{k1.Pubkey, k2.Pubkey, k3.Pubkey}
 	// Only delete keys 0 and 1.
 	deletePublicKeys := strings.Join(generatedPubKeys[0:2], ",")
-
-	// Write a password for the accounts we wish to backup to a file.
-	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
-	err = ioutil.WriteFile(
-		backupPasswordFile,
-		[]byte("Passw0rdz4938%%"),
-		params.BeaconIoConfig().ReadWritePermissions,
-	)
-	require.NoError(t, err)
 
 	// We initialize a wallet with a direct keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
