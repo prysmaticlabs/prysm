@@ -20,26 +20,7 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	db := setupDB(t, cli.NewContext(&app, set, nil))
 	ctx := context.Background()
 
-	ps := &ethpb.ProposerSlashing{
-		Header_1: &ethpb.SignedBeaconBlockHeader{
-			Header: &ethpb.BeaconBlockHeader{
-				ProposerIndex: 1,
-				ParentRoot:    make([]byte, 32),
-				StateRoot:     make([]byte, 32),
-				BodyRoot:      make([]byte, 32),
-			},
-			Signature: make([]byte, 96),
-		},
-		Header_2: &ethpb.SignedBeaconBlockHeader{
-			Header: &ethpb.BeaconBlockHeader{
-				ProposerIndex: 1,
-				ParentRoot:    make([]byte, 32),
-				StateRoot:     make([]byte, 32),
-				BodyRoot:      make([]byte, 32),
-			},
-			Signature: make([]byte, 96),
-		},
-	}
+	ps := &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}}}
 	has, _, err := db.HasProposerSlashing(ctx, ps)
 	require.NoError(t, err)
 	require.Equal(t, false, has)
@@ -63,70 +44,22 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
 			},
 		},
 		{
 			ss: types.Included,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
 			},
 		},
 		{
 			ss: types.Reverted,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
 			},
 		},
 	}
@@ -158,72 +91,15 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	}{
 		{
 			ss: types.Active,
-			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-			},
+			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}}},
 		},
 		{
 			ss: types.Active,
-			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-			},
+			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}}},
 		},
 		{
 			ss: types.Active,
-			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
-					},
-					Signature: make([]byte, 96),
-				},
-			},
+			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}}},
 		},
 	}
 
@@ -254,64 +130,16 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 
 	ps := []*ethpb.ProposerSlashing{
 		{
-			Header_1: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: 1,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
-				},
-				Signature: make([]byte, 96),
-			},
-			Header_2: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: 1,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
-				},
-				Signature: make([]byte, 96),
-			},
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
 		},
 		{
-			Header_1: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: 2,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
-				},
-				Signature: make([]byte, 96),
-			},
-			Header_2: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: 2,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
-				},
-				Signature: make([]byte, 96),
-			},
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
 		},
 		{
-			Header_1: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: 3,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
-				},
-				Signature: make([]byte, 96),
-			},
-			Header_2: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: 3,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
-				},
-				Signature: make([]byte, 96),
-			},
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
 		},
 	}
 	err := db.SaveProposerSlashings(ctx, types.Active, ps)
