@@ -68,10 +68,10 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		msg proto.Message
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "invalid block does not remove attestations",
@@ -83,7 +83,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantedErr: "nil inner state",
 			check: func(t *testing.T, s *Service) {
 				if s.attPool.AggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 aggregated attestation in the pool")
@@ -113,10 +113,12 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 				}
 			}
 			// Perform method under test call.
-			if err := s.beaconBlockSubscriber(context.Background(), tt.args.msg); (err != nil) != tt.wantErr {
-				t.Errorf("beaconBlockSubscriber(ctx, msg) error = %v, wantErr %v", err, tt.wantErr)
+			err := s.beaconBlockSubscriber(context.Background(), tt.args.msg)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			// Perform any test check.
 			if tt.check != nil {
 				tt.check(t, s)
 			}
