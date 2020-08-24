@@ -191,8 +191,7 @@ func (c *Config) String() string {
 // are imported into the keymanager while the validator process is running.
 func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
 	if dr.accountsChangedFeed == nil {
-		f := new(event.Feed)
-		dr.accountsChangedFeed = f
+		dr.accountsChangedFeed = new(event.Feed)
 	}
 	return dr.accountsChangedFeed.Subscribe(pubKeysChan)
 }
