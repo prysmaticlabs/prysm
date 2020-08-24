@@ -96,6 +96,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					}
 					numberOfAttsRecovered.Inc()
 
+					// Verify signed aggregate has a valid signature.
+					if _, err := bls.SignatureFromBytes(signedAtt.Signature); err != nil {
+						continue
+					}
+
 					// Broadcasting the signed attestation again once a node is able to process it.
 					if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
 						log.WithError(err).Debug("Failed to broadcast")
