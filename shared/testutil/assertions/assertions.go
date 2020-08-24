@@ -45,6 +45,15 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 	}
 }
 
+// DeepNotEqual compares values using DeepEqual.
+func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
+	errMsg := parseMsg("Values are equal", msg...)
+	if reflect.DeepEqual(expected, actual) {
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
+	}
+}
+
 // NoError asserts that error is nil.
 func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 	errMsg := parseMsg("Unexpected error", msg...)
