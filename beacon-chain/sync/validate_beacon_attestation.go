@@ -98,6 +98,37 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+
+	if featureconfig.Get().UseCheckPointInfoCache {
+		// Use check point info to validate unaggregated attestation.
+		c, err := s.chain.AttestationCheckPtInfo(ctx, att)
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		// Is the attestation subnet correct.
+		indices := c.ActiveIndices
+		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
+		if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
+			return pubsub.ValidationReject
+		}
+		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		// Is the attestation bitfield correct.
+		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
+			return pubsub.ValidationReject
+		}
+		// Is the attestation signature correct.
+		if err := blocks.VerifyAttSigUseCheckPt(ctx, c, att); err != nil {
+			return pubsub.ValidationReject
+		}
+
+		s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
+		msg.ValidatorData = att
+		return pubsub.ValidationAccept
+	}
+
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
 		log.Error("Failed to retrieve pre state")
