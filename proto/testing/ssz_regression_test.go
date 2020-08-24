@@ -68,7 +68,7 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			root1, err := ssz.HashTreeRoot(tt.header1)
+			root1, err := tt.header1.HashTreeRoot()
 			if err != nil {
 				t.Error(err)
 			}

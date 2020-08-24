@@ -30,7 +30,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		JustificationBits:   bitfield.Bitvector4{0x0F}, // 0b1111
 		Validators:          []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
@@ -67,7 +67,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		JustificationBits:   bitfield.Bitvector4{0x03}, // 0b0011
 		Validators:          []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
@@ -107,7 +107,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 		JustificationBits: bitfield.Bitvector4{0x03}, // 0b0011
 		Validators:        []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
 		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
-		BlockRoots:        blockRoots, FinalizedCheckpoint: &ethpb.Checkpoint{},
+		BlockRoots:        blockRoots, FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 	state, err := beaconstate.InitializeFromProto(base)
 	require.NoError(t, err)
