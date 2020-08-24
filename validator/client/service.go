@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -22,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -131,34 +129,6 @@ func (v *ValidatorService) Start() {
 		log.Info("Established secure gRPC connection")
 	}
 
-	var validatingKeys [][48]byte
-	if featureconfig.Get().EnableAccountsV2 {
-		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(v.ctx)
-	} else {
-		validatingKeys, err = v.keyManager.FetchValidatingKeys()
-	}
-	if err != nil {
-		log.WithError(err).Error("Could not fetch validating keys")
-		return
-	}
-
-	if len(validatingKeys) == 0 {
-		log.Error("No keys found to validate with")
-	} else {
-		log.WithField("validators", len(validatingKeys)).Debug("Found validator keys")
-		for _, key := range validatingKeys {
-			log.WithField(
-				"pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
-			).Info("Validating for public key")
-		}
-	}
-
-	valDB, err := kv.NewKVStore(v.dataDir, validatingKeys)
-	if err != nil {
-		log.Errorf("Could not initialize db: %v", err)
-		return
-	}
-
 	v.conn = conn
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1920, // number of keys to track.
@@ -198,7 +168,7 @@ func (v *ValidatorService) Start() {
 	}
 	go run(v.ctx, v.validator)
 	if featureconfig.Get().EnableAccountsV2 {
-		go recheckValidatingKeysBucket(v.ctx, valDB, v.keyManagerV2)
+		go recheckValidatingKeysBucket(v.ctx, v.db, v.keyManagerV2)
 	}
 }
 
@@ -318,7 +288,7 @@ func ConstructDialOptions(
 
 // Reloads the validating keys every set interval to check if they have changed and updates
 // their buckets in bolt DB if a bucket for a key does not exist.
-func recheckValidatingKeysBucket(ctx context.Context, valDB *kv.Store, km v2.IKeymanager) {
+func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
 	directKeymanager, ok := km.(*direct.Keymanager)
 	if !ok {
 		return

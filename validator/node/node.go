@@ -111,6 +111,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	validatingPubKeys := make([][48]byte, 0)
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -122,22 +123,21 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			}
 
 		}
-		var validatingKeys [][48]byte
 		if featureconfig.Get().EnableAccountsV2 {
-			validatingKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
+			validatingPubKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
 		} else {
-			validatingKeys, err = keyManagerV1.FetchValidatingKeys()
+			validatingPubKeys, err = keyManagerV1.FetchValidatingKeys()
 		}
 		if err != nil {
 			return nil, err
 		}
-		if err := clearDB(dataDir, validatingKeys, forceClearFlag); err != nil {
+		if err := clearDB(dataDir, validatingPubKeys, forceClearFlag); err != nil {
 			return nil, err
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(dataDir, pubKeys)
+	valDB, err := kv.NewKVStore(dataDir, validatingPubKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize db")
 	}
