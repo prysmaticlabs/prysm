@@ -518,6 +518,10 @@ func (dr *Keymanager) listenForFileChanges(ctx context.Context, filePath string)
 // Replaces the accounts store struct in the direct keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
 func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore) error {
+	// If no one is subscribing to account changes, no need to proceed.
+	if dr.accountsChangedFeed == nil {
+		return nil
+	}
 	decryptor := keystorev4.New()
 	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.accountsPassword)
 	if err != nil {
@@ -542,9 +546,7 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore
 	}
 	dr.lock.Unlock()
 	log.Info("Reloaded validator keys into keymanager")
-	if dr.accountsChangedFeed != nil {
-		dr.accountsChangedFeed.Send(pubKeys)
-	}
+	dr.accountsChangedFeed.Send(pubKeys)
 	return nil
 }
 
