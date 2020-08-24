@@ -96,6 +96,56 @@ type BeaconState struct {
 	sharedFieldReferences map[fieldIndex]*reference
 }
 
+// String returns the name of the field index.
+func (f fieldIndex) String() string {
+	switch f {
+	case genesisTime:
+		return "genesisTime"
+	case genesisValidatorRoot:
+		return "genesisValidatorRoot"
+	case slot:
+		return "slot"
+	case fork:
+		return "fork"
+	case latestBlockHeader:
+		return "latestBlockHeader"
+	case blockRoots:
+		return "blockRoots"
+	case stateRoots:
+		return "stateRoots"
+	case historicalRoots:
+		return "historicalRoots"
+	case eth1Data:
+		return "eth1Data"
+	case eth1DataVotes:
+		return "eth1DataVotes"
+	case eth1DepositIndex:
+		return "eth1DepositIndex"
+	case validators:
+		return "validators"
+	case balances:
+		return "balances"
+	case randaoMixes:
+		return "randaoMixes"
+	case slashings:
+		return "slashings"
+	case previousEpochAttestations:
+		return "previousEpochAttestations"
+	case currentEpochAttestations:
+		return "currentEpochAttestations"
+	case justificationBits:
+		return "justificationBits"
+	case previousJustifiedCheckpoint:
+		return "previousJustifiedCheckpoint"
+	case currentJustifiedCheckpoint:
+		return "currentJustifiedCheckpoint"
+	case finalizedCheckpoint:
+		return "finalizedCheckpoint"
+	default:
+		return ""
+	}
+}
+
 // ReadOnlyValidator returns a wrapper that only allows fields from a validator
 // to be read, and prevents any modification of internal validator fields.
 type ReadOnlyValidator struct {
