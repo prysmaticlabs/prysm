@@ -202,9 +202,11 @@ func (dr *Keymanager) AccountsPassword() string {
 
 // ValidatingAccountNames for a direct keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
-	names := make([]string, len(dr.accountsStore.PublicKeys))
-	for i, pubKey := range dr.accountsStore.PublicKeys {
-		names[i] = petnames.DeterministicName(pubKey, "-")
+	names := make([]string, len(dr.keysCache))
+	index := 0
+	for pubKey, _ := range dr.keysCache {
+		names[index] = petnames.DeterministicName(pubKey[:], "-")
+		index++
 	}
 	return names, nil
 }
