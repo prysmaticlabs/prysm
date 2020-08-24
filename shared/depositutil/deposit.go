@@ -58,13 +58,13 @@ func DepositInput(
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := ssz.HashTreeRoot(&p2ppb.SigningData{ObjectRoot: sr[:], Domain: domain})
+	root, err := (&p2ppb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
 	di.Signature = depositKey.Sign(root[:]).Marshal()
 
-	dr, err := ssz.HashTreeRoot(di)
+	dr, err := di.HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -107,7 +107,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 		ObjectRoot: root[:],
 		Domain:     domain,
 	}
-	ctrRoot, err := ssz.HashTreeRoot(signingData)
+	ctrRoot, err := signingData.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get container root")
 	}

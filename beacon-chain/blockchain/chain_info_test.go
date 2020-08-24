@@ -11,7 +11,9 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -42,7 +44,7 @@ func TestHeadRoot_Nil(t *testing.T) {
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
-	cp := &ethpb.Checkpoint{Epoch: 5, Root: []byte("foo")}
+	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, db, sc)
 	c.finalizedCheckpt = cp
 
@@ -66,7 +68,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
-	cp := &ethpb.Checkpoint{Epoch: 6, Root: []byte("foo")}
+	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, db, sc)
 	c.justifiedCheckpt = cp
 
@@ -90,7 +92,7 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
-	cp := &ethpb.Checkpoint{Epoch: 7, Root: []byte("foo")}
+	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, db, sc)
 	c.prevJustifiedCheckpt = cp
 
@@ -128,7 +130,8 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 1
 	s, err := state.InitializeFromProto(&pb.BeaconState{})
 	require.NoError(t, err)
 	c := &Service{}
