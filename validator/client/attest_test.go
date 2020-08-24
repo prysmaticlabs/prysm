@@ -63,14 +63,14 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte{},
-		Target:          &ethpb.Checkpoint{},
-		Source:          &ethpb.Checkpoint{},
+		BeaconBlockRoot: make([]byte, 32),
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}, nil)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch2
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
@@ -115,7 +115,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: []byte{}}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -136,9 +136,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 		},
 		AggregationBits: aggregationBitfield,
+		Signature:       make([]byte, 96),
 	}
 
-	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})
+	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
 	sig, err := validator.keyManager.Sign(validatorPubKey, root)
@@ -186,12 +187,12 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-	).Return(&ethpb.AttestResponse{}, nil /* error */)
+	).Return(&ethpb.AttestResponse{AttestationDataRoot: make([]byte, 32)}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
@@ -233,7 +234,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -280,7 +281,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -294,9 +295,9 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 2},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 1},
+		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
+		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32), Epoch: 2},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 1},
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
@@ -352,9 +353,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B")},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
+		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -362,7 +363,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -388,14 +389,15 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Root: []byte("B")},
-		Source: &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
+		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
+		BeaconBlockRoot: make([]byte, 32),
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
