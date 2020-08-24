@@ -70,6 +70,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 		},
 		accountsPassword: password,
 	}
+	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	ctx := context.Background()
 	accountName, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
 	require.NoError(t, err)
@@ -99,43 +100,35 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		AccountPasswords: make(map[string]string),
 	}
 	dr := &Keymanager{
-		wallet:    wallet,
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		wallet: wallet,
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
 		seed:             make([]byte, 32),
 		accountsPassword: "hello world",
 	}
+	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
 	numAccounts := 20
 	wantedPublicKeys := make([][48]byte, numAccounts)
-	var err error
-	var accountName string
 	for i := 0; i < numAccounts; i++ {
-		accountName, err = dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		accountName, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
+		assert.Equal(t, fmt.Sprintf("%d", i), accountName)
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 		require.NoError(t, err)
 		wantedPublicKeys[i] = bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())
 	}
-	assert.Equal(t, fmt.Sprintf("%d", numAccounts-1), accountName)
-
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
+	require.Equal(t, numAccounts, len(publicKeys))
 
-	// The results are not guaranteed to be ordered, so we ensure each
-	// key we expect exists in the results via a map.
-	keysMap := make(map[[48]byte]bool)
-	for _, key := range publicKeys {
-		keysMap[key] = true
-	}
-	for _, wanted := range wantedPublicKeys {
-		if _, ok := keysMap[wanted]; !ok {
-			t.Errorf("Could not find expected public key %#x in results", wanted)
-		}
+	// FetchValidatingPublicKeys is also used in generating the output of account list
+	// therefore the results must be in the same order as the order in which the accounts were derived
+	for i, key := range wantedPublicKeys {
+		assert.Equal(t, key, publicKeys[i])
 	}
 }
 
@@ -147,28 +140,23 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	seed := make([]byte, 32)
 	copy(seed, "hello world")
 	dr := &Keymanager{
-		wallet:    wallet,
-		seed:      seed,
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		wallet: wallet,
+		seed:   seed,
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
 		accountsPassword: "hello world",
 	}
+	require.NoError(t, dr.initializeKeysCachesFromSeed())
 
 	// First, generate some accounts.
 	numAccounts := 2
 	ctx := context.Background()
-	var err error
-	var accountName string
 	for i := 0; i < numAccounts; i++ {
-		accountName, err = dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		accountName, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
+		assert.Equal(t, fmt.Sprintf("%d", i), accountName)
 	}
-	assert.Equal(t, fmt.Sprintf("%d", numAccounts-1), accountName)
-
-	// Initialize the secret keys cache for the keymanager.
-	require.NoError(t, dr.initializeSecretKeysCache())
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 
@@ -205,9 +193,7 @@ func TestDerivedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
-	dr := &Keymanager{
-		keysCache: make(map[[48]byte]bls.SecretKey),
-	}
+	dr := &Keymanager{}
 	_, err := dr.Sign(context.Background(), req)
 	assert.NotNil(t, err)
 	assert.Equal(t, strings.Contains(err.Error(), "no signing key found"), true)

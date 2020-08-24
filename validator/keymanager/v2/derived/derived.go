@@ -70,7 +70,8 @@ type Keymanager struct {
 	wallet            iface.Wallet
 	cfg               *Config
 	mnemonicGenerator SeedPhraseFactory
-	keysCache         map[[48]byte]bls.SecretKey
+	publicKeysCache   [][48]byte
+	secretKeysCache   map[[48]byte]bls.SecretKey
 	lock              sync.RWMutex
 	seedCfg           *SeedConfig
 	seed              []byte
@@ -182,13 +183,12 @@ func NewKeymanager(
 		seedCfg:          seedConfig,
 		seed:             seed,
 		accountsPassword: accountsPassword,
-		keysCache:        make(map[[48]byte]bls.SecretKey),
 	}
-	// We initialize a cache of public key -> secret keys
-	// used to retrieve secrets keys for the accounts via the unlocked wallet.
-	// This cache is needed to process Sign requests using a validating public key.
-	if err := k.initializeSecretKeysCache(); err != nil {
-		return nil, errors.Wrap(err, "could not initialize secret keys cache")
+	// Initialize public and secret key caches that are used to speed up the functions
+	// FetchValidatingPublicKeys and Sign
+	err = k.initializeKeysCachesFromSeed()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize keys caches from seed")
 	}
 	return k, nil
 }
@@ -261,13 +261,12 @@ func KeymanagerForPhrase(
 		seedCfg:          seedConfig,
 		seed:             seed,
 		accountsPassword: accountsPassword,
-		keysCache:        make(map[[48]byte]bls.SecretKey),
 	}
-	// We initialize a cache of public key -> secret keys
-	// used to retrieve secrets keys for the accounts via the unlocked wallet.
-	// This cache is needed to process Sign requests using a validating public key.
-	if err := k.initializeSecretKeysCache(); err != nil {
-		return nil, errors.Wrap(err, "could not initialize secret keys cache")
+	// Initialize public and secret key caches that are used to speed up the functions
+	// FetchValidatingPublicKeys and Sign
+	err = k.initializeKeysCachesFromSeed()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize keys caches from seed")
 	}
 	return k, nil
 }
@@ -325,15 +324,12 @@ func (dr *Keymanager) WriteEncryptedSeedToWallet(ctx context.Context, mnemonic s
 
 // ValidatingAccountNames for the derived keymanager.
 func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, error) {
-	names := make([]string, 0)
-	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
-		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not derive validating key")
-		}
-		names = append(names, petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-"))
+	dr.lock.RLock()
+	names := make([]string, len(dr.publicKeysCache))
+	for i, pubKey := range dr.publicKeysCache {
+		names[i] = petnames.DeterministicName(bytesutil.FromBytes48(pubKey), "-")
 	}
+	dr.lock.RUnlock()
 	return names, nil
 }
 
@@ -389,7 +385,14 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 			"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
 		}).Info("Successfully created new validator account")
 	}
+
+	dr.lock.Lock()
 	dr.seedCfg.NextAccount++
+	// Append the new account keys to the account keys caches
+	publicKey := bytesutil.ToBytes48(blsValidatingKey.PublicKey().Marshal())
+	dr.publicKeysCache = append(dr.publicKeysCache, publicKey)
+	dr.secretKeysCache[publicKey] = blsValidatingKey
+	dr.lock.Unlock()
 	encodedCfg, err := marshalEncryptedSeedFile(dr.seedCfg)
 	if err != nil {
 		return "", errors.Wrap(err, "could not marshal encrypted seed file")
@@ -407,8 +410,8 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("nil public key in request")
 	}
 	dr.lock.RLock()
-	defer dr.lock.RUnlock()
-	secretKey, ok := dr.keysCache[bytesutil.ToBytes48(rawPubKey)]
+	secretKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(rawPubKey)]
+	dr.lock.RUnlock()
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
@@ -417,28 +420,12 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	// Return the public keys from the cache if they match the
-	// number of accounts from the wallet.
-	publicKeys := make([][48]byte, dr.seedCfg.NextAccount)
 	dr.lock.RLock()
-	defer dr.lock.RUnlock()
-	if dr.keysCache != nil && uint64(len(dr.keysCache)) == dr.seedCfg.NextAccount {
-		var i int
-		for k := range dr.keysCache {
-			publicKeys[i] = k
-			i++
-		}
-		return publicKeys, nil
-	}
-	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
-		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create validating key for account %d", i)
-		}
-		publicKeys = append(publicKeys, bytesutil.ToBytes48(validatingKey.PublicKey().Marshal()))
-	}
-	return publicKeys, nil
+	keys := dr.publicKeysCache
+	result := make([][48]byte, len(keys))
+	copy(result, keys)
+	dr.lock.RUnlock()
+	return result, nil
 }
 
 // FetchWithdrawalPublicKeys fetches the list of withdrawal public keys from keymanager
@@ -485,16 +472,31 @@ func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error)
 	return tx.Data(), nil
 }
 
-func (dr *Keymanager) initializeSecretKeysCache() error {
+// Append the public and the secret key for the provided secret key to their respective caches
+func (dr *Keymanager) appendKeysToCaches(secretKey bls.SecretKey) error {
+	publicKey := bytesutil.ToBytes48(secretKey.PublicKey().Marshal())
+	dr.lock.Lock()
+	dr.publicKeysCache = append(dr.publicKeysCache, publicKey)
+	dr.secretKeysCache[publicKey] = secretKey
+	dr.lock.Unlock()
+	return nil
+}
+
+// Initialize public and secret key caches used to speed up the functions
+// FetchValidatingPublicKeys and Sign as part of the Keymanager instance initialization
+func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 	dr.lock.Lock()
 	defer dr.lock.Unlock()
-	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+	count := dr.seedCfg.NextAccount
+	dr.publicKeysCache = make([][48]byte, count)
+	dr.secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
+	for i := uint64(0); i < count; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		derivedKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 		if err != nil {
 			return errors.Wrapf(err, "failed to derive validating key for account %s", validatingKeyPath)
 		}
-		validatorSigningKey, err := bls.SecretKeyFromBytes(derivedKey.Marshal())
+		secretKey, err := bls.SecretKeyFromBytes(derivedKey.Marshal())
 		if err != nil {
 			return errors.Wrapf(
 				err,
@@ -502,10 +504,9 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 				validatingKeyPath,
 			)
 		}
-
-		// Update a simple cache of public key -> secret key utilized
-		// for fast signing access in the keymanager.
-		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
+		publicKey := bytesutil.ToBytes48(secretKey.PublicKey().Marshal())
+		dr.publicKeysCache[i] = publicKey
+		dr.secretKeysCache[publicKey] = secretKey
 	}
 	return nil
 }

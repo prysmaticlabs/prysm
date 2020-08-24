@@ -62,8 +62,9 @@ type Config struct {
 type Keymanager struct {
 	wallet           iface.Wallet
 	cfg              *Config
-	keysCache        map[[48]byte]bls.SecretKey
 	accountsStore    *AccountStore
+	publicKeysCache  [][48]byte
+	secretKeysCache  map[[48]byte]bls.SecretKey
 	lock             sync.RWMutex
 	accountsPassword string
 }
@@ -84,10 +85,11 @@ func DefaultConfig() *Config {
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:        wallet,
-		cfg:           cfg,
-		keysCache:     make(map[[48]byte]bls.SecretKey),
-		accountsStore: &AccountStore{},
+		wallet:          wallet,
+		cfg:             cfg,
+		publicKeysCache: [][48]byte{},
+		secretKeysCache: make(map[[48]byte]bls.SecretKey),
+		accountsStore:   &AccountStore{},
 	}
 
 	walletExists, err := wallet.Exists()
@@ -122,13 +124,9 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 		return nil, err
 	}
 	k.accountsPassword = accountsPassword
-
-	// If the wallet has the capability of unlocking accounts using
-	// passphrases, then we initialize a cache of public key -> secret keys
-	// used to retrieve secrets keys for the accounts via password unlock.
-	// This cache is needed to process Sign requests using a public key.
-	if err := k.initializeSecretKeysCache(ctx); err != nil {
-		return nil, errors.Wrap(err, "could not initialize keys cache")
+	err = k.initializeAccountKeystore(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize account store")
 	}
 	return k, nil
 }
@@ -136,19 +134,20 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 // NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
 func NewInteropKeymanager(ctx *cli.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		publicKeysCache: make([][48]byte, numValidatorKeys),
+		secretKeysCache: make(map[[48]byte]bls.SecretKey, numValidatorKeys),
 	}
 	if numValidatorKeys == 0 {
 		return k, nil
 	}
-
 	secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(offset, numValidatorKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate interop keys")
 	}
-
-	for i := 0; i < len(publicKeys); i++ {
-		k.keysCache[bytesutil.ToBytes48(publicKeys[i].Marshal())] = secretKeys[i]
+	for i := uint64(0); i < numValidatorKeys; i++ {
+		publicKey := bytesutil.ToBytes48(publicKeys[i].Marshal())
+		k.publicKeysCache[i] = publicKey
+		k.secretKeysCache[publicKey] = secretKeys[i]
 	}
 	return k, nil
 }
@@ -201,13 +200,33 @@ func (dr *Keymanager) AccountsPassword() string {
 
 // ValidatingAccountNames for a direct keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
-	names := make([]string, len(dr.keysCache))
-	index := 0
-	for pubKey := range dr.keysCache {
-		names[index] = petnames.DeterministicName(pubKey[:], "-")
-		index++
+	dr.lock.RLock()
+	names := make([]string, len(dr.publicKeysCache))
+	for i, pubKey := range dr.publicKeysCache {
+		names[i] = petnames.DeterministicName(bytesutil.FromBytes48(pubKey), "-")
 	}
+	dr.lock.RUnlock()
 	return names, nil
+}
+
+// Initialize public and secret key caches that are used to speed up the functions
+// FetchValidatingPublicKeys and Sign
+func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
+	dr.lock.Lock()
+	defer dr.lock.Unlock()
+	count := len(dr.accountsStore.PrivateKeys)
+	dr.publicKeysCache = make([][48]byte, count)
+	dr.secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
+	for i, publicKey := range dr.accountsStore.PublicKeys {
+		publicKey48 := bytesutil.ToBytes48(publicKey)
+		dr.publicKeysCache[i] = publicKey48
+		secretKey, err := bls.SecretKeyFromBytes(dr.accountsStore.PrivateKeys[i])
+		if err != nil {
+			return errors.Wrap(err, "failed to initialize keys caches from account keystore")
+		}
+		dr.secretKeysCache[publicKey48] = secretKey
+	}
+	return nil
 }
 
 // CreateAccount for a direct keymanager implementation. This utilizes
@@ -268,9 +287,11 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	log.WithFields(logrus.Fields{
 		"name": accountName,
 	}).Info("Successfully created new validator account")
-	dr.lock.Lock()
-	dr.keysCache[bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())] = validatingKey
-	dr.lock.Unlock()
+
+	err = dr.initializeKeysCachesFromKeystore()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to initialize keys caches")
+	}
 	return accountName, nil
 }
 
@@ -312,52 +333,40 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 			"name":      accountName,
 			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
 		}).Info("Successfully deleted validator account")
-		dr.lock.Lock()
-		delete(dr.keysCache, bytesutil.ToBytes48(deletedPublicKey))
-		dr.lock.Unlock()
+		err = dr.initializeKeysCachesFromKeystore()
+		if err != nil {
+			return errors.Wrap(err, "failed to initialize keys caches")
+		}
 	}
 	return nil
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	accountNames, err := dr.ValidatingAccountNames()
-	if err != nil {
-		return nil, err
-	}
-
-	// Return the public keys from the cache if they match the
-	// number of accounts from the wallet.
-	publicKeys := make([][48]byte, len(accountNames))
-	dr.lock.Lock()
-	defer dr.lock.Unlock()
-	if dr.keysCache != nil && len(dr.keysCache) == len(accountNames) {
-		var i int
-		for k := range dr.keysCache {
-			publicKeys[i] = k
-			i++
-		}
-		return publicKeys, nil
-	}
-	return nil, nil
+	dr.lock.RLock()
+	keys := dr.publicKeysCache
+	result := make([][48]byte, len(keys))
+	copy(result, keys)
+	dr.lock.RUnlock()
+	return result, nil
 }
 
 // Sign signs a message using a validator key.
 func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	rawPubKey := req.PublicKey
-	if rawPubKey == nil {
+	publicKey := req.PublicKey
+	if publicKey == nil {
 		return nil, errors.New("nil public key in request")
 	}
 	dr.lock.RLock()
-	defer dr.lock.RUnlock()
-	secretKey, ok := dr.keysCache[bytesutil.ToBytes48(rawPubKey)]
+	secretKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(publicKey)]
+	dr.lock.RUnlock()
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
-func (dr *Keymanager) initializeSecretKeysCache(cliCtx *cli.Context) error {
+func (dr *Keymanager) initializeAccountKeystore(cliCtx *cli.Context) error {
 	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.
@@ -395,16 +404,11 @@ func (dr *Keymanager) initializeSecretKeysCache(cliCtx *cli.Context) error {
 	if len(store.PublicKeys) == 0 {
 		return nil
 	}
-	dr.lock.Lock()
-	defer dr.lock.Unlock()
-	for i := 0; i < len(store.PublicKeys); i++ {
-		privKey, err := bls.SecretKeyFromBytes(store.PrivateKeys[i])
-		if err != nil {
-			return err
-		}
-		dr.keysCache[bytesutil.ToBytes48(store.PublicKeys[i])] = privKey
-	}
 	dr.accountsStore = store
+	err = dr.initializeKeysCachesFromKeystore()
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize keys caches")
+	}
 	return err
 }
 
@@ -450,6 +454,10 @@ func (dr *Keymanager) createAccountsKeystore(
 			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
 			dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, sk)
 		}
+	}
+	err = dr.initializeKeysCachesFromKeystore()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize keys caches")
 	}
 	encodedStore, err := json.MarshalIndent(dr.accountsStore, "", "\t")
 	if err != nil {
