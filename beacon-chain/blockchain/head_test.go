@@ -5,7 +5,6 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,8 +34,9 @@ func TestSaveHead_Different(t *testing.T) {
 	oldRoot := [32]byte{'A'}
 	service.head = &head{slot: 0, root: oldRoot}
 
-	newHeadBlock := &ethpb.BeaconBlock{Slot: 1}
-	newHeadSignedBlock := &ethpb.SignedBeaconBlock{Block: newHeadBlock}
+	newHeadSignedBlock := testutil.NewBeaconBlock()
+	newHeadSignedBlock.Block.Slot = 1
+	newHeadBlock := newHeadSignedBlock.Block
 
 	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := stateutil.BlockRoot(newHeadBlock)
@@ -68,11 +68,10 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	service.head = &head{slot: 0, root: oldRoot}
 
 	reorgChainParent := [32]byte{'B'}
-	newHeadBlock := &ethpb.BeaconBlock{
-		Slot:       1,
-		ParentRoot: reorgChainParent[:],
-	}
-	newHeadSignedBlock := &ethpb.SignedBeaconBlock{Block: newHeadBlock}
+	newHeadSignedBlock := testutil.NewBeaconBlock()
+	newHeadSignedBlock.Block.Slot = 1
+	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
+	newHeadBlock := newHeadSignedBlock.Block
 
 	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := stateutil.BlockRoot(newHeadBlock)

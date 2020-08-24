@@ -17,6 +17,6 @@ func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 	chainService := setupBeaconChain(t, db, sc)
 	chainService.genesisTime = time.Now()
 
-	assert.Equal(t, true, chainService.verifyCheckpointEpoch(&ethpb.Checkpoint{}))
+	assert.Equal(t, true, chainService.verifyCheckpointEpoch(&ethpb.Checkpoint{Root: make([]byte, 32)}))
 	assert.Equal(t, false, chainService.verifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 1}))
 }
