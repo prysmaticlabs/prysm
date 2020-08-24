@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -160,7 +159,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			genericHTR, err := ssz.HashTreeRoot(testState.InnerStateUnsafe())
+			genericHTR, err := testState.InnerStateUnsafe().HashTreeRoot()
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
@@ -231,7 +230,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			genericHTR, err := ssz.HashTreeRoot(testState.InnerStateUnsafe())
+			genericHTR, err := testState.InnerStateUnsafe().HashTreeRoot()
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}

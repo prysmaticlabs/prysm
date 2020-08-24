@@ -55,7 +55,8 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 0
 	root, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
@@ -139,12 +140,9 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot:       j + 1,
-				ParentRoot: parentRoot,
-			},
-		}
+		blocks[j-i] = testutil.NewBeaconBlock()
+		blocks[j-i].Block.Slot = j + 1
+		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
 		previousRoot, err = stateutil.BlockRoot(blocks[j-i].Block)
 		require.NoError(t, err)

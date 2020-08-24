@@ -81,6 +81,8 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 
 	if hasError {
 		w.WriteHeader(http.StatusServiceUnavailable)
+	} else {
+		w.WriteHeader(http.StatusOK)
 	}
 
 	// Handle plain text content.
