@@ -102,6 +102,57 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
 
+func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
+	db, _ := dbtest.SetupDB(t)
+	p1 := p2ptest.NewTestP2P(t)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
+	r := &Service{
+		p2p:                  p1,
+		db:                   db,
+		chain:                &mock.ChainService{Genesis: roughtime.Now()},
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		attPool:              attestations.NewPool(),
+		stateSummaryCache:    cache.NewStateSummaryCache(),
+	}
+
+	a := &ethpb.AggregateAttestationAndProof{
+		Aggregate: &ethpb.Attestation{
+			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
+			AggregationBits: bitfield.Bitlist{0x02},
+			Data: &ethpb.AttestationData{
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				BeaconBlockRoot: make([]byte, 32),
+			},
+		},
+		SelectionProof: make([]byte, 96),
+	}
+
+	b := testutil.NewBeaconBlock()
+	r32, err := stateutil.BlockRoot(b.Block)
+	require.NoError(t, err)
+	s := testutil.NewBeaconState()
+	require.NoError(t, r.db.SaveBlock(context.Background(), b))
+	require.NoError(t, r.db.SaveState(context.Background(), s, r32))
+
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a, Signature: make([]byte, 96)}}
+	require.NoError(t, r.processPendingAtts(context.Background()))
+
+	assert.Equal(t, false, p1.BroadcastCalled, "Broadcasted bad aggregate")
+	// Clear pool.
+	err = r.attPool.DeleteUnaggregatedAttestation(a.Aggregate)
+	require.NoError(t, err)
+
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a, Signature: make([]byte, 96)}}
+	// Make the signature a zero sig
+	r.blkRootToPendingAtts[r32][0].Signature[0] = 0xC0
+	require.NoError(t, r.processPendingAtts(context.Background()))
+
+	assert.Equal(t, true, p1.BroadcastCalled, "Could not broadcast the good aggregate")
+}
+
 func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db, _ := dbtest.SetupDB(t)
