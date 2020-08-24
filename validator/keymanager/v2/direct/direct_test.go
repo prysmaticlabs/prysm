@@ -7,9 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -17,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestDirectKeymanager_CreateAccount(t *testing.T) {
@@ -247,7 +246,6 @@ func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 }
 
 func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
-	hook := logTest.NewGlobal()
 	password := "Passw03rdz293**%#2"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
@@ -277,7 +275,6 @@ func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 		_, ok := dr.keysCache[bytesutil.ToBytes48(keyBytes)]
 		require.Equal(t, true, ok)
 	}
-	testutil.AssertLogsContain(t, hook, "Reloaded validator keys")
 
 	// Check the key was added to the global accounts store.
 	require.Equal(t, numAccounts, len(dr.accountsStore.PublicKeys))
