@@ -25,7 +25,6 @@ import (
 )
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
-
 	p := p2ptest.NewTestP2P(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableDynamicCommitteeSubnets: true})
 	defer resetCfg()
@@ -79,9 +78,11 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		Data: &eth.AttestationData{
 			Slot:            0,
 			BeaconBlockRoot: root[:],
-			Target:          &eth.Checkpoint{},
+			Target:          &eth.Checkpoint{Root: make([]byte, 32)},
+			Source:          &eth.Checkpoint{Root: make([]byte, 32)},
 		},
 		AggregationBits: bitfield.Bitlist{0b0101},
+		Signature:       make([]byte, 96),
 	}
 	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)

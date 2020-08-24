@@ -39,12 +39,9 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: genesis[:],
-			Slot:       40,
-		},
-	}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.ParentRoot = genesis[:]
+	blk.Block.Slot = 40
 
 	root, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -19,7 +20,7 @@ func FakeDeposits(n uint64) []*ethpb.Eth1Data {
 	for i := uint64(0); i < n; i++ {
 		deposits[i] = &ethpb.Eth1Data{
 			DepositCount: 1,
-			DepositRoot:  []byte("root"),
+			DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
 		}
 	}
 	return deposits
@@ -36,7 +37,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
-				DepositRoot:  []byte("root"),
+				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
 			},
 			hasSupport:         true,
 			votingPeriodLength: 7,
@@ -44,7 +45,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
-				DepositRoot:  []byte("root"),
+				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
 			},
 			hasSupport:         false,
 			votingPeriodLength: 8,
@@ -52,7 +53,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
-				DepositRoot:  []byte("root"),
+				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
 			},
 			hasSupport:         false,
 			votingPeriodLength: 10,

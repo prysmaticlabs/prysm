@@ -20,6 +20,11 @@ func DeepEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, m
 	assertions.DeepEqual(tb.Fatalf, expected, actual, msg...)
 }
 
+// DeepNotEqual compares values using DeepEqual.
+func DeepNotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
+	assertions.DeepNotEqual(tb.Fatalf, expected, actual, msg...)
+}
+
 // NoError asserts that error is nil.
 func NoError(tb assertions.AssertionTestingTB, err error, msg ...interface{}) {
 	assertions.NoError(tb.Fatalf, err, msg...)
