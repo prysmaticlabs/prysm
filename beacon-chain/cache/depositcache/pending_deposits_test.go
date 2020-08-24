@@ -29,28 +29,14 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 	assert.Equal(t, 0, len(dc.pendingDeposits))
 }
 
-func makeDepositProof() [][]byte {
-	proof := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
-	for i := range proof {
-		proof[i] = make([]byte, 32)
-	}
-	return proof
-}
-
 func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := DepositCache{}
-	proof1 := makeDepositProof()
+	proof1 := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	proof1[0] = bytesutil.PadTo([]byte{'A'}, 32)
-	proof2 := makeDepositProof()
+	proof2 := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	proof2[0] = bytesutil.PadTo([]byte{'A'}, 32)
-	data := &ethpb.Deposit_Data{
-		PublicKey:             make([]byte, 48),
-		WithdrawalCredentials: make([]byte, 32),
-		Amount:                0,
-		Signature:             make([]byte, 96),
-	}
-	depToRemove := &ethpb.Deposit{Proof: proof1, Data: data}
-	otherDep := &ethpb.Deposit{Proof: proof2, Data: data}
+	depToRemove := &ethpb.Deposit{Proof: proof1}
+	otherDep := &ethpb.Deposit{Proof: proof2}
 	db.pendingDeposits = []*dbpb.DepositContainer{
 		{Deposit: depToRemove, Index: 1},
 		{Deposit: otherDep, Index: 5},
@@ -71,15 +57,9 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 
 func TestPendingDeposit_RoundTrip(t *testing.T) {
 	dc := DepositCache{}
-	proof := makeDepositProof()
+	proof := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	proof[0] = bytesutil.PadTo([]byte{'A'}, 32)
-	data := &ethpb.Deposit_Data{
-		PublicKey:             make([]byte, 48),
-		WithdrawalCredentials: make([]byte, 32),
-		Amount:                0,
-		Signature:             make([]byte, 96),
-	}
-	dep := &ethpb.Deposit{Proof: proof, Data: data}
+	dep := &ethpb.Deposit{Proof: proof}
 	dc.InsertPendingDeposit(context.Background(), dep, 111, 100, [32]byte{})
 	dc.RemovePendingDeposit(context.Background(), dep)
 	assert.Equal(t, 0, len(dc.pendingDeposits), "Failed to insert & delete a pending deposit")
