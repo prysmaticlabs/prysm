@@ -2,6 +2,7 @@ package attestations
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 
@@ -228,23 +229,64 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x13} /* 0b00010011 */}
+	ad1 := &ethpb.AttestationData{
+		Slot:            0,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: make([]byte, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+	att1 := &ethpb.Attestation{Data: ad1, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x13} /* 0b00010011 */}
 	got, err := s.seen(att1)
 	require.NoError(t, err)
 	assert.Equal(t, false, got)
 
-	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
+	att2 := &ethpb.Attestation{Data: ad1, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
 	got, err = s.seen(att2)
 	require.NoError(t, err)
 	assert.Equal(t, false, got)
 
-	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
+	att3 := &ethpb.Attestation{Data: ad1, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
 	got, err = s.seen(att3)
 	require.NoError(t, err)
 	assert.Equal(t, true, got)
 }
 
 func TestService_seen(t *testing.T) {
+	ad1 := &ethpb.AttestationData{
+		Slot:            1,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: make([]byte, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+
+	ad2 := &ethpb.AttestationData{
+		Slot:            2,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: make([]byte, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+
 	// Attestation are checked in order of this list.
 	tests := []struct {
 		att  *ethpb.Attestation
@@ -253,42 +295,42 @@ func TestService_seen(t *testing.T) {
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11011},
-				Data:            &ethpb.AttestationData{Slot: 1},
+				Data:            ad1,
 			},
 			want: false,
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11011},
-				Data:            &ethpb.AttestationData{Slot: 1},
+				Data:            ad1,
 			},
 			want: true, // Exact same attestation should return true
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b10101},
-				Data:            &ethpb.AttestationData{Slot: 1},
+				Data:            ad1,
 			},
 			want: false, // Haven't seen the bit at index 2 yet.
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11111},
-				Data:            &ethpb.AttestationData{Slot: 1},
+				Data:            ad1,
 			},
 			want: true, // We've full committee at this point.
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11111},
-				Data:            &ethpb.AttestationData{Slot: 2},
+				Data:            ad2,
 			},
 			want: false, // Different root is different bitlist.
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11111001},
-				Data:            &ethpb.AttestationData{Slot: 1},
+				Data:            ad1,
 			},
 			want: false, // Sanity test that an attestation of different lengths does not panic.
 		},
@@ -297,9 +339,11 @@ func TestService_seen(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	for _, tt := range tests {
-		got, err := s.seen(tt.att)
-		require.NoError(t, err)
-		assert.Equal(t, tt.want, got)
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			got, err := s.seen(tt.att)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
 	}
 }

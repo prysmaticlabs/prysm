@@ -44,7 +44,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 		GenesisTimeFetcher: m,
 		StateGen:           stategen.New(db, sc),
 	}
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, headState.SetRandaoMixes(mixes))
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 		GenesisTimeFetcher: m,
 		StateGen:           stategen.New(db, sc),
 	}
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)

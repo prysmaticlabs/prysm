@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -25,9 +24,8 @@ func TestServer_GetBeaconState(t *testing.T) {
 	st := testutil.NewBeaconState()
 	slot := uint64(100)
 	require.NoError(t, st.SetSlot(slot))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
-		Slot: slot,
-	}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = slot
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
