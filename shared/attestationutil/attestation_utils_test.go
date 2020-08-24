@@ -60,7 +60,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: make([]byte, 96),
+				Signature: nil,
 			},
 			want: "expected non-empty",
 		},
@@ -71,7 +71,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: make([]byte, 96),
+				Signature: nil,
 			},
 			want: "indices count exceeds",
 		},
@@ -82,7 +82,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: make([]byte, 96),
+				Signature: nil,
 			},
 			want: "not uniquely sorted",
 		},
@@ -93,7 +93,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: make([]byte, 96),
+				Signature: nil,
 			},
 		},
 	}
