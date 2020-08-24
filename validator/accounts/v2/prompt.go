@@ -21,6 +21,7 @@ const (
 	walletDirPromptText                   = "Enter a wallet directory"
 	selectAccountsDeletePromptText        = "Select the account(s) you would like to delete"
 	selectAccountsBackupPromptText        = "Select the account(s) you wish to backup"
+	selectAccountsDepositPromptText       = "Select the validating public keys you wish to submit deposits for"
 	selectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
 )
 
