@@ -151,7 +151,6 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	require.NoError(t, r.processPendingAtts(context.Background()))
 
 	assert.Equal(t, true, p1.BroadcastCalled, "Could not broadcast the good aggregate")
-
 }
 
 func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
