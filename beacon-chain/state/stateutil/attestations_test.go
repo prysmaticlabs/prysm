@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -23,7 +24,7 @@ func TestAttestationDataRoot_EqualGeneric(t *testing.T) {
 			Epoch: 9,
 		},
 	}
-	genericHtr, err := attData.HashTreeRoot()
+	genericHtr, err := ssz.HashTreeRoot(attData)
 	require.NoError(t, err)
 	dataHtr, err := AttestationDataRoot(attData)
 	require.NoError(t, err)
@@ -49,7 +50,7 @@ func BenchmarkAttestationDataRoot(b *testing.B) {
 	}
 	b.Run("generic", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, err := attData.HashTreeRoot()
+			_, err := ssz.HashTreeRoot(attData)
 			require.NoError(b, err)
 		}
 	})

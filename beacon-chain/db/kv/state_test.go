@@ -132,10 +132,12 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
-	blk := testutil.NewBeaconBlock()
-	blk.Block.ParentRoot = genesis[:]
-	blk.Block.Slot = 100
-
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ParentRoot: genesis[:],
+			Slot:       100,
+		},
+	}
 	require.NoError(t, db.SaveBlock(ctx, blk))
 
 	finalizedBlockRoot, err := stateutil.BlockRoot(blk.Block)
@@ -157,9 +159,12 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
-	blk := testutil.NewBeaconBlock()
-	blk.Block.ParentRoot = genesis[:]
-	blk.Block.Slot = 100
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ParentRoot: genesis[:],
+			Slot:       100,
+		},
+	}
 	require.NoError(t, db.SaveBlock(ctx, blk))
 
 	headBlockRoot, err := stateutil.BlockRoot(blk.Block)
@@ -175,8 +180,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	db := setupDB(t)
 
-	b := testutil.NewBeaconBlock()
-	b.Block.Slot = 1
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))
@@ -185,7 +189,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	s0 := st.InnerStateUnsafe()
 	require.NoError(t, db.SaveState(context.Background(), st, r))
 
-	b.Block.Slot = 100
+	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
 	r1, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))
@@ -194,7 +198,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	s1 := st.InnerStateUnsafe()
 	require.NoError(t, db.SaveState(context.Background(), st, r1))
 
-	b.Block.Slot = 1000
+	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
 	r2, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))
@@ -225,8 +229,7 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
-	b := testutil.NewBeaconBlock()
-	b.Block.Slot = 1
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))

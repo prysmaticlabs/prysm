@@ -85,14 +85,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 				if rootsYaml.SigningRoot == "" {
 					return
 				}
-
-				var signingRoot [32]byte
-				if v, ok := object.(fssz.HashRoot); ok {
-					signingRoot, err = v.HashTreeRoot()
-				} else {
-					t.Fatal("object does not meet fssz.HashRoot")
-				}
-
+				signingRoot, err := ssz.HashTreeRoot(object)
 				if err != nil {
 					t.Fatal(err)
 				}
