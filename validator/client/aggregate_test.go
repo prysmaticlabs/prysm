@@ -6,7 +6,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -41,7 +40,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 		gomock.Any(), // ctx
@@ -49,28 +48,20 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				},
-				Signature:       make([]byte, 96),
-				AggregationBits: make([]byte, 1),
-			},
-			SelectionProof: make([]byte, 96),
+			Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+			SelectionProof:  nil,
 		},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
-	).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
+	).Return(&ethpb.SignedAggregateSubmitResponse{}, nil)
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
 }
@@ -97,19 +88,12 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		&ethpb.DomainRequest{Epoch: 0, Domain: params.BeaconConfig().DomainAggregateAndProof[:]},
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	agg := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 0,
-		Aggregate: &ethpb.Attestation{
-			AggregationBits: bitfield.NewBitlist(1), Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			},
-			Signature: make([]byte, 96),
-		},
-		SelectionProof: make([]byte, 96),
+		Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+		SelectionProof:  nil,
 	}
 	sig, err := validator.aggregateAndProofSig(context.Background(), validatorPubKey, agg)
 	require.NoError(t, err)
