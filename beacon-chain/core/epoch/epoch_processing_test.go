@@ -1,7 +1,6 @@
 package epoch_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -288,9 +287,9 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	assert.Equal(t, newS.Slashings()[ce], newS.Slashings()[ne], "Unexpected slashed balance")
 
 	// Verify randao is correctly updated in the right position.
-	if mix, err := newS.RandaoMixAtIndex(ne); err != nil || bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("latest RANDAO still zero hashes")
-	}
+	mix, err := newS.RandaoMixAtIndex(ne)
+	assert.NoError(t, err)
+	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
 
 	// Verify historical root accumulator was appended.
 	assert.Equal(t, 1, len(newS.HistoricalRoots()), "Unexpected slashed balance")
@@ -446,14 +445,8 @@ func buildState(t testing.TB, slot uint64, validatorCount uint64) *state.BeaconS
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
 	s := testutil.NewBeaconState()
-	if err := s.SetSlot(slot); err != nil {
-		t.Error(err)
-	}
-	if err := s.SetBalances(validatorBalances); err != nil {
-		t.Error(err)
-	}
-	if err := s.SetValidators(validators); err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, s.SetSlot(slot))
+	assert.NoError(t, s.SetBalances(validatorBalances))
+	assert.NoError(t, s.SetValidators(validators))
 	return s
 }
