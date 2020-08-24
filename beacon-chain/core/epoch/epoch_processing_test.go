@@ -262,7 +262,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 }
 
 func TestProcessFinalUpdates_CanProcess(t *testing.T) {
-	s := buildState(params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
+	s := buildState(t, params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
 	require.NoError(t, s.SetEth1DataVotes([]*ethpb.Eth1Data{}))
@@ -419,7 +419,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 }
 
-func buildState(slot uint64, validatorCount uint64) *state.BeaconState {
+func buildState(t testing.TB, slot uint64, validatorCount uint64) *state.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -447,13 +447,13 @@ func buildState(slot uint64, validatorCount uint64) *state.BeaconState {
 	}
 	s := testutil.NewBeaconState()
 	if err := s.SetSlot(slot); err != nil {
-		panic(err)
+		t.Error(err)
 	}
 	if err := s.SetBalances(validatorBalances); err != nil {
-		panic(err)
+		t.Error(err)
 	}
 	if err := s.SetValidators(validators); err != nil {
-		panic(err)
+		t.Error(err)
 	}
 	return s
 }
