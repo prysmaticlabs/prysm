@@ -26,7 +26,7 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 	assert.NoError(t, c.MarkInProgress(req))
 
 	res := &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 5},
+		Target: &ethpb.Checkpoint{Epoch: 5, Root: make([]byte, 32)},
 	}
 
 	assert.NoError(t, c.Put(ctx, req, res))
