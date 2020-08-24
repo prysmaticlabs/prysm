@@ -129,9 +129,9 @@ func (f *blocksFetcher) bestFinalizedSlot() uint64 {
 	return helpers.StartSlot(finalizedEpoch)
 }
 
-// bestNonFinalizedSlot returns the highest non-finalized slot of the majority of connected peers.
+// bestNonFinalizedSlot returns the highest non-finalized slot of enough number of connected peers.
 func (f *blocksFetcher) bestNonFinalizedSlot() uint64 {
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	targetEpoch, _ := f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+	targetEpoch, _ := f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers*2, headEpoch)
 	return helpers.StartSlot(targetEpoch)
 }

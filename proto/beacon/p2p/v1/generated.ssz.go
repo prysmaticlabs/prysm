@@ -54,15 +54,24 @@ func (s *Status) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (0) 'ForkDigest'
+	if cap(s.ForkDigest) == 0 {
+		s.ForkDigest = make([]byte, 0, len(buf[0:4]))
+	}
 	s.ForkDigest = append(s.ForkDigest, buf[0:4]...)
 
 	// Field (1) 'FinalizedRoot'
+	if cap(s.FinalizedRoot) == 0 {
+		s.FinalizedRoot = make([]byte, 0, len(buf[4:36]))
+	}
 	s.FinalizedRoot = append(s.FinalizedRoot, buf[4:36]...)
 
 	// Field (2) 'FinalizedEpoch'
 	s.FinalizedEpoch = ssz.UnmarshallUint64(buf[36:44])
 
 	// Field (3) 'HeadRoot'
+	if cap(s.HeadRoot) == 0 {
+		s.HeadRoot = make([]byte, 0, len(buf[44:76]))
+	}
 	s.HeadRoot = append(s.HeadRoot, buf[44:76]...)
 
 	// Field (4) 'HeadSlot'
@@ -241,6 +250,9 @@ func (b *BeaconBlocksByRootRequest) UnmarshalSSZ(buf []byte) error {
 		}
 		b.BlockRoots = make([][]byte, num)
 		for ii := 0; ii < num; ii++ {
+			if cap(b.BlockRoots[ii]) == 0 {
+				b.BlockRoots[ii] = make([]byte, 0, len(buf[ii*32:(ii+1)*32]))
+			}
 			b.BlockRoots[ii] = append(b.BlockRoots[ii], buf[ii*32:(ii+1)*32]...)
 		}
 	}
@@ -303,7 +315,7 @@ func (e *ErrorResponse) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	offset += len(e.Message)
 
 	// Field (0) 'Message'
-	if len(e.Message) != 0 {
+	if len(e.Message) > 256 {
 		err = ssz.ErrBytesLength
 		return
 	}
@@ -331,6 +343,12 @@ func (e *ErrorResponse) UnmarshalSSZ(buf []byte) error {
 	// Field (0) 'Message'
 	{
 		buf = tail[o0:]
+		if len(buf) > 256 {
+			return ssz.ErrBytesLength
+		}
+		if cap(e.Message) == 0 {
+			e.Message = make([]byte, 0, len(buf))
+		}
 		e.Message = append(e.Message, buf...)
 	}
 	return err
@@ -356,7 +374,7 @@ func (e *ErrorResponse) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Message'
-	if len(e.Message) != 0 {
+	if len(e.Message) > 256 {
 		err = ssz.ErrBytesLength
 		return
 	}
@@ -404,9 +422,15 @@ func (e *ENRForkID) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (0) 'CurrentForkDigest'
+	if cap(e.CurrentForkDigest) == 0 {
+		e.CurrentForkDigest = make([]byte, 0, len(buf[0:4]))
+	}
 	e.CurrentForkDigest = append(e.CurrentForkDigest, buf[0:4]...)
 
 	// Field (1) 'NextForkVersion'
+	if cap(e.NextForkVersion) == 0 {
+		e.NextForkVersion = make([]byte, 0, len(buf[4:8]))
+	}
 	e.NextForkVersion = append(e.NextForkVersion, buf[4:8]...)
 
 	// Field (2) 'NextForkEpoch'
@@ -485,6 +509,9 @@ func (m *MetaData) UnmarshalSSZ(buf []byte) error {
 	m.SeqNumber = ssz.UnmarshallUint64(buf[0:8])
 
 	// Field (1) 'Attnets'
+	if cap(m.Attnets) == 0 {
+		m.Attnets = make([]byte, 0, len(buf[8:16]))
+	}
 	m.Attnets = append(m.Attnets, buf[8:16]...)
 
 	return err
@@ -776,6 +803,9 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	b.GenesisTime = ssz.UnmarshallUint64(buf[0:8])
 
 	// Field (1) 'GenesisValidatorsRoot'
+	if cap(b.GenesisValidatorsRoot) == 0 {
+		b.GenesisValidatorsRoot = make([]byte, 0, len(buf[8:40]))
+	}
 	b.GenesisValidatorsRoot = append(b.GenesisValidatorsRoot, buf[8:40]...)
 
 	// Field (2) 'Slot'
@@ -800,12 +830,18 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	// Field (5) 'BlockRoots'
 	b.BlockRoots = make([][]byte, 8192)
 	for ii := 0; ii < 8192; ii++ {
+		if cap(b.BlockRoots[ii]) == 0 {
+			b.BlockRoots[ii] = make([]byte, 0, len(buf[176:262320][ii*32:(ii+1)*32]))
+		}
 		b.BlockRoots[ii] = append(b.BlockRoots[ii], buf[176:262320][ii*32:(ii+1)*32]...)
 	}
 
 	// Field (6) 'StateRoots'
 	b.StateRoots = make([][]byte, 8192)
 	for ii := 0; ii < 8192; ii++ {
+		if cap(b.StateRoots[ii]) == 0 {
+			b.StateRoots[ii] = make([]byte, 0, len(buf[262320:524464][ii*32:(ii+1)*32]))
+		}
 		b.StateRoots[ii] = append(b.StateRoots[ii], buf[262320:524464][ii*32:(ii+1)*32]...)
 	}
 
@@ -843,6 +879,9 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	// Field (13) 'RandaoMixes'
 	b.RandaoMixes = make([][]byte, 65536)
 	for ii := 0; ii < 65536; ii++ {
+		if cap(b.RandaoMixes[ii]) == 0 {
+			b.RandaoMixes[ii] = make([]byte, 0, len(buf[524560:2621712][ii*32:(ii+1)*32]))
+		}
 		b.RandaoMixes[ii] = append(b.RandaoMixes[ii], buf[524560:2621712][ii*32:(ii+1)*32]...)
 	}
 
@@ -863,6 +902,9 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (17) 'JustificationBits'
+	if cap(b.JustificationBits) == 0 {
+		b.JustificationBits = make([]byte, 0, len(buf[2687256:2687257]))
+	}
 	b.JustificationBits = append(b.JustificationBits, buf[2687256:2687257]...)
 
 	// Field (18) 'PreviousJustifiedCheckpoint'
@@ -898,6 +940,9 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		}
 		b.HistoricalRoots = make([][]byte, num)
 		for ii := 0; ii < num; ii++ {
+			if cap(b.HistoricalRoots[ii]) == 0 {
+				b.HistoricalRoots[ii] = make([]byte, 0, len(buf[ii*32:(ii+1)*32]))
+			}
 			b.HistoricalRoots[ii] = append(b.HistoricalRoots[ii], buf[ii*32:(ii+1)*32]...)
 		}
 	}
@@ -1293,9 +1338,15 @@ func (f *Fork) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (0) 'PreviousVersion'
+	if cap(f.PreviousVersion) == 0 {
+		f.PreviousVersion = make([]byte, 0, len(buf[0:4]))
+	}
 	f.PreviousVersion = append(f.PreviousVersion, buf[0:4]...)
 
 	// Field (1) 'CurrentVersion'
+	if cap(f.CurrentVersion) == 0 {
+		f.CurrentVersion = make([]byte, 0, len(buf[4:8]))
+	}
 	f.CurrentVersion = append(f.CurrentVersion, buf[4:8]...)
 
 	// Field (2) 'Epoch'
@@ -1414,6 +1465,9 @@ func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
 		if err = ssz.ValidateBitlist(buf, 2048); err != nil {
 			return err
 		}
+		if cap(p.AggregationBits) == 0 {
+			p.AggregationBits = make([]byte, 0, len(buf))
+		}
 		p.AggregationBits = append(p.AggregationBits, buf...)
 	}
 	return err
@@ -1505,12 +1559,18 @@ func (h *HistoricalBatch) UnmarshalSSZ(buf []byte) error {
 	// Field (0) 'BlockRoots'
 	h.BlockRoots = make([][]byte, 8192)
 	for ii := 0; ii < 8192; ii++ {
+		if cap(h.BlockRoots[ii]) == 0 {
+			h.BlockRoots[ii] = make([]byte, 0, len(buf[0:262144][ii*32:(ii+1)*32]))
+		}
 		h.BlockRoots[ii] = append(h.BlockRoots[ii], buf[0:262144][ii*32:(ii+1)*32]...)
 	}
 
 	// Field (1) 'StateRoots'
 	h.StateRoots = make([][]byte, 8192)
 	for ii := 0; ii < 8192; ii++ {
+		if cap(h.StateRoots[ii]) == 0 {
+			h.StateRoots[ii] = make([]byte, 0, len(buf[262144:524288][ii*32:(ii+1)*32]))
+		}
 		h.StateRoots[ii] = append(h.StateRoots[ii], buf[262144:524288][ii*32:(ii+1)*32]...)
 	}
 
@@ -1605,9 +1665,15 @@ func (s *SigningData) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (0) 'ObjectRoot'
+	if cap(s.ObjectRoot) == 0 {
+		s.ObjectRoot = make([]byte, 0, len(buf[0:32]))
+	}
 	s.ObjectRoot = append(s.ObjectRoot, buf[0:32]...)
 
 	// Field (1) 'Domain'
+	if cap(s.Domain) == 0 {
+		s.Domain = make([]byte, 0, len(buf[32:64]))
+	}
 	s.Domain = append(s.Domain, buf[32:64]...)
 
 	return err
@@ -1681,9 +1747,15 @@ func (f *ForkData) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (0) 'CurrentVersion'
+	if cap(f.CurrentVersion) == 0 {
+		f.CurrentVersion = make([]byte, 0, len(buf[0:4]))
+	}
 	f.CurrentVersion = append(f.CurrentVersion, buf[0:4]...)
 
 	// Field (1) 'GenesisValidatorsRoot'
+	if cap(f.GenesisValidatorsRoot) == 0 {
+		f.GenesisValidatorsRoot = make([]byte, 0, len(buf[4:36]))
+	}
 	f.GenesisValidatorsRoot = append(f.GenesisValidatorsRoot, buf[4:36]...)
 
 	return err
@@ -1717,108 +1789,6 @@ func (f *ForkData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		return
 	}
 	hh.PutBytes(f.GenesisValidatorsRoot)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the SignedAggregateAndProof object
-func (s *SignedAggregateAndProof) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(s)
-}
-
-// MarshalSSZTo ssz marshals the SignedAggregateAndProof object to a target array
-func (s *SignedAggregateAndProof) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-	offset := int(100)
-
-	// Offset (0) 'Message'
-	dst = ssz.WriteOffset(dst, offset)
-	if s.Message == nil {
-		s.Message = new(v1alpha1.AggregateAttestationAndProof)
-	}
-	offset += s.Message.SizeSSZ()
-
-	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, s.Signature...)
-
-	// Field (0) 'Message'
-	if dst, err = s.Message.MarshalSSZTo(dst); err != nil {
-		return
-	}
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the SignedAggregateAndProof object
-func (s *SignedAggregateAndProof) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 100 {
-		return ssz.ErrSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'Message'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return ssz.ErrOffset
-	}
-
-	// Field (1) 'Signature'
-	s.Signature = append(s.Signature, buf[4:100]...)
-
-	// Field (0) 'Message'
-	{
-		buf = tail[o0:]
-		if s.Message == nil {
-			s.Message = new(v1alpha1.AggregateAttestationAndProof)
-		}
-		if err = s.Message.UnmarshalSSZ(buf); err != nil {
-			return err
-		}
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the SignedAggregateAndProof object
-func (s *SignedAggregateAndProof) SizeSSZ() (size int) {
-	size = 100
-
-	// Field (0) 'Message'
-	if s.Message == nil {
-		s.Message = new(v1alpha1.AggregateAttestationAndProof)
-	}
-	size += s.Message.SizeSSZ()
-
-	return
-}
-
-// HashTreeRoot ssz hashes the SignedAggregateAndProof object
-func (s *SignedAggregateAndProof) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(s)
-}
-
-// HashTreeRootWith ssz hashes the SignedAggregateAndProof object with a hasher
-func (s *SignedAggregateAndProof) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'Message'
-	if err = s.Message.HashTreeRootWith(hh); err != nil {
-		return
-	}
-
-	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(s.Signature)
 
 	hh.Merkleize(indx)
 	return

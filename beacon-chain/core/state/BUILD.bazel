@@ -69,6 +69,7 @@ go_test(
         "//shared/attestationutil:go_default_library",
         "//shared/benchutil:go_default_library",
         "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

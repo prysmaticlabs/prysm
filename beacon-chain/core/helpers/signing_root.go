@@ -49,19 +49,14 @@ func ComputeDomainAndSign(state *state.BeaconState, epoch uint64, obj interface{
 //        domain=domain,
 //    ))
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
+	if object == nil {
+		return [32]byte{}, errors.New("cannot compute signing root of nil")
+	}
 	return signingData(func() ([32]byte, error) {
 		if v, ok := object.(fssz.HashRoot); ok {
 			return v.HashTreeRoot()
 		}
-		switch t := object.(type) {
-		case *ethpb.BeaconBlock:
-			return stateutil.BlockRoot(t)
-		case *ethpb.AttestationData:
-			return stateutil.AttestationDataRoot(t)
-		default:
-			// utilise generic ssz library
-			return ssz.HashTreeRoot(object)
-		}
+		return ssz.HashTreeRoot(object)
 	}, domain)
 }
 
@@ -229,10 +224,10 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //        genesis_validators_root=genesis_validators_root,
 //    ))
 func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
-	r, err := ssz.HashTreeRoot(&pb.ForkData{
+	r, err := (&pb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
-	})
+	}).HashTreeRoot()
 	if err != nil {
 		return [32]byte{}, err
 	}

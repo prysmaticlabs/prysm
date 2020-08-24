@@ -17,6 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -51,7 +52,8 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
-		DepositRoot:  []byte{2},
+		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		BlockHash:    make([]byte, 32),
 	}
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
 	e := beaconState.Eth1Data()
@@ -75,17 +77,12 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          beaconState.Slot() + 1,
-			ParentRoot:    parentRoot[:],
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: randaoReveal,
-				Eth1Data:     eth1Data,
-			},
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.ProposerIndex = proposerIdx
+	block.Block.Slot = beaconState.Slot() + 1
+	block.Block.ParentRoot = parentRoot[:]
+	block.Block.Body.RandaoReveal = randaoReveal
+	block.Block.Body.Eth1Data = eth1Data
 
 	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	require.NoError(t, err)
@@ -113,7 +110,8 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
-		DepositRoot:  []byte{2},
+		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		BlockHash:    make([]byte, 32),
 	}
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
 	e := beaconState.Eth1Data()
@@ -134,17 +132,12 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          beaconState.Slot() + 1,
-			ParentRoot:    parentRoot[:],
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: randaoReveal,
-				Eth1Data:     eth1Data,
-			},
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.ProposerIndex = proposerIdx
+	block.Block.Slot = beaconState.Slot() + 1
+	block.Block.ParentRoot = parentRoot[:]
+	block.Block.Body.RandaoReveal = randaoReveal
+	block.Block.Body.Eth1Data = eth1Data
 
 	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	require.NoError(t, err)
@@ -168,8 +161,24 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	require.NoError(t, err)
 	slashing := &ethpb.ProposerSlashing{
-		Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch}},
-		Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch * 2}},
+		Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:       params.BeaconConfig().SlotsPerEpoch,
+				ParentRoot: make([]byte, 32),
+				StateRoot:  make([]byte, 32),
+				BodyRoot:   make([]byte, 32),
+			},
+			Signature: make([]byte, 96),
+		},
+		Header_2: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:       params.BeaconConfig().SlotsPerEpoch * 2,
+				ParentRoot: make([]byte, 32),
+				StateRoot:  make([]byte, 32),
+				BodyRoot:   make([]byte, 32),
+			},
+			Signature: make([]byte, 96),
+		},
 	}
 	block.Block.Body.ProposerSlashings = []*ethpb.ProposerSlashing{slashing}
 
@@ -192,10 +201,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{Epoch: 0},
-			Source: &ethpb.Checkpoint{Epoch: 0},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AggregationBits: bitfield.NewBitlist(3),
+		Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
 	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
@@ -211,7 +222,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
 	require.NoError(t, err)
 
-	want := "could not process block attestations"
+	want := "could not verify attestations"
 	_, err = state.ProcessBlock(context.Background(), beaconState, block)
 	assert.ErrorContains(t, want, err)
 }
@@ -225,15 +236,21 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
+					ParentRoot:    make([]byte, 32),
+					StateRoot:     make([]byte, 32),
+					BodyRoot:      make([]byte, 32),
 				},
-				Signature: []byte("A"),
+				Signature: bytesutil.PadTo([]byte("A"), 96),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
+					ParentRoot:    make([]byte, 32),
+					StateRoot:     make([]byte, 32),
+					BodyRoot:      make([]byte, 32),
 				},
-				Signature: []byte("B"),
+				Signature: bytesutil.PadTo([]byte("B"), 96),
 			},
 		},
 	}
@@ -241,17 +258,19 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0},
-					Target: &ethpb.Checkpoint{Epoch: 0},
+					Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				},
 				AttestingIndices: []uint64{0, 1},
+				Signature:        make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1},
-					Target: &ethpb.Checkpoint{Epoch: 0},
+					Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				},
 				AttestingIndices: []uint64{0, 1},
+				Signature:        make([]byte, 96),
 			},
 		},
 	}
@@ -262,7 +281,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
@@ -279,6 +298,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		BodyRoot:   bodyRoot[:],
+		StateRoot:  make([]byte, 32),
 	})
 	require.NoError(t, err)
 	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
@@ -288,14 +308,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			ParentRoot: parentRoot[:],
 			Slot:       1,
 			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal:      []byte{},
+				RandaoReveal:      make([]byte, 96),
 				ProposerSlashings: proposerSlashings,
 				AttesterSlashings: attesterSlashings,
 				Attestations:      attestations,
 				VoluntaryExits:    exits,
 				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: []byte{2},
-					BlockHash:   []byte{3},
+					DepositRoot: bytesutil.PadTo([]byte{2}, 32),
+					BlockHash:   bytesutil.PadTo([]byte{3}, 32),
 				},
 			},
 		},
@@ -342,7 +362,9 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
-			StateRoot:     []byte("A"),
+			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+			ParentRoot:    make([]byte, 32),
+			BodyRoot:      make([]byte, 32),
 		},
 	}
 	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
@@ -352,7 +374,9 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
-			StateRoot:     []byte("B"),
+			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+			ParentRoot:    make([]byte, 32),
+			BodyRoot:      make([]byte, 32),
 		},
 	}
 	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
@@ -371,9 +395,12 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	mockRoot2 := [32]byte{'A'}
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0}},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
+		},
 		AttestingIndices: []uint64{0, 1},
+		Signature:        make([]byte, 96),
 	}
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
@@ -387,9 +414,12 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	mockRoot3 := [32]byte{'B'}
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0}},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
+		},
 		AttestingIndices: []uint64{0, 1},
+		Signature:        make([]byte, 96),
 	}
 
 	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
@@ -416,13 +446,15 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	aggBits.SetBitAt(0, true)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Slot:   beaconState.Slot(),
-			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState)},
+			Slot:            beaconState.Slot(),
+			BeaconBlockRoot: make([]byte, 32),
+			Target:          &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState), Root: make([]byte, 32)},
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  mockRoot[:],
 			}},
 		AggregationBits: aggBits,
+		Signature:       make([]byte, 96),
 	}
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
@@ -466,14 +498,15 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 			Slot:          beaconState.Slot() + 1,
 			ProposerIndex: proposerIndex,
 			Body: &ethpb.BeaconBlockBody{
+				Graffiti:          make([]byte, 32),
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
 				AttesterSlashings: attesterSlashings,
 				Attestations:      []*ethpb.Attestation{blockAtt},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{exit},
 				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: []byte{2},
-					BlockHash:   []byte{3},
+					DepositRoot: bytesutil.PadTo([]byte{2}, 32),
+					BlockHash:   bytesutil.PadTo([]byte{3}, 32),
 				},
 			},
 		},
@@ -521,7 +554,7 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	epoch := uint64(1)
 
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, InclusionDelay: 1}}
+	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &pb.BeaconState{
 		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -529,9 +562,9 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Validators:                 []*ethpb.Validator{},
 	}
 	s, err := beaconstate.InitializeFromProto(base)
@@ -591,14 +624,14 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 					ProposerIndex: 1,
 					Slot:          0,
 				},
-				Signature: []byte("A"),
+				Signature: bytesutil.PadTo([]byte("A"), 96),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
 					Slot:          0,
 				},
-				Signature: []byte("B"),
+				Signature: bytesutil.PadTo([]byte("B"), 96),
 			},
 		},
 	}
@@ -607,11 +640,19 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
-				Data:             &ethpb.AttestationData{},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, 32),
+					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				},
 				AttestingIndices: []uint64{2, 3},
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
-				Data:             &ethpb.AttestationData{},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, 32),
+					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				},
 				AttestingIndices: []uint64{2, 3},
 			},
 		},
@@ -724,10 +765,13 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		att := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:   1,
-				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-				Target: &ethpb.Checkpoint{Epoch: 0}},
+				Slot:            1,
+				Source:          &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+				Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+				BeaconBlockRoot: make([]byte, 32),
+			},
 			AggregationBits: aggBits,
+			Signature:       make([]byte, 96),
 		}
 
 		committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
@@ -763,18 +807,12 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	require.NoError(t, nextSlotState.SetSlot(s.Slot()+1))
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: proposerIdx,
-			Slot:          s.Slot() + 1,
-			ParentRoot:    parentRoot[:],
-			Body: &ethpb.BeaconBlockBody{
-				Eth1Data:     &ethpb.Eth1Data{},
-				RandaoReveal: epochSignature,
-				Attestations: atts,
-			},
-		},
-	}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.ProposerIndex = proposerIdx
+	blk.Block.Slot = s.Slot() + 1
+	blk.Block.ParentRoot = parentRoot[:]
+	blk.Block.Body.RandaoReveal = epochSignature
+	blk.Block.Body.Attestations = atts
 	sig, err := testutil.BlockSignature(s, blk.Block, privKeys)
 	require.NoError(t, err)
 	blk.Signature = sig.Marshal()
