@@ -172,20 +172,16 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	// Generate some more random attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
-	if atts, err := testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true); err != nil {
-		t.Fatal(err)
-	} else {
-		found := false
-		for _, a := range atts {
-			if !helpers.IsAggregated(a) {
-				found = true
-				require.NoError(t, proposerServer.AttPool.SaveUnaggregatedAttestation(a))
-			}
-		}
-		if !found {
-			t.Fatal("No unaggregated attestations were generated")
+	atts, err = testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true)
+	require.NoError(t, err)
+	found := false
+	for _, a := range atts {
+		if !helpers.IsAggregated(a) {
+			found = true
+			require.NoError(t, proposerServer.AttPool.SaveUnaggregatedAttestation(a))
 		}
 	}
+	require.Equal(t, true, found, "No unaggregated attestations were generated")
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	assert.NoError(t, err)
