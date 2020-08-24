@@ -1,4 +1,4 @@
-package main
+package derived
 
 import (
 	"bytes"
@@ -26,9 +26,11 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
-	numberOfDeposits, numberOfValidators uint64) []*ethpb.Deposit {
-
+func sendDepositsTest(
+	t *testing.T,
+	testAcc *contracts.TestAccount,
+	numberOfDeposits, numberOfValidators uint64,
+) []*ethpb.Deposit {
 	deposits := make([]*ethpb.Deposit, 0, numberOfValidators)
 	depositDelay := int64(1)
 	depositContractAddrStr := testAcc.ContractAddr.Hex()
@@ -71,7 +73,7 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
 	return deposits
 }
 
-func TestEndtoEndDeposits(t *testing.T) {
+func TestSendDepositTx(t *testing.T) {
 	testutil.ResetCache()
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -85,7 +87,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	numberOfValidators := uint64(2)
 	numberOfDeposits := uint64(5)
-	deposits := sendDeposits(t, testAcc, numberOfDeposits, numberOfValidators)
+	deposits := sendDepositsTest(t, testAcc, numberOfDeposits, numberOfValidators)
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
