@@ -123,8 +123,12 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	}
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
-	blk := testutil.NewBeaconBlock()
-	blk.Block.ParentRoot = parentRoot[:]
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:       0,
+			ParentRoot: parentRoot[:],
+		},
+	}
 	root, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
@@ -134,8 +138,11 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	blks := make([]*ethpb.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
-		b := testutil.NewBeaconBlock()
-		b.Block.Slot = i
+		b := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Slot: i,
+			},
+		}
 		root, err := stateutil.BlockRoot(b.Block)
 		require.NoError(t, err)
 		blks[i] = b
