@@ -174,10 +174,15 @@ var (
 		Name:  "enable-roughtime",
 		Usage: "Enables periodic roughtime syncs.",
 	}
+	checkPtInfoCache = &cli.BoolFlag{
+		Name:  "use-check-point-cache",
+		Usage: "Enables check point info caching",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
+	checkPtInfoCache,
 	batchBlockVerify,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -665,6 +670,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	enableRoughtime,
+	checkPtInfoCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -675,5 +681,6 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-finalized-deposits-cache",
+	"--use-check-point-cache",
 	// "--enable-eth1-data-majority-vote", // TODO(6786): This flag fails long running e2e tests.
 }
