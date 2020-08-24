@@ -1,21 +1,21 @@
-package helpers_test
+package helpers
 
 import (
 	"bytes"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSigningRoot_ComputeOK(t *testing.T) {
-	emptyBlock := testutil.NewBeaconBlock()
-	_, err := helpers.ComputeSigningRoot(emptyBlock, bytesutil.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
+	emptyBlock := &ethpb.BeaconBlock{}
+	_, err := ComputeSigningRoot(emptyBlock, []byte{'T', 'E', 'S', 'T'})
 	assert.NoError(t, err, "Could not compute signing root of block")
 }
 
@@ -25,19 +25,36 @@ func TestComputeDomain_OK(t *testing.T) {
 		domainType [4]byte
 		domain     []byte
 	}{
-		{epoch: 1, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
-		{epoch: 2, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
-		{epoch: 2, domainType: [4]byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
-		{epoch: 3, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
-		{epoch: 3, domainType: [4]byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
+		{epoch: 1, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 2, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 2, domainType: [4]byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 3, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 3, domainType: [4]byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
 	}
 	for _, tt := range tests {
-		if got, err := helpers.ComputeDomain(tt.domainType, nil, nil); !bytes.Equal(got, tt.domain) {
-			t.Errorf("wanted domain version: %d, got: %d", tt.domain, got)
-		} else {
-			require.NoError(t, err)
+		if !bytes.Equal(domain(tt.domainType, params.BeaconConfig().ZeroHash[:]), tt.domain) {
+			t.Errorf("wanted domain version: %d, got: %d", tt.domain, domain(tt.domainType, params.BeaconConfig().ZeroHash[:]))
 		}
 	}
+}
+
+func TestSigningRoot_Compatibility(t *testing.T) {
+	parRoot := [32]byte{'A'}
+	stateRoot := [32]byte{'B'}
+	blk := &ethpb.BeaconBlock{
+		Slot:          20,
+		ProposerIndex: 20,
+		ParentRoot:    parRoot[:],
+		StateRoot:     stateRoot[:],
+		Body:          &ethpb.BeaconBlockBody{},
+	}
+	root, err := ComputeSigningRoot(blk, params.BeaconConfig().DomainBeaconProposer[:])
+	require.NoError(t, err)
+	newRoot, err := signingData(func() ([32]byte, error) {
+		return stateutil.BlockRoot(blk)
+	}, params.BeaconConfig().DomainBeaconProposer[:])
+	require.NoError(t, err)
+	assert.Equal(t, root, newRoot, "Wanted root of %#x but got %#x", root, newRoot)
 }
 
 func TestComputeForkDigest_OK(t *testing.T) {
@@ -51,7 +68,7 @@ func TestComputeForkDigest_OK(t *testing.T) {
 		{version: []byte{'b', 'w', 'r', 't'}, root: [32]byte{'r', 'd', 'c'}, result: [4]byte{0x83, 0x34, 0x38, 0x88}},
 	}
 	for _, tt := range tests {
-		digest, err := helpers.ComputeForkDigest(tt.version, tt.root[:])
+		digest, err := ComputeForkDigest(tt.version, tt.root[:])
 		require.NoError(t, err)
 		assert.Equal(t, tt.result, digest, "Wanted domain version: %#x, got: %#x", digest, tt.result)
 	}
@@ -75,8 +92,8 @@ func TestFuzzverifySigningRoot_10000(t *testing.T) {
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		err := helpers.VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
-		err = helpers.VerifySigningRoot(state, p, s, d)
+		err := VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
+		err = VerifySigningRoot(state, p, s, d)
 		_ = err
 	}
 }

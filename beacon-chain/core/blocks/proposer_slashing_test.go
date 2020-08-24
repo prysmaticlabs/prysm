@@ -98,14 +98,14 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					ProposerIndex: 0,
 					Slot:          0,
 				},
-				Signature: bytesutil.PadTo([]byte("A"), 96),
+				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 0,
 					Slot:          0,
 				},
-				Signature: bytesutil.PadTo([]byte("B"), 96),
+				Signature: []byte("B"),
 			},
 		},
 	}
@@ -138,9 +138,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			Slot:          0,
-			ParentRoot:    make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
-			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+			StateRoot:     []byte("A"),
 		},
 	}
 	var err error
@@ -151,9 +149,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			Slot:          0,
-			ParentRoot:    make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
-			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+			StateRoot:     []byte("B"),
 		},
 	}
 	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
@@ -166,10 +162,13 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	block := testutil.NewBeaconBlock()
-	block.Block.Body.ProposerSlashings = slashings
+	block := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
+			ProposerSlashings: slashings,
+		},
+	}
 
-	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body)
+	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
 	require.NoError(t, err)
 
 	newStateVals := newState.Validators()

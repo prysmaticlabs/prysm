@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -41,7 +42,7 @@ func (kv *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 func (kv *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveVoluntaryExit")
 	defer span.End()
-	exitRoot, err := exit.HashTreeRoot()
+	exitRoot, err := ssz.HashTreeRoot(exit)
 	if err != nil {
 		return err
 	}
