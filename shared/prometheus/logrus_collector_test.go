@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 )
 
 const addr = "127.0.0.1:8989"
