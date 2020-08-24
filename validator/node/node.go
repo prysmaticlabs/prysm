@@ -13,8 +13,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -31,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"

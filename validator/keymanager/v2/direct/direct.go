@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/interop"
-
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -21,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -204,7 +203,7 @@ func (dr *Keymanager) AccountsPassword() string {
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 	names := make([]string, len(dr.keysCache))
 	index := 0
-	for pubKey, _ := range dr.keysCache {
+	for pubKey := range dr.keysCache {
 		names[index] = petnames.DeterministicName(pubKey[:], "-")
 		index++
 	}
