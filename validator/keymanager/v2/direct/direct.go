@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -61,15 +62,17 @@ type Config struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet           iface.Wallet
-	cfg              *Config
-	keysCache        map[[48]byte]bls.SecretKey
-	accountsStore    *AccountStore
-	lock             sync.RWMutex
-	accountsPassword string
+	wallet              iface.Wallet
+	cfg                 *Config
+	keysCache           map[[48]byte]bls.SecretKey
+	accountsStore       *AccountStore
+	lock                sync.RWMutex
+	accountsPassword    string
+	accountsChangedFeed *event.Feed
 }
 
-// AccountStore --
+// AccountStore defines a struct containing 1-to-1 corresponding
+// private keys and public keys for eth2 validators.
 type AccountStore struct {
 	PrivateKeys [][]byte `json:"private_keys"`
 	PublicKeys  [][]byte `json:"public_keys"`
@@ -83,7 +86,11 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(cliCtx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(
+	cliCtx *cli.Context,
+	wallet iface.Wallet,
+	cfg *Config,
+) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:        wallet,
 		cfg:           cfg,
@@ -124,19 +131,15 @@ func NewKeymanager(cliCtx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keym
 	}
 	k.accountsPassword = accountsPassword
 
-	// If the wallet has the capability of unlocking accounts using
-	// passphrases, then we initialize a cache of public key -> secret keys
+	// We initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via password unlock.
 	// This cache is needed to process Sign requests using a public key.
 	if err := k.initializeSecretKeysCache(cliCtx); err != nil {
 		return nil, errors.Wrap(err, "could not initialize keys cache")
 	}
 
-	// If the user desires and sets the --rescan-keystores-from-dir flag, we begin
-	// a goroutine to listen for file changes at the specified directory and dynamically load
-	// keys from valid keystore.json files observed into our validator client.
-	//// Begin listening for file changes and loading in new keystores
-	//// if observed via a filesystem watcher.
+	// We begin a goroutine to listen for file changes to our
+	// all-accounts.keystore.json file in the wallet directory.
 	accountsFilePath := filepath.Join(k.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
 	go k.listenForFileChanges(cliCtx.Context, accountsFilePath)
 	return k, nil
@@ -181,6 +184,17 @@ func (c *Config) String() string {
 		return ""
 	}
 	return b.String()
+}
+
+// SubscribeAccountChanges creates an event subscription for a channel
+// to listen for public key changes at runtime, such as when new validator accounts
+// are imported into the keymanager while the validator process is running.
+func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	if dr.accountsChangedFeed == nil {
+		f := new(event.Feed)
+		dr.accountsChangedFeed = f
+	}
+	return dr.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
 // AccountsPassword for the direct keymanager.
@@ -473,8 +487,8 @@ func (dr *Keymanager) listenForFileChanges(ctx context.Context, filePath string)
 	for {
 		select {
 		case event := <-watcher.Events:
-			// If a file was modified, we attempt to
-			// read that file and parse it into our accounts store.
+			// If a file was modified, we attempt to read that file
+			// and parse it into our accounts store.
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				fileBytes, err := ioutil.ReadFile(event.Name)
 				if err != nil {
@@ -517,16 +531,21 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore
 	dr.lock.Lock()
 	dr.keysCache = make(map[[48]byte]bls.SecretKey)
 	dr.accountsStore = newAccountsStore
+	pubKeys := make([][48]byte, len(dr.accountsStore.PublicKeys))
 	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
 		privKey, err := bls.SecretKeyFromBytes(dr.accountsStore.PrivateKeys[i])
 		if err != nil {
 			return errors.Wrap(err, "could not initialize private key")
 		}
 		pubKeyBytes := privKey.PublicKey().Marshal()
+		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
 		dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
 	}
 	dr.lock.Unlock()
-	log.Info("Loaded-in new validator keys into keymanager")
+	log.Info("Reloaded validator keys into keymanager")
+	if dr.accountsChangedFeed != nil {
+		dr.accountsChangedFeed.Send(pubKeys)
+	}
 	return nil
 }
 

@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -33,11 +34,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "validator")
-
-// Every minute, we recheck if new validator keys
-// have been added to the validator client and if so,
-// create a new bucket in the database for slashing protection.
-const recheckKeysInterval = 3 * time.Minute
 
 // ValidatorService represents a service to manage the validator client
 // routine.
@@ -316,17 +312,20 @@ func ConstructDialOptions(
 	return dialOpts
 }
 
+// Reloads the validating keys every set interval to check if they have changed and updates
+// their buckets in bolt DB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB *kv.Store, km v2.IKeymanager) {
-	ticker := time.NewTicker(recheckKeysInterval)
+	directKeymanager, ok := km.(*direct.Keymanager)
+	if !ok {
+		return
+	}
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	sub := directKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-ticker.C:
-			pubKeys, err := km.FetchValidatingPublicKeys(ctx)
-			if err != nil {
-				log.WithError(err).Debug("Could not re-fetch validating public keys")
-				continue
-			}
-			if err := valDB.UpdatePublicKeysBuckets(pubKeys); err != nil {
+		case keys := <-validatingPubKeysChan:
+			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
 				log.WithError(err).Debug("Could not update public keys buckets")
 				continue
 			}

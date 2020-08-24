@@ -2,11 +2,13 @@ package direct
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
+
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -16,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestDirectKeymanager_CreateAccount(t *testing.T) {
@@ -262,20 +262,26 @@ func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 
 	numAccounts := 20
 	privKeys := make([][]byte, numAccounts)
+	pubKeys := make([][]byte, numAccounts)
+	for i := 0; i < numAccounts; i++ {
+		privKey := bls.RandKey()
+		privKeys[i] = privKey.Marshal()
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
 
-	// Completely new keystore loaded in.
-	keystore := createRandomKeystore(t, password)
-	require.NoError(t, dr.reloadAccountsFromKeystore(keystore))
+	accountsStore, err := dr.createAccountsKeystore(context.Background(), privKeys, pubKeys)
+	require.NoError(t, err)
+	require.NoError(t, dr.reloadAccountsFromKeystore(accountsStore))
 
 	// Check the key was added to the keys cache.
-	pubKeyBytes, err := hex.DecodeString(keystore.Pubkey)
-	require.NoError(t, err)
-	_, ok := dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)]
-	require.Equal(t, true, ok)
-	testutil.AssertLogsContain(t, hook, "Loaded-in new validator key")
+	for _, keyBytes := range pubKeys {
+		_, ok := dr.keysCache[bytesutil.ToBytes48(keyBytes)]
+		require.Equal(t, true, ok)
+	}
+	testutil.AssertLogsContain(t, hook, "Reloaded validator keys")
 
 	// Check the key was added to the global accounts store.
-	require.Equal(t, 1, len(dr.accountsStore.PublicKeys))
-	require.Equal(t, 1, len(dr.accountsStore.PrivateKeys))
-	assert.DeepEqual(t, dr.accountsStore.PublicKeys[0], pubKeyBytes)
+	require.Equal(t, numAccounts, len(dr.accountsStore.PublicKeys))
+	require.Equal(t, numAccounts, len(dr.accountsStore.PrivateKeys))
+	assert.DeepEqual(t, dr.accountsStore.PublicKeys[0], pubKeys[0])
 }

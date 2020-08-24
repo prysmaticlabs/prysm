@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -49,11 +50,12 @@ var (
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
-	walletDir      string
-	accountsPath   string
-	configFilePath string
-	walletFileLock *flock.Flock
-	keymanagerKind v2keymanager.Kind
+	walletDir           string
+	accountsPath        string
+	configFilePath      string
+	walletFileLock      *flock.Flock
+	keymanagerKind      v2keymanager.Kind
+	accountsChangedFeed *event.Feed
 }
 
 // NewWallet given a set of configuration options, will leverage
