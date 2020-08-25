@@ -1,7 +1,6 @@
 package aggregation
 
 import (
-	"errors"
 	"reflect"
 	"sort"
 	"testing"
@@ -551,17 +550,15 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 		allowDuplicates bool
 	}
 	tests := []struct {
-		name        string
-		args        args
-		want        *Aggregation
-		wantErr     bool
-		expectedErr error
+		name      string
+		args      args
+		want      *Aggregation
+		wantedErr string
 	}{
 		{
-			name:        "nil problem",
-			args:        args{},
-			wantErr:     true,
-			expectedErr: ErrInvalidMaxCoverProblem,
+			name:      "nil problem",
+			args:      args{},
+			wantedErr: ErrInvalidMaxCoverProblem.Error(),
 		},
 		{
 			name: "different bitlengths",
@@ -570,8 +567,7 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				{2, &bitfield.Bitlist{0b00000001, 0b11100000, 0b1}, 0, false},
 				{3, &bitfield.Bitlist{0b00000110, 0b00000000, 0b1}, 0, false},
 			}},
-			wantErr:     true,
-			expectedErr: ErrInvalidMaxCoverProblem,
+			wantedErr: ErrInvalidMaxCoverProblem.Error(),
 		},
 		{
 			name: "k=0",
@@ -580,7 +576,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b0000000, 0b1},
 				Keys:     []int{},
 			},
-			wantErr: false,
 		},
 		{
 			name: "k=1",
@@ -589,7 +584,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b0011011, 0b1},
 				Keys:     []int{1},
 			},
-			wantErr: false,
 		},
 		{
 			name: "k=2",
@@ -598,7 +592,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
 			},
-			wantErr: false,
 		},
 		{
 			name: "k=3",
@@ -607,7 +600,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
 			},
-			wantErr: false,
 		},
 		{
 			name: "k=5",
@@ -616,7 +608,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
 			},
-			wantErr: false,
 		},
 		{
 			name: "k=50",
@@ -625,7 +616,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
 			},
-			wantErr: false,
 		},
 		{
 			name: "suboptimal", // Greedy algorithm selects: 0, 2, 3, while 1,4,5 is optimal.
@@ -641,7 +631,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b00000111, 0b11111111, 0b1},
 				Keys:     []int{0, 2, 3},
 			},
-			wantErr: false,
 		},
 		{
 			name: "allow overlaps",
@@ -658,7 +647,6 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Coverage: bitfield.Bitlist{0b00001111, 0xff, 0b11111110, 0b1},
 				Keys:     []int{0, 3, 1, 2, 6},
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -667,11 +655,12 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				Candidates: tt.args.candidates,
 			}
 			got, err := mc.Cover(tt.args.k, tt.args.allowOverlaps, tt.args.allowDuplicates)
-			if (err != nil) != tt.wantErr || !errors.Is(err, tt.expectedErr) {
-				t.Errorf("newMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
-				return
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+				assert.DeepEqual(t, tt.want, got)
 			}
-			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }

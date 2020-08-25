@@ -1,7 +1,6 @@
 package epoch
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -286,9 +285,9 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	assert.Equal(t, newS.Slashings()[ce], newS.Slashings()[ne], "Unexpected slashed balance")
 
 	// Verify randao is correctly updated in the right position.
-	if mix, err := newS.RandaoMixAtIndex(ne); err != nil || bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("latest RANDAO still zero hashes")
-	}
+	mix, err := newS.RandaoMixAtIndex(ne)
+	assert.NoError(t, err)
+	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
 
 	// Verify historical root accumulator was appended.
 	assert.Equal(t, 1, len(newS.HistoricalRoots()), "Unexpected slashed balance")

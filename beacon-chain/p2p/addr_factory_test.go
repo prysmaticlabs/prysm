@@ -20,9 +20,7 @@ func TestRelayAddrs_OnlyFactory(t *testing.T) {
 	assert.Equal(t, 2, len(result), "Unexpected number of addresses")
 
 	expected := "/ip4/127.0.0.1/tcp/6660/p2p/QmQ7zhY7nGY66yK1n8hLGevfVyjbtvHSgtZuXkCH9oTrgi/p2p-circuit/ip4/127.0.0.1/tcp/33201/p2p/QmaXZhW44pwQxBSeLkE5FNeLz8tGTTEsRciFg1DNWXXrWG"
-	if result[1].String() != expected {
-		t.Errorf("Address at index 1 (%s) is not the expected p2p-circuit address", result[1].String())
-	}
+	assert.Equal(t, expected, result[1].String(), "Address at index 1 (%s) is not the expected p2p-circuit address", result[1].String())
 }
 
 func TestRelayAddrs_UseNonRelayAddrs(t *testing.T) {
@@ -37,9 +35,7 @@ func TestRelayAddrs_UseNonRelayAddrs(t *testing.T) {
 	addrs := make([]ma.Multiaddr, len(expected))
 	for i, addr := range expected {
 		a, err := ma.NewMultiaddr(addr)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		addrs[i] = a
 	}
 

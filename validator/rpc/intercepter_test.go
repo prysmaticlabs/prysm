@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -22,18 +23,14 @@ func TestServer_JWTInterceptor_Verify(t *testing.T) {
 		return nil, nil
 	}
 	token, _, err := s.createTokenString()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ctxMD := map[string][]string{
 		"authorization": {token},
 	}
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)
 	_, err = interceptor(ctx, "xyz", unaryInfo, unaryHandler)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestServer_JWTInterceptor_BadToken(t *testing.T) {
@@ -53,9 +50,7 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 		jwtKey: []byte("badTestKey"),
 	}
 	token, _, err := badServer.createTokenString()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ctxMD := map[string][]string{
 		"authorization": {token},
 	}
