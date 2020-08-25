@@ -102,13 +102,13 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int(params.BeaconConfig().DepositContractTreeDepth)+1, len(proof))
 	root := m.Root()
-	if ok := VerifyMerkleBranch(root[:], items[0], 0, proof); !ok {
+	if ok := VerifyMerkleBranch(root[:], items[0], 0, proof, params.BeaconConfig().DepositContractTreeDepth); !ok {
 		t.Error("First Merkle proof did not verify")
 	}
 	proof, err = m.MerkleProof(3)
 	require.NoError(t, err)
-	require.Equal(t, true, VerifyMerkleBranch(root[:], items[3], 3, proof))
-	require.Equal(t, false, VerifyMerkleBranch(root[:], []byte("buzz"), 3, proof))
+	require.Equal(t, true, VerifyMerkleBranch(root[:], items[3], 3, proof, params.BeaconConfig().DepositContractTreeDepth))
+	require.Equal(t, false, VerifyMerkleBranch(root[:], []byte("buzz"), 3, proof, params.BeaconConfig().DepositContractTreeDepth))
 }
 
 func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
@@ -118,22 +118,23 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 		{3},
 		{4},
 	}
-	m, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
+	depth := params.BeaconConfig().DepositContractTreeDepth + 1
+	m, err := GenerateTrieFromItems(items, int(depth))
 	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
 	root := m.Root()
-	require.Equal(t, true, VerifyMerkleBranch(root[:], items[0], 0, proof), 3, proof)
+	require.Equal(t, true, VerifyMerkleBranch(root[:], items[0], 0, proof, depth))
 
 	// Now we update the trie.
 	m.Insert([]byte{5}, 3)
 	proof, err = m.MerkleProof(3)
 	require.NoError(t, err)
 	root = m.Root()
-	if ok := VerifyMerkleBranch(root[:], []byte{5}, 3, proof); !ok {
+	if ok := VerifyMerkleBranch(root[:], []byte{5}, 3, proof, depth); !ok {
 		t.Error("Second Merkle proof did not verify")
 	}
-	if ok := VerifyMerkleBranch(root[:], []byte{4}, 3, proof); ok {
+	if ok := VerifyMerkleBranch(root[:], []byte{4}, 3, proof, depth); ok {
 		t.Error("Old item should not verify")
 	}
 
@@ -251,7 +252,7 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 	root := m.Root()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if ok := VerifyMerkleBranch(root[:], items[2], 2, proof); !ok {
+		if ok := VerifyMerkleBranch(root[:], items[2], 2, proof, params.BeaconConfig().DepositContractTreeDepth); !ok {
 			b.Error("Merkle proof did not verify")
 		}
 	}
