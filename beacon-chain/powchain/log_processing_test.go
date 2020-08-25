@@ -179,9 +179,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	if err := web3Service.initDataFromContract(); err != nil {
-		t.Fatalf("Could not init from contract: %v", err)
-	}
+	require.NoError(t, web3Service.initDataFromContract(), "Could not init from contract")
 
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
@@ -239,9 +237,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
-	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
@@ -311,9 +307,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
-	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
@@ -498,9 +492,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
-	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 	depositsWanted := 10
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
@@ -543,9 +535,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	genSt, err := state.EmptyGenesisState()
 	require.NoError(t, err)
 	web3Service.preGenesisState = genSt
-	if err := web3Service.preGenesisState.SetEth1Data(&ethpb.Eth1Data{}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, web3Service.preGenesisState.SetEth1Data(&ethpb.Eth1Data{}))
 	web3Service.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
 	web3Service.depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err)

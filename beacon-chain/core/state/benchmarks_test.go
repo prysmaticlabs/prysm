@@ -101,9 +101,8 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := ssz.HashTreeRoot(beaconState); err != nil {
-			b.Fatal(err)
-		}
+		_, err := ssz.HashTreeRoot(beaconState)
+		require.NoError(b, err)
 	}
 }
 

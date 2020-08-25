@@ -1,7 +1,6 @@
 package herumi_test
 
 import (
-	"bytes"
 	"errors"
 	"testing"
 
@@ -65,9 +64,9 @@ func TestMultipleSignatureVerification(t *testing.T) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); !verify || err != nil {
-		t.Errorf("Signature did not verify: %v and err %v", verify, err)
-	}
+	verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verify, "Signature did not verify")
 }
 
 func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
@@ -128,9 +127,9 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 		t.Error("Signature did not verify")
 	}
 	// This method would be expected to fail.
-	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); verify || err != nil {
-		t.Errorf("Signature verified when it was not supposed to: %v and err %v", verify, err)
-	}
+	verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys)
+	assert.NoError(t, err)
+	assert.Equal(t, false, verify, "Signature verified when it was not supposed to")
 }
 
 func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
@@ -184,17 +183,10 @@ func TestSignatureFromBytes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := herumi.SignatureFromBytes(test.input)
 			if test.err != nil {
-				if err == nil {
-					t.Errorf("No error returned: expected %v", test.err)
-				} else if test.err.Error() != err.Error() {
-					t.Errorf("Unexpected error returned: expected %v, received %v", test.err, err)
-				}
+				assert.ErrorContains(t, test.err.Error(), err)
 			} else {
-				if err != nil {
-					t.Errorf("Unexpected error returned: %v", err)
-				} else if !bytes.Equal(res.Marshal(), test.input) {
-					t.Errorf("Unexpected result: expected %x, received %x", test.input, res.Marshal())
-				}
+				assert.NoError(t, err)
+				assert.DeepEqual(t, test.input, res.Marshal())
 			}
 		})
 	}

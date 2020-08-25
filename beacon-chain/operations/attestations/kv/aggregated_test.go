@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"reflect"
 	"sort"
 	"testing"
 
@@ -27,19 +26,11 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	att7 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()}
 	att8 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()}
 	atts := []*ethpb.Attestation{att1, att2, att3, att4, att5, att6, att7, att8}
-	if err := cache.SaveUnaggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.AggregateUnaggregatedAttestations(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
+	require.NoError(t, cache.AggregateUnaggregatedAttestations())
 
-	if len(cache.AggregatedAttestationsBySlotIndex(1, 0)) != 1 {
-		t.Fatal("Did not aggregate correctly")
-	}
-	if len(cache.AggregatedAttestationsBySlotIndex(2, 0)) != 1 {
-		t.Fatal("Did not aggregate correctly")
-	}
+	require.Equal(t, 1, len(cache.AggregatedAttestationsBySlotIndex(1, 0)), "Did not aggregate correctly")
+	require.Equal(t, 1, len(cache.AggregatedAttestationsBySlotIndex(2, 0)), "Did not aggregate correctly")
 }
 
 func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
@@ -103,25 +94,16 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
 			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
-			if len(cache.unAggregatedAtt) != 0 {
-				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
-			}
+			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
 			err := cache.SaveAggregatedAttestation(tt.att)
-			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {
-				t.Errorf("Did not receive wanted error, want: %q, got: %v", tt.wantErrString, err)
-				return
+			if tt.wantErrString != "" {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			if tt.wantErrString == "" && err != nil {
-				t.Error(err)
-				return
-			}
-			if len(cache.aggregatedAtt) != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.aggregatedAtt))
-			}
-			if cache.AggregatedAttestationCount() != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.AggregatedAttestationCount())
-			}
+			assert.Equal(t, tt.count, len(cache.aggregatedAtt), "Wrong attestation count")
+			assert.Equal(t, tt.count, cache.AggregatedAttestationCount(), "Wrong attestation count")
 		})
 	}
 }
@@ -148,20 +130,15 @@ func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			if len(cache.aggregatedAtt) != 0 {
-				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
-			}
+			assert.Equal(t, 0, len(cache.aggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 			err := cache.SaveAggregatedAttestations(tt.atts)
-			if tt.wantErrString == "" && err != nil {
-				t.Error(err)
-				return
+			if tt.wantErrString != "" {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			if len(cache.aggregatedAtt) != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.aggregatedAtt))
-			}
-			if cache.AggregatedAttestationCount() != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.AggregatedAttestationCount())
-			}
+			assert.Equal(t, tt.count, len(cache.aggregatedAtt), "Wrong attestation count")
+			assert.Equal(t, tt.count, cache.AggregatedAttestationCount(), "Wrong attestation count")
 		})
 	}
 }
@@ -175,9 +152,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
-		if err := cache.SaveAggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveAggregatedAttestation(att))
 	}
 
 	returned := cache.AggregatedAttestations()
@@ -190,23 +165,16 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 	t.Run("nil attestation", func(t *testing.T) {
 		cache := NewAttCaches()
-		if err := cache.DeleteAggregatedAttestation(nil); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, cache.DeleteAggregatedAttestation(nil))
 		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}}
-		if err := cache.DeleteAggregatedAttestation(att); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, cache.DeleteAggregatedAttestation(att))
 	})
 
 	t.Run("non aggregated attestation", func(t *testing.T) {
 		cache := NewAttCaches()
 		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: &ethpb.AttestationData{Slot: 2}}
 		err := cache.DeleteAggregatedAttestation(att)
-		wantErr := "attestation is not aggregated"
-		if err == nil || err.Error() != wantErr {
-			t.Errorf("Did not receive wanted error, want: %q, got: %v", wantErr, err)
-		}
+		assert.ErrorContains(t, "attestation is not aggregated", err)
 	})
 
 	t.Run("invalid hash", func(t *testing.T) {
@@ -220,17 +188,13 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		}
 		err := cache.DeleteAggregatedAttestation(att)
 		wantErr := "could not tree hash attestation data: incorrect fixed bytes marshalling"
-		if err == nil || err.Error() != wantErr {
-			t.Errorf("Did not receive wanted error, want: %q, got: %v", wantErr, err)
-		}
+		assert.ErrorContains(t, wantErr, err)
 	})
 
 	t.Run("nonexistent attestation", func(t *testing.T) {
 		cache := NewAttCaches()
 		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}}
-		if err := cache.DeleteAggregatedAttestation(att); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, cache.DeleteAggregatedAttestation(att))
 	})
 
 	t.Run("non-filtered deletion", func(t *testing.T) {
@@ -240,16 +204,9 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}
 		att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b10101}}
 		atts := []*ethpb.Attestation{att1, att2, att3, att4}
-		if err := cache.SaveAggregatedAttestations(atts); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := cache.DeleteAggregatedAttestation(att1); err != nil {
-			t.Fatal(err)
-		}
-		if err := cache.DeleteAggregatedAttestation(att3); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveAggregatedAttestations(atts))
+		require.NoError(t, cache.DeleteAggregatedAttestation(att1))
+		require.NoError(t, cache.DeleteAggregatedAttestation(att3))
 
 		returned := cache.AggregatedAttestations()
 		wanted := []*ethpb.Attestation{att2}
@@ -263,16 +220,10 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110100}}
 		att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110101}}
 		atts := []*ethpb.Attestation{att1, att2, att3, att4}
-		if err := cache.SaveAggregatedAttestations(atts); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveAggregatedAttestations(atts))
 
-		if cache.AggregatedAttestationCount() != 2 {
-			t.Error("Unexpected number of atts")
-		}
-		if err := cache.DeleteAggregatedAttestation(att4); err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, 2, cache.AggregatedAttestationCount(), "Unexpected number of atts")
+		require.NoError(t, cache.DeleteAggregatedAttestation(att4))
 
 		returned := cache.AggregatedAttestations()
 		wanted := []*ethpb.Attestation{att1, att2}
@@ -456,27 +407,19 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			if err := cache.SaveAggregatedAttestations(tt.existing); err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, cache.SaveAggregatedAttestations(tt.existing))
 
 			result, err := cache.HasAggregatedAttestation(tt.input)
 			require.NoError(t, err)
-			if result != tt.want {
-				t.Errorf("Result = %v, wanted = %v", result, tt.want)
-			}
+			assert.Equal(t, tt.want, result)
 
 			// Same test for block attestations
 			cache = NewAttCaches()
-			if err := cache.SaveBlockAttestations(tt.existing); err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, cache.SaveBlockAttestations(tt.existing))
 
 			result, err = cache.HasAggregatedAttestation(tt.input)
 			require.NoError(t, err)
-			if result != tt.want {
-				t.Errorf("Result = %v, wanted = %v", result, tt.want)
-			}
+			assert.Equal(t, tt.want, result)
 		})
 	}
 }
@@ -489,15 +432,12 @@ func TestKV_Aggregated_DuplicateAggregatedAttestations(t *testing.T) {
 	atts := []*ethpb.Attestation{att1, att2}
 
 	for _, att := range atts {
-		if err := cache.SaveAggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveAggregatedAttestation(att))
 	}
 
 	returned := cache.AggregatedAttestations()
 
 	// It should have only returned att2.
-	if !reflect.DeepEqual(att2, returned[0]) || len(returned) != 1 {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	assert.DeepEqual(t, att2, returned[0], "Did not receive correct aggregated atts")
+	assert.Equal(t, 1, len(returned), "Did not receive correct aggregated atts")
 }

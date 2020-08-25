@@ -123,9 +123,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
+	require.DeepEqual(t, wanted, res)
 
 	// Should throw an error if there is more than 1 block
 	// for the genesis slot.
@@ -870,12 +868,8 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		if err := server.StreamIndexedAttestations(
-			&ptypes.Empty{},
-			mockStream,
-		); err != nil && !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Expected context canceled error got: %v", err)
-		}
+		err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream)
+		assert.ErrorContains(t, "Context canceled", err)
 		<-exitRoutine
 	}(t)
 	cancel()

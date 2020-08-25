@@ -1,7 +1,6 @@
 package herumi_test
 
 import (
-	"bytes"
 	"errors"
 	"testing"
 
@@ -61,17 +60,10 @@ func TestSecretKeyFromBytes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := herumi.SecretKeyFromBytes(test.input)
 			if test.err != nil {
-				if err == nil {
-					t.Errorf("No error returned: expected %v", test.err)
-				} else if test.err.Error() != err.Error() {
-					t.Errorf("Unexpected error returned: expected %v, received %v", test.err, err)
-				}
+				assert.ErrorContains(t, test.err.Error(), err)
 			} else {
-				if err != nil {
-					t.Errorf("Unexpected error returned: %v", err)
-				} else if !bytes.Equal(res.Marshal(), test.input) {
-					t.Errorf("Unexpected result: expected %x, received %x", test.input, res.Marshal())
-				}
+				assert.NoError(t, err)
+				assert.DeepEqual(t, test.input, res.Marshal())
 			}
 		})
 	}
@@ -81,7 +73,6 @@ func TestSerialize(t *testing.T) {
 	rk := herumi.RandKey()
 	b := rk.Marshal()
 
-	if _, err := herumi.SecretKeyFromBytes(b); err != nil {
-		t.Error(err)
-	}
+	_, err := herumi.SecretKeyFromBytes(b)
+	assert.NoError(t, err)
 }
