@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -89,12 +90,12 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 		accountsStore: &AccountStore{},
 	}
 
-	walletFiles, err := wallet.ListDirs()
+	walletExists, err := wallet.Exists()
 	if err != nil {
 		return nil, err
 	}
 	var accountsPassword string
-	if len(walletFiles) == 0 {
+	if !walletExists {
 		accountsPassword, err = inputPassword(
 			ctx,
 			flags.WalletPasswordFileFlag,
@@ -128,6 +129,26 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 	// This cache is needed to process Sign requests using a public key.
 	if err := k.initializeSecretKeysCache(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not initialize keys cache")
+	}
+	return k, nil
+}
+
+// NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
+func NewInteropKeymanager(ctx *cli.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
+	k := &Keymanager{
+		keysCache: make(map[[48]byte]bls.SecretKey),
+	}
+	if numValidatorKeys == 0 {
+		return k, nil
+	}
+
+	secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(offset, numValidatorKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate interop keys")
+	}
+
+	for i := 0; i < len(publicKeys); i++ {
+		k.keysCache[bytesutil.ToBytes48(publicKeys[i].Marshal())] = secretKeys[i]
 	}
 	return k, nil
 }
@@ -180,9 +201,11 @@ func (dr *Keymanager) AccountsPassword() string {
 
 // ValidatingAccountNames for a direct keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
-	names := make([]string, len(dr.accountsStore.PublicKeys))
-	for i, pubKey := range dr.accountsStore.PublicKeys {
-		names[i] = petnames.DeterministicName(pubKey, "-")
+	names := make([]string, len(dr.keysCache))
+	index := 0
+	for pubKey := range dr.keysCache {
+		names[index] = petnames.DeterministicName(pubKey[:], "-")
+		index++
 	}
 	return names, nil
 }

@@ -171,24 +171,24 @@ func TestService_roundRobinSync(t *testing.T) {
 				{
 					blocks:         makeSequence(1, 384),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 				},
 				{
 					blocks:         makeSequence(1, 320),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 					failureSlots:   makeSequence(1, 320),
 				},
 				{
 					blocks:         makeSequence(1, 320),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 					failureSlots:   makeSequence(1, 320),
 				},
 				{
 					blocks:         makeSequence(1, 320),
 					finalizedEpoch: 9,
-					headSlot:       320,
+					headSlot:       384,
 					failureSlots:   makeSequence(1, 320),
 				},
 			},
@@ -201,17 +201,17 @@ func TestService_roundRobinSync(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 384),
-					finalizedEpoch: 4,
-					headSlot:       320,
+					finalizedEpoch: 10,
+					headSlot:       384,
+				},
+				{
+					blocks:         makeSequence(1, 384),
+					finalizedEpoch: 10,
+					headSlot:       384,
 				},
 				{
 					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
-					headSlot:       256,
-				},
-				{
-					blocks:         makeSequence(1, 256),
-					finalizedEpoch: 3,
+					finalizedEpoch: 5,
 					headSlot:       256,
 				},
 				{
@@ -296,6 +296,9 @@ func TestService_roundRobinSync(t *testing.T) {
 				State: st,
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
+				FinalizedCheckPoint: &eth.Checkpoint{
+					Epoch: 0,
+				},
 			} // no-op mock
 			s := &Service{
 				chain:        mc,
@@ -339,6 +342,9 @@ func TestService_processBlock(t *testing.T) {
 			State: st,
 			Root:  genesisBlkRoot[:],
 			DB:    beaconDB,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
 		},
 	})
 	ctx := context.Background()
@@ -404,6 +410,9 @@ func TestService_processBlockBatch(t *testing.T) {
 			State: st,
 			Root:  genesisBlkRoot[:],
 			DB:    beaconDB,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
 		},
 	})
 	ctx := context.Background()
@@ -533,6 +542,9 @@ func TestService_blockProviderScoring(t *testing.T) {
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: 0,
+		},
 	} // no-op mock
 	s := &Service{
 		chain:        mc,
@@ -572,5 +584,5 @@ func TestService_blockProviderScoring(t *testing.T) {
 	score3 := scorer.Score(peer3)
 	assert.Equal(t, true, score1 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score1, peer1, score3)
 	assert.Equal(t, true, score2 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score2, peer2, score3)
-	assert.Equal(t, true, scorer.ProcessedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer")
+	assert.Equal(t, true, scorer.ProcessedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer: %d", scorer.ProcessedBlocks(peer3))
 }

@@ -168,7 +168,7 @@ func TestLoadHoteStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	assert.Equal(t, slot, loadedState.Slot(), "Did not correctly load state")
 }
 
-func TestLastAncestorState_CanGet(t *testing.T) {
+func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
@@ -201,6 +201,45 @@ func TestLastAncestorState_CanGet(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b2))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b3))
 	require.NoError(t, service.beaconDB.SaveState(ctx, b1State, r1))
+
+	lastState, err := service.lastAncestorState(ctx, r3)
+	require.NoError(t, err)
+	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
+}
+
+func TestLastAncestorState_CanGetUsingHotCache(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	b0 := testutil.NewBeaconBlock()
+	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r0, err := ssz.HashTreeRoot(b0.Block)
+	require.NoError(t, err)
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
+	r1, err := ssz.HashTreeRoot(b1.Block)
+	require.NoError(t, err)
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
+	r2, err := ssz.HashTreeRoot(b2.Block)
+	require.NoError(t, err)
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 3
+	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
+	r3, err := ssz.HashTreeRoot(b3.Block)
+	require.NoError(t, err)
+
+	b1State := testutil.NewBeaconState()
+	require.NoError(t, b1State.SetSlot(1))
+
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b0))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b1))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b2))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b3))
+	service.hotStateCache.Put(r1, b1State)
 
 	lastState, err := service.lastAncestorState(ctx, r3)
 	require.NoError(t, err)

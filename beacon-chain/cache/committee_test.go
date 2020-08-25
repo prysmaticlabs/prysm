@@ -122,7 +122,9 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	cache := NewCommitteesCache()
 
 	// Should rotate out all the epochs except 190 through 199.
-	for i := 100; i < 200; i++ {
+	start := 100
+	end := 200
+	for i := start; i < end; i++ {
 		s := []byte(strconv.Itoa(i))
 		item := &Committees{Seed: bytesutil.ToBytes32(s)}
 		require.NoError(t, cache.AddCommitteeShuffledList(item))
@@ -134,7 +136,8 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	sort.Slice(k, func(i, j int) bool {
 		return k[i] < k[j]
 	})
-	s := bytesutil.ToBytes32([]byte(strconv.Itoa(190)))
+	wanted := end - int(maxCommitteesCacheSize)
+	s := bytesutil.ToBytes32([]byte(strconv.Itoa(wanted)))
 	assert.Equal(t, key(s), k[0], "incorrect key received for slot 190")
 
 	s = bytesutil.ToBytes32([]byte(strconv.Itoa(199)))

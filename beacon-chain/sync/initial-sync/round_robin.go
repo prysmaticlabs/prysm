@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -15,11 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,7 +54,9 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		headFetcher:         s.chain,
+		finalizationFetcher: s.chain,
 		highestExpectedSlot: highestFinalizedSlot,
+		mode:                modeStopOnFinalizedEpoch,
 	})
 	if err := queue.start(); err != nil {
 		return err
@@ -87,72 +85,25 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// mitigation. We are already convinced that we are on the correct finalized chain. Any blocks
 	// we receive there after must build on the finalized chain or be considered invalid during
 	// fork choice resolution / block processing.
-	blocksFetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		p2p:         s.p2p,
-		headFetcher: s.chain,
+	queue = newBlocksQueue(ctx, &blocksQueueConfig{
+		p2p:                 s.p2p,
+		headFetcher:         s.chain,
+		finalizationFetcher: s.chain,
+		highestExpectedSlot: helpers.SlotsSince(genesis),
+		mode:                modeNonConstrained,
 	})
-
-	// Select a new peer in the event of failure.
-	nextBestPeer := func(prevPeer peer.ID) peer.ID {
-		var pids []peer.ID
-		for {
-			_, pids = s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync /* maxPeers */, s.highestFinalizedEpoch())
-			if len(pids) == 0 {
-				log.Info("Waiting for a suitable peer before syncing to the head of the chain")
-				time.Sleep(refreshTime)
-				continue
-			}
-			break
-		}
-		// Return new peer in the event of failure
-		for _, id := range pids {
-			if prevPeer != id {
-				return id
-			}
-		}
-		return prevPeer
+	if err := queue.start(); err != nil {
+		return err
 	}
-
-	_, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
-	for len(pids) == 0 {
-		log.Info("Waiting for a suitable peer before syncing to the head of the chain")
-		time.Sleep(refreshTime)
-		_, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
+	for data := range queue.fetchedData {
+		s.processFetchedDataRegSync(ctx, genesis, s.chain.HeadSlot(), data)
 	}
-	best := pids[0]
-
-	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
-		count := mathutil.Min(
-			helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, blocksFetcher.blocksPerSecond)
-		req := &p2ppb.BeaconBlocksByRangeRequest{
-			StartSlot: s.chain.HeadSlot() + 1,
-			Count:     count,
-			Step:      1,
-		}
-		log.WithFields(logrus.Fields{
-			"req":  req,
-			"peer": best.Pretty(),
-		}).Debug("Sending batch block request")
-		resp, err := blocksFetcher.requestBlocks(ctx, req, best)
-		if err != nil {
-			log.WithError(err).Error("Failed to receive blocks")
-			best = nextBestPeer(best)
-			continue
-		}
-		for _, blk := range resp {
-			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlock)
-			if err != nil {
-				if strings.Contains(err.Error(), errBlockAlreadyProcessed.Error()) {
-					continue
-				}
-				log.WithError(err).Error("Failed to process block")
-				best = nextBestPeer(best)
-				break
-			}
-		}
-		if len(resp) == 0 {
-			best = nextBestPeer(best)
-		}
+	log.WithFields(logrus.Fields{
+		"syncedSlot": s.chain.HeadSlot(),
+		"headSlot":   helpers.SlotsSince(genesis),
+	}).Debug("Synced to head of chain")
+	if err := queue.stop(); err != nil {
+		log.WithError(err).Debug("Error stopping queue")
 	}
 
 	return nil
@@ -161,15 +112,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedData(
 	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
-	defer func() {
-		if !featureconfig.Get().EnablePeerScorer || data.pid == "" {
-			return
-		}
-		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
-		if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
-			scorer.IncrementProcessedBlocks(data.pid, diff)
-		}
-	}()
+	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.chain.ReceiveBlockInitialSync
 	batchReceiver := s.chain.ReceiveBlockBatch
@@ -181,6 +124,21 @@ func (s *Service) processFetchedData(
 		}
 		return
 	}
+	for _, blk := range data.blocks {
+		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+			log.WithError(err).Debug("Block is not processed")
+			continue
+		}
+	}
+}
+
+// processFetchedData processes data received from queue.
+func (s *Service) processFetchedDataRegSync(
+	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
+	defer s.updatePeerScorerStats(data.pid, startSlot)
+
+	blockReceiver := s.chain.ReceiveBlock
+
 	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
 			log.WithError(err).Debug("Block is not processed")
@@ -253,7 +211,7 @@ func (s *Service) processBlock(
 	if err != nil {
 		return err
 	}
-	if blk.Block.Slot <= s.lastProcessedSlot && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
+	if s.isProcessedBlock(ctx, blk, blkRoot) {
 		return errors.Wrapf(errBlockAlreadyProcessed, "slot: %d , root %#x", blk.Block.Slot, blkRoot)
 	}
 
@@ -275,16 +233,20 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return errors.New("0 blocks provided into method")
 	}
 	firstBlock := blks[0]
-	for s.lastProcessedSlot >= firstBlock.Block.Slot {
+	blkRoot, err := stateutil.BlockRoot(firstBlock.Block)
+	if err != nil {
+		return err
+	}
+	for s.lastProcessedSlot >= firstBlock.Block.Slot && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
 		if len(blks) == 1 {
 			return errors.New("no good blocks in batch")
 		}
 		blks = blks[1:]
 		firstBlock = blks[0]
-	}
-	blkRoot, err := stateutil.BlockRoot(firstBlock.Block)
-	if err != nil {
-		return err
+		blkRoot, err = stateutil.BlockRoot(firstBlock.Block)
+		if err != nil {
+			return err
+		}
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
 	parentRoot := bytesutil.ToBytes32(firstBlock.Block.ParentRoot)
@@ -311,4 +273,27 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	lastBlk := blks[len(blks)-1]
 	s.lastProcessedSlot = lastBlk.Block.Slot
 	return nil
+}
+
+// updatePeerScorerStats adjusts monitored metrics for a peer.
+func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
+	if !featureconfig.Get().EnablePeerScorer || pid == "" {
+		return
+	}
+	headSlot := s.chain.HeadSlot()
+	if startSlot >= headSlot {
+		return
+	}
+	if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
+		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
+		scorer.IncrementProcessedBlocks(pid, diff)
+	}
+}
+
+// isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
+func (s *Service) isProcessedBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blkRoot [32]byte) bool {
+	if blk.Block.Slot <= s.lastProcessedSlot && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
+		return true
+	}
+	return false
 }
