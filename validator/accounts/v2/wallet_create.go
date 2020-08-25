@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/pkg/errors"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -85,6 +86,11 @@ func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
+	}
+	skipMnemonic := cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name)
+	_, err = wallet.InitializeKeymanager(cliCtx, skipMnemonic)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	return nil
 }
