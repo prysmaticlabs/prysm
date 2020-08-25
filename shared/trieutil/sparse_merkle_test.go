@@ -124,7 +124,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
 	root := m.Root()
-	require.Equal(t, true, VerifyMerkleBranch(root[:], items[0], 0, proof), 3, proof, depth)
+	require.Equal(t, true, VerifyMerkleBranch(root[:], items[0], 0, proof, depth))
 
 	// Now we update the trie.
 	m.Insert([]byte{5}, 3)
