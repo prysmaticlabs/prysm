@@ -193,7 +193,7 @@ func NewKeymanager(
 	return k, nil
 }
 
-// KeymanagerForPhrase instantiates a new derived keymanager from configuration options.
+// KeymanagerForPhrase instantiates a new derived keymanager from configuration and an existing mnemonic phrase provided.
 func KeymanagerForPhrase(
 	cliCtx *cli.Context,
 	wallet iface.Wallet,
