@@ -108,8 +108,6 @@ func setupTempKeystoreDir(t *testing.T) (string, func()) {
 	tempDir := path.Join(testutil.TempDir(), fmt.Sprintf("%d", randPath), "keystore")
 
 	return tempDir, func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Logf("unable to remove temporary files: %v", err)
-		}
+		assert.NoError(t, os.RemoveAll(tempDir))
 	}
 }

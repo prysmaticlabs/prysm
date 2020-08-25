@@ -188,9 +188,8 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 		[]byte("GGGGGGG"),
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)); err != nil {
-			b.Fatalf("Could not generate Merkle trie from items: %v", err)
-		}
+		_, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
+		require.NoError(b, err, "Could not generate Merkle trie from items")
 	}
 }
 
@@ -228,9 +227,8 @@ func BenchmarkGenerateProof(b *testing.B) {
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := normalTrie.MerkleProof(3); err != nil {
-			b.Fatal(err)
-		}
+		_, err := normalTrie.MerkleProof(3)
+		require.NoError(b, err)
 	}
 }
 

@@ -32,9 +32,7 @@ func init() {
 
 func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	ip, err := iputils.ExternalIPv4()
-	if err != nil {
-		t.Fatalf("Could not get ip: %v", err)
-	}
+	require.NoError(t, err, "Could not get ip")
 	ipAddr := net.ParseIP(ip)
 	temp := testutil.TempDir()
 	randNum := rand.Int()

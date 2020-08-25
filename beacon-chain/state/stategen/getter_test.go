@@ -34,12 +34,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	r := [32]byte{'a'}
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Root: r[:],
-		Slot: 1,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:], Slot: 1}))
 	loadedState, err := service.StateByRoot(ctx, r)
 	require.NoError(t, err)
 	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
@@ -81,12 +76,7 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, targetBlock))
 	targetRoot, err := stateutil.BlockRoot(targetBlock.Block)
 	require.NoError(t, err)
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: targetSlot,
-		Root: targetRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: targetSlot, Root: targetRoot[:]}))
 	loadedState, err := service.StateByRoot(ctx, targetRoot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, loadedState.Slot(), "Did not correctly load state")
@@ -164,12 +154,7 @@ func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	targetRoot, err := stateutil.BlockRoot(targetBlk.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, targetBlk))
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: targetSlot,
-		Root: targetRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: targetSlot, Root: targetRoot[:]}))
 
 	loadedState, err := service.StateByRootInitialSync(ctx, targetRoot)
 	require.NoError(t, err)
@@ -194,12 +179,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, bRoot))
 
 	r := [32]byte{}
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: service.slotsPerArchivedPoint,
-		Root: r[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: service.slotsPerArchivedPoint, Root: r[:]}))
 
 	slot := uint64(20)
 	loadedState, err := service.StateBySlot(ctx, slot)

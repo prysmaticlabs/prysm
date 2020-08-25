@@ -83,25 +83,15 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 
 	svc := New(db, ssc)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	r := [32]byte{'a'}
 	svc.hotStateCache.Put(r, beaconState)
 
-	if db.HasState(ctx, r) {
-		t.Fatal("Database has state stored already")
-	}
-	if err := svc.ForceCheckpoint(ctx, r[:]); err != nil {
-		t.Error(err)
-	}
-	if !db.HasState(ctx, r) {
-		t.Error("Did not save checkpoint to database")
-	}
+	require.Equal(t, false, db.HasState(ctx, r), "Database has state stored already")
+	assert.NoError(t, svc.ForceCheckpoint(ctx, r[:]))
+	assert.Equal(t, true, db.HasState(ctx, r), "Did not save checkpoint to database")
 
 	// Should not panic with genesis finalized root.
-	if err := svc.ForceCheckpoint(ctx, params.BeaconConfig().ZeroHash[:]); err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, svc.ForceCheckpoint(ctx, params.BeaconConfig().ZeroHash[:]))
 }
