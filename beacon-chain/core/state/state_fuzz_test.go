@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -21,7 +20,6 @@ func TestGenesisBeaconState_1000(t *testing.T) {
 		fuzzer.Fuzz(&deposits)
 		fuzzer.Fuzz(&genesisTime)
 		fuzzer.Fuzz(eth1Data)
-		fmt.Printf("[FAB] FUZZ DEPOSITS %v", deposits)
 		gs, err := GenesisBeaconState(deposits, genesisTime, eth1Data)
 		if err != nil {
 			if gs != nil {

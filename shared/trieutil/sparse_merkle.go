@@ -54,27 +54,18 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error)
 		arr := bytesutil.ToBytes32(leaves[i])
 		transformedLeaves[i] = arr[:]
 	}
-	fmt.Printf("[GenTrie] layers[0] = transformedLeaves = %v \n", transformedLeaves)
 	layers[0] = transformedLeaves
 	for i := 0; i < depth; i++ {
-		fmt.Printf("[GenTrie][Loop] i = %v \n", i)
 		if len(layers[i])%2 == 1 {
-			fmt.Print("[GenTrie] len(layers[i])%2 == 1 \n")
 			layers[i] = append(layers[i], ZeroHashes[i][:])
-			fmt.Printf("[GenTrie] layers[%v] = %v \n", i, layers[i])
 		}
 		updatedValues := make([][]byte, 0)
 		for j := 0; j < len(layers[i]); j += 2 {
-			fmt.Printf("[GenTrie] j = %v; j < %v \n", j, len(layers[i]))
 			concat := hashutil.Hash(append(layers[i][j], layers[i][j+1]...))
-			fmt.Printf("[GenTrie] concat := %v (append(%v, %v)) \n", concat, layers[i][j], layers[i][j+1])
 			updatedValues = append(updatedValues, concat[:])
-			fmt.Printf("[GenTrie] updatedValues = %v \n", updatedValues)
 		}
 		layers[i+1] = updatedValues
-		fmt.Printf("[GenTrie] layers[%v] = %v \n", i+1, updatedValues)
 	}
-	fmt.Printf("[GenTrie] SparseMerkleTrie{branches:%v, originalItems:%v, depth:%v} \n", layers, items, uint(depth))
 	return &SparseMerkleTrie{
 		branches:      layers,
 		originalItems: items,
@@ -91,9 +82,6 @@ func (m *SparseMerkleTrie) Items() [][]byte {
 func (m *SparseMerkleTrie) Root() [32]byte {
 	enc := [32]byte{}
 	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
-	fmt.Printf("[Root()] enc = %v \n", enc)
-	a := hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
-	fmt.Printf("[Root()] root = %v => append(%v, %v) \n", a, m.branches[len(m.branches)-1][0], enc[:])
 	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
 }
 
