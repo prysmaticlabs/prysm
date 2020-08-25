@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	"github.com/urfave/cli/v2"
@@ -18,14 +19,10 @@ func TestNode_Builds(t *testing.T) {
 	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
 	dir := testutil.TempDir() + "/keystore1"
 	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.RemoveAll(dir))
 	}()
 	defer func() {
-		if err := os.RemoveAll(testutil.TempDir() + "/datadir"); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.RemoveAll(testutil.TempDir()+"/datadir"))
 	}()
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")

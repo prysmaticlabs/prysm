@@ -170,9 +170,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 	p := p2pt.NewTestP2P(t)
 	p.SetStreamHandler(topic, func(stream network.Stream) {
 		defer func() {
-			if err := stream.Close(); err != nil {
-				t.Log(err)
-			}
+			assert.NoError(t, stream.Close())
 		}()
 
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
@@ -182,12 +180,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 		// Expected failure range
 		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
-			if _, err := stream.Write([]byte{0x01}); err != nil {
-				t.Error(err)
-			}
-			if _, err := p.Encoding().EncodeWithMaxLength(stream, "bad"); err != nil {
-				t.Error(err)
-			}
+			_, err := stream.Write([]byte{0x01})
+			assert.NoError(t, err)
+			_, err = p.Encoding().EncodeWithMaxLength(stream, "bad")
+			assert.NoError(t, err)
 			return
 		}
 

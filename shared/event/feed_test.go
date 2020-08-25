@@ -22,6 +22,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestFeedPanics(t *testing.T) {
@@ -29,38 +31,28 @@ func TestFeedPanics(t *testing.T) {
 		var f Feed
 		f.Send(2)
 		want := feedTypeError{op: "Send", got: reflect.TypeOf(uint64(0)), want: reflect.TypeOf(0)}
-		if err := checkPanic(want, func() { f.Send(uint64(2)) }); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, checkPanic(want, func() { f.Send(uint64(2)) }))
 	}
 	{
 		var f Feed
 		ch := make(chan int)
 		f.Subscribe(ch)
 		want := feedTypeError{op: "Send", got: reflect.TypeOf(uint64(0)), want: reflect.TypeOf(0)}
-		if err := checkPanic(want, func() { f.Send(uint64(2)) }); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, checkPanic(want, func() { f.Send(uint64(2)) }))
 	}
 	{
 		var f Feed
 		f.Send(2)
 		want := feedTypeError{op: "Subscribe", got: reflect.TypeOf(make(chan uint64)), want: reflect.TypeOf(make(chan<- int))}
-		if err := checkPanic(want, func() { f.Subscribe(make(chan uint64)) }); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, checkPanic(want, func() { f.Subscribe(make(chan uint64)) }))
 	}
 	{
 		var f Feed
-		if err := checkPanic(errBadChannel, func() { f.Subscribe(make(<-chan int)) }); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, checkPanic(errBadChannel, func() { f.Subscribe(make(<-chan int)) }))
 	}
 	{
 		var f Feed
-		if err := checkPanic(errBadChannel, func() { f.Subscribe(0) }); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, checkPanic(errBadChannel, func() { f.Subscribe(0) }))
 	}
 }
 
@@ -283,22 +275,14 @@ func TestFeedUnsubscribeFromInbox(t *testing.T) {
 		sub2 = feed.Subscribe(ch1)
 		sub3 = feed.Subscribe(ch2)
 	)
-	if len(feed.inbox) != 3 {
-		t.Errorf("inbox length != 3 after subscribe")
-	}
-	if len(feed.sendCases) != 1 {
-		t.Errorf("sendCases is non-empty after unsubscribe")
-	}
+	assert.Equal(t, 3, len(feed.inbox))
+	assert.Equal(t, 1, len(feed.sendCases), "sendCases is non-empty after unsubscribe")
 
 	sub1.Unsubscribe()
 	sub2.Unsubscribe()
 	sub3.Unsubscribe()
-	if len(feed.inbox) != 0 {
-		t.Errorf("inbox is non-empty after unsubscribe")
-	}
-	if len(feed.sendCases) != 1 {
-		t.Errorf("sendCases is non-empty after unsubscribe")
-	}
+	assert.Equal(t, 0, len(feed.inbox), "Inbox is non-empty after unsubscribe")
+	assert.Equal(t, 1, len(feed.sendCases), "sendCases is non-empty after unsubscribe")
 }
 
 func BenchmarkFeedSend1000(b *testing.B) {

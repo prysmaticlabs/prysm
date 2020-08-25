@@ -9,6 +9,8 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	sszspectest "github.com/prysmaticlabs/go-ssz/spectests"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // Regression tests for investigating discrepancies between ssz signing root of
@@ -69,29 +71,17 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			root1, err := ssz.HashTreeRoot(tt.header1)
-			if err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, err)
 			root2, err := ssz.HashTreeRoot(tt.header2)
-			if err != nil {
-				t.Error(err)
-			}
-
-			if root1 != root2 {
-				t.Errorf("Root1 = %#x, root2 = %#x. These should be equal!", root1, root2)
-			}
-
-			if root1 != tt.expectedRoot {
-				t.Errorf("Root1 = %#x, wanted %#x", root1, tt.expectedRoot)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, root1, root2)
+			assert.Equal(t, tt.expectedRoot, root1)
 		})
 	}
 }
 
 func hexDecodeOrDie(t *testing.T, h string) []byte {
 	b, err := hex.DecodeString(h)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return b
 }
