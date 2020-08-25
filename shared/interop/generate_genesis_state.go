@@ -131,7 +131,7 @@ func depositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not create deposit data for key: %#x", privKeys[i].Marshal())
 		}
-		hash, err := ssz.HashTreeRoot(data)
+		hash, err := data.HashTreeRoot()
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not hash tree root deposit data item")
 		}
@@ -156,7 +156,7 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Depo
 	if err != nil {
 		return nil, err
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
+	root, err := (&pb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -58,7 +57,7 @@ func TestLoadStateByRoot_CanGet(t *testing.T) {
 	service.slotsPerArchivedPoint = 1
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	blk := testutil.NewBeaconBlock()
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
@@ -84,7 +83,7 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	blk := testutil.NewBeaconBlock()
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))

@@ -234,8 +234,10 @@ func (ms *ChainService) HeadSlot() uint64 {
 
 // HeadRoot mocks HeadRoot method in chain service.
 func (ms *ChainService) HeadRoot(ctx context.Context) ([]byte, error) {
-	return ms.Root, nil
-
+	if len(ms.Root) > 0 {
+		return ms.Root, nil
+	}
+	return make([]byte, 32), nil
 }
 
 // HeadBlock mocks HeadBlock method in chain service.

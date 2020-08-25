@@ -115,7 +115,9 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	// Update ENR of a peer.
 	testService := &Service{
 		dv5Listener: listeners[0],
-		metaData:    &pb.MetaData{},
+		metaData: &pb.MetaData{
+			Attnets: bitfield.NewBitvector64(),
+		},
 	}
 	cache.SubnetIDs.AddAttesterSubnetID(0, 10)
 	testService.RefreshENR()

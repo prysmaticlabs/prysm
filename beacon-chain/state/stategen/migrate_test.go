@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -20,7 +19,8 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	db, c := testDB.SetupDB(t)
 	service := New(db, c)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 1
 	br, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
@@ -41,7 +41,8 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 2
 	fRoot, err := stateutil.BlockRoot(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
@@ -70,7 +71,8 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 2
 	fRoot, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
