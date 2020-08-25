@@ -6,6 +6,9 @@ import (
 	"go/token"
 	"go/types"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 const commonSrc = `
@@ -46,25 +49,19 @@ func TestWalkThroughEmbeddedInterfaces(t *testing.T) {
 	for _, c := range cases {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "test", commonSrc+c.selector, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		conf := types.Config{}
 		info := types.Info{
 			Selections: make(map[*ast.SelectorExpr]*types.Selection),
 		}
 		_, err = conf.Check("test", fset, []*ast.File{f}, &info)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		ast.Inspect(f, func(n ast.Node) bool {
 			s, ok := n.(*ast.SelectorExpr)
 			if ok {
 				selection, ok := info.Selections[s]
-				if !ok {
-					t.Fatalf("no Selection!")
-				}
+				require.Equal(t, true, ok, "No selection!")
 				ts, ok := walkThroughEmbeddedInterfaces(selection)
 				if ok != c.expectedOk {
 					t.Errorf("expected ok %v got %v", c.expectedOk, ok)
@@ -74,20 +71,12 @@ func TestWalkThroughEmbeddedInterfaces(t *testing.T) {
 					return false
 				}
 
-				if len(ts) != len(c.expected) {
-					t.Fatalf("expected %d types, got %d", len(c.expected), len(ts))
-				}
-
+				require.Equal(t, len(c.expected), len(ts))
 				for i, e := range c.expected {
-					if e != ts[i].String() {
-						t.Errorf("mismatch at index %d: expected %s got %s", i, e, ts[i])
-					}
+					assert.Equal(t, e, ts[i].String(), "mismatch at index %d", i)
 				}
 			}
-
 			return true
 		})
-
 	}
-
 }
