@@ -41,8 +41,8 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			postSSZExists := true
 			if err != nil && strings.Contains(err.Error(), "could not locate file") {
 				postSSZExists = false
-			} else if err != nil {
-				t.Fatal(err)
+			} else {
+				require.NoError(t, err)
 			}
 
 			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 type mockService struct {
@@ -46,9 +48,7 @@ func TestRegisterService_Twice(t *testing.T) {
 	}
 
 	// Checks if first service was indeed registered.
-	if len(registry.serviceTypes) != 1 {
-		t.Fatalf("service types slice should contain 1 service, contained %v", len(registry.serviceTypes))
-	}
+	require.Equal(t, 1, len(registry.serviceTypes))
 
 	if err := registry.RegisterService(m); err == nil {
 		t.Errorf("should not be able to register a service twice, got nil error")
@@ -70,9 +70,7 @@ func TestRegisterService_Different(t *testing.T) {
 		t.Fatalf("failed to register second service")
 	}
 
-	if len(registry.serviceTypes) != 2 {
-		t.Errorf("service types slice should contain 2 services, contained %v", len(registry.serviceTypes))
-	}
+	require.Equal(t, 2, len(registry.serviceTypes))
 
 	if _, exists := registry.services[reflect.TypeOf(m)]; !exists {
 		t.Errorf("service of type %v not registered", reflect.TypeOf(m))
@@ -107,9 +105,7 @@ func TestFetchService_OK(t *testing.T) {
 		t.Fatalf("failed to fetch service")
 	}
 
-	if m2 != m {
-		t.Errorf("pointers were not equal, instead got %p, %p", m2, m)
-	}
+	require.Equal(t, m, m2)
 }
 
 func TestServiceStatus_OK(t *testing.T) {
