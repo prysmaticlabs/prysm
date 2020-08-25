@@ -19,9 +19,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	k2 := bls.RandKey()
 
 	result, _, err := depositutil.DepositInput(k1, k2, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	assert.DeepEqual(t, k1.PublicKey().Marshal(), result.PublicKey)
 
 	sig, err := bls.SignatureFromBytes(result.Signature)
@@ -41,38 +39,28 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 
 func TestVerifyDepositSignature_ValidSig(t *testing.T) {
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatalf("Error Generating Deposits and Keys - %v", err)
-	}
+	require.NoError(t, err)
 	deposit := deposits[0]
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
 		params.BeaconConfig().GenesisForkVersion,
 		params.BeaconConfig().ZeroHash[:],
 	)
-	if err != nil {
-		t.Fatalf("Error Computing Domain - %v", err)
-	}
+	require.NoError(t, err)
 	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
-	if err != nil {
-		t.Fatal("Deposit Verification fails with a valid signature")
-	}
+	require.NoError(t, err)
 }
 
 func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatalf("Error Generating Deposits and Keys - %v", err)
-	}
+	require.NoError(t, err)
 	deposit := deposits[0]
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
 		params.BeaconConfig().GenesisForkVersion,
 		params.BeaconConfig().ZeroHash[:],
 	)
-	if err != nil {
-		t.Fatalf("Error Computing Domain - %v", err)
-	}
+	require.NoError(t, err)
 	deposit.Data.Signature = deposit.Data.Signature[1:]
 	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
 	if err == nil {
