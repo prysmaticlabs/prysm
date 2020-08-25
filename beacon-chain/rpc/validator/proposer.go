@@ -96,7 +96,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if featureconfig.Get().EnableEth1DataMajorityVote {
 		eth1Data, err = vs.eth1DataMajorityVote(ctx, head)
 	} else {
-		eth1Data, err = vs.eth1Data(ctx, head)
+		eth1Data, err = vs.eth1Data(ctx, req.Slot)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
@@ -194,30 +194,30 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 //  - Determine the most recent eth1 block before that timestamp.
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
-func (vs *Server) eth1Data(ctx context.Context, beaconState *stateTrie.BeaconState) (*ethpb.Eth1Data, error) {
+func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
 
 	if vs.MockEth1Votes {
-		return vs.mockETH1DataVote(ctx, beaconState.Slot())
+		return vs.mockETH1DataVote(ctx, slot)
 	}
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
-		return vs.randomETH1DataVote(ctx, beaconState)
+		return vs.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
 
-	eth1VotingPeriodStartTime := vs.slotStartTime(beaconState.Slot())
+	eth1VotingPeriodStartTime := vs.slotStartTime(slot)
 
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
 		log.WithError(err).Error("Failed to get block number from timestamp")
-		return vs.randomETH1DataVote(ctx, beaconState)
+		return vs.randomETH1DataVote(ctx)
 	}
 	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
 	if err != nil {
 		log.WithError(err).Error("Failed to get eth1 data from block number")
-		return vs.randomETH1DataVote(ctx, beaconState)
+		return vs.randomETH1DataVote(ctx)
 	}
 
 	return eth1Data, nil
@@ -244,7 +244,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 		return vs.mockETH1DataVote(ctx, slot)
 	}
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
-		return vs.randomETH1DataVote(ctx, beaconState)
+		return vs.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
 
@@ -257,12 +257,12 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 	currentPeriodBlockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, currentPeriodVotingStartTime)
 	if err != nil {
 		log.WithError(err).Error("Failed to get block number for current voting period")
-		return vs.randomETH1DataVote(ctx, beaconState)
+		return vs.randomETH1DataVote(ctx)
 	}
 	previousPeriodBlockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, previousPeriodVotingStartTime)
 	if err != nil {
 		log.WithError(err).Error("Failed to get block number for previous voting period")
-		return vs.randomETH1DataVote(ctx, beaconState)
+		return vs.randomETH1DataVote(ctx)
 	}
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	currentPeriodInitialBlock := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
@@ -277,7 +277,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
 		if err != nil {
 			log.WithError(err).Error("Failed to get eth1 data from current period block number")
-			return vs.randomETH1DataVote(ctx, beaconState)
+			return vs.randomETH1DataVote(ctx)
 		}
 		return eth1Data, nil
 	}
@@ -290,7 +290,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
 		if err != nil {
 			log.WithError(err).Error("Failed to get eth1 data from current period block number")
-			return vs.randomETH1DataVote(ctx, beaconState)
+			return vs.randomETH1DataVote(ctx)
 		}
 		return eth1Data, nil
 	}
@@ -397,10 +397,14 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	}, nil
 }
 
-func (vs *Server) randomETH1DataVote(ctx context.Context, beaconState *stateTrie.BeaconState) (*ethpb.Eth1Data, error) {
+func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now random.")
 		eth1DataNotification = true
+	}
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// set random roots and block hashes to prevent a majority from being
@@ -410,7 +414,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context, beaconState *stateTrie
 	blockHash := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
-		DepositCount: beaconState.Eth1DepositIndex(),
+		DepositCount: headState.Eth1DepositIndex(),
 		BlockHash:    blockHash[:],
 	}, nil
 }

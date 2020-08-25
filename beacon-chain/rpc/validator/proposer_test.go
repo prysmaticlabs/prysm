@@ -1033,7 +1033,6 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 
 func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
-		Slot: 1,
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte{'a'},
 		},
@@ -1050,7 +1049,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		BlockReceiver:     &mock.ChainService{State: beaconState},
 		HeadFetcher:       &mock.ChainService{State: beaconState},
 	}
-	_, err = proposerServer.eth1Data(context.Background(), beaconState)
+	_, err = proposerServer.eth1Data(context.Background(), beaconState.Slot()+1)
 	assert.NoError(t, err, "A failed request should not have returned an error, got %v")
 }
 
@@ -1138,7 +1137,6 @@ func TestEth1Data(t *testing.T) {
 
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}))
-	require.NoError(t, headState.SetSlot(slot))
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
 
@@ -1151,14 +1149,13 @@ func TestEth1Data(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	eth1Data, err := ps.eth1Data(ctx, headState)
+	eth1Data, err := ps.eth1Data(ctx, slot)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(55), eth1Data.DepositCount)
 }
 
 func TestEth1Data_SmallerDepositCount(t *testing.T) {
 	slot := uint64(20000)
-
 	deps := []*dbpb.DepositContainer{
 		{
 			Index:           0,
@@ -1202,12 +1199,6 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 			DepositCount: 55,
 		},
 	}
-
-	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
-		Slot: slot,
-	})
-	require.NoError(t, err)
-
 	ps := &Server{
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
@@ -1217,7 +1208,7 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	eth1Data, err := ps.eth1Data(ctx, beaconState)
+	eth1Data, err := ps.eth1Data(ctx, slot)
 	require.NoError(t, err)
 
 	// Will default to 10 as the current deposit count in the
@@ -1239,7 +1230,6 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	ctx := context.Background()
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetEth1DepositIndex(64))
-	require.NoError(t, headState.SetSlot(100))
 	ps := &Server{
 		HeadFetcher:   &mock.ChainService{State: headState},
 		BeaconDB:      db,
@@ -1249,7 +1239,7 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, headBlockRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
 
-	eth1Data, err := ps.eth1Data(ctx, headState)
+	eth1Data, err := ps.eth1Data(ctx, 100)
 	require.NoError(t, err)
 	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
 	wantedSlot := 100 % period
@@ -1934,9 +1924,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := beaconState.SetSlot(beaconState.Slot() + 1)
-		require.NoError(b, err)
-		_, err = proposerServer.eth1Data(context.Background(), beaconState)
+		_, err := proposerServer.eth1Data(context.Background(), beaconState.Slot()+1)
 		require.NoError(b, err)
 	}
 }
