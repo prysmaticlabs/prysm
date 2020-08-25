@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/validator/flags"
-
 	"github.com/pkg/errors"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
