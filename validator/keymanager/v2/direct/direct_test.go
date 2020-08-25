@@ -10,6 +10,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
@@ -252,9 +253,10 @@ func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 		AccountPasswords: make(map[string]string),
 	}
 	dr := &Keymanager{
-		wallet:           wallet,
-		keysCache:        make(map[[48]byte]bls.SecretKey),
-		accountsPassword: password,
+		wallet:              wallet,
+		keysCache:           make(map[[48]byte]bls.SecretKey),
+		accountsPassword:    password,
+		accountsChangedFeed: new(event.Feed),
 	}
 
 	numAccounts := 20
