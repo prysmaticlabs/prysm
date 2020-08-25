@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -145,6 +146,26 @@ func NewKeymanager(
 	return k, nil
 }
 
+// NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
+func NewInteropKeymanager(ctx *cli.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
+	k := &Keymanager{
+		keysCache: make(map[[48]byte]bls.SecretKey),
+	}
+	if numValidatorKeys == 0 {
+		return k, nil
+	}
+
+	secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(offset, numValidatorKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate interop keys")
+	}
+
+	for i := 0; i < len(publicKeys); i++ {
+		k.keysCache[bytesutil.ToBytes48(publicKeys[i].Marshal())] = secretKeys[i]
+	}
+	return k, nil
+}
+
 // UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
 // configuration file into the *Config{} struct.
 func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
@@ -203,9 +224,11 @@ func (dr *Keymanager) AccountsPassword() string {
 
 // ValidatingAccountNames for a direct keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
-	names := make([]string, len(dr.accountsStore.PublicKeys))
-	for i, pubKey := range dr.accountsStore.PublicKeys {
-		names[i] = petnames.DeterministicName(pubKey, "-")
+	names := make([]string, len(dr.keysCache))
+	index := 0
+	for pubKey := range dr.keysCache {
+		names[index] = petnames.DeterministicName(pubKey[:], "-")
+		index++
 	}
 	return names, nil
 }
