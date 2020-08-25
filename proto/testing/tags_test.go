@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSSZTagSize(t *testing.T) {
@@ -16,36 +18,20 @@ func TestSSZTagSize(t *testing.T) {
 	rootSize := 32
 
 	sizes, err := sszTagSizes(pb.Attestation{}, "Signature")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sizes[0] != sigSize {
-		t.Errorf("wanted signature size: %d, got: %d", sigSize, sizes[0])
-	}
+	require.NoError(t, err)
+	assert.Equal(t, sigSize, sizes[0], "Unexpected signature size")
 
 	sizes, err = sszTagSizes(pb.SignedBeaconBlock{}, "Signature")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sizes[0] != sigSize {
-		t.Errorf("wanted signature size: %d, got: %d", sigSize, sizes[0])
-	}
+	require.NoError(t, err)
+	assert.Equal(t, sigSize, sizes[0], "Unexpected signature size")
 
 	sizes, err = sszTagSizes(pb.Checkpoint{}, "Root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sizes[0] != rootSize {
-		t.Errorf("wanted signature size: %d, got: %d", rootSize, sizes[0])
-	}
+	require.NoError(t, err)
+	assert.Equal(t, rootSize, sizes[0], "Unexpected signature size")
 
 	sizes, err = sszTagSizes(pb.Validator{}, "PublicKey")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sizes[0] != pubKeySize {
-		t.Errorf("wanted signature size: %d, got: %d", pubKeySize, sizes[0])
-	}
+	require.NoError(t, err)
+	assert.Equal(t, pubKeySize, sizes[0], "Unexpected signature size")
 }
 
 func sszTagSizes(i interface{}, fName string) ([]int, error) {

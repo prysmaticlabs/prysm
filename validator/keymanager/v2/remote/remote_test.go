@@ -1,13 +1,11 @@
 package remote
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/urfave/cli/v2"
 )
@@ -244,12 +243,8 @@ func TestRemoteKeymanager_Sign(t *testing.T) {
 		Signature: sig.Marshal(),
 	}, nil /*err*/)
 	resp, err := k.Sign(context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(sig.Marshal(), resp.Marshal()) {
-		t.Errorf("Expected %#x, received %#x", sig.Marshal(), resp.Marshal())
-	}
+	require.NoError(t, err)
+	assert.DeepEqual(t, sig.Marshal(), resp.Marshal())
 }
 
 func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
@@ -280,12 +275,8 @@ func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		ValidatingPublicKeys: make([][]byte, 0),
 	}, nil /*err*/)
 	keys, err := k.FetchValidatingPublicKeys(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(keys) != 0 {
-		t.Errorf("Expected empty response, received %v", keys)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(keys), "Expected empty response")
 
 	numKeys := 10
 	pubKeys := make([][]byte, numKeys)
@@ -301,14 +292,10 @@ func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		ValidatingPublicKeys: pubKeys,
 	}, nil /*err*/)
 	keys, err = k.FetchValidatingPublicKeys(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	rawKeys := make([][]byte, len(keys))
 	for i := 0; i < len(rawKeys); i++ {
 		rawKeys[i] = keys[i][:]
 	}
-	if !reflect.DeepEqual(pubKeys, rawKeys) {
-		t.Errorf("Wanted %v, received %v", pubKeys, rawKeys)
-	}
+	assert.DeepEqual(t, pubKeys, rawKeys)
 }

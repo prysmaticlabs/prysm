@@ -683,8 +683,6 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	assert.DeepEqual(t, currentCp, service.prevJustifiedCheckpt, "Incorrect previous justified checkpoint")
 	assert.DeepEqual(t, newCp, service.CurrentJustifiedCheckpt(), "Incorrect current justified checkpoint in cache")
 	cp, err := service.beaconDB.JustifiedCheckpoint(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	assert.DeepEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
 }

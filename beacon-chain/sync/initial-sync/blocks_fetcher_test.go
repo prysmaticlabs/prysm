@@ -581,12 +581,10 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := fetcher.selectFailOverPeer(tt.args.excludedPID, tt.args.peers)
-			if err != nil && err != tt.wantErr {
-				t.Errorf("selectFailOverPeer() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("selectFailOverPeer() got = %v, want %v", got, tt.want)
+			if tt.wantErr != nil {
+				assert.ErrorContains(t, tt.wantErr.Error(), err)
+			} else {
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -995,8 +993,8 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 				})
 			}
 			_, err := fetcher.requestBlocks(ctx, req, p2.PeerID())
-			if err != nil && err != errFetcherCtxIsDone {
-				t.Error(err)
+			if err != nil {
+				assert.ErrorContains(t, errFetcherCtxIsDone.Error(), err)
 			}
 		}
 	}()

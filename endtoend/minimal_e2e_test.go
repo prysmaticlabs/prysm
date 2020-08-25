@@ -11,14 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
-	if err := e2eParams.Init(e2eParams.StandardBeaconCount); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	epochsToRun := 10
@@ -26,9 +25,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 
 	minimalConfig := &types.E2EConfig{

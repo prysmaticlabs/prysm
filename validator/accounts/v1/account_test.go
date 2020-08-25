@@ -62,9 +62,7 @@ func TestNewValidatorAccount_CreateValidatorAccount(t *testing.T) {
 	t.Run("empty existing dir", func(t *testing.T) {
 		directory := testutil.TempDir() + "/testkeystore"
 		defer func() {
-			if err := os.RemoveAll(directory); err != nil {
-				t.Logf("Could not remove directory: %v", err)
-			}
+			assert.NoError(t, os.RemoveAll(directory), "Could not remove directory")
 		}()
 
 		// Make sure that empty existing directory doesn't trigger any errors.
@@ -76,9 +74,7 @@ func TestNewValidatorAccount_CreateValidatorAccount(t *testing.T) {
 	t.Run("empty string as password", func(t *testing.T) {
 		directory := testutil.TempDir() + "/testkeystore"
 		defer func() {
-			if err := os.RemoveAll(directory); err != nil {
-				t.Logf("Could not remove directory: %v", err)
-			}
+			assert.NoError(t, os.RemoveAll(directory), "Could not remove directory")
 		}()
 		require.NoError(t, os.Mkdir(directory, 0777))
 		_, _, err := CreateValidatorAccount(directory, "")
@@ -106,9 +102,7 @@ func TestHandleEmptyFlags_FlagsSet(t *testing.T) {
 func TestChangePassword_KeyEncryptedWithNewPassword(t *testing.T) {
 	directory := testutil.TempDir() + "/testkeystore"
 	defer func() {
-		if err := os.RemoveAll(directory); err != nil {
-			t.Logf("Could not remove directory: %v", err)
-		}
+		assert.NoError(t, os.RemoveAll(directory), "Could not remove directory")
 	}()
 
 	oldPassword := "old"
@@ -132,9 +126,7 @@ func TestChangePassword_KeyEncryptedWithNewPassword(t *testing.T) {
 func TestChangePassword_KeyNotMatchingOldPasswordNotEncryptedWithNewPassword(t *testing.T) {
 	directory := testutil.TempDir() + "/testkeystore"
 	defer func() {
-		if err := os.RemoveAll(directory); err != nil {
-			t.Logf("Could not remove directory: %v", err)
-		}
+		assert.NoError(t, os.RemoveAll(directory), "Could not remove directory")
 	}()
 
 	oldPassword := "old"

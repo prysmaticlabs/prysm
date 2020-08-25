@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -72,8 +71,8 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		PublicKeys: [][]byte{pubKey},
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.GetDuties(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
+	if _, err := vs.GetDuties(ctx, req); err != nil {
+		assert.ErrorContains(t, want, err)
 	}
 }
 
