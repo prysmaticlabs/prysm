@@ -388,7 +388,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	nowTime := params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
+	nowTime := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
 	require.NoError(t, service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{}))
 }
 
