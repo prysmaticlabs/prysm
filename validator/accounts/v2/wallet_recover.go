@@ -42,13 +42,9 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, true)
+	km, err := derived.KeymanagerForPhrase(cliCtx, wallet, derived.DefaultConfig(), mnemonic)
 	if err != nil {
-		return err
-	}
-	km, ok := keymanager.(*derived.Keymanager)
-	if !ok {
-		return errors.New("not a derived keymanager")
+		return errors.Wrap(err, "could not make keymanager for given phrase")
 	}
 	if err := km.WriteEncryptedSeedToWallet(ctx, mnemonic); err != nil {
 		return err
