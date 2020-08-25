@@ -59,13 +59,12 @@ func TestStore_OnAttestation(t *testing.T) {
 	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
 	require.NoError(t, err)
 	s = testutil.NewBeaconState()
-	if err := s.SetFork(&pb.Fork{
+	err = s.SetFork(&pb.Fork{
 		Epoch:           0,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
 
 	tests := []struct {
@@ -182,13 +181,12 @@ func TestStore_OnAttestationUsingCheckptCache(t *testing.T) {
 	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
 	require.NoError(t, err)
 	s = testutil.NewBeaconState()
-	if err := s.SetFork(&pb.Fork{
+	err = s.SetFork(&pb.Fork{
 		Epoch:           0,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
 
 	tests := []struct {
@@ -389,13 +387,8 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	if err := service.verifyAttTargetEpoch(
-		ctx,
-		0,
-		params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
-		&ethpb.Checkpoint{}); err != nil {
-		t.Error(err)
-	}
+	nowTime := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
+	require.NoError(t, service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{}))
 }
 
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
@@ -406,13 +399,8 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	if err := service.verifyAttTargetEpoch(
-		ctx,
-		0,
-		params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
-		&ethpb.Checkpoint{Epoch: 1}); err != nil {
-		t.Error(err)
-	}
+	nowTime := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
+	require.NoError(t, service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Epoch: 1}))
 }
 
 func TestAttEpoch_NotMatch(t *testing.T) {
@@ -423,14 +411,9 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	if err := service.verifyAttTargetEpoch(
-		ctx,
-		0,
-		2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot,
-		&ethpb.Checkpoint{}); !strings.Contains(err.Error(),
-		"target epoch 0 does not match current epoch 2 or prev epoch 1") {
-		t.Error("Did not receive wanted error")
-	}
+	nowTime := 2 * params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
+	err = service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{})
+	assert.ErrorContains(t, "target epoch 0 does not match current epoch 2 or prev epoch 1", err)
 }
 
 func TestVerifyBeaconBlock_NoBlock(t *testing.T) {

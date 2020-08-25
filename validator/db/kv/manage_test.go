@@ -94,34 +94,23 @@ func TestSplit(t *testing.T) {
 	require.NoError(t, err, "Retrieving the store for public key %v failed", encodedKey2)
 	require.NotNil(t, keyStore2, "No store created for public key %v", encodedKey2)
 
-	if err := keyStore1.view(func(tx *bolt.Tx) error {
+	err = keyStore1.view(func(tx *bolt.Tx) error {
 		otherKeyProposalsBucket := tx.Bucket(historicProposalsBucket).Bucket(pubKey2[:])
-		if otherKeyProposalsBucket != nil {
-			t.Fatalf("Store for public key %v contains proposals for another key", encodedKey2)
-		}
+		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey2)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey2[:])
-		if otherKeyAttestationsBucket != nil {
-			t.Fatalf("Store for public key %v contains attestations for another key", encodedKey2)
-		}
-
+		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey2)
 		return nil
-	}); err != nil {
-		t.Fatalf("Failed to close store: %v", err)
-	}
-	if err := keyStore2.view(func(tx *bolt.Tx) error {
+	})
+	require.NoError(t, err)
+
+	err = keyStore2.view(func(tx *bolt.Tx) error {
 		otherKeyProposalsBucket := tx.Bucket(historicProposalsBucket).Bucket(pubKey1[:])
-		if otherKeyProposalsBucket != nil {
-			t.Fatalf("Store for public key %v contains proposals for another key", encodedKey1)
-		}
+		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey1)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey1[:])
-		if otherKeyAttestationsBucket != nil {
-			t.Fatalf("Store for public key %v contains attestations for another key", encodedKey1)
-		}
-
+		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey1)
 		return nil
-	}); err != nil {
-		t.Fatalf("Failed to close store: %v", err)
-	}
+	})
+	require.NoError(t, err)
 
 	assertStore(t, keyStore1, [][48]byte{pubKey1}, storeHistory1)
 	assertStore(t, keyStore2, [][48]byte{pubKey2}, storeHistory2)
@@ -151,20 +140,14 @@ func TestSplit_AttestationsWithoutMatchingProposalsAreSplit(t *testing.T) {
 	require.NoError(t, err, "Retrieving the store failed")
 	require.NotNil(t, attestationsOnlyKeyStore, "No store created for public key %v", encodedKey2)
 
-	if err := attestationsOnlyKeyStore.view(func(tx *bolt.Tx) error {
+	err = attestationsOnlyKeyStore.view(func(tx *bolt.Tx) error {
 		otherKeyProposalsBucket := tx.Bucket(historicProposalsBucket).Bucket(pubKey1[:])
-		if otherKeyProposalsBucket != nil {
-			t.Fatalf("Store for public key %v contains proposals for another key", encodedKey1)
-		}
+		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey1)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey1[:])
-		if otherKeyAttestationsBucket != nil {
-			t.Fatalf("Store for public key %v contains attestations for another key", encodedKey1)
-		}
-
+		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey1)
 		return nil
-	}); err != nil {
-		t.Fatalf("Failed to retrieve attestations: %v", err)
-	}
+	})
+	require.NoError(t, err)
 
 	splitAttestationsHistory, err :=
 		attestationsOnlyKeyStore.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey2})

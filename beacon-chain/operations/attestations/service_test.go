@@ -5,27 +5,19 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStop_OK(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{})
 	require.NoError(t, err)
-
-	if err := s.Stop(); err != nil {
-		t.Fatalf("Unable to stop attestation pool service: %v", err)
-	}
-
-	if s.ctx.Err() != context.Canceled {
-		t.Error("context was not canceled")
-	}
+	require.NoError(t, s.Stop(), "Unable to stop attestation pool service")
+	assert.ErrorContains(t, context.Canceled.Error(), s.ctx.Err(), "Context was not canceled")
 }
 
 func TestStatus_Error(t *testing.T) {
 	err := errors.New("bad bad bad")
 	s := &Service{err: err}
-
-	if err := s.Status(); err != s.err {
-		t.Errorf("Wanted: %v, got: %v", s.err, s.Status())
-	}
+	assert.ErrorContains(t, s.err.Error(), s.Status())
 }

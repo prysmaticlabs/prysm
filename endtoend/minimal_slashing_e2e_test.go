@@ -8,14 +8,13 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
-	if err := e2eParams.Init(e2eParams.StandardBeaconCount); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},

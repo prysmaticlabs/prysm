@@ -19,9 +19,8 @@ func TestRegularSync_generateErrorResponse(t *testing.T) {
 
 	buf := bytes.NewBuffer(data)
 	b := make([]byte, 1)
-	if _, err := buf.Read(b); err != nil {
-		t.Fatal(err)
-	}
+	_, err = buf.Read(b)
+	require.NoError(t, err)
 	assert.Equal(t, responseCodeServerError, b[0], "The first byte was not the status code")
 	msg := &pb.ErrorResponse{}
 	require.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(buf, msg))
