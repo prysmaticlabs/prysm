@@ -163,6 +163,7 @@ func TestSendDepositTx(t *testing.T) {
 			encodedDeposit,
 			i,
 			proof,
+			params.BeaconConfig().DepositContractTreeDepth,
 		); !ok {
 			t.Fatalf(
 				"Unable verify deposit merkle branch of deposit root for root: %#x, encodedDeposit: %#x, i : %d",
