@@ -59,13 +59,12 @@ func TestStore_OnAttestation(t *testing.T) {
 	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
 	require.NoError(t, err)
 	s = testutil.NewBeaconState()
-	if err := s.SetFork(&pb.Fork{
+	err = s.SetFork(&pb.Fork{
 		Epoch:           0,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
 
 	tests := []struct {
