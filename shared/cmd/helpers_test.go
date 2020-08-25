@@ -66,11 +66,10 @@ func TestEnterPassword(t *testing.T) {
 			}
 			pw, err := EnterPassword(true, m)
 			assert.Equal(t, tc.expectedPw, pw)
-			if err == nil && tc.expectedErr != nil {
-				t.Errorf("got nil err, expected %v err", tc.expectedErr.Error())
-			}
-			if err != nil && tc.expectedErr != nil && errors.Cause(err).Error() != tc.expectedErr.Error() {
-				t.Errorf("got %v, wanted %v", errors.Cause(err), tc.expectedErr.Error())
+			if tc.expectedErr != nil {
+				assert.ErrorContains(t, tc.expectedErr.Error(), err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
