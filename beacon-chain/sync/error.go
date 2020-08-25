@@ -18,6 +18,7 @@ const genericError = "internal service error"
 const rateLimitedError = "rate limited"
 const stepError = "invalid range or step"
 const seqError = "invalid sequence number provided"
+const deadlineError = "i/o deadline exceeded"
 
 var errWrongForkDigestVersion = errors.New("wrong fork digest version")
 var errInvalidEpoch = errors.New("invalid epoch")
