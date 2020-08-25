@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/prysmaticlabs/go-ssz"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -52,7 +53,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		}
 
 		testAcc.Backend.Commit()
-		item, err := data.HashTreeRoot()
+		item, err := ssz.HashTreeRoot(data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -111,7 +112,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		copy(data.PublicKey, strconv.Itoa(i+10))
 
 		testAcc.Backend.Commit()
-		item, err := data.HashTreeRoot()
+		item, err := ssz.HashTreeRoot(data)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	fssz "github.com/ferranbt/fastssz"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -205,14 +204,7 @@ func (v *validator) signObject(
 	}
 
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		var root [32]byte
-		var err error
-		if v, ok := object.(fssz.HashRoot); ok {
-			root, err = v.HashTreeRoot()
-		} else {
-			root, err = ssz.HashTreeRoot(object)
-		}
-
+		root, err := ssz.HashTreeRoot(object)
 		if err != nil {
 			return nil, err
 		}

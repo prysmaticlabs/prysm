@@ -73,8 +73,12 @@ func (s *Service) resyncIfBehind() {
 	runutil.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
-			highestEpoch, _ := s.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, syncedEpoch)
-			if helpers.StartSlot(highestEpoch) > s.chain.HeadSlot() {
+			// Factor number of expected minimum sync peers, to make sure that enough peers are
+			// available to resync (some peers may go away between checking non-finalized peers and
+			// actual resyncing).
+			highestEpoch, _ := s.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers*2, syncedEpoch)
+			// Check if the current node is more than 1 epoch behind.
+			if highestEpoch > (syncedEpoch + 1) {
 				log.WithFields(logrus.Fields{
 					"currentEpoch": helpers.SlotToEpoch(s.chain.CurrentSlot()),
 					"syncedEpoch":  syncedEpoch,

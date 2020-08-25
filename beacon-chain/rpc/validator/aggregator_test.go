@@ -218,13 +218,11 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.Se
 	aggBits.SetBitAt(index+1, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			CommitteeIndex:  1,
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			CommitteeIndex: 1,
+			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+			Target:         &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, 96),
 	}
 	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
@@ -258,13 +256,11 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			CommitteeIndex:  1,
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			CommitteeIndex: 1,
+			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+			Target:         &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, 96),
 	}
 	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {

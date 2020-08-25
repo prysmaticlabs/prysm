@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
@@ -62,9 +61,9 @@ func TestService_CommitBlock(t *testing.T) {
 		Header: &eth.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
-			ParentRoot:    bytesutil.PadTo([]byte("parent"), 32),
-			StateRoot:     bytesutil.PadTo([]byte("state"), 32),
-			BodyRoot:      bytesutil.PadTo([]byte("body"), 32),
+			ParentRoot:    []byte("parent"),
+			StateRoot:     []byte("state"),
+			BodyRoot:      []byte("body"),
 		},
 	}
 	assert.Equal(t, false, s.CommitBlock(context.Background(), blk), "Expected commit block to fail verification")
@@ -77,9 +76,9 @@ func TestService_VerifyBlock(t *testing.T) {
 	blk := &eth.BeaconBlockHeader{
 		Slot:          0,
 		ProposerIndex: 0,
-		ParentRoot:    bytesutil.PadTo([]byte("parent"), 32),
-		StateRoot:     bytesutil.PadTo([]byte("state"), 32),
-		BodyRoot:      bytesutil.PadTo([]byte("body"), 32),
+		ParentRoot:    []byte("parent"),
+		StateRoot:     []byte("state"),
+		BodyRoot:      []byte("body"),
 	}
 	assert.Equal(t, false, s.CheckBlockSafety(context.Background(), blk), "Expected verify block to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}

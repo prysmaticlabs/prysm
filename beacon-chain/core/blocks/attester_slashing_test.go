@@ -11,7 +11,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -20,14 +19,12 @@ import (
 
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att1 := &ethpb.AttestationData{
-		Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
-		BeaconBlockRoot: make([]byte, 32),
+		Target: &ethpb.Checkpoint{Epoch: 1},
+		Source: &ethpb.Checkpoint{Root: []byte{'A'}},
 	}
 	att2 := &ethpb.AttestationData{
-		Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'B'}, 32)},
-		BeaconBlockRoot: make([]byte, 32),
+		Target: &ethpb.Checkpoint{Epoch: 1},
+		Source: &ethpb.Checkpoint{Root: []byte{'B'}},
 	}
 	assert.Equal(t, true, blocks.IsSlashableAttestationData(att1, att2), "Atts should have been slashable")
 	att1.Target.Epoch = 4
@@ -41,19 +38,15 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-					Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-					BeaconBlockRoot: make([]byte, 32),
+					Source: &ethpb.Checkpoint{Epoch: 0},
+					Target: &ethpb.Checkpoint{Epoch: 0},
 				},
-				Signature: make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-					Target:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-					BeaconBlockRoot: make([]byte, 32),
+					Source: &ethpb.Checkpoint{Epoch: 1},
+					Target: &ethpb.Checkpoint{Epoch: 1},
 				},
-				Signature: make([]byte, 96),
 			},
 		},
 	}
@@ -89,21 +82,17 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-					Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-					BeaconBlockRoot: make([]byte, 32),
+					Source: &ethpb.Checkpoint{Epoch: 1},
+					Target: &ethpb.Checkpoint{Epoch: 0},
 				},
 				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
-				Signature:        make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
-					Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-					Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-					BeaconBlockRoot: make([]byte, 32),
+					Source: &ethpb.Checkpoint{Epoch: 0},
+					Target: &ethpb.Checkpoint{Epoch: 0},
 				},
 				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
-				Signature:        make([]byte, 96),
 			},
 		},
 	}
@@ -127,9 +116,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{Epoch: 1},
+			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
@@ -144,9 +132,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{Epoch: 0},
+			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
