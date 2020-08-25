@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
@@ -16,13 +17,9 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 		NumAttestations: 1,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
@@ -33,13 +30,9 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 		NumAttestations: 4,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
@@ -54,13 +47,9 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
 	for i := 0; i < int(finalSlot); i++ {
 		block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 
 	// Blocks are one slot ahead of beacon state.
@@ -83,19 +72,13 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 		NumProposerSlashings: 1,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot()+1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	slashableIndice := block.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
 	if val, err := beaconState.ValidatorAtIndexReadOnly(slashableIndice); err != nil || !val.Slashed() {
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		t.Fatal("expected validator to be slashed")
 	}
 }
@@ -108,19 +91,13 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 		NumAttesterSlashings: 1,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	slashableIndices := block.Block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices
 	if val, err := beaconState.ValidatorAtIndexReadOnly(slashableIndices[0]); err != nil || !val.Slashed() {
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		t.Fatal("expected validator to be slashed")
 	}
 }
@@ -134,13 +111,9 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 		NumAttestations: 4,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if len(beaconState.CurrentEpochAttestations()) != 4 {
 		t.Fatal("expected 4 attestations to be saved to the beacon state")
 	}
@@ -149,35 +122,23 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 	beaconState, privs := DeterministicGenesisState(t, 256)
 	deposits, _, err := DeterministicDepositsAndKeys(257)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.SetEth1Data(eth1Data); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetEth1Data(eth1Data))
 	conf := &BlockGenConfig{
 		NumDeposits: 1,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	depositedPubkey := block.Block.Body.Deposits[0].Data.PublicKey
 	valIndexMap := stateutils.ValidatorIndexMap(beaconState.Validators())
 	index := valIndexMap[bytesutil.ToBytes48(depositedPubkey)]
 	val, err := beaconState.ValidatorAtIndexReadOnly(index)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if val.EffectiveBalance() != params.BeaconConfig().MaxEffectiveBalance {
 		t.Fatalf(
 			"expected validator balance to be max effective balance, received %d",
@@ -190,27 +151,19 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 	beaconState, privs := DeterministicGenesisState(t, 256)
 	// Moving the state 2048 epochs forward due to PERSISTENT_COMMITTEE_PERIOD.
 	err := beaconState.SetSlot(3 + params.BeaconConfig().ShardCommitteePeriod*params.BeaconConfig().SlotsPerEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	conf := &BlockGenConfig{
 		NumVoluntaryExits: 1,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	exitedIndex := block.Block.Body.VoluntaryExits[0].Exit.ValidatorIndex
 
 	val, err := beaconState.ValidatorAtIndexReadOnly(exitedIndex)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if val.ExitEpoch() == params.BeaconConfig().FarFutureEpoch {
 		t.Fatal("expected exiting validator index to be marked as exiting")
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSignVerify(t *testing.T) {
@@ -88,15 +89,9 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 	secondLastSig := sigs[len(sigs)-2]
 	// Convert to bls object
 	rawSig := new(bls12.Sign)
-	if err := rawSig.Deserialize(secondLastSig.Marshal()); err != nil {
-		t.Fatal(err)
-	}
-
+	require.NoError(t, rawSig.Deserialize(secondLastSig.Marshal()))
 	rawSig2 := new(bls12.Sign)
-	if err := rawSig2.Deserialize(lastSig.Marshal()); err != nil {
-		t.Fatal(err)
-	}
-
+	require.NoError(t, rawSig2.Deserialize(lastSig.Marshal()))
 	// set random field prime value
 	fprime := new(bls12.Fp)
 	fprime.SetInt64(100)
@@ -110,10 +105,7 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 	fp2.D = [2]bls12.Fp{*fprime, *fprime2}
 
 	g2Point := new(bls12.G2)
-	if err := bls12.MapToG2(g2Point, fp2); err != nil {
-		t.Fatal(err)
-	}
-
+	require.NoError(t, bls12.MapToG2(g2Point, fp2))
 	// We now add/subtract the respective g2 points by a fixed
 	// value. This would cause singluar verification to fail but
 	// not aggregate verification.
@@ -123,13 +115,9 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 	bls12.G2Sub(secondG2, secondG2, g2Point)
 
 	lastSig, err := herumi.SignatureFromBytes(rawSig.Serialize())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	secondLastSig, err = herumi.SignatureFromBytes(rawSig2.Serialize())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	sigs[len(sigs)-1] = lastSig
 	sigs[len(sigs)-2] = secondLastSig
 
