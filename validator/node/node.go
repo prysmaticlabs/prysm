@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -86,21 +87,30 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager
 	if featureconfig.Get().EnableAccountsV2 {
-		// Read the wallet from the specified path.
-		wallet, err := accountsv2.OpenWallet(cliCtx)
-		if err != nil {
-			log.Fatalf("Could not open wallet: %v", err)
-		}
-		ValidatorClient.wallet = wallet
-		ctx := context.Background()
-		keyManagerV2, err = wallet.InitializeKeymanager(
-			cliCtx, false, /* skipMnemonicConfirm */
-		)
-		if err != nil {
-			log.Fatalf("Could not read existing keymanager for wallet: %v", err)
-		}
-		if err := wallet.LockConfigFile(ctx); err != nil {
-			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
+		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
+			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
+			offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
+			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx, offset, numValidatorKeys)
+			if err != nil {
+				log.Fatalf("Could not generate interop keys: %v", err)
+			}
+		} else {
+			// Read the wallet from the specified path.
+			wallet, err := accountsv2.OpenWallet(cliCtx)
+			if err != nil {
+				log.Fatalf("Could not open wallet: %v", err)
+			}
+			ValidatorClient.wallet = wallet
+			ctx := context.Background()
+			keyManagerV2, err = wallet.InitializeKeymanager(
+				cliCtx, false, /* skipMnemonicConfirm */
+			)
+			if err != nil {
+				log.Fatalf("Could not read existing keymanager for wallet: %v", err)
+			}
+			if err := wallet.LockConfigFile(ctx); err != nil {
+				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
+			}
 		}
 	} else {
 		keyManagerV1, err = selectV1Keymanager(cliCtx)
@@ -212,8 +222,10 @@ func (s *ValidatorClient) Close() {
 
 	s.services.StopAll()
 	log.Info("Stopping Prysm validator")
-	if err := s.wallet.UnlockWalletConfigFile(); err != nil {
-		log.WithError(err).Errorf("Failed to unlock wallet config file.")
+	if !s.cliCtx.IsSet(flags.InteropNumValidators.Name) {
+		if err := s.wallet.UnlockWalletConfigFile(); err != nil {
+			log.WithError(err).Errorf("Failed to unlock wallet config file.")
+		}
 	}
 	close(s.stop)
 }
