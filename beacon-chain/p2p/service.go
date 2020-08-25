@@ -148,8 +148,8 @@ func NewService(cfg *Config) (*Service, error) {
 	// account previously added peers when creating the gossipsub
 	// object.
 	psOpts := []pubsub.Option{
-		pubsub.WithMessageSigning(false),
-		pubsub.WithStrictSignatureVerification(false),
+		pubsub.WithMessageSignaturePolicy(pubsub.LaxNoSign),
+		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 	// Set the pubsub global parameters that we require.
