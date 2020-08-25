@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -101,4 +103,9 @@ func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEnc
 	}
 
 	return b[0], string(msg.Message), nil
+}
+
+// only returns true for errors that are valid (no resets or expectedEOF errors).
+func isValidStreamError(err error) bool {
+	return err != nil && err.Error() != mux.ErrReset.Error() && err.Error() != helpers.ErrExpectedEOF.Error()
 }
