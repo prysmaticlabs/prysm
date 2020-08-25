@@ -25,5 +25,9 @@ go_test(
     name = "go_default_test",
     srcs = ["main_test.go"],
     embed = [":go_default_library"],
-    deps = ["//tools/unencrypted-keys-gen/keygen:go_default_library"],
+    deps = [
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
+        "//tools/unencrypted-keys-gen/keygen:go_default_library",
+    ],
 )

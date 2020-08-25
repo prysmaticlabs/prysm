@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"math"
-	"reflect"
 	"testing"
 	"time"
 
@@ -190,10 +189,10 @@ func TestSlotToTime(t *testing.T) {
 		slot           uint64
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    time.Time
-		wantErr bool
+		name      string
+		args      args
+		want      time.Time
+		wantedErr string
 	}{
 		{
 			name: "slot_0",
@@ -201,8 +200,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 0,
 				slot:           0,
 			},
-			want:    time.Unix(0, 0),
-			wantErr: false,
+			want: time.Unix(0, 0),
 		},
 		{
 			name: "slot_1",
@@ -210,8 +208,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 0,
 				slot:           1,
 			},
-			want:    time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
-			wantErr: false,
+			want: time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
 		},
 		{
 			name: "slot_12",
@@ -219,8 +216,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 500,
 				slot:           12,
 			},
-			want:    time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
-			wantErr: false,
+			want: time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
 		},
 		{
 			name: "overflow",
@@ -228,13 +224,17 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 500,
 				slot:           math.MaxUint64,
 			},
-			wantErr: true,
+			wantedErr: "is in the far distant future",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); (err != nil) != tt.wantErr && !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SlotToTime() = %v, want %v", got, tt.want)
+			got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+				assert.DeepEqual(t, tt.want, got)
 			}
 		})
 	}
@@ -247,9 +247,9 @@ func TestVerifySlotTime(t *testing.T) {
 		timeTolerance time.Duration
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name      string
+		args      args
+		wantedErr string
 	}{
 		{
 			name: "Past slot",
@@ -257,7 +257,6 @@ func TestVerifySlotTime(t *testing.T) {
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
 				slot:        3,
 			},
-			wantErr: false,
 		},
 		{
 			name: "within tolerance",
@@ -265,7 +264,6 @@ func TestVerifySlotTime(t *testing.T) {
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Add(20 * time.Millisecond).Unix(),
 				slot:        5,
 			},
-			wantErr: false,
 		},
 		{
 			name: "future slot",
@@ -273,13 +271,16 @@ func TestVerifySlotTime(t *testing.T) {
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
 				slot:        6,
 			},
-			wantErr: true,
+			wantedErr: "could not process slot from the future",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := VerifySlotTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance); (err != nil) != tt.wantErr {
-				t.Errorf("VerifySlotTime() error = %v, wantErr %v", err, tt.wantErr)
+			err := VerifySlotTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

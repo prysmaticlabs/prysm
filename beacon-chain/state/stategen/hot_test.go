@@ -112,12 +112,7 @@ func TestLoadHoteStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	require.NoError(t, err)
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: 10,
-		Root: blkRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 10, Root: blkRoot[:]}))
 
 	// This tests where hot state was not cached and needs processing.
 	loadedState, err := service.loadHotStateByRoot(ctx, blkRoot)
@@ -136,12 +131,7 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
 	targetSlot := uint64(0)
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: targetSlot,
-		Root: blkRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: targetSlot, Root: blkRoot[:]}))
 
 	// This tests where hot state was not cached but doesn't need processing
 	// because it on the epoch boundary slot.
