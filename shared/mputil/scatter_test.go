@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/mputil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestDouble(t *testing.T) {
@@ -59,10 +60,7 @@ func TestDouble(t *testing.T) {
 					t.Fatalf("Unexpected error value: expected \"%v\", found \"%v\"", test.err, err)
 				}
 			} else {
-				if err != nil {
-					t.Fatalf("Unexpected error %v", test.err)
-				}
-
+				require.NoError(t, err)
 				for _, result := range workerResults {
 					copy(outValues[result.Offset:], result.Extent.([]int))
 				}
@@ -88,9 +86,7 @@ func TestMutex(t *testing.T) {
 		}
 		return nil, nil
 	})
-	if err != nil {
-		t.Fatalf("Unexpected error %v", err)
-	}
+	require.NoError(t, err)
 
 	if val != totalRuns {
 		t.Fatalf("Unexpected value: expected \"%v\", found \"%v\"", totalRuns, val)

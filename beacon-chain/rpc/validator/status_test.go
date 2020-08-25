@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -70,8 +69,8 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	pubKey1 := pubKey(1)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 	deposit := &ethpb.Deposit{
 		Data: depData,
@@ -128,11 +127,10 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	require.NoError(t, state.SetSlot(5000))
 	err = state.SetValidators([]*ethpb.Validator{
 		{
-			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
-			PublicKey:             pubKey,
-			WithdrawalCredentials: make([]byte, 32),
+			ActivationEpoch:   params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey:         pubKey,
 		},
 	})
 	require.NoError(t, err)
@@ -141,8 +139,8 @@ func TestValidatorStatus_Pending(t *testing.T) {
 
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -188,8 +186,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -279,8 +277,8 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -339,8 +337,8 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -396,15 +394,14 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	state := testutil.NewBeaconState()
 	require.NoError(t, state.SetSlot(slot))
 	err = state.SetValidators([]*ethpb.Validator{{
-		PublicKey:             pubKey,
-		WithdrawableEpoch:     epoch + 1,
-		WithdrawalCredentials: make([]byte, 32)},
+		PublicKey:         pubKey,
+		WithdrawableEpoch: epoch + 1},
 	})
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -564,46 +561,40 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	// Pending active because activation epoch is still defaulted at far future slot.
 	validators := []*ethpb.Validator{
 		{
-			ActivationEpoch:       0,
-			PublicKey:             pubKey(0),
-			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(0),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       0,
-			PublicKey:             pubKey(1),
-			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(1),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       0,
-			PublicKey:             pubKey(2),
-			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(2),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       0,
-			PublicKey:             pubKey(3),
-			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(3),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       currentSlot/params.BeaconConfig().SlotsPerEpoch + 1,
-			PublicKey:             pbKey,
-			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 1,
+			PublicKey:         pbKey,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       currentSlot/params.BeaconConfig().SlotsPerEpoch + 4,
-			PublicKey:             pubKey(5),
-			WithdrawalCredentials: make([]byte, 32),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 4,
+			PublicKey:         pubKey(5),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
 	state := testutil.NewBeaconState()
@@ -620,8 +611,8 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	for i := 0; i < 6; i++ {
 		depData := &ethpb.Deposit_Data{
 			PublicKey:             pubKey(uint64(i)),
-			Signature:             bytesutil.PadTo([]byte("hi"), 96),
-			WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+			Signature:             []byte("hi"),
+			WithdrawalCredentials: []byte("hey"),
 		}
 
 		deposit := &ethpb.Deposit{
@@ -662,8 +653,8 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &ethpb.Deposit{
@@ -725,8 +716,8 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
 	}
 
 	deposit := &ethpb.Deposit{

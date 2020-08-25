@@ -20,16 +20,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
@@ -83,10 +82,11 @@ func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
+	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 0}})
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
+	require.NoError(t, err)
 
 	return &mock.ChainService{
 		State: st,
@@ -198,9 +198,12 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			cache.RLock()
 			parentRoot := cache.rootCache[cache.parentSlotCache[slot]]
 			cache.RUnlock()
-			blk := testutil.NewBeaconBlock()
-			blk.Block.Slot = slot
-			blk.Block.ParentRoot = parentRoot[:]
+			blk := &eth.SignedBeaconBlock{
+				Block: &eth.BeaconBlock{
+					Slot:       slot,
+					ParentRoot: parentRoot[:],
+				},
+			}
 			// If forked peer, give a different parent root.
 			if datum.forkedPeer {
 				newRoot := hashutil.Hash(parentRoot[:])
@@ -229,7 +232,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
 		FinalizedEpoch: datum.finalizedEpoch,
-		HeadRoot:       bytesutil.PadTo([]byte("head_root"), 32),
+		HeadRoot:       []byte("head_root"),
 		HeadSlot:       datum.headSlot,
 	})
 
