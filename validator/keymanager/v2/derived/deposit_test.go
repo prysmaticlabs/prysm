@@ -124,7 +124,7 @@ func TestSendDepositTx(t *testing.T) {
 	for i, encodedDeposit := range encodedDeposits {
 		proof, err := depositTrie.MerkleProof(i)
 		require.NoError(t, err, "Could not generate proof")
-		require.Equal(t, true, trieutil.VerifyMerkleBranch(root[:], encodedDeposit, i, proof),
+		require.Equal(t, true, trieutil.VerifyMerkleBranch(root[:], encodedDeposit, i, proof, params.BeaconConfig().DepositContractTreeDepth),
 			"Unable verify deposit merkle branch of deposit root for root: %#x, encodedDeposit: %#x, i : %d", root[:], encodedDeposit, i)
 	}
 }
