@@ -58,7 +58,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	e := beaconState.Eth1Data()
 	e.DepositCount = 100
 	require.NoError(t, beaconState.SetEth1Data(e))
-	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}))
+	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot(), ParentRoot: make([]byte, 32), StateRoot: make([]byte, 32), BodyRoot: make([]byte, 32)}))
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	oldMix, err := beaconState.RandaoMixAtIndex(1)
