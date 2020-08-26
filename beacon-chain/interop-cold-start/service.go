@@ -148,7 +148,7 @@ func (s *Service) ClearPreGenesisData() {
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
 func (s *Service) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
-	return &ethpb.Deposit{}, big.NewInt(1)
+	return &ethpb.Deposit{}, nil
 }
 
 // DepositsNumberAndRootAtHeight mocks out the deposit cache functionality for interop.
