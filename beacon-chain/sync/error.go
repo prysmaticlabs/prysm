@@ -108,5 +108,5 @@ func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEnc
 
 // only returns true for errors that are valid (no resets or expectedEOF errors).
 func isValidStreamError(err error) bool {
-	return err != nil && err.Error() != mux.ErrReset.Error() && err.Error() != helpers.ErrExpectedEOF.Error()
+	return err != nil && !errors.Is(err, mux.ErrReset) && !errors.Is(err, helpers.ErrExpectedEOF)
 }
