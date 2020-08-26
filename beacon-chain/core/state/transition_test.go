@@ -282,12 +282,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			BeaconBlockRoot: make([]byte, 32),
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
-		Signature: make([]byte, 96),
+		Signature:       make([]byte, 96),
 	}
 	attestations := []*ethpb.Attestation{blockAtt}
 	var exits []*ethpb.SignedVoluntaryExit

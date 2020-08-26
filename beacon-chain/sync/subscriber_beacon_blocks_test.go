@@ -77,7 +77,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		{
 			name: "invalid block does not remove attestations",
 			args: args{
-				msg: func() *ethpb.SignedBeaconBlock{
+				msg: func() *ethpb.SignedBeaconBlock {
 					b := testutil.NewBeaconBlock()
 					b.Block.Body.Attestations = pooledAttestations
 					return b
@@ -99,7 +99,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			db, _ := dbtest.SetupDB(t)
 			s := &Service{
 				chain: &chainMock.ChainService{
-					DB: db,
+					DB:   db,
 					Root: make([]byte, 32),
 				},
 				attPool: attestations.NewPool(),
