@@ -477,7 +477,8 @@ func (bs *Server) GetValidatorParticipation(
 		)
 	}
 
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch+1))
+	nextEpochEndSlot := helpers.StartSlot(requestedEpoch+2) - 1
+	requestedState, err := bs.StateGen.StateBySlot(ctx, nextEpochEndSlot)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get state")
 	}
