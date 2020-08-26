@@ -166,9 +166,25 @@ func (v *ValidatorService) Start() {
 		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 	}
+	var validatingKeys [][48]byte
 	go run(v.ctx, v.validator)
 	if featureconfig.Get().EnableAccountsV2 {
+		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(v.ctx)
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
 		go recheckValidatingKeysBucket(v.ctx, v.db, v.keyManagerV2)
+	} else {
+		validatingKeys, err = v.keyManager.FetchValidatingKeys()
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
 	}
 }
 
