@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -76,12 +77,11 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		{
 			name: "invalid block does not remove attestations",
 			args: args{
-				msg: &ethpb.SignedBeaconBlock{
-					Block: &ethpb.BeaconBlock{
-						// An empty block will return an err in mocked chainService.ReceiveBlock.
-						Body: &ethpb.BeaconBlockBody{Attestations: pooledAttestations},
-					},
-				},
+				msg: func() *ethpb.SignedBeaconBlock{
+					b := testutil.NewBeaconBlock()
+					b.Block.Body.Attestations = pooledAttestations
+					return b
+				}(),
 			},
 			wantedErr: "nil inner state",
 			check: func(t *testing.T, s *Service) {
@@ -100,6 +100,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			s := &Service{
 				chain: &chainMock.ChainService{
 					DB: db,
+					Root: make([]byte, 32),
 				},
 				attPool: attestations.NewPool(),
 			}

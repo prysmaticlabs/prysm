@@ -128,18 +128,16 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 	c.rootCache = make(map[uint64][32]byte)
 	c.parentSlotCache = make(map[uint64]uint64)
 	parentSlot := uint64(0)
-	genesisBlock := &eth.BeaconBlock{
-		Slot: 0,
-	}
+
+	genesisBlock := testutil.NewBeaconBlock().Block
 	genesisRoot, err := genesisBlock.HashTreeRoot()
 	require.NoError(t, err)
 	c.rootCache[0] = genesisRoot
 	parentRoot := genesisRoot
 	for _, slot := range reqSlots {
-		currentBlock := &eth.BeaconBlock{
-			Slot:       slot,
-			ParentRoot: parentRoot[:],
-		}
+		currentBlock := testutil.NewBeaconBlock().Block
+		currentBlock.Slot = slot
+		currentBlock.ParentRoot = parentRoot[:]
 		parentRoot, err = currentBlock.HashTreeRoot()
 		require.NoError(t, err)
 		c.rootCache[slot] = parentRoot

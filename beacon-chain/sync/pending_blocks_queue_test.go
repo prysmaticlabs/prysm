@@ -76,7 +76,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
 
 	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
-	r.insertBlockToPendingQueue(b1.Block.Slot, &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}, [32]byte{})
+	r.insertBlockToPendingQueue(b1.Block.Slot, testutil.NewBeaconBlock(), [32]byte{})
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks), "Incorrect size for slot to pending blocks cache")
