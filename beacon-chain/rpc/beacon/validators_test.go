@@ -39,9 +39,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
-	if err := st.SetSlot(0); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, st.SetSlot(0))
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
 		HeadFetcher: &mock.ChainService{
@@ -197,8 +195,8 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 
 	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 100, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(st.Balances()))
-	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil {
+		assert.ErrorContains(t, wanted, err)
 	}
 }
 
@@ -1012,10 +1010,9 @@ func TestServer_GetValidator(t *testing.T) {
 	}
 
 	tests := []struct {
-		req     *ethpb.GetValidatorRequest
-		res     *ethpb.Validator
-		wantErr bool
-		err     string
+		req       *ethpb.GetValidatorRequest
+		res       *ethpb.Validator
+		wantedErr string
 	}{
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -1023,8 +1020,7 @@ func TestServer_GetValidator(t *testing.T) {
 					Index: 0,
 				},
 			},
-			res:     validators[0],
-			wantErr: false,
+			res: validators[0],
 		},
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -1032,8 +1028,7 @@ func TestServer_GetValidator(t *testing.T) {
 					Index: uint64(count - 1),
 				},
 			},
-			res:     validators[count-1],
-			wantErr: false,
+			res: validators[count-1],
 		},
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -1041,8 +1036,7 @@ func TestServer_GetValidator(t *testing.T) {
 					PublicKey: pubKey(5),
 				},
 			},
-			res:     validators[5],
-			wantErr: false,
+			res: validators[5],
 		},
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -1050,9 +1044,8 @@ func TestServer_GetValidator(t *testing.T) {
 					PublicKey: []byte("bad-keyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
 				},
 			},
-			res:     nil,
-			wantErr: true,
-			err:     "No validator matched filter criteria",
+			res:       nil,
+			wantedErr: "No validator matched filter criteria",
 		},
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -1060,20 +1053,17 @@ func TestServer_GetValidator(t *testing.T) {
 					Index: uint64(len(validators)),
 				},
 			},
-			res:     nil,
-			wantErr: true,
-			err:     fmt.Sprintf("there are only %d validators", len(validators)),
+			res:       nil,
+			wantedErr: fmt.Sprintf("there are only %d validators", len(validators)),
 		},
 	}
 
 	for _, test := range tests {
 		res, err := bs.GetValidator(context.Background(), test.req)
-		if test.wantErr && err != nil {
-			if !strings.Contains(err.Error(), test.err) {
-				t.Fatalf("Wanted %v, received %v", test.err, err)
-			}
-		} else if err != nil {
-			t.Fatal(err)
+		if test.wantedErr != "" {
+			require.ErrorContains(t, test.wantedErr, err)
+		} else {
+			require.NoError(t, err)
 		}
 		assert.DeepEqual(t, test.res, res)
 	}
@@ -1446,7 +1436,7 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0},
 	})
 	if err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
+		assert.ErrorContains(t, wanted, err)
 	}
 }
 

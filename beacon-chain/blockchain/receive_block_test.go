@@ -37,10 +37,10 @@ func TestService_ReceiveBlock(t *testing.T) {
 		block *ethpb.SignedBeaconBlock
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "applies block with state transition",
@@ -143,9 +143,11 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := stateutil.BlockRoot(tt.args.block.Block)
 			require.NoError(t, err)
-			if err := s.ReceiveBlock(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlock() error = %v, wantErr %v", err, tt.wantErr)
+			err = s.ReceiveBlock(ctx, tt.args.block, root)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
+				assert.NoError(t, err)
 				tt.check(t, s)
 			}
 		})
@@ -201,9 +203,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		return blk
 	}
 
@@ -211,10 +211,10 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 		block *ethpb.SignedBeaconBlock
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "applies block with state transition",
@@ -266,9 +266,11 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 			root, err := stateutil.BlockRoot(tt.args.block.Block)
 			require.NoError(t, err)
 
-			if err := s.ReceiveBlockInitialSync(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlockInitialSync() error = %v, wantErr %v", err, tt.wantErr)
+			err = s.ReceiveBlockInitialSync(ctx, tt.args.block, root)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
+				assert.NoError(t, err)
 				tt.check(t, s)
 			}
 		})
@@ -281,9 +283,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		return blk
 	}
 
@@ -291,10 +291,10 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 		block *ethpb.SignedBeaconBlock
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "applies block with state transition",
@@ -347,9 +347,11 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 			blks := []*ethpb.SignedBeaconBlock{tt.args.block}
 			roots := [][32]byte{root}
-			if err := s.ReceiveBlockBatch(ctx, blks, roots); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlockBatch() error = %v, wantErr %v", err, tt.wantErr)
+			err = s.ReceiveBlockBatch(ctx, blks, roots)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
+				assert.NoError(t, err)
 				tt.check(t, s)
 			}
 		})

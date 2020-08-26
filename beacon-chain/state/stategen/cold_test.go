@@ -63,13 +63,7 @@ func TestLoadStateByRoot_CanGet(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, blkRoot))
-
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Root: blkRoot[:],
-		Slot: 100,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: blkRoot[:], Slot: 100}))
 
 	loadedState, err := service.StateByRoot(ctx, blkRoot)
 	require.NoError(t, err)

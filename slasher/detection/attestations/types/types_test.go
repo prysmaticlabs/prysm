@@ -45,8 +45,6 @@ func BenchmarkSpan_Unmarshal(b *testing.B) {
 	var err error
 	for i := 0; i < b.N; i++ {
 		span, err = types.UnmarshalSpan(marshaled)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
 }

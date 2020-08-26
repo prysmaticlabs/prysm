@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -338,6 +339,44 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		},
 	).Return(nil)
 	assert.NoError(t, Server.WaitForChainStart(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+}
+
+func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
+	db, _ := dbutil.SetupDB(t)
+	genesisValidatorRoot := [32]byte{0x01, 0x02}
+
+	// Set head state to nil
+	chainService := &mockChain.ChainService{State: nil}
+	notifier := chainService.StateNotifier()
+	Server := &Server{
+		Ctx: context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{
+			ChainFeed: new(event.Feed),
+		},
+		BeaconDB:      db,
+		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
+
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		assert.NoError(t, Server.WaitForChainStart(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		wg.Done()
+	}()
+	// Simulate a late state initialization event, so that
+	// method is able to handle race condition here.
+	notifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{
+			StartTime:             time.Unix(0, 0),
+			GenesisValidatorsRoot: genesisValidatorRoot[:],
+		},
+	})
+	testutil.WaitTimeout(wg, time.Second)
 }
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {

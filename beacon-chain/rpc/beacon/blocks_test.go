@@ -577,9 +577,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
 	b, err := testutil.GenerateFullBlock(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,

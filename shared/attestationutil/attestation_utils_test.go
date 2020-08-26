@@ -2,7 +2,6 @@ package attestationutil_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -49,9 +48,9 @@ func TestAttestingIndices(t *testing.T) {
 
 func TestIsValidAttestationIndices(t *testing.T) {
 	tests := []struct {
-		name string
-		att  *eth.IndexedAttestation
-		want string
+		name      string
+		att       *eth.IndexedAttestation
+		wantedErr string
 	}{
 		{
 			name: "Indices should be non-empty",
@@ -62,7 +61,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				},
 				Signature: make([]byte, 96),
 			},
-			want: "expected non-empty",
+			wantedErr: "expected non-empty",
 		},
 		{
 			name: "Greater than max validators per committee",
@@ -73,7 +72,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				},
 				Signature: make([]byte, 96),
 			},
-			want: "indices count exceeds",
+			wantedErr: "indices count exceeds",
 		},
 		{
 			name: "Needs to be sorted",
@@ -84,7 +83,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				},
 				Signature: make([]byte, 96),
 			},
-			want: "not uniquely sorted",
+			wantedErr: "not uniquely sorted",
 		},
 		{
 			name: "Valid indices",
@@ -100,11 +99,10 @@ func TestIsValidAttestationIndices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := attestationutil.IsValidAttestationIndices(context.Background(), tt.att)
-			if tt.want == "" && err != nil {
-				t.Fatal(err)
-			}
-			if tt.want != "" && !strings.Contains(err.Error(), tt.want) {
-				t.Errorf("IsValidAttestationIndices() got = %v, want %v", err, tt.want)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

@@ -4,6 +4,9 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 type mockService struct {
@@ -41,18 +44,11 @@ func TestRegisterService_Twice(t *testing.T) {
 	}
 
 	m := &mockService{}
-	if err := registry.RegisterService(m); err != nil {
-		t.Fatalf("failed to register first service")
-	}
+	require.NoError(t, registry.RegisterService(m), "Failed to register first service")
 
 	// Checks if first service was indeed registered.
-	if len(registry.serviceTypes) != 1 {
-		t.Fatalf("service types slice should contain 1 service, contained %v", len(registry.serviceTypes))
-	}
-
-	if err := registry.RegisterService(m); err == nil {
-		t.Errorf("should not be able to register a service twice, got nil error")
-	}
+	require.Equal(t, 1, len(registry.serviceTypes))
+	assert.ErrorContains(t, "service already exists", registry.RegisterService(m))
 }
 
 func TestRegisterService_Different(t *testing.T) {
@@ -62,25 +58,16 @@ func TestRegisterService_Different(t *testing.T) {
 
 	m := &mockService{}
 	s := &secondMockService{}
-	if err := registry.RegisterService(m); err != nil {
-		t.Fatalf("failed to register first service")
-	}
+	require.NoError(t, registry.RegisterService(m), "Failed to register first service")
+	require.NoError(t, registry.RegisterService(s), "Failed to register second service")
 
-	if err := registry.RegisterService(s); err != nil {
-		t.Fatalf("failed to register second service")
-	}
+	require.Equal(t, 2, len(registry.serviceTypes))
 
-	if len(registry.serviceTypes) != 2 {
-		t.Errorf("service types slice should contain 2 services, contained %v", len(registry.serviceTypes))
-	}
+	_, exists := registry.services[reflect.TypeOf(m)]
+	assert.Equal(t, true, exists, "service of type %v not registered", reflect.TypeOf(m))
 
-	if _, exists := registry.services[reflect.TypeOf(m)]; !exists {
-		t.Errorf("service of type %v not registered", reflect.TypeOf(m))
-	}
-
-	if _, exists := registry.services[reflect.TypeOf(s)]; !exists {
-		t.Errorf("service of type %v not registered", reflect.TypeOf(s))
-	}
+	_, exists = registry.services[reflect.TypeOf(s)]
+	assert.Equal(t, true, exists, "service of type %v not registered", reflect.TypeOf(s))
 }
 
 func TestFetchService_OK(t *testing.T) {
@@ -89,27 +76,16 @@ func TestFetchService_OK(t *testing.T) {
 	}
 
 	m := &mockService{}
-	if err := registry.RegisterService(m); err != nil {
-		t.Fatalf("failed to register first service")
-	}
+	require.NoError(t, registry.RegisterService(m), "Failed to register first service")
 
-	if err := registry.FetchService(*m); err == nil {
-		t.Errorf("passing in a value should throw an error, received nil error")
-	}
+	assert.ErrorContains(t, "input must be of pointer type, received value type instead", registry.FetchService(*m))
 
 	var s *secondMockService
-	if err := registry.FetchService(&s); err == nil {
-		t.Errorf("fetching an unregistered service should return an error, got nil")
-	}
+	assert.ErrorContains(t, "unknown service", registry.FetchService(&s))
 
 	var m2 *mockService
-	if err := registry.FetchService(&m2); err != nil {
-		t.Fatalf("failed to fetch service")
-	}
-
-	if m2 != m {
-		t.Errorf("pointers were not equal, instead got %p, %p", m2, m)
-	}
+	require.NoError(t, registry.FetchService(&m2), "Failed to fetch service")
+	require.Equal(t, m, m2)
 }
 
 func TestServiceStatus_OK(t *testing.T) {
@@ -118,27 +94,16 @@ func TestServiceStatus_OK(t *testing.T) {
 	}
 
 	m := &mockService{}
-	if err := registry.RegisterService(m); err != nil {
-		t.Fatalf("failed to register first service")
-	}
+	require.NoError(t, registry.RegisterService(m), "Failed to register first service")
 
 	s := &secondMockService{}
-	if err := registry.RegisterService(s); err != nil {
-		t.Fatalf("failed to register first service")
-	}
+	require.NoError(t, registry.RegisterService(s), "Failed to register first service")
 
 	m.status = errors.New("something bad has happened")
 	s.status = errors.New("woah, horsee")
 
 	statuses := registry.Statuses()
 
-	mStatus := statuses[reflect.TypeOf(m)]
-	if mStatus == nil || mStatus.Error() != "something bad has happened" {
-		t.Errorf("Received unexpected status for %T = %v", m, mStatus)
-	}
-
-	sStatus := statuses[reflect.TypeOf(s)]
-	if sStatus == nil || sStatus.Error() != "woah, horsee" {
-		t.Errorf("Received unexpected status for %T = %v", s, sStatus)
-	}
+	assert.ErrorContains(t, "something bad has happened", statuses[reflect.TypeOf(m)])
+	assert.ErrorContains(t, "woah, horsee", statuses[reflect.TypeOf(s)])
 }

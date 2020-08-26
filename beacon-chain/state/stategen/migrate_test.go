@@ -77,12 +77,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, fRoot))
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: 1,
-		Root: fRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: fRoot[:]}))
 	service.finalizedInfo = &finalizedInfo{
 		slot:  1,
 		root:  fRoot,
