@@ -11,7 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -480,15 +482,16 @@ func (bs *Server) GetValidatorParticipation(
 		return nil, status.Error(codes.Internal, "Could not get state")
 	}
 
+	requestedState, err = bs.appendNonFinalizedBlockAttsToState(ctx, requestedState, requestedEpoch)
+
 	v, b, err := precompute.New(ctx, requestedState)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not set up pre compute instance")
 	}
 	_, b, err = precompute.ProcessAttestations(ctx, requestedState, v, b)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not pre compute attestations")
+		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 	}
-
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
@@ -503,6 +506,48 @@ func (bs *Server) GetValidatorParticipation(
 			EligibleEther:           b.ActivePrevEpoch,
 		},
 	}, nil
+}
+
+// This appends non finalized block atts to state. To replay for a state, a node does not replay non canonical
+// nor finalized blocks. To count participation, this includes the attestations from the orphaned block to state.
+func (bs *Server) appendNonFinalizedBlockAttsToState(ctx context.Context, s *statetrie.BeaconState, e uint64) (*statetrie.BeaconState, error) {
+	start := helpers.StartSlot(e)
+	end := helpers.StartSlot(e + 1)
+	f := filters.NewFilter().SetStartSlot(start).SetEndSlot(end)
+	blks, err := bs.BeaconDB.Blocks(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	bRoots, err := bs.BeaconDB.BlockRoots(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	if len(blks) != len(bRoots) {
+		return nil, err
+	}
+	fbs := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
+	for i := len(blks) - 1; i >= 0; i-- {
+		if bs.BeaconDB.IsFinalizedBlock(ctx, bRoots[i]) {
+			fbs = append(fbs, blks[i])
+		}
+	}
+
+	for _, blk := range blks {
+		for _, a := range blk.Block.Body.Attestations {
+			if a.Data.Target.Epoch == e {
+				pa := &pb.PendingAttestation{
+					Data:            a.Data,
+					AggregationBits: a.AggregationBits,
+					InclusionDelay:  params.BeaconConfig().FarFutureEpoch,
+				}
+				if err := s.AppendPreviousEpochAttestations(pa); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return s, nil
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
