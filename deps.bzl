@@ -3615,9 +3615,8 @@ def prysm_deps():
         version = "v0.7.1",
     )
     go_repository(
-      name = "com_github_go_fsnotify_fsnotify",
-      importpath = "github.com/go-fsnotify/fsnotify",
-      sum = "h1:PeVNzgTRtWGm6fVic5i21t+n5ptPGCZuMcSPVMyTWjs=",
-      version = "v0.0.0-20180321022601-755488143dae",
+        name = "com_github_go_fsnotify_fsnotify",
+        importpath = "github.com/go-fsnotify/fsnotify",
+        sum = "h1:PeVNzgTRtWGm6fVic5i21t+n5ptPGCZuMcSPVMyTWjs=",
+        version = "v0.0.0-20180321022601-755488143dae",
     )
-
