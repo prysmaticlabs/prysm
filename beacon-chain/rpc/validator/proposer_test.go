@@ -23,7 +23,6 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -55,7 +54,7 @@ func TestGetBlock_OK(t *testing.T) {
 	genesis := b.NewGenesisBlock(stateRoot[:])
 	require.NoError(t, db.SaveBlock(ctx, genesis), "Could not save genesis block")
 
-	parentRoot, err := stateutil.BlockRoot(genesis.Block)
+	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
@@ -137,7 +136,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	genesis := b.NewGenesisBlock(stateRoot[:])
 	require.NoError(t, db.SaveBlock(ctx, genesis), "Could not save genesis block")
 
-	parentRoot, err := stateutil.BlockRoot(genesis.Block)
+	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
@@ -223,7 +222,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 	bsRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
@@ -260,7 +259,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	genesis := b.NewGenesisBlock(stateRoot[:])
 	require.NoError(t, db.SaveBlock(ctx, genesis), "Could not save genesis block")
 
-	parentRoot, err := stateutil.BlockRoot(genesis.Block)
+	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
@@ -1767,7 +1766,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 	require.NoError(t, state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
 	assert.NoError(t, state.SetSlot(1))
 
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, state, genesisRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, genesisRoot), "Could not save genesis state")

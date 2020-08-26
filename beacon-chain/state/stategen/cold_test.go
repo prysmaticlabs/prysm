@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -58,7 +57,7 @@ func TestLoadStateByRoot_CanGet(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := testutil.NewBeaconBlock()
-	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
@@ -78,7 +77,7 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := testutil.NewBeaconBlock()
-	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))

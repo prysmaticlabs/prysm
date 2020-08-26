@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -61,7 +60,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	blk.Block.Slot = 1
 	require.NoError(t, db.SaveBlock(ctx, blk))
 
-	validBlockRoot, err := stateutil.BlockRoot(blk.Block)
+	validBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	validators := uint64(64)
@@ -269,7 +268,7 @@ func TestService_validateCommitteeIndexBeaconAttestationUseCheckptCache(t *testi
 	blk.Block.Slot = 1
 	require.NoError(t, db.SaveBlock(ctx, blk))
 
-	validBlockRoot, err := stateutil.BlockRoot(blk.Block)
+	validBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	validators := uint64(64)

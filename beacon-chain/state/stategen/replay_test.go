@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,7 +25,7 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := testutil.NewBeaconBlock()
-	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	gRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -48,7 +47,7 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := testutil.NewBeaconBlock()
-	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	gRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -66,7 +65,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
@@ -95,7 +94,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
@@ -304,7 +303,7 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 	}
 
 	gBlk := testutil.NewBeaconBlock()
-	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	gRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, gBlk))
 	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -336,7 +335,7 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+100)
 	require.NoError(t, err)
 	assert.Equal(t, s.finalizedInfo.slot+20, savedSlot)
-	wantedRoot, err := stateutil.BlockRoot(b3.Block)
+	wantedRoot, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, wantedRoot, savedRoot, "Did not save correct root")
 }
@@ -366,7 +365,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 
 	gBlk := testutil.NewBeaconBlock()
 	gState := testutil.NewBeaconState()
-	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	gRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, gBlk))
 	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -391,7 +390,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = s.finalizedInfo.slot + 10
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b2))
-	b2Root, err := stateutil.BlockRoot(b2.Block)
+	b2Root, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(s.finalizedInfo.slot+10))
@@ -777,7 +776,7 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 		beaconDB: db,
 	}
 	gBlock := testutil.NewBeaconBlock()
-	gRoot, err := stateutil.BlockRoot(gBlock.Block)
+	gRoot, err := gBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, gBlock))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, [32]byte{}))

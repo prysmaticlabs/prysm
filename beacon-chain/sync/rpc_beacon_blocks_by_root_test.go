@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -83,9 +82,9 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	blockB := testutil.NewBeaconBlock()
 	blockB.Block.Slot = 40
 	// Set up a head state with data we expect.
-	blockARoot, err := stateutil.BlockRoot(blockA.Block)
+	blockARoot, err := blockA.Block.HashTreeRoot()
 	require.NoError(t, err)
-	blockBRoot, err := stateutil.BlockRoot(blockB.Block)
+	blockBRoot, err := blockB.Block.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)

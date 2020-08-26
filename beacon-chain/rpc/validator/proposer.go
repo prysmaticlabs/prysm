@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -155,7 +154,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	root, err := stateutil.BlockRoot(blk.Block)
+	root, err := blk.Block.HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
 	}
@@ -695,7 +694,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 
 		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 		for _, att := range atts {
-			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
+			attDataRoot, err := att.Data.HashTreeRoot()
 			if err != nil {
 				return nil, err
 			}

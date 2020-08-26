@@ -17,7 +17,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -66,7 +65,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -128,7 +127,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		},
 	}
 	block := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
@@ -228,7 +227,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 		},
 	}
 	block := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)

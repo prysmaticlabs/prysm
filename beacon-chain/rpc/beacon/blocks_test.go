@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -89,7 +88,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	parentRoot := [32]byte{'a'}
 	blk := testutil.NewBeaconBlock()
 	blk.Block.ParentRoot = parentRoot[:]
-	root, err := stateutil.BlockRoot(blk.Block)
+	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -125,7 +124,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	parentRoot := [32]byte{1, 2, 3}
 	blk := testutil.NewBeaconBlock()
 	blk.Block.ParentRoot = parentRoot[:]
-	root, err := stateutil.BlockRoot(blk.Block)
+	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -136,7 +135,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
-		root, err := stateutil.BlockRoot(b.Block)
+		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = b
 		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
@@ -162,7 +161,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	for i := uint64(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
-		root, err := stateutil.BlockRoot(b.Block)
+		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = b
 		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
@@ -173,7 +172,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		BeaconDB: db,
 	}
 
-	root6, err := stateutil.BlockRoot(blks[6].Block)
+	root6, err := blks[6].Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -342,7 +341,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
-	gRoot, err := stateutil.BlockRoot(genBlock.Block)
+	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
@@ -373,7 +372,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
-	gRoot, err := stateutil.BlockRoot(genBlock.Block)
+	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
@@ -381,21 +380,21 @@ func TestServer_GetChainHead(t *testing.T) {
 	finalizedBlock.Block.Slot = 1
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), finalizedBlock))
-	fRoot, err := stateutil.BlockRoot(finalizedBlock.Block)
+	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), justifiedBlock))
-	jRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
+	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 3
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), prevJustifiedBlock))
-	pjRoot, err := stateutil.BlockRoot(prevJustifiedBlock.Block)
+	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -460,7 +459,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
-	gRoot, err := stateutil.BlockRoot(genBlock.Block)
+	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
@@ -468,21 +467,21 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	finalizedBlock.Block.Slot = 32
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), finalizedBlock))
-	fRoot, err := stateutil.BlockRoot(finalizedBlock.Block)
+	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 64
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), justifiedBlock))
-	jRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
+	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 96
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), prevJustifiedBlock))
-	pjRoot, err := stateutil.BlockRoot(prevJustifiedBlock.Block)
+	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -494,7 +493,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
-	hRoot, err := stateutil.BlockRoot(b.Block)
+	hRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	chainService := &chainMock.ChainService{}

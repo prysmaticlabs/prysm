@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -148,7 +147,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 	newHeader.StateRoot = prevStateRoot[:]
-	parentRoot, err := stateutil.BlockHeaderRoot(newHeader)
+	parentRoot, err := newHeader.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}

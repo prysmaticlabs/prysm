@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -103,7 +102,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	signedBlock := testutil.NewBeaconBlock()
 	signedBlock.Block.ParentRoot = bytesutil.PadTo(parentRoot[:], 32)
 	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
-	root, err := stateutil.BlockRoot(signedBlock.Block)
+	root, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, signedBlock))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -910,7 +909,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))

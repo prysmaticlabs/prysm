@@ -22,7 +22,6 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -102,7 +101,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	headState := testutil.NewBeaconState()
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
@@ -152,7 +151,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	require.NoError(t, st.SetBalances(balances))
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
@@ -180,7 +179,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	st := testutil.NewBeaconState()
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
@@ -228,7 +227,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 	headState, err := db.HeadState(context.Background())
 	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
@@ -313,7 +312,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	headState, err := db.HeadState(context.Background())
 	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
@@ -384,7 +383,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	headState, err := db.HeadState(context.Background())
 	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
@@ -524,7 +523,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
@@ -895,7 +894,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	require.NoError(t, st.SetValidators(validators))
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -961,7 +960,7 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	require.NoError(t, st.SetBalances(balances))
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -1116,7 +1115,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
 
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
@@ -1388,7 +1387,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
-	bRoot, err := stateutil.BlockRoot(b.Block)
+	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, headState, bRoot))
 
@@ -1419,7 +1418,7 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
-	bRoot, err := stateutil.BlockRoot(b.Block)
+	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, headState, bRoot))
 
@@ -1748,7 +1747,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(db, sc)
 	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
@@ -1845,7 +1844,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(db, sc)
 	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))

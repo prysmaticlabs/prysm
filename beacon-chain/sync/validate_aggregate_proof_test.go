@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -189,7 +188,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
@@ -277,7 +276,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	aggBits := bitfield.NewBitlist(3)
@@ -346,7 +345,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
@@ -437,7 +436,7 @@ func TestValidateAggregateAndProofUseCheckptCache_CanValidate(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
@@ -525,7 +524,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), b))
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
@@ -634,7 +633,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))

@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -136,7 +135,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db, sc)
 
 	genesisBlk := testutil.NewBeaconBlock()
-	blkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
 	s := testutil.NewBeaconState()
@@ -203,7 +202,7 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	chainService := setupBeaconChain(t, db, sc)
 
 	genesisBlk := testutil.NewBeaconBlock()
-	blkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
 	s := testutil.NewBeaconState()
@@ -226,7 +225,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
 	require.NoError(t, db.SaveBlock(ctx, genesis))
@@ -238,7 +237,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(finalizedSlot))
 	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
-	headRoot, err := stateutil.BlockRoot(headBlock.Block)
+	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, headState, headRoot))
 	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
@@ -292,7 +291,7 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 		beaconDB:         db,
 	}
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
-	r, err := stateutil.BlockRoot(block.Block)
+	r, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	state, err := beaconstate.InitializeFromProto(bs)
@@ -311,7 +310,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	}
 	block := testutil.NewBeaconBlock()
 	require.NoError(b, s.beaconDB.SaveBlock(ctx, block))
-	r, err := stateutil.BlockRoot(block.Block)
+	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)
 
 	b.ResetTimer()
@@ -329,7 +328,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 		beaconDB:         db,
 	}
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
-	r, err := stateutil.BlockRoot(block.Block)
+	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)
 	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	state, err := beaconstate.InitializeFromProto(bs)

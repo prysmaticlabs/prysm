@@ -8,7 +8,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -88,7 +87,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = uint64(i)
 		totalBlocks[i] = b
-		r, err := stateutil.BlockRoot(totalBlocks[i].Block)
+		r, err := totalBlocks[i].Block.HashTreeRoot()
 		require.NoError(t, err)
 		st := testutil.NewBeaconState()
 		require.NoError(t, st.SetSlot(uint64(i)))
@@ -138,7 +137,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 
 	require.NoError(t, db.SaveBlock(ctx, blk))
 
-	finalizedBlockRoot, err := stateutil.BlockRoot(blk.Block)
+	finalizedBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	finalizedState := testutil.NewBeaconState()
@@ -162,7 +161,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	blk.Block.Slot = 100
 	require.NoError(t, db.SaveBlock(ctx, blk))
 
-	headBlockRoot, err := stateutil.BlockRoot(blk.Block)
+	headBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(100))
@@ -177,7 +176,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	r, err := stateutil.BlockRoot(b.Block)
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	st := testutil.NewBeaconState()
@@ -186,7 +185,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	require.NoError(t, db.SaveState(context.Background(), st, r))
 
 	b.Block.Slot = 100
-	r1, err := stateutil.BlockRoot(b.Block)
+	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	st = testutil.NewBeaconState()
@@ -195,7 +194,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	require.NoError(t, db.SaveState(context.Background(), st, r1))
 
 	b.Block.Slot = 1000
-	r2, err := stateutil.BlockRoot(b.Block)
+	r2, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	st = testutil.NewBeaconState()
@@ -227,7 +226,7 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	r, err := stateutil.BlockRoot(b.Block)
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 

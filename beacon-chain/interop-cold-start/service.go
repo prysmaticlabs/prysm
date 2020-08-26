@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -173,7 +172,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}

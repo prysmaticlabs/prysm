@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -56,7 +55,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
@@ -97,7 +96,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))

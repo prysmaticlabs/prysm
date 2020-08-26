@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -40,7 +39,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
 	genesis := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -86,7 +85,7 @@ func TestGetDuties_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
@@ -160,7 +159,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	// Set state to non-epoch start slot.
 	require.NoError(t, bState.SetSlot(5))
 
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))
@@ -201,7 +200,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))
@@ -414,7 +413,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	require.NoError(b, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(b, err, "Could not setup genesis bs")
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(b, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))

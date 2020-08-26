@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -45,7 +44,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 		BodyRoot:   make([]byte, 32),
 	}))
 
-	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
+	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -82,7 +81,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	}))
 	require.NoError(t, beaconState.SetSlot(10))
 
-	lbhdr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
+	lbhdr, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
@@ -217,7 +216,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	parentRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
+	parentRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv := bls.RandKey()
@@ -266,7 +265,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		BodyRoot:      make([]byte, 32),
 	}))
 
-	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
+	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -280,7 +279,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
+	bodyRoot, err := block.Block.Body.HashTreeRoot()
 	require.NoError(t, err, "Failed to hash block bytes got")
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
@@ -326,7 +325,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 		BodyRoot:      make([]byte, 32),
 	}))
 
-	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
+	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)

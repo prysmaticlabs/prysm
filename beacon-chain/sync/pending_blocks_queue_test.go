@@ -15,7 +15,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -47,7 +46,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 
 	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
-	b0Root, err := stateutil.BlockRoot(b0.Block)
+	b0Root, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 3
@@ -57,12 +56,12 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = b0Root[:]
-	b1Root, err := stateutil.BlockRoot(b1.Block)
+	b1Root, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 2
 	b2.Block.ParentRoot = b1Root[:]
-	b2Root, err := stateutil.BlockRoot(b1.Block)
+	b2Root, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	// Add b2 to the cache
@@ -106,7 +105,7 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 	b0 := testutil.NewBeaconBlock()
 	b0r := [32]byte{'a'}
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
-	b0Root, err := stateutil.BlockRoot(b0.Block)
+	b0Root, err := b0.Block.HashTreeRoot()
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = b0Root[:]
@@ -174,13 +173,13 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 
 	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
-	b0Root, err := stateutil.BlockRoot(b0.Block)
+	b0Root, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = b0Root[:]
 	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
-	b1Root, err := stateutil.BlockRoot(b1.Block)
+	b1Root, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	// Incomplete block links
@@ -255,13 +254,13 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 
 	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
-	b0Root, err := stateutil.BlockRoot(b0.Block)
+	b0Root, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = b0Root[:]
 	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
-	b1Root, err := stateutil.BlockRoot(b1.Block)
+	b1Root, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	// Incomplete block links
@@ -340,13 +339,13 @@ func TestService_BatchRootRequest(t *testing.T) {
 
 	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
-	b0Root, err := stateutil.BlockRoot(b0.Block)
+	b0Root, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = b0Root[:]
 	require.NoError(t, r.db.SaveBlock(context.Background(), b1))
-	b1Root, err := stateutil.BlockRoot(b1.Block)
+	b1Root, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	b2 := testutil.NewBeaconBlock()

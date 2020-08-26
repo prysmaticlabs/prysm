@@ -10,7 +10,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -235,7 +234,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			defer wg.Done()
 			sbbh := state.CopySignedBeaconBlockHeader(savedBlock)
 			sbbh.Header.BodyRoot = bytesutil.PadTo([]byte(fmt.Sprintf("%d", j)), 32)
-			bhr, err := stateutil.BlockHeaderRoot(sbbh.Header)
+			bhr, err := sbbh.Header.HashTreeRoot()
 			assert.NoError(t, err)
 			root, err := helpers.ComputeSigningRoot(bhr, domain)
 			assert.NoError(t, err)
@@ -298,7 +297,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	require.NoError(t, err)
 	domain, err := helpers.Domain(fork, savedBlockEpoch, params.BeaconConfig().DomainBeaconProposer, wantedGenesis.GenesisValidatorsRoot)
 	require.NoError(t, err)
-	bhr, err := stateutil.BlockHeaderRoot(savedBlock.Header)
+	bhr, err := savedBlock.Header.HashTreeRoot()
 	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(bhr, domain)
 	require.NoError(t, err)

@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
@@ -25,7 +24,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 	block := signed.Block
 
-	root, err := stateutil.BlockRoot(block)
+	root, err := block.HashTreeRoot()
 	if err != nil {
 		return err
 	}

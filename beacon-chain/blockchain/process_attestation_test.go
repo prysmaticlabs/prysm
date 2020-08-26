@@ -13,7 +13,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -41,13 +40,13 @@ func TestStore_OnAttestation(t *testing.T) {
 	BlkWithOutState := testutil.NewBeaconBlock()
 	BlkWithOutState.Block.Slot = 0
 	require.NoError(t, db.SaveBlock(ctx, BlkWithOutState))
-	BlkWithOutStateRoot, err := stateutil.BlockRoot(BlkWithOutState.Block)
+	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	BlkWithStateBadAtt := testutil.NewBeaconBlock()
 	BlkWithStateBadAtt.Block.Slot = 1
 	require.NoError(t, db.SaveBlock(ctx, BlkWithStateBadAtt))
-	BlkWithStateBadAttRoot, err := stateutil.BlockRoot(BlkWithStateBadAtt.Block)
+	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s := testutil.NewBeaconState()
@@ -58,7 +57,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	BlkWithValidState.Block.Slot = 2
 	require.NoError(t, db.SaveBlock(ctx, BlkWithValidState))
 
-	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
+	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s = testutil.NewBeaconState()
 	err = s.SetFork(&pb.Fork{
@@ -163,13 +162,13 @@ func TestStore_OnAttestationUsingCheckptCache(t *testing.T) {
 	BlkWithOutState := testutil.NewBeaconBlock()
 	BlkWithOutState.Block.Slot = 0
 	require.NoError(t, db.SaveBlock(ctx, BlkWithOutState))
-	BlkWithOutStateRoot, err := stateutil.BlockRoot(BlkWithOutState.Block)
+	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	BlkWithStateBadAtt := testutil.NewBeaconBlock()
 	BlkWithStateBadAtt.Block.Slot = 1
 	require.NoError(t, db.SaveBlock(ctx, BlkWithStateBadAtt))
-	BlkWithStateBadAttRoot, err := stateutil.BlockRoot(BlkWithStateBadAtt.Block)
+	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s := testutil.NewBeaconState()
@@ -180,7 +179,7 @@ func TestStore_OnAttestationUsingCheckptCache(t *testing.T) {
 	BlkWithValidState.Block.Slot = 2
 	require.NoError(t, db.SaveBlock(ctx, BlkWithValidState))
 
-	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
+	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s = testutil.NewBeaconState()
 	err = s.SetFork(&pb.Fork{
@@ -439,7 +438,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
-	r, err := stateutil.BlockRoot(b.Block)
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
 
@@ -457,7 +456,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
-	r, err := stateutil.BlockRoot(b.Block)
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
 
@@ -475,13 +474,13 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	b32 := testutil.NewBeaconBlock()
 	b32.Block.Slot = 32
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
-	r32, err := stateutil.BlockRoot(b32.Block)
+	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := testutil.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
-	r33, err := stateutil.BlockRoot(b33.Block)
+	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	wanted := "FFG and LMD votes are not consistent"
@@ -499,13 +498,13 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	b32 := testutil.NewBeaconBlock()
 	b32.Block.Slot = 32
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
-	r32, err := stateutil.BlockRoot(b32.Block)
+	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := testutil.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
-	r33, err := stateutil.BlockRoot(b33.Block)
+	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	err = service.verifyLMDFFGConsistent(context.Background(), 1, r32[:], r33[:])
@@ -521,7 +520,7 @@ func TestGetAttCheckptInfo(t *testing.T) {
 
 	baseState, _ := testutil.DeterministicGenesisState(t, 128)
 	b := testutil.NewBeaconBlock()
-	r, err := stateutil.BlockRoot(b.Block)
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, r))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))

@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -83,7 +82,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
 			s.pendingQueueLock.RUnlock()
 
-			blkRoot, err := stateutil.BlockRoot(b.Block)
+			blkRoot, err := b.Block.HashTreeRoot()
 			if err != nil {
 				traceutil.AnnotateError(span, err)
 				span.End()
@@ -224,7 +223,7 @@ func (s *Service) validatePendingSlots() error {
 			epoch := helpers.SlotToEpoch(slot)
 			// remove all descendant blocks of old blocks
 			if oldBlockRoots[bytesutil.ToBytes32(b.Block.ParentRoot)] {
-				root, err := stateutil.BlockRoot(b.Block)
+				root, err := b.Block.HashTreeRoot()
 				if err != nil {
 					return err
 				}
@@ -234,7 +233,7 @@ func (s *Service) validatePendingSlots() error {
 			}
 			// don't process old blocks
 			if finalizedEpoch > 0 && epoch <= finalizedEpoch {
-				blkRoot, err := stateutil.BlockRoot(b.Block)
+				blkRoot, err := b.Block.HashTreeRoot()
 				if err != nil {
 					return err
 				}

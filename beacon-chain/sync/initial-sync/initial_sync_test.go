@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -132,7 +131,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 	genesisBlock := &eth.BeaconBlock{
 		Slot: 0,
 	}
-	genesisRoot, err := stateutil.BlockRoot(genesisBlock)
+	genesisRoot, err := genesisBlock.HashTreeRoot()
 	require.NoError(t, err)
 	c.rootCache[0] = genesisRoot
 	parentRoot := genesisRoot
@@ -141,7 +140,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 			Slot:       slot,
 			ParentRoot: parentRoot[:],
 		}
-		parentRoot, err = stateutil.BlockRoot(currentBlock)
+		parentRoot, err = currentBlock.HashTreeRoot()
 		require.NoError(t, err)
 		c.rootCache[slot] = parentRoot
 		c.parentSlotCache[slot] = parentSlot
@@ -207,7 +206,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 				blk.Block.ParentRoot = newRoot[:]
 			}
 			ret = append(ret, blk)
-			currRoot, err := stateutil.BlockRoot(blk.Block)
+			currRoot, err := blk.Block.HashTreeRoot()
 			require.NoError(t, err)
 			logrus.Tracef("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 		}
