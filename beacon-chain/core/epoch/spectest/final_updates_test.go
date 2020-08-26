@@ -8,12 +8,11 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func runFinalUpdatesTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/final_updates/pyspec_tests")
 	for _, folder := range testFolders {
@@ -26,8 +25,6 @@ func runFinalUpdatesTests(t *testing.T, config string) {
 
 func processFinalUpdatesWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
 	state, err := epoch.ProcessFinalUpdates(state)
-	if err != nil {
-		t.Fatalf("could not process final updates: %v", err)
-	}
+	require.NoError(t, err, "Could not process final updates")
 	return state, nil
 }

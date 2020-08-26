@@ -21,7 +21,6 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -248,7 +247,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 	// adds in the genesis delay to the eth1 block time
 	// on which it was triggered.
-	return timeStamp + cmd.Get().CustomGenesisDelay
+	return timeStamp + params.BeaconConfig().GenesisDelay
 }
 
 // processPastLogs processes all the past logs from the deposit contract and

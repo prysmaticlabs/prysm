@@ -33,7 +33,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	assert.Equal(t, true, service.beaconDB.HasArchivedPoint(ctx, 1), "Did not save cold state")
 	assert.Equal(t, r, service.beaconDB.ArchivedPointRoot(ctx, 1), "Did not get wanted root")
 
-	testutil.AssertLogsContain(t, hook, "Saved full state on archived point")
+	require.LogsContain(t, hook, "Saved full state on archived point")
 }
 
 func TestSaveState_HotStateCanBeSaved(t *testing.T) {
@@ -74,7 +74,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	// Should not save the state and state summary.
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
 	assert.Equal(t, false, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")
-	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 }
 
 func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
@@ -83,20 +83,15 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 
 	svc := New(db, ssc)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	r := [32]byte{'a'}
 	svc.hotStateCache.Put(r, beaconState)
 
-	if db.HasState(ctx, r) {
-		t.Fatal("Database has state stored already")
-	}
-	if err := svc.ForceCheckpoint(ctx, r[:]); err != nil {
-		t.Error(err)
-	}
-	if !db.HasState(ctx, r) {
-		t.Error("Did not save checkpoint to database")
-	}
+	require.Equal(t, false, db.HasState(ctx, r), "Database has state stored already")
+	assert.NoError(t, svc.ForceCheckpoint(ctx, r[:]))
+	assert.Equal(t, true, db.HasState(ctx, r), "Did not save checkpoint to database")
+
+	// Should not panic with genesis finalized root.
+	assert.NoError(t, svc.ForceCheckpoint(ctx, params.BeaconConfig().ZeroHash[:]))
 }

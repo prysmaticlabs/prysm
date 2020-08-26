@@ -88,7 +88,7 @@ func (s *Service) listenForNewNodes() {
 			continue
 		}
 		go func(info *peer.AddrInfo) {
-			if err := s.connectWithPeer(*info); err != nil {
+			if err := s.connectWithPeer(s.ctx, *info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(peerInfo)
@@ -109,6 +109,13 @@ func (s *Service) createListener(
 	// Check for the real local address which may
 	// be different in the presence of virtual networks.
 	ipAddr = s.localAddress(networkVersion, ipAddr)
+	// If local ip is specified then use that instead.
+	if s.cfg.LocalIP != "" {
+		ipAddr = net.ParseIP(s.cfg.LocalIP)
+		if ipAddr == nil {
+			return nil, errors.New("invalid local ip provided")
+		}
+	}
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
 		Port: int(s.cfg.UDPPort),
@@ -133,6 +140,19 @@ func (s *Service) createListener(
 		} else {
 			localNode.SetFallbackIP(hostIP)
 			localNode.SetStaticIP(hostIP)
+		}
+	}
+	if s.cfg.HostDNS != "" {
+		host := s.cfg.HostDNS
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not resolve host address")
+		}
+		if len(ips) > 0 {
+			// Use first IP returned from the
+			// resolver.
+			firstIP := ips[0]
+			localNode.SetFallbackIP(firstIP)
 		}
 	}
 	dv5Cfg := discover.Config{

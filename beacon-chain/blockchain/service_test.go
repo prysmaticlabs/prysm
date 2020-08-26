@@ -120,9 +120,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	}
 
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
-	if err := cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
 	chainService, err := NewService(ctx, cfg)
 	require.NoError(t, err, "Unable to setup chain service")
@@ -156,7 +154,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	// The context should have been canceled.
 	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
-	testutil.AssertLogsContain(t, hook, "data already exists")
+	require.LogsContain(t, hook, "data already exists")
 }
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {
@@ -198,6 +196,31 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	}
 }
 
+func TestChainService_CorrectGenesisRoots(t *testing.T) {
+	ctx := context.Background()
+	db, sc := testDB.SetupDB(t)
+
+	chainService := setupBeaconChain(t, db, sc)
+
+	genesisBlk := testutil.NewBeaconBlock()
+	blkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
+	s := testutil.NewBeaconState()
+	require.NoError(t, s.SetSlot(0))
+	require.NoError(t, db.SaveState(ctx, s, blkRoot))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
+	// Test the start function.
+	chainService.Start()
+
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.justifiedCheckpt.Root, "Justified Checkpoint root is incorrect")
+
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+
+}
+
 func TestChainService_InitializeChainInfo(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	ctx := context.Background()
@@ -220,12 +243,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, headRoot))
 	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, db.SaveBlock(ctx, headBlock))
-	if err := db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
-		Epoch: helpers.SlotToEpoch(finalizedSlot),
-		Root:  headRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: helpers.SlotToEpoch(finalizedSlot), Root: headRoot[:]}))
 	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	headBlk, err := c.HeadBlock(ctx)

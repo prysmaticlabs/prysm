@@ -3,6 +3,7 @@ package promptutil
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"unicode"
 
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
@@ -11,9 +12,9 @@ import (
 const (
 	// Constants for passwords.
 	minPasswordLength = 8
-	// Min password score of 3 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
+	// Min password score of 2 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
 	// library for strong-entropy password computation.
-	minPasswordScore = 3
+	minPasswordScore = 2
 )
 
 // NotEmpty is a validation function to make sure the input given isn't empty and is valid unicode.
@@ -44,6 +45,15 @@ func ValidateConfirmation(input string) error {
 	return nil
 }
 
+// ValidateYesOrNo ensures the user input either Y, y or N, n.
+func ValidateYesOrNo(input string) error {
+	lowercase := strings.ToLower(input)
+	if lowercase != "y" && lowercase != "n" {
+		return errors.New("please enter y or n")
+	}
+	return nil
+}
+
 // IsValidUnicode checks if an input string is a valid unicode string comprised of only
 // letters, numbers, punctuation, or symbols.
 func IsValidUnicode(input string) bool {
@@ -51,7 +61,8 @@ func IsValidUnicode(input string) bool {
 		if !(unicode.IsLetter(char) ||
 			unicode.IsNumber(char) ||
 			unicode.IsPunct(char) ||
-			unicode.IsSymbol(char)) {
+			unicode.IsSymbol(char) ||
+			unicode.IsSpace(char)) {
 			return false
 		}
 	}
@@ -73,7 +84,11 @@ func ValidatePasswordInput(input string) error {
 	}
 	for _, char := range input {
 		switch {
-		case !(unicode.IsLetter(char) || unicode.IsNumber(char) || unicode.IsPunct(char) || unicode.IsSymbol(char)):
+		case !(unicode.IsSpace(char) ||
+			unicode.IsLetter(char) ||
+			unicode.IsNumber(char) ||
+			unicode.IsPunct(char) ||
+			unicode.IsSymbol(char)):
 			return errors.New("password must only contain alphanumeric characters, punctuation, or symbols")
 		case unicode.IsLetter(char):
 			hasLetter = true

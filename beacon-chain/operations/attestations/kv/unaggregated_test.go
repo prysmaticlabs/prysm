@@ -3,9 +3,11 @@ package kv
 import (
 	"testing"
 
+	c "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
@@ -31,37 +33,48 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 					BeaconBlockRoot: []byte{0b0},
 				},
 			},
-			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
+			wantErrString: "incorrect fixed bytes marshalling",
 		},
 		{
-			name:  "normal save",
-			att:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}},
+			name: "normal save",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 100,
+				},
+				AggregationBits: bitfield.Bitlist{0b0001},
+			},
 			count: 1,
 		},
+		{
+			name: "already seen",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 100,
+				},
+				AggregationBits: bitfield.Bitlist{0b10000001},
+			},
+			count: 0,
+		},
 	}
+	r, err := hashFn(&ethpb.AttestationData{
+		Slot: 100,
+	})
+	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			if len(cache.unAggregatedAtt) != 0 {
-				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
-			}
+			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
+			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
 			err := cache.SaveUnaggregatedAttestation(tt.att)
-			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {
-				t.Errorf("Did not receive wanted error, want: %q, got: %v", tt.wantErrString, err)
-				return
+			if tt.wantErrString != "" {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			if tt.wantErrString == "" && err != nil {
-				t.Error(err)
-				return
-			}
-			if len(cache.unAggregatedAtt) != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
-			}
-			if cache.UnaggregatedAttestationCount() != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.UnaggregatedAttestationCount())
-			}
+			assert.Equal(t, tt.count, len(cache.unAggregatedAtt), "Wrong attestation count")
+			assert.Equal(t, tt.count, cache.UnaggregatedAttestationCount(), "Wrong attestation count")
 		})
 	}
 }
@@ -97,23 +110,16 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			if len(cache.unAggregatedAtt) != 0 {
-				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
-			}
+			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
 			err := cache.SaveUnaggregatedAttestations(tt.atts)
-			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {
-				t.Errorf("Did not receive wanted error, want: %q, got: %v", tt.wantErrString, err)
+			if tt.wantErrString != "" {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			if tt.wantErrString == "" && err != nil {
-				t.Error(err)
-			}
-			if len(cache.unAggregatedAtt) != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
-			}
-			if cache.UnaggregatedAttestationCount() != tt.count {
-				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.UnaggregatedAttestationCount())
-			}
+			assert.Equal(t, tt.count, len(cache.unAggregatedAtt), "Wrong attestation count")
+			assert.Equal(t, tt.count, cache.UnaggregatedAttestationCount(), "Wrong attestation count")
 		})
 	}
 }
@@ -121,19 +127,14 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestations(t *testing.T) {
 func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 	t.Run("nil attestation", func(t *testing.T) {
 		cache := NewAttCaches()
-		if err := cache.DeleteUnaggregatedAttestation(nil); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, cache.DeleteUnaggregatedAttestation(nil))
 	})
 
 	t.Run("aggregated attestation", func(t *testing.T) {
 		cache := NewAttCaches()
 		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}}
 		err := cache.DeleteUnaggregatedAttestation(att)
-		wantErr := "attestation is aggregated"
-		if err == nil || err.Error() != wantErr {
-			t.Errorf("Did not receive wanted error, want: %q, got: %v", wantErr, err)
-		}
+		assert.ErrorContains(t, "attestation is aggregated", err)
 	})
 
 	t.Run("successful deletion", func(t *testing.T) {
@@ -142,15 +143,12 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 		att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110}}
 		att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b110}}
 		atts := []*ethpb.Attestation{att1, att2, att3}
-		if err := cache.SaveUnaggregatedAttestations(atts); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
 		for _, att := range atts {
-			if err := cache.DeleteUnaggregatedAttestation(att); err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, cache.DeleteUnaggregatedAttestation(att))
 		}
-		returned := cache.UnaggregatedAttestations()
+		returned, err := cache.UnaggregatedAttestations()
+		require.NoError(t, err)
 		assert.DeepEqual(t, []*ethpb.Attestation{}, returned)
 	})
 }
@@ -164,9 +162,7 @@ func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
-		if err := cache.SaveUnaggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveUnaggregatedAttestation(att))
 	}
 
 	returned := cache.UnaggregatedAttestationsBySlotIndex(1, 1)

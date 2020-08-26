@@ -87,9 +87,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
 	s, err = NewService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
@@ -195,7 +193,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		t.Error("Expected to have valid peers, got 0")
 	}
 
-	testutil.AssertLogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
+	require.LogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
 	require.NoError(t, s.Stop())
 }
 

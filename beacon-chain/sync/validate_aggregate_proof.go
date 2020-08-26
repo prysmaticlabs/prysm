@@ -37,7 +37,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode message")
+		log.WithError(err).Debug("Failed to decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -95,6 +95,61 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	attSlot := signed.Message.Aggregate.Data.Slot
 
+	if featureconfig.Get().UseCheckPointInfoCache {
+		// Use check point info to validate aggregated attestation.
+		c, err := s.chain.AttestationCheckPtInfo(ctx, signed.Message.Aggregate)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationIgnore
+		}
+		a := signed.Message.Aggregate
+		committee, err := helpers.BeaconCommittee(c.ActiveIndices, bytesutil.ToBytes32(c.Seed), a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		// Is the aggregator part of the committee.
+		var withinCommittee bool
+		for _, i := range committee {
+			if signed.Message.AggregatorIndex == i {
+				withinCommittee = true
+				break
+			}
+		}
+		if !withinCommittee {
+			return pubsub.ValidationReject
+		}
+		// Is the selection proof signed by the aggregator.
+		aggregator, err := helpers.IsAggregator(uint64(len(committee)), signed.Message.SelectionProof)
+		if err != nil {
+			return pubsub.ValidationReject
+		}
+		if !aggregator {
+			return pubsub.ValidationReject
+		}
+		// Are the aggregate and proof by the aggregator.
+		d, err := helpers.Domain(c.Fork, helpers.SlotToEpoch(a.Data.Slot), params.BeaconConfig().DomainSelectionProof, c.GenesisRoot)
+		if err != nil {
+			return pubsub.ValidationReject
+		}
+		pk := c.PubKeys[signed.Message.AggregatorIndex]
+		if err := helpers.VerifySigningRoot(a.Data.Slot, pk[:], signed.Message.SelectionProof, d); err != nil {
+			return pubsub.ValidationReject
+		}
+		// Is the attestation signature correct.
+		d, err = helpers.Domain(c.Fork, helpers.SlotToEpoch(a.Data.Slot), params.BeaconConfig().DomainAggregateAndProof, c.GenesisRoot)
+		if err != nil {
+			return pubsub.ValidationReject
+		}
+		if err := helpers.VerifySigningRoot(signed.Message, pk[:], signed.Signature, d); err != nil {
+			return pubsub.ValidationReject
+		}
+		if err := blocks.VerifyAttSigUseCheckPt(ctx, c, signed.Message.Aggregate); err != nil {
+			return pubsub.ValidationReject
+		}
+
+		return pubsub.ValidationAccept
+	}
+
 	bs, err := s.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -130,7 +185,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	// Verify aggregated attestation has a valid signature.
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestation(ctx, bs, signed.Message.Aggregate); err != nil {
+		if err := blocks.VerifyAttestationSignature(ctx, bs, signed.Message.Aggregate); err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}

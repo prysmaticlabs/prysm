@@ -10,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -88,7 +89,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 	if featureconfig.Get().SkipBLSVerify {
 		return nil
 	}
-	ddCopy := *dd
+	ddCopy := state.CopyDepositData(dd)
 	publicKey, err := bls.PublicKeyFromBytes(dd.PublicKey)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")

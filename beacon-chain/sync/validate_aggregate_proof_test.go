@@ -110,12 +110,9 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	data := &ethpb.AttestationData{}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[0])
 	require.NoError(t, err)
-	slotRoot, err := helpers.ComputeSigningRoot(data.Slot, domain)
-	require.NoError(t, err)
-	sig := privKeys[0].Sign(slotRoot[:])
-	require.NoError(t, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
+	require.NoError(t, validateSelection(ctx, beaconState, data, 0, sig))
 }
 
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
@@ -317,7 +314,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	}
 }
 
-func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
+func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -359,26 +356,108 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-
-	selectionDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
-	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
-	require.NoError(t, err)
-
-	sig := privKeys[22].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  sig.Marshal(),
+		SelectionProof:  sig,
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
+	require.NoError(t, err)
 
-	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
+	c, err := lru.New(10)
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
+	r := &Service{
+		p2p:         p,
+		db:          db,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Now(),
+			State:            beaconState,
+			ValidAttestation: true,
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
+		attPool:              attestations.NewPool(),
+		seenAttestationCache: c,
+		stateSummaryCache:    cache.NewStateSummaryCache(),
+	}
+	err = r.initCaches()
 	require.NoError(t, err)
-	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
-	signedAggregateAndProof.Signature = aggreSig[:]
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
+	require.NoError(t, err)
+
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
+			},
+		},
+	}
+
+	assert.Equal(t, pubsub.ValidationAccept, r.validateAggregateAndProof(context.Background(), "", msg), "Validated status is false")
+	assert.NotNil(t, msg.ValidatorData, "Did not set validator data")
+}
+
+func TestValidateAggregateAndProofUseCheckptCache_CanValidate(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{UseCheckPointInfoCache: true})
+	defer resetCfg()
+
+	db, _ := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+
+	validators := uint64(256)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+
+	b := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(context.Background(), b))
+	root, err := stateutil.BlockRoot(b.Block)
+	require.NoError(t, err)
+	s := testutil.NewBeaconState()
+	require.NoError(t, db.SaveState(context.Background(), s, root))
+
+	aggBits := bitfield.NewBitlist(3)
+	aggBits.SetBitAt(0, true)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: root[:],
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+		},
+		AggregationBits: aggBits,
+	}
+
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	assert.NoError(t, err)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	assert.NoError(t, err)
+	attesterDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	assert.NoError(t, err)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, attesterDomain)
+	assert.NoError(t, err)
+	sigs := make([]bls.Signature, len(attestingIndices))
+	for i, indice := range attestingIndices {
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sigs[i] = sig
+	}
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
+	require.NoError(t, err)
+	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
+		SelectionProof:  sig,
+		Aggregate:       att,
+		AggregatorIndex: ai,
+	}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
+	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 	c, err := lru.New(10)
@@ -455,27 +534,17 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-
-	selectionDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
-	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
-	require.NoError(t, err)
-
-	sig := privKeys[22].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  sig.Marshal(),
+		SelectionProof:  sig,
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
-
-	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
-	assert.NoError(t, err)
-	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
-	signedAggregateAndProof.Signature = aggreSig[:]
-
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
 	c, err := lru.New(10)
@@ -575,26 +644,18 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-
-	selectionDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
-	require.NoError(t, err)
-	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
 
-	sig := privKeys[22].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  sig.Marshal(),
+		SelectionProof:  sig,
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: ai,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
-
-	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
-	require.NoError(t, err)
-	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
-	signedAggregateAndProof.Signature = aggreSig[:]
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 	c, err := lru.New(10)
@@ -616,7 +677,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	err = r.initCaches()
 	require.NoError(t, err)
 	// Set beacon block as bad.
-	r.setBadBlock(root)
+	r.setBadBlock(context.Background(), root)
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)

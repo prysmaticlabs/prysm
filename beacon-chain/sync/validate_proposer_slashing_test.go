@@ -61,15 +61,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 	})
 	require.NoError(t, err)
 
-	domain, err := helpers.Domain(
-		state.Fork(),
-		helpers.CurrentEpoch(state),
-		params.BeaconConfig().DomainBeaconProposer,
-		state.GenesisValidatorRoot(),
-	)
-	require.NoError(t, err)
 	privKey := bls.RandKey()
-
 	someRoot := [32]byte{1, 2, 3}
 	someRoot2 := [32]byte{4, 5, 6}
 	header1 := &ethpb.SignedBeaconBlockHeader{
@@ -81,9 +73,8 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 			BodyRoot:      someRoot[:],
 		},
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(header1.Header, domain)
-	assert.NoError(t, err, "Could not get signing root of beacon block header")
-	header1.Signature = privKey.Sign(signingRoot[:]).Marshal()[:]
+	header1.Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	require.NoError(t, err)
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -94,9 +85,8 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 			BodyRoot:      someRoot2[:],
 		},
 	}
-	signingRoot, err = helpers.ComputeSigningRoot(header2.Header, domain)
-	assert.NoError(t, err, "Could not get signing root of beacon block header")
-	header2.Signature = privKey.Sign(signingRoot[:]).Marshal()[:]
+	header2.Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	require.NoError(t, err)
 
 	slashing := &ethpb.ProposerSlashing{
 		Header_1: header1,

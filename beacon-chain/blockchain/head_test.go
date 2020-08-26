@@ -92,7 +92,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	}
 	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock(), "Head did not change")
 	assert.DeepEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
-	testutil.AssertLogsContain(t, hook, "Chain reorg occurred")
+	require.LogsContain(t, hook, "Chain reorg occurred")
 }
 
 func TestUpdateRecentCanonicalBlocks_CanUpdateWithoutParent(t *testing.T) {

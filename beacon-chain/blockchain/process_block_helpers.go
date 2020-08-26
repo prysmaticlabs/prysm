@@ -49,7 +49,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 	}
 
 	// Verify block slot time is not from the future.
-	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := helpers.VerifySlotTime(helpers.GenesisTime(preState), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 
@@ -78,7 +78,11 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
 	}
-	if !s.stateGen.HasState(ctx, parentRoot) {
+	has, err := s.stateGen.HasState(ctx, parentRoot)
+	if err != nil {
+		return err
+	}
+	if !has {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return errors.Wrap(err, "could not save initial sync blocks")
 		}
@@ -223,6 +227,10 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	}
 	s.clearInitSyncBlocks()
 
+	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
+		return err
+	}
+
 	s.prevFinalizedCheckpt = s.finalizedCheckpt
 	s.finalizedCheckpt = cp
 
@@ -231,7 +239,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		return errors.Wrap(err, "could not migrate to cold")
 	}
 
-	return s.beaconDB.SaveFinalizedCheckpoint(ctx, cp)
+	return nil
 }
 
 // ancestor returns the block root of an ancestry block from the input block root.

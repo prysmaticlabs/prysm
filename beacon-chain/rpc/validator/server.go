@@ -182,7 +182,20 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 					return errors.New("event data is not type *statefeed.ChainStartData")
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
-				log.Info("Sending genesis time notification to connected validator clients")
+				log.Debug("Sending genesis time notification to connected validator clients")
+				res := &ethpb.ChainStartResponse{
+					Started:     true,
+					GenesisTime: uint64(data.StartTime.Unix()),
+				}
+				return stream.Send(res)
+			}
+			// Handle race condition in the event the blockchain
+			// service isn't initialized in time and the saved head state is nil.
+			if event.Type == statefeed.Initialized {
+				data, ok := event.Data.(*statefeed.InitializedData)
+				if !ok {
+					return errors.New("event data is not type *statefeed.InitializedData")
+				}
 				res := &ethpb.ChainStartResponse{
 					Started:     true,
 					GenesisTime: uint64(data.StartTime.Unix()),
@@ -224,7 +237,7 @@ func (vs *Server) WaitForSynced(req *ptypes.Empty, stream ethpb.BeaconNodeValida
 					return errors.New("event data is not type *statefeed.SyncedData")
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received sync completed event")
-				log.Info("Sending genesis time notification to connected validator clients")
+				log.Debug("Sending genesis time notification to connected validator clients")
 				res := &ethpb.SyncedResponse{
 					Synced:      true,
 					GenesisTime: uint64(data.StartTime.Unix()),

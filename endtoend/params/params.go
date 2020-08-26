@@ -25,6 +25,7 @@ type Params struct {
 	BeaconNodeRPCPort     int
 	BeaconNodeMetricsPort int
 	ValidatorMetricsPort  int
+	ValidatorGatewayPort  int
 	SlasherRPCPort        int
 	SlasherMetricsPort    int
 }
@@ -38,17 +39,20 @@ var BootNodeLogFileName = "bootnode.log"
 // BeaconNodeLogFileName is the file name used for the beacon chain node logs.
 var BeaconNodeLogFileName = "beacon-%d.log"
 
+// BeaconNodeCPUProfileFileName is the file name used for the beacon chain cpu profiles.
+var BeaconNodeCPUProfileFileName = "beacon-cpu-%d.out"
+
 // SlasherLogFileName is the file name used for the slasher client logs.
 var SlasherLogFileName = "slasher-%d.log"
 
 // ValidatorLogFileName is the file name used for the validator client logs.
 var ValidatorLogFileName = "vals-%d.log"
 
-// LongRunningBeaconCount is a global constant for the count of beacon nodes of long running E2E.
-var LongRunningBeaconCount = 2
-
 // StandardBeaconCount is a global constant for the count of beacon nodes of standard E2E tests.
 var StandardBeaconCount = 2
+
+// DepositCount is the amount of deposits E2E makes on a separate validator client.
+var DepositCount = uint64(64)
 
 // Init initializes the E2E config, properly handling test sharding.
 func Init(beaconNodeCount int) error {
@@ -76,6 +80,7 @@ func Init(beaconNodeCount int) error {
 		BeaconNodeRPCPort:     4150 + testIndex*100,
 		BeaconNodeMetricsPort: 5100 + testIndex*100,
 		ValidatorMetricsPort:  6100 + testIndex*100,
+		ValidatorGatewayPort:  7150 + testIndex*100,
 		SlasherRPCPort:        7100 + testIndex*100,
 		SlasherMetricsPort:    8100 + testIndex*100,
 	}

@@ -7,8 +7,8 @@ import (
 )
 
 func init() {
-	// Using onyx as the default configuration for now.
-	UseOnyxNetworkConfig()
+	// Using medalla as the default configuration for now.
+	UseMedallaNetworkConfig()
 }
 
 // NetworkConfig defines the spec based network parameters.

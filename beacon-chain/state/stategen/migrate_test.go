@@ -57,7 +57,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), lastIndex, "Did not save last archived index")
 
-	testutil.AssertLogsContain(t, hook, "Saved state in DB")
+	require.LogsContain(t, hook, "Saved state in DB")
 }
 
 func TestMigrateToCold_RegeneratePath(t *testing.T) {
@@ -75,12 +75,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, fRoot))
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: 1,
-		Root: fRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: fRoot[:]}))
 	service.finalizedInfo = &finalizedInfo{
 		slot:  1,
 		root:  fRoot,
@@ -98,5 +93,5 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), lastIndex, "Did not save last archived index")
 
-	testutil.AssertLogsContain(t, hook, "Saved state in DB")
+	require.LogsContain(t, hook, "Saved state in DB")
 }

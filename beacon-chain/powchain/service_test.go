@@ -20,7 +20,6 @@ import (
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -307,5 +306,5 @@ func TestHandlePanic_OK(t *testing.T) {
 	// nil eth1DataFetcher would panic if cached value not used
 	web3Service.eth1DataFetcher = nil
 	web3Service.processBlockHeader(nil)
-	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
+	require.LogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }

@@ -8,6 +8,7 @@ go_library(
         "errors.go",
         "helpers.go",
         "metrics.go",
+        "node.go",
         "nodes.go",
         "store.go",
         "types.go",

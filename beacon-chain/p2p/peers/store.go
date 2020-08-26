@@ -37,6 +37,8 @@ type peerData struct {
 	metaData              *pb.MetaData
 	chainStateLastUpdated time.Time
 	badResponses          int
+	processedBlocks       uint64
+	blockProviderUpdated  time.Time
 }
 
 // newPeerDataStore creates peer store.

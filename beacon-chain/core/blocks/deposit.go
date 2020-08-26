@@ -179,10 +179,8 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
-	} else {
-		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-			return nil, err
-		}
+	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
+		return nil, err
 	}
 
 	return beaconState, nil
@@ -208,12 +206,14 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 		leaf[:],
 		int(beaconState.Eth1DepositIndex()),
 		deposit.Proof,
+		params.BeaconConfig().DepositContractTreeDepth,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",
 			receiptRoot,
 		)
 	}
+
 	return nil
 }
 

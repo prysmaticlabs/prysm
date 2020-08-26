@@ -61,6 +61,10 @@ var appFlags = []cli.Flag{
 	flags.UnencryptedKeysFlag,
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
+	flags.RPCHost,
+	flags.RPCPort,
+	flags.GRPCGatewayPort,
+	flags.GRPCGatewayHost,
 	flags.GrpcRetriesFlag,
 	flags.GrpcRetryDelayFlag,
 	flags.GrpcHeadersFlag,
@@ -71,7 +75,7 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
-	flags.WalletPasswordsDirFlag,
+	flags.DeprecatedPasswordsDirFlag,
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	cmd.MinimalConfigFlag,
@@ -128,11 +132,12 @@ contract in order to activate the validator client`,
 							cmd.ChainConfigFileFlag,
 						}...),
 					Action: func(cliCtx *cli.Context) error {
+						featureconfig.ConfigureValidator(cliCtx)
+
 						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 							params.LoadChainConfigFile(chainConfigFileName)
 						}
-						featureconfig.ConfigureValidator(cliCtx)
 
 						keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
@@ -300,6 +305,7 @@ contract in order to activate the validator client`,
 				return err
 			}
 		}
+		flags.ComplainOnDeprecatedFlags(ctx)
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {

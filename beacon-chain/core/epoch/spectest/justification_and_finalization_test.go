@@ -9,12 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func runJustificationAndFinalizationTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testPath := "epoch_processing/justification_and_finalization/pyspec_tests"
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, testPath)
@@ -29,18 +28,12 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, state *state.BeaconState) (*state.BeaconState, error) {
 	ctx := context.Background()
 	vp, bp, err := precompute.New(ctx, state)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, bp, err = precompute.ProcessAttestations(ctx, state, vp, bp)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
-	if err != nil {
-		t.Fatalf("could not process justification: %v", err)
-	}
+	require.NoError(t, err, "Could not process justification")
 
 	return state, nil
 }

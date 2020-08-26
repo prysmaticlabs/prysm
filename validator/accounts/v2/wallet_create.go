@@ -32,7 +32,7 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created wallet with on-disk keymanager configuration. " +
 				"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 		)
@@ -40,7 +40,7 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 		if err = createDerivedKeymanagerWallet(cliCtx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created HD wallet and saved configuration to disk. " +
 				"Make a new validator account with ./prysm.sh validator accounts-2 create",
 		)
@@ -48,7 +48,7 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 		if err = createRemoteKeymanagerWallet(cliCtx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with remote keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
@@ -58,11 +58,13 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 }
 
 func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
+	if wallet == nil {
+		return errors.New("nil wallet")
+	}
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	defaultConfig := direct.DefaultConfig()
-	defaultConfig.AccountPasswordsDirectory = wallet.passwordsDir
 	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), defaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -74,16 +76,7 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 }
 
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
-	skipMnemonicConfirm := cliCtx.Bool(flags.SkipMnemonicConfirmFlag.Name)
 	ctx := context.Background()
-	seedConfig, err := derived.InitializeWalletSeedFile(ctx, wallet.walletPassword, skipMnemonicConfirm)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize new wallet seed file")
-	}
-	seedConfigFile, err := derived.MarshalEncryptedSeedFile(ctx, seedConfig)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
-	}
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -94,8 +87,10 @@ func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	if err := wallet.WriteEncryptedSeedToDisk(ctx, seedConfigFile); err != nil {
-		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+	skipMnemonic := cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name)
+	_, err = wallet.InitializeKeymanager(cliCtx, skipMnemonic)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	return nil
 }

@@ -23,6 +23,19 @@ const DomainByteLength = 4
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
+// ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
+func ComputeDomainAndSign(state *state.BeaconState, epoch uint64, obj interface{}, domain [4]byte, key bls.SecretKey) ([]byte, error) {
+	d, err := Domain(state.Fork(), epoch, domain, state.GenesisValidatorRoot())
+	if err != nil {
+		return nil, err
+	}
+	sr, err := ComputeSigningRoot(obj, d)
+	if err != nil {
+		return nil, err
+	}
+	return key.Sign(sr[:]).Marshal(), nil
+}
+
 // ComputeSigningRoot computes the root of the object by calculating the hash tree root of the signing data with the given domain.
 //
 // Spec pseudocode definition:
@@ -36,11 +49,11 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 //    ))
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 	return signingData(func() ([32]byte, error) {
-		switch object.(type) {
+		switch t := object.(type) {
 		case *ethpb.BeaconBlock:
-			return stateutil.BlockRoot(object.(*ethpb.BeaconBlock))
+			return stateutil.BlockRoot(t)
 		case *ethpb.AttestationData:
-			return stateutil.AttestationDataRoot(object.(*ethpb.AttestationData))
+			return stateutil.AttestationDataRoot(t)
 		default:
 			// utilise generic ssz library
 			return ssz.HashTreeRoot(object)

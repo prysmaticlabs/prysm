@@ -229,21 +229,20 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.Se
 		return nil, err
 	}
 	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
-	if err != nil {
-		return nil, err
-	}
 
 	sigs := make([]bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
-		hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+		sb, err := helpers.ComputeDomainAndSign(state, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
 		if err != nil {
 			return nil, err
 		}
-		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sig, err := bls.SignatureFromBytes(sb)
+		if err != nil {
+			return nil, err
+		}
 		sigs[i] = sig
 	}
 

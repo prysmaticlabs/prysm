@@ -3,11 +3,9 @@ package sync
 import (
 	"context"
 	"encoding/hex"
-	"io"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -17,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -33,7 +30,7 @@ func (s *Service) processPendingAttsQueue() {
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
 		mutex.Lock()
 		if err := s.processPendingAtts(ctx); err != nil {
-			log.WithError(err).Errorf("Could not process pending attestation: %v", err)
+			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
 		}
 		mutex.Unlock()
 	})
@@ -47,8 +44,6 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingAtts")
 	defer span.End()
 
-	pids := s.p2p.Peers().Connected()
-
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
@@ -61,6 +56,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	}
 	s.pendingAttsLock.RUnlock()
 
+	pendingRoots := [][32]byte{}
 	randGen := rand.NewGenerator()
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()
@@ -86,7 +82,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 						// Broadcasting the signed attestation again once a node is able to process it.
 						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
-							log.WithError(err).Error("Failed to broadcast")
+							log.WithError(err).Debug("Failed to broadcast")
 						}
 					}
 				} else {
@@ -100,9 +96,14 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					}
 					numberOfAttsRecovered.Inc()
 
+					// Verify signed aggregate has a valid signature.
+					if _, err := bls.SignatureFromBytes(signedAtt.Signature); err != nil {
+						continue
+					}
+
 					// Broadcasting the signed attestation again once a node is able to process it.
 					if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
-						log.WithError(err).Error("Failed to broadcast")
+						log.WithError(err).Debug("Failed to broadcast")
 					}
 				}
 			}
@@ -123,36 +124,10 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
 			}).Debug("Requesting block for pending attestation")
-
-			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
-			// have a head slot newer or equal to the pending attestation's target boundary slot.
-			// If there are no peer id's available, then we should exit from this function. The function will
-			// be run again periodically, and there may be peers available in future runs.
-			if len(pids) == 0 {
-				log.Debug("No peer IDs available to request missing block from for pending attestation")
-				return nil
-			}
-			pid := pids[randGen.Int()%len(pids)]
-			targetSlot := helpers.SlotToEpoch(attestations[0].Message.Aggregate.Data.Target.Epoch)
-			for _, p := range pids {
-				cs, err := s.p2p.Peers().ChainState(p)
-				if err != nil {
-					return errors.Wrap(err, "could not get chain state for peer")
-				}
-				if cs != nil && cs.HeadSlot >= targetSlot {
-					pid = p
-					break
-				}
-			}
-
-			req := [][32]byte{bRoot}
-			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil && err == io.EOF {
-				traceutil.AnnotateError(span, err)
-				log.Errorf("Could not send recent block request: %v", err)
-			}
+			pendingRoots = append(pendingRoots, bRoot)
 		}
 	}
-	return nil
+	return s.sendBatchRootRequest(ctx, pendingRoots, randGen)
 }
 
 // This defines how pending attestations is saved in the map. The key is the

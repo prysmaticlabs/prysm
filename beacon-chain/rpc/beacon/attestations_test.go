@@ -123,9 +123,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
+	require.DeepEqual(t, wanted, res)
 
 	// Should throw an error if there is more than 1 block
 	// for the genesis slot.
@@ -521,7 +519,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	count := uint64(100)
-	atts := make([]*ethpb.Attestation, count, count)
+	atts := make([]*ethpb.Attestation, count)
 	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
@@ -606,7 +604,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	state, _ := testutil.DeterministicGenesisState(t, numValidators)
 
 	// Next up we convert the test attestations to indexed form:
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2), len(atts)+len(atts2))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
@@ -707,7 +705,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	require.NoError(t, state.SetSlot(startSlot))
 
 	// Next up we convert the test attestations to indexed form:
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
@@ -870,12 +868,8 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		if err := server.StreamIndexedAttestations(
-			&ptypes.Empty{},
-			mockStream,
-		); err != nil && !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Expected context canceled error got: %v", err)
-		}
+		err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream)
+		assert.ErrorContains(t, "Context canceled", err)
 		<-exitRoutine
 	}(t)
 	cancel()

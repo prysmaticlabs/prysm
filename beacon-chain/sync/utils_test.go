@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSortedObj_SortBlocksRoots(t *testing.T) {
@@ -66,7 +67,8 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 
 	r := &Service{}
 
-	newBlks, newRoots := r.dedupBlocksAndRoots(blks, roots)
+	newBlks, newRoots, err := r.dedupBlocksAndRoots(blks, roots)
+	require.NoError(t, err)
 
 	rootMap := make(map[[32]byte]bool)
 	for i, b := range newBlks {

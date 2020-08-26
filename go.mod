@@ -14,10 +14,10 @@ require (
 	github.com/cloudflare/roughtime v0.0.0-20200205191924-a69ef1dab727
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/d4l3k/messagediff v1.2.1 // indirect
+	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.3
-	github.com/dustin/go-humanize v1.0.0
-	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.5 // indirect
 	github.com/emicklei/dot v0.11.0
@@ -28,6 +28,7 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-yaml/yaml v2.1.0+incompatible
+	github.com/gofrs/flock v0.7.1
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
 	github.com/golang/mock v1.4.3
@@ -43,31 +44,31 @@ require (
 	github.com/herumi/bls-eth-go-binary v0.0.0-20200722032157-41fc56eba7b4
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
-	github.com/ipfs/go-cid v0.0.6 // indirect
 	github.com/ipfs/go-ipfs-addr v0.0.1
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.1
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
-	github.com/json-iterator/go v1.1.9
+	github.com/json-iterator/go v1.1.10
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/kr/pretty v0.2.0
-	github.com/libp2p/go-libp2p v0.9.2
-	github.com/libp2p/go-libp2p-blankhost v0.1.6
-	github.com/libp2p/go-libp2p-circuit v0.2.3
-	github.com/libp2p/go-libp2p-core v0.5.7
+	github.com/libp2p/go-libp2p v0.10.2
+	github.com/libp2p/go-libp2p-blankhost v0.2.0
+	github.com/libp2p/go-libp2p-circuit v0.3.1
+	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-host v0.1.0
-	github.com/libp2p/go-libp2p-kad-dht v0.8.2
+	github.com/libp2p/go-libp2p-kad-dht v0.8.3
 	github.com/libp2p/go-libp2p-net v0.1.0
 	github.com/libp2p/go-libp2p-noise v0.1.1
-	github.com/libp2p/go-libp2p-pubsub v0.3.2
+	github.com/libp2p/go-libp2p-pubsub v0.3.3
 	github.com/libp2p/go-libp2p-secio v0.2.2
-	github.com/libp2p/go-libp2p-swarm v0.2.5
+	github.com/libp2p/go-libp2p-swarm v0.2.8
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
-	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
-	github.com/libp2p/go-maddr-filter v0.1.0 // indirect
+	github.com/libp2p/go-mplex v0.1.3 // indirect
+	github.com/libp2p/go-reuseport-transport v0.0.4 // indirect
+	github.com/libp2p/go-yamux v1.3.8 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.0
@@ -83,7 +84,7 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
-	github.com/prometheus/client_golang v1.6.0
+	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20200709024211-e8095222f77b
@@ -106,15 +107,16 @@ require (
 	github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4
-	go.opencensus.io v0.22.3
+	go.opencensus.io v0.22.4
 	go.uber.org/automaxprocs v1.3.0
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
-	golang.org/x/net v0.0.0-20200528225125-3c3fba18258b // indirect
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
 	golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e
-	google.golang.org/genproto v0.0.0-20200528191852-705c0b31589b
-	google.golang.org/grpc v1.30.0
+	google.golang.org/genproto v0.0.0-20200730144737-007c33dbd381
+	google.golang.org/grpc v1.29.1
+	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
 	gopkg.in/yaml.v2 v2.3.0
