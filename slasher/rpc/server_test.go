@@ -282,12 +282,17 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
+			StateRoot:     bytesutil.PadTo([]byte("state root"), 32),
+			ParentRoot:    bytesutil.PadTo([]byte("parent root"), 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	incomingBlock := &ethpb.BeaconBlockHeader{
 		Slot:          1,
 		ProposerIndex: 1,
 		BodyRoot:      bytesutil.PadTo([]byte("body root2"), 32),
+		StateRoot:     bytesutil.PadTo([]byte("state root2"), 32),
+		ParentRoot:    bytesutil.PadTo([]byte("parent root2"), 32),
 	}
 	cfg := &detection.Config{
 		SlasherDB: db,

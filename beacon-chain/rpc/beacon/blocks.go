@@ -249,7 +249,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if headBlock == nil {
+	if headBlock == nil || headBlock.Block == nil {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
 	headBlockRoot, err := headBlock.Block.HashTreeRoot()

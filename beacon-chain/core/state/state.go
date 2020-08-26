@@ -188,7 +188,14 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
-	bodyRoot, err := (&ethpb.BeaconBlockBody{}).HashTreeRoot()
+	bodyRoot, err := (&ethpb.BeaconBlockBody{
+		RandaoReveal: make([]byte, 96),
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot:  make([]byte, 32),
+			BlockHash:    make([]byte, 32),
+		},
+		Graffiti: make([]byte, 32),
+	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}

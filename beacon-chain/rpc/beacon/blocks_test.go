@@ -330,13 +330,11 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot:                        1,
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
-	})
-	require.NoError(t, err)
+	s := testutil.NewBeaconState()
+	require.NoError(t, s.SetSlot(1))
+	require.NoError(t, s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 3, Root: bytesutil.PadTo([]byte{'A'}, 32)}))
+	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}))
+	require.NoError(t, s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}))
 
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
@@ -347,7 +345,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: &ethpb.SignedBeaconBlock{}, State: s},
+		HeadFetcher: &chainMock.ChainService{Block: genBlock, State: s},
 		FinalizationFetcher: &chainMock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
@@ -405,7 +403,8 @@ func TestServer_GetChainHead(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = helpers.StartSlot(s.PreviousJustifiedCheckpoint().Epoch) + 1
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &chainMock.ChainService{Block: b, State: s},
@@ -492,7 +491,8 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = helpers.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)+1
 	hRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
