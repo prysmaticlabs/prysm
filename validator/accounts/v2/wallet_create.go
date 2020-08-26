@@ -3,8 +3,8 @@ package v2
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
