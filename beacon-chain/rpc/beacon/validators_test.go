@@ -1400,7 +1400,7 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 	ctx := context.Background()
 
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2-1))
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: params.BeaconConfig().SlotsPerEpoch}}
 	require.NoError(t, db.SaveBlock(ctx, b))
