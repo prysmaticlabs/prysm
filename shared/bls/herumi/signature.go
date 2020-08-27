@@ -186,6 +186,9 @@ func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys [
 
 	multiKeys := make([]bls12.PublicKey, length)
 	for i := 0; i < len(pubKeys); i++ {
+		if pubKeys[i] == nil {
+			return false, errors.New("nil public key")
+		}
 		// Perform scalar multiplication for the corresponding g1 points.
 		g1 := new(bls12.G1)
 		bls12.G1Mul(g1, bls12.CastFromPublicKey(pubKeys[i].(*PublicKey).p), &randNums[i])

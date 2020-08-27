@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
@@ -217,7 +216,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 	if lastSaved[0] == nil || lastSaved[0].Block == nil {
 		return [32]byte{}, 0, nil
 	}
-	r, err := stateutil.BlockRoot(lastSaved[0].Block)
+	r, err := lastSaved[0].Block.HashTreeRoot()
 	if err != nil {
 		return [32]byte{}, 0, err
 	}
@@ -259,7 +258,7 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return stateutil.BlockRoot(b.Block)
+	return b.Block.HashTreeRoot()
 }
 
 // Given the start slot and the end slot, this returns the finalized beacon blocks in between.

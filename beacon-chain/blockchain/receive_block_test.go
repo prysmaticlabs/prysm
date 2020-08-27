@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -139,9 +138,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
-			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			gRoot, err := gBlk.Block.HashTreeRoot()
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-			root, err := stateutil.BlockRoot(tt.args.block.Block)
+			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 			err = s.ReceiveBlock(ctx, tt.args.block, root)
 			if tt.wantedErr != "" {
@@ -179,9 +178,9 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	gBlk, err := s.beaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
-	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	gRoot, err := gBlk.Block.HashTreeRoot()
 	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -261,9 +260,9 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 
-			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			gRoot, err := gBlk.Block.HashTreeRoot()
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-			root, err := stateutil.BlockRoot(tt.args.block.Block)
+			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 
 			err = s.ReceiveBlockInitialSync(ctx, tt.args.block, root)
@@ -322,8 +321,8 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, stateSummaryCache := testDB.SetupDB(t)
-			genesisBlockRoot := bytesutil.ToBytes32(nil)
-
+			genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
+			require.NoError(t, err)
 			cfg := &Config{
 				BeaconDB: db,
 				ForkChoiceStore: protoarray.New(
@@ -341,9 +340,9 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 
-			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			gRoot, err := gBlk.Block.HashTreeRoot()
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-			root, err := stateutil.BlockRoot(tt.args.block.Block)
+			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 			blks := []*ethpb.SignedBeaconBlock{tt.args.block}
 			roots := [][32]byte{root}

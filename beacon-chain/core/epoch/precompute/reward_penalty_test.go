@@ -24,8 +24,8 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{},
-				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
@@ -214,8 +214,8 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{},
-				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
@@ -287,9 +287,9 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		BlockRoots:                  make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
-		FinalizedCheckpoint:         &ethpb.Checkpoint{},
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 }
 
