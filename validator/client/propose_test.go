@@ -373,8 +373,11 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 
 	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
 
-	validator.ProposeExit(context.Background(), exit, validatorPubKey)
-	require.LogsContain(t, hook, "Failed to sign voluntary exit")
+	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, "could not get domain data", err)
+	assert.ErrorContains(t, "uh oh", err)
+	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
 }
 
 func TestProposeBlock_ProposeExitFailed(t *testing.T) {
@@ -394,8 +397,9 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 
 	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
 
-	validator.ProposeExit(context.Background(), exit, validatorPubKey)
-	require.LogsContain(t, hook, "Failed to propose voluntary exit")
+	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	assert.NotNil(t, err)
+	assert.LogsContain(t, hook, "Failed to propose voluntary exit")
 }
 
 func TestProposeExit_BroadcastsBlock(t *testing.T) {
@@ -414,5 +418,5 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 
 	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
 
-	validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	assert.NoError(t, validator.ProposeExit(context.Background(), exit, validatorPubKey))
 }
