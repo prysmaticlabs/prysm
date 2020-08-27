@@ -122,8 +122,6 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	bh.Slot = beaconState.Slot()
 	require.NoError(t, beaconState.SetLatestBlockHeader(bh))
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
-	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
-	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := helpers.CurrentEpoch(beaconState)
@@ -131,8 +129,10 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState := beaconState.Copy()
-	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
+	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	require.NoError(t, err)
+	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
