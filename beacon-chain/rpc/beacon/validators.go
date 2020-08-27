@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -476,7 +477,8 @@ func (bs *Server) GetValidatorParticipation(
 			requestedEpoch,
 		)
 	}
-
+	// Calculate the end slot of the next epoch.
+	// Ex: requested epoch 1, this gets slot 95.
 	nextEpochEndSlot := helpers.StartSlot(requestedEpoch+2) - 1
 	requestedState, err := bs.StateGen.StateBySlot(ctx, nextEpochEndSlot)
 	if err != nil {
@@ -519,22 +521,19 @@ func (bs *Server) appendNonFinalizedBlockAttsToState(ctx context.Context, s *sta
 	if err != nil {
 		return nil, err
 	}
-	bRoots, err := bs.BeaconDB.BlockRoots(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-	if len(blks) != len(bRoots) {
-		return nil, err
-	}
-	fbs := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
+
+	nonFinalizedBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for i := len(blks) - 1; i >= 0; i-- {
-		if bs.BeaconDB.IsFinalizedBlock(ctx, bRoots[i]) {
-			fbs = append(fbs, blks[i])
+		r, err := stateutil.BlockRoot(blks[i].Block)
+		if err != nil {
+			return nil, err
+		}
+		if bs.BeaconDB.IsFinalizedBlock(ctx, r) {
+			nonFinalizedBlks = append(nonFinalizedBlks, blks[i])
 		}
 	}
-
-	for _, blk := range blks {
-		for _, a := range blk.Block.Body.Attestations {
+	for _, b := range nonFinalizedBlks {
+		for _, a := range b.Block.Body.Attestations {
 			if a.Data.Target.Epoch == e {
 				pa := &pb.PendingAttestation{
 					Data:            a.Data,
