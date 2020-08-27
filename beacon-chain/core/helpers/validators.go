@@ -42,8 +42,8 @@ func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch 
 //  Check if ``validator`` is slashable.
 //  """
 //  return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
-func IsSlashableValidator(val *ethpb.Validator, epoch uint64) bool {
-	return checkValidatorSlashable(val.ActivationEpoch, val.WithdrawableEpoch, val.Slashed, epoch)
+func IsSlashableValidator(activationEpoch uint64, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+	return checkValidatorSlashable(activationEpoch, withdrawableEpoch, slashed, epoch)
 }
 
 // IsSlashableValidatorUsingTrie checks if a read only validator is slashable.

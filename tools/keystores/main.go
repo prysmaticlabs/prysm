@@ -154,6 +154,7 @@ func encrypt(cliCtx *cli.Context) error {
 	}
 	if fileutil.FileExists(fullPath) {
 		response, err := promptutil.ValidatePrompt(
+			os.Stdin,
 			fmt.Sprintf("file at path %s already exists, are you sure you want to overwrite it? [y/n]", fullPath),
 			func(s string) error {
 				input := strings.ToLower(s)

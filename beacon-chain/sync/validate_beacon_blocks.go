@@ -12,7 +12,6 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -71,7 +70,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
-	blockRoot, err := stateutil.BlockRoot(blk.Block)
+	blockRoot, err := blk.Block.HashTreeRoot()
 	if err != nil {
 		return pubsub.ValidationIgnore
 	}
@@ -81,7 +80,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Check if parent is a bad block and then reject the block.
 	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		log.Debugf("Received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block.ParentRoot)
-		s.setBadBlock(blockRoot)
+		s.setBadBlock(ctx, blockRoot)
 		return pubsub.ValidationReject
 	}
 
@@ -110,15 +109,14 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Handle block when the parent is unknown.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		s.pendingQueueLock.Lock()
-		s.slotToPendingBlocks[blk.Block.Slot] = blk
-		s.seenPendingBlocks[blockRoot] = true
+		s.insertBlockToPendingQueue(blk.Block.Slot, blk, blockRoot)
 		s.pendingQueueLock.Unlock()
 		return pubsub.ValidationIgnore
 	}
 
 	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)); err != nil {
 		log.WithError(err).Warn("Rejecting block")
-		s.setBadBlock(blockRoot)
+		s.setBadBlock(ctx, blockRoot)
 		return pubsub.ValidationReject
 	}
 
@@ -136,7 +134,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
-		s.setBadBlock(blockRoot)
+		s.setBadBlock(ctx, blockRoot)
 		return pubsub.ValidationReject
 	}
 
@@ -152,7 +150,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	if blk.Block.ProposerIndex != idx {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Incorrect proposer index")
-		s.setBadBlock(blockRoot)
+		s.setBadBlock(ctx, blockRoot)
 		return pubsub.ValidationReject
 	}
 
@@ -186,9 +184,12 @@ func (s *Service) hasBadBlock(root [32]byte) bool {
 }
 
 // Set bad block in the cache.
-func (s *Service) setBadBlock(root [32]byte) {
+func (s *Service) setBadBlock(ctx context.Context, root [32]byte) {
 	s.badBlockLock.Lock()
 	defer s.badBlockLock.Unlock()
+	if ctx.Err() != nil { // Do not mark block as bad if it was due to context error.
+		return
+	}
 	s.badBlockCache.Add(string(root[:]), true)
 }
 

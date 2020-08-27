@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -78,7 +77,11 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
 	}
-	if !s.stateGen.HasState(ctx, parentRoot) {
+	has, err := s.stateGen.HasState(ctx, parentRoot)
+	if err != nil {
+		return err
+	}
+	if !has {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return errors.Wrap(err, "could not save initial sync blocks")
 		}
@@ -223,6 +226,10 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	}
 	s.clearInitSyncBlocks()
 
+	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
+		return err
+	}
+
 	s.prevFinalizedCheckpt = s.finalizedCheckpt
 	s.finalizedCheckpt = cp
 
@@ -231,9 +238,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		return errors.Wrap(err, "could not migrate to cold")
 	}
 
-	s.attPool.ClearSeenAtts()
-
-	return s.beaconDB.SaveFinalizedCheckpoint(ctx, cp)
+	return nil
 }
 
 // ancestor returns the block root of an ancestry block from the input block root.
@@ -354,7 +359,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	// Lower slots should be at the end of the list.
 	for i := len(pendingNodes) - 1; i >= 0; i-- {
 		b := pendingNodes[i]
-		r, err := stateutil.BlockRoot(b)
+		r, err := b.HashTreeRoot()
 		if err != nil {
 			return err
 		}

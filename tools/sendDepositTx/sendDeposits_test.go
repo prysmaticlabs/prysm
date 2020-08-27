@@ -1,29 +1,32 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
-func init() {
+func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+
+	os.Exit(m.Run())
 }
 
 func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
@@ -34,14 +37,10 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
 	depositContractAddrStr := testAcc.ContractAddr.Hex()
 
 	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0, numberOfValidators)
-	if err != nil {
-		t.Fatalf("Unable to generate keys: %v", err)
-	}
+	require.NoError(t, err, "Unable to generate keys")
 
 	depositData, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
-	if err != nil {
-		t.Fatalf("Unable to generate deposit data from keys: %v", err)
-	}
+	require.NoError(t, err, "Unable to generate deposit data from keys")
 
 	for i, data := range depositData {
 		dataRoot := [32]byte{}
@@ -55,9 +54,7 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
 
 		for j := uint64(0); j < numberOfDeposits; j++ {
 			tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
-			if err != nil {
-				t.Fatalf("unable to send transaction to contract: %v", err)
-			}
+			require.NoError(t, err, "Unable to send transaction to contract")
 
 			testAcc.Backend.Commit()
 
@@ -74,9 +71,7 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
 func TestEndtoEndDeposits(t *testing.T) {
 	testutil.ResetCache()
 	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
+	require.NoError(t, err, "Unable to set up simulated backend")
 
 	testAcc.Backend.Commit()
 
@@ -94,39 +89,18 @@ func TestEndtoEndDeposits(t *testing.T) {
 	}
 
 	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
-	if err != nil {
-		t.Fatalf("Unable to retrieve logs %v", err)
-	}
-	if len(logs) == 0 {
-		t.Fatal("no logs")
-	}
-
-	if len(logs) != int(numberOfDeposits*numberOfValidators) {
-		t.Fatal("No sufficient number of logs")
-	}
+	require.NoError(t, err, "Unable to retrieve logs")
+	require.NotEqual(t, 0, len(logs), "No logs")
+	require.Equal(t, int(numberOfDeposits*numberOfValidators), len(logs), "No sufficient number of logs")
 
 	j := 0
 	for i, log := range logs {
 		loggedPubkey, withCreds, _, loggedSig, index, err := contracts.UnpackDepositLogData(log.Data)
-		if err != nil {
-			t.Fatalf("Unable to unpack logs %v", err)
-		}
-
-		if binary.LittleEndian.Uint64(index) != uint64(i) {
-			t.Errorf("Retrieved merkle tree index is incorrect %d", index)
-		}
-
-		if !bytes.Equal(loggedPubkey, deposits[j].Data.PublicKey) {
-			t.Errorf("Pubkey is not the same as the data that was put in %v, i: %d", loggedPubkey, i)
-		}
-
-		if !bytes.Equal(loggedSig, deposits[j].Data.Signature) {
-			t.Errorf("Proof of Possession is not the same as the data that was put in %v, i: %d", loggedSig, i)
-		}
-
-		if !bytes.Equal(withCreds, deposits[j].Data.WithdrawalCredentials) {
-			t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v, i: %d", withCreds, i)
-		}
+		require.NoError(t, err, "Unable to unpack logs")
+		assert.Equal(t, uint64(i), binary.LittleEndian.Uint64(index))
+		assert.DeepEqual(t, deposits[j].Data.PublicKey, loggedPubkey, "Pubkey is not the same as the data that was put in %v, i: %d", loggedPubkey, i)
+		assert.DeepEqual(t, deposits[j].Data.Signature, loggedSig, "Proof of Possession is not the same as the data that was put in %v, i: %d", loggedSig, i)
+		assert.DeepEqual(t, deposits[j].Data.WithdrawalCredentials, withCreds, "Withdrawal Credentials is not the same as the data that was put in %v, i: %d", withCreds, i)
 
 		if i == int(numberOfDeposits)-1 {
 			j++
@@ -135,36 +109,22 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	encodedDeposits := make([][]byte, numberOfValidators*numberOfDeposits)
 	for i := 0; i < int(numberOfValidators); i++ {
-		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
-		if err != nil {
-			t.Fatalf("could not tree hash deposit data: %v", err)
-		}
+		hashedDeposit, err := deposits[i].Data.HashTreeRoot()
+		require.NoError(t, err, "Could not tree hash deposit data")
 		for j := 0; j < int(numberOfDeposits); j++ {
 			encodedDeposits[i*int(numberOfDeposits)+j] = hashedDeposit[:]
 		}
 	}
 
 	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not generate trie: %v", err)
-	}
+	require.NoError(t, err, "Could not generate trie")
 
 	root := depositTrie.Root()
 
 	for i, encodedDeposit := range encodedDeposits {
 		proof, err := depositTrie.MerkleProof(i)
-		if err != nil {
-			t.Fatalf("Could not generate proof: %v", err)
-		}
-		if ok := trieutil.VerifyMerkleBranch(
-			root[:],
-			encodedDeposit,
-			i,
-			proof,
-		); !ok {
-			t.Fatalf(
-				"Unable verify deposit merkle branch of deposit root for root: %#x, encodedDeposit: %#x, i : %d",
-				root[:], encodedDeposit, i)
-		}
+		require.NoError(t, err, "Could not generate proof")
+		require.Equal(t, true, trieutil.VerifyMerkleBranch(root[:], encodedDeposit, i, proof, params.BeaconConfig().DepositContractTreeDepth),
+			"Unable verify deposit merkle branch of deposit root for root: %#x, encodedDeposit: %#x, i : %d", root[:], encodedDeposit, i)
 	}
 }

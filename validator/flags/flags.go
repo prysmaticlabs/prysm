@@ -157,10 +157,10 @@ var (
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
 		Value: filepath.Join(DefaultValidatorDir(), WalletDefaultDirName),
 	}
-	// AccountPasswordFileFlag is path to a file containing a password for a new validator account.
+	// AccountPasswordFileFlag is path to a file containing a password for a validator account.
 	AccountPasswordFileFlag = &cli.StringFlag{
 		Name:  "account-password-file",
-		Usage: "Path to a plain-text, .txt file containing a password for a new validator account",
+		Usage: "Path to a plain-text, .txt file containing a password for a validator account",
 	}
 	// WalletPasswordFileFlag is the path to a file containing your wallet password.
 	WalletPasswordFileFlag = &cli.StringFlag{
@@ -176,11 +176,6 @@ var (
 	MnemonicFileFlag = &cli.StringFlag{
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
-	}
-	// SkipMnemonicConfirmFlag is used to skip the withdrawal key mnemonic phrase prompt confirmation.
-	SkipMnemonicConfirmFlag = &cli.BoolFlag{
-		Name:  "skip-mnemonic-confirm",
-		Usage: "Skip the withdrawal key mnemonic phrase prompt confirmation",
 	}
 	// ShowDepositDataFlag for accounts-v2.
 	ShowDepositDataFlag = &cli.BoolFlag{
@@ -206,6 +201,14 @@ var (
 	BackupPublicKeysFlag = &cli.StringFlag{
 		Name:  "backup-public-keys",
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
+		Value: "",
+	}
+	// VoluntaryExitPublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts on which a user wants to perform a voluntary exit.
+	VoluntaryExitPublicKeysFlag = &cli.StringFlag{
+		Name: "voluntary-exit-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify on which validator accounts to perform " +
+			"a voluntary exit",
 		Value: "",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
@@ -257,6 +260,60 @@ var (
 		Name:  "keymanager-kind",
 		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
 		Value: "",
+	}
+	// Eth1KeystoreUTCPathFlag defines the path to an eth1 utc keystore containing eth1 private keys.
+	Eth1KeystoreUTCPathFlag = &cli.StringFlag{
+		Name:  "eth1-keystore-utc-path",
+		Usage: "Path to an eth1 utc keystore containing eth1 private keys",
+		Value: "",
+	}
+	// Eth1KeystorePasswordFileFlag to unlock an eth1 keystores.
+	Eth1KeystorePasswordFileFlag = &cli.StringFlag{
+		Name:  "eth1-keystore-password-file",
+		Value: "",
+		Usage: "Password file for unlock account",
+	}
+	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
+	HTTPWeb3ProviderFlag = &cli.StringFlag{
+		Name:  "http-web3provider",
+		Usage: "An eth1 web3 provider string http endpoint",
+		Value: "https://goerli.prylabs.net",
+	}
+	// Eth1PrivateKeyFileFlag containing a hex string for sending deposit transactions from eth1.
+	Eth1PrivateKeyFileFlag = &cli.StringFlag{
+		Name:  "eth1-private-key-file",
+		Usage: "File containing a private key for sending deposit transactions from eth1",
+		Value: "",
+	}
+	// DepositDelaySecondsFlag to delay sending deposit transactions by a fixed interval.
+	DepositDelaySecondsFlag = &cli.Int64Flag{
+		Name:  "deposit-delay-seconds",
+		Usage: "The time delay between sending the deposits to the contract (in seconds)",
+		Value: 5,
+	}
+	// DepositContractAddressFlag for the validator deposit contract on eth1.
+	DepositContractAddressFlag = &cli.StringFlag{
+		Name:  "deposit-contract",
+		Usage: "Address of the deposit contract",
+		Value: "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", // Medalla deposit contract address.
+	}
+	// DepositPublicKeysFlag for validating public keys a user wishes to deposit for.
+	DepositPublicKeysFlag = &cli.StringFlag{
+		Name:  "deposit-public-keys",
+		Usage: "Comma-separated list of validating public key hex strings to specify which validator accounts to deposit",
+		Value: "",
+	}
+	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.
+	SkipDepositConfirmationFlag = &cli.BoolFlag{
+		Name:  "skip-deposit-confirmation",
+		Usage: "Skips the y/n confirmation prompt for sending a deposit to the deposit contract",
+		Value: false,
+	}
+	// DepositAllAccountsFlag is an easy way for a user to send deposit transactions for all accounts in their wallet.
+	DepositAllAccountsFlag = &cli.BoolFlag{
+		Name:  "deposit-all-accounts",
+		Usage: "Sends a 32 ETH deposit for each of a user's validator accounts in their wallet",
+		Value: false,
 	}
 )
 

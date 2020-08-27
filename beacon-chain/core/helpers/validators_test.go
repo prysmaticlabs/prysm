@@ -128,7 +128,8 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			slashableValidator := IsSlashableValidator(test.validator, test.epoch)
+			slashableValidator := IsSlashableValidator(test.validator.ActivationEpoch,
+				test.validator.WithdrawableEpoch, test.validator.Slashed, test.epoch)
 			assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
 		})
 	}
@@ -414,10 +415,10 @@ func TestActiveValidatorIndices(t *testing.T) {
 		epoch uint64
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    []uint64
-		wantErr bool
+		name      string
+		args      args
+		want      []uint64
+		wantedErr string
 	}{
 		{
 			name: "all_active_epoch_10",
@@ -557,8 +558,8 @@ func TestActiveValidatorIndices(t *testing.T) {
 			s, err := beaconstate.InitializeFromProto(tt.args.state)
 			require.NoError(t, err)
 			got, err := ActiveValidatorIndices(s, tt.args.epoch)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ActiveValidatorIndices() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 				return
 			}
 			assert.DeepEqual(t, tt.want, got, "ActiveValidatorIndices()")
@@ -575,10 +576,10 @@ func TestComputeProposerIndex(t *testing.T) {
 		seed       [32]byte
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    uint64
-		wantErr bool
+		name      string
+		args      args
+		want      uint64
+		wantedErr string
 	}{
 		{
 			name: "all_active_indices",
@@ -623,7 +624,7 @@ func TestComputeProposerIndex(t *testing.T) {
 				indices: []uint64{},
 				seed:    seed,
 			},
-			wantErr: true,
+			wantedErr: "empty active indices list",
 		},
 		{
 			name: "active_indices_out_of_range",
@@ -638,7 +639,7 @@ func TestComputeProposerIndex(t *testing.T) {
 				indices: []uint64{100},
 				seed:    seed,
 			},
-			wantErr: true,
+			wantedErr: "active index out of range",
 		},
 		{
 			name: "second_half_active",
@@ -680,13 +681,10 @@ func TestComputeProposerIndex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bState := &pb.BeaconState{Validators: tt.args.validators}
 			stTrie, err := beaconstate.InitializeFromProtoUnsafe(bState)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+			require.NoError(t, err)
 			got, err := ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ComputeProposerIndex() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 				return
 			}
 			assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
@@ -730,7 +728,7 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 			true},
 		{"Not yet finalized",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
-			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{}},
+			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
 			false},
 		{"Incorrect activation epoch",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1},

@@ -32,11 +32,9 @@ var _ = Validator(&validator{})
 
 const cancelledCtx = "context has been canceled"
 
-func publicKeys(km keymanager.KeyManager) [][]byte {
+func publicKeys(t *testing.T, km keymanager.KeyManager) [][]byte {
 	keys, err := km.FetchValidatingKeys()
-	if err != nil {
-		log.WithError(err).Debug("Cannot fetch validating keys")
-	}
+	assert.NoError(t, err, "Cannot fetch validating keys")
 	res := make([][]byte, len(keys))
 	for i := range keys {
 		res[i] = keys[i][:]
@@ -263,7 +261,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(v.keyManager),
+			PublicKeys: publicKeys(t, v.keyManager),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -288,7 +286,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(v.keyManager),
+			PublicKeys: publicKeys(t, v.keyManager),
 		},
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForActivation(context.Background())
@@ -309,7 +307,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(v.keyManager),
+			PublicKeys: publicKeys(t, v.keyManager),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -332,13 +330,13 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(v.keyManager))
+	resp := generateMockStatusResponse(publicKeys(t, v.keyManager))
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(v.keyManager),
+			PublicKeys: publicKeys(t, v.keyManager),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -394,7 +392,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	publicKeys := publicKeys(v.keyManager)
+	publicKeys := publicKeys(t, v.keyManager)
 	resp := generateMockStatusResponse(publicKeys)
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	resp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -423,7 +421,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(v.keyManager))
+	resp := generateMockStatusResponse(publicKeys(t, v.keyManager))
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
@@ -674,9 +672,7 @@ func TestSaveProtections_OK(t *testing.T) {
 	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	v := validator{
 		db:                      db,
 		keyManager:              testKeyManager,
@@ -741,12 +737,12 @@ func TestRolesAt_OK(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
@@ -794,7 +790,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)

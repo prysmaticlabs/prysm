@@ -168,7 +168,9 @@ func (s *SlasherNode) startDB() error {
 	clearDB := s.cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := s.cliCtx.Bool(cmd.ForceClearDB.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &kv.Config{}
+	spanCacheSize := s.cliCtx.Int(flags.SpanCacheSize.Name)
+	cfg := &kv.Config{SpanCacheSize: spanCacheSize}
+	log.Infof("Span cache size has been set to: %d", spanCacheSize)
 	d, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err

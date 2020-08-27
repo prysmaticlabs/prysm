@@ -154,9 +154,9 @@ func Test_ValidateAttestationTime(t *testing.T) {
 		genesisTime time.Time
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name      string
+		args      args
+		wantedErr string
 	}{
 		{
 			name: "attestation.slot == current_slot",
@@ -164,7 +164,6 @@ func Test_ValidateAttestationTime(t *testing.T) {
 				attSlot:     15,
 				genesisTime: roughtime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
-			wantErr: false,
 		},
 		{
 			name: "attestation.slot == current_slot, received in middle of slot",
@@ -174,7 +173,6 @@ func Test_ValidateAttestationTime(t *testing.T) {
 					-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(-(time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second)),
 			},
-			wantErr: false,
 		},
 		{
 			name: "attestation.slot == current_slot, received 200ms early",
@@ -184,7 +182,6 @@ func Test_ValidateAttestationTime(t *testing.T) {
 					-16 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(-200 * time.Millisecond),
 			},
-			wantErr: false,
 		},
 		{
 			name: "attestation.slot > current_slot",
@@ -192,7 +189,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 				attSlot:     16,
 				genesisTime: roughtime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
-			wantErr: true,
+			wantedErr: "not within attestation propagation range",
 		},
 		{
 			name: "attestation.slot < current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
@@ -200,7 +197,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange - 1,
 				genesisTime: roughtime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
-			wantErr: true,
+			wantedErr: "not within attestation propagation range",
 		},
 		{
 			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
@@ -208,7 +205,6 @@ func Test_ValidateAttestationTime(t *testing.T) {
 				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
 				genesisTime: roughtime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
-			wantErr: false,
 		},
 		{
 			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE, received 200ms late",
@@ -218,13 +214,15 @@ func Test_ValidateAttestationTime(t *testing.T) {
 					-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(200 * time.Millisecond),
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime); (err != nil) != tt.wantErr {
-				t.Errorf("validateAggregateAttTime() error = %v, wantErr %v", err, tt.wantErr)
+			err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

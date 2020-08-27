@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -269,7 +268,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 			return nil, err
 		}
 	}
-	prevBlockRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
+	prevBlockRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not determine prev block root")
@@ -579,11 +578,11 @@ func ProcessOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
+	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	if err := b.VerifyAttestations(ctx, state, body.Attestations); err != nil {
+	if err := b.VerifyAttestationsSignatures(ctx, state, body.Attestations); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestations")
 	}
 	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
@@ -642,7 +641,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
+	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}

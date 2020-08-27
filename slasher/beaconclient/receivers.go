@@ -9,11 +9,9 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
@@ -49,11 +47,17 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 			if e, ok := status.FromError(err); ok {
 				switch e.Code() {
 				case codes.Canceled, codes.Internal:
-					stream, err = bs.restartBlockStream(ctx)
+					err = bs.restartBeaconConnection(ctx)
 					if err != nil {
-						log.WithError(err).Error("Could not restart stream")
+						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
+					stream, err = bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
+					if err != nil {
+						log.WithError(err).Error("Could not restart block stream")
+						return
+					}
+					log.Info("Block stream restarted...")
 				default:
 					log.WithError(err).Errorf("Could not receive block from beacon node. rpc status: %v", e.Code())
 					return
@@ -66,7 +70,7 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 		if res == nil {
 			continue
 		}
-		root, err := stateutil.BlockRoot(res.Block)
+		root, err := res.Block.HashTreeRoot()
 		if err != nil {
 			log.WithError(err).Error("Could not hash block")
 			return
@@ -111,11 +115,17 @@ func (bs *Service) ReceiveAttestations(ctx context.Context) {
 			if e, ok := status.FromError(err); ok {
 				switch e.Code() {
 				case codes.Canceled, codes.Internal:
-					stream, err = bs.restartIndexedAttestationStream(ctx)
+					err = bs.restartBeaconConnection(ctx)
 					if err != nil {
-						log.WithError(err).Error("Could not restart stream")
+						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
+					stream, err = bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+					if err != nil {
+						log.WithError(err).Error("Could not restart attestation stream")
+						return
+					}
+					log.Info("Attestation stream restarted...")
 				default:
 					log.WithError(err).Errorf("Could not receive attestations from beacon node. rpc status: %v", e.Code())
 					return
@@ -173,61 +183,31 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	}
 }
 
-func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.BeaconChain_StreamIndexedAttestationsClient, error) {
+func (bs *Service) restartBeaconConnection(ctx context.Context) error {
 	ticker := time.NewTicker(reconnectPeriod)
 	for {
 		select {
 		case <-ticker.C:
-			log.Info("Context closed, attempting to restart attestation stream")
-			conn, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
+			if bs.conn.GetState() == connectivity.TransientFailure || bs.conn.GetState() == connectivity.Idle {
+				log.Debugf("Connection status %v", bs.conn.GetState())
+				log.Info("Beacon node is still down")
+				continue
+			}
+			status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
-				log.Debug("Failed to dial beacon node")
+				log.WithError(err).Error("Could not fetch sync status")
 				continue
 			}
-			log.Debugf("connection status %v", conn.GetState())
-			if conn.GetState() == connectivity.TransientFailure || conn.GetState() == connectivity.Idle {
-				log.Debug("Beacon node is still down")
+			if status == nil || status.Syncing {
+				log.Info("Waiting for beacon node to be fully synced...")
 				continue
 			}
-			stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
-			if err != nil {
-				continue
-			}
-			log.Info("Attestation stream restarted...")
-			return stream, nil
+			log.Info("Beacon node is fully synced")
+
+			return nil
 		case <-ctx.Done():
 			log.Debug("Context closed, exiting reconnect routine")
-			return nil, errors.New("context closed, no longer attempting to restart stream")
-		}
-	}
-
-}
-
-func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_StreamBlocksClient, error) {
-	ticker := time.NewTicker(reconnectPeriod)
-	for {
-		select {
-		case <-ticker.C:
-			log.Info("Context closed, attempting to restart block stream")
-			conn, err := grpc.DialContext(bs.ctx, bs.provider, bs.beaconDialOptions...)
-			if err != nil {
-				log.Debug("Failed to dial beacon node")
-				continue
-			}
-			log.Debugf("connection status %v", conn.GetState())
-			if conn.GetState() == connectivity.TransientFailure || conn.GetState() == connectivity.Idle {
-				log.Debug("Beacon node is still down")
-				continue
-			}
-			stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
-			if err != nil {
-				continue
-			}
-			log.Info("Block stream restarted...")
-			return stream, nil
-		case <-ctx.Done():
-			log.Debug("Context closed, exiting reconnect routine")
-			return nil, errors.New("context closed, no longer attempting to restart stream")
+			return errors.New("context closed, no longer attempting to restart stream")
 		}
 	}
 

@@ -10,13 +10,14 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
@@ -31,9 +32,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	ctx := context.Background()
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wantedValidators1 := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
 			{
@@ -43,24 +42,24 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	}
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 
 	cfg := &detection.Config{
 		SlasherDB: db,
 	}
 	fork, err := p2putils.Fork(savedAttestation.Data.Target.Epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
 	bs, err := beaconclient.NewBeaconClientService(ctx, bcCfg)
@@ -72,9 +71,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 		gomock.Any(),
 	).Return(wantedValidators1, nil).AnyTimes()
 	domain, err := helpers.Domain(fork, savedAttestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, wantedGenesis.GenesisValidatorsRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(100)
 	var wentThrough bool
@@ -84,17 +81,13 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 			iatt := state.CopyIndexedAttestation(savedAttestation)
 			iatt.Data.Slot += j
 			root, err := helpers.ComputeSigningRoot(iatt.Data, domain)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			var validatorSig bls.Signature
 			validatorSig = keys[iatt.AttestingIndices[0]].Sign(root[:])
 			marshalledSig := validatorSig.Marshal()
 			iatt.Signature = marshalledSig
 			slashings, err := server.IsSlashableAttestation(ctx, iatt)
-			if err != nil {
-				t.Fatalf("got error while trying to detect slashing: %v", err)
-			}
+			require.NoError(t, err, "Got error while trying to detect slashing")
 
 			if len(slashings.AttesterSlashing) == 0 && !wentThrough {
 				wentThrough = true
@@ -116,9 +109,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wantedValidators1 := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
 			{
@@ -132,38 +123,36 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	).Return(wantedValidators1, nil)
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	incomingAtt := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 2},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	cfg := &detection.Config{
 		SlasherDB: db,
 	}
 	fork, err := p2putils.Fork(savedAttestation.Data.Target.Epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	domain, err := helpers.Domain(fork, savedAttestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, wantedGenesis.GenesisValidatorsRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(savedAttestation.Data, domain)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	sig := []bls.Signature{}
 	for _, idx := range savedAttestation.AttestingIndices {
 		validatorSig := keys[idx].Sign(root[:])
@@ -179,19 +168,11 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	ds := detection.NewDetectionService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableAttestation(ctx, savedAttestation)
-	if err != nil {
-		t.Fatalf("got error while trying to detect slashing: %v", err)
-	}
-	if len(slashings.AttesterSlashing) != 0 {
-		t.Fatalf("Found slashings while no slashing should have been found on first attestation: %v slashing found: %v", savedAttestation, slashings)
-	}
+	require.NoError(t, err, "Got error while trying to detect slashing")
+	require.Equal(t, 0, len(slashings.AttesterSlashing), "Found slashings while no slashing should have been found on first attestation")
 	sl, err := server.IsSlashableAttestationNoUpdate(ctx, incomingAtt)
-	if err != nil {
-		t.Fatalf("got error while trying to detect slashing: %v", err)
-	}
-	if sl.Slashable != true {
-		t.Fatalf("attestation should be found to be slashable. got: %v", sl.Slashable)
-	}
+	require.NoError(t, err, "Got error while trying to detect slashing")
+	require.Equal(t, true, sl.Slashable, "Attestation should be found to be slashable")
 }
 
 func TestServer_IsSlashableBlock(t *testing.T) {
@@ -203,9 +184,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	ctx := context.Background()
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wantedValidators := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
 			{
@@ -219,7 +198,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	).Return(wantedValidators, nil).AnyTimes()
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
 	savedBlock := &ethpb.SignedBeaconBlockHeader{
@@ -227,7 +206,10 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
+			StateRoot:     make([]byte, 32),
+			ParentRoot:    make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 
 	cfg := &detection.Config{
@@ -235,13 +217,9 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	}
 	savedBlockEpoch := helpers.SlotToEpoch(savedBlock.Header.Slot)
 	fork, err := p2putils.Fork(savedBlockEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	domain, err := helpers.Domain(fork, savedBlockEpoch, params.BeaconConfig().DomainBeaconProposer, wantedGenesis.GenesisValidatorsRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
 	bs, err := beaconclient.NewBeaconClientService(ctx, bcCfg)
@@ -256,19 +234,13 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			defer wg.Done()
 			sbbh := state.CopySignedBeaconBlockHeader(savedBlock)
 			sbbh.Header.BodyRoot = bytesutil.PadTo([]byte(fmt.Sprintf("%d", j)), 32)
-			bhr, err := stateutil.BlockHeaderRoot(sbbh.Header)
-			if err != nil {
-				t.Error(err)
-			}
+			bhr, err := sbbh.Header.HashTreeRoot()
+			assert.NoError(t, err)
 			root, err := helpers.ComputeSigningRoot(bhr, domain)
-			if err != nil {
-				t.Error(err)
-			}
+			assert.NoError(t, err)
 			sbbh.Signature = keys[sbbh.Header.ProposerIndex].Sign(root[:]).Marshal()
 			slashings, err := server.IsSlashableBlock(ctx, sbbh)
-			if err != nil {
-				t.Fatalf("got error while trying to detect slashing: %v", err)
-			}
+			require.NoError(t, err, "Got error while trying to detect slashing")
 			if len(slashings.ProposerSlashing) == 0 && !wentThrough {
 				wentThrough = true
 			} else if len(slashings.ProposerSlashing) == 0 && wentThrough {
@@ -277,7 +249,6 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-
 }
 
 func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
@@ -289,9 +260,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wantedValidators := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
 			{
@@ -305,7 +274,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	).Return(wantedValidators, nil)
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	savedBlock := &ethpb.SignedBeaconBlockHeader{
@@ -313,33 +282,30 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
+			StateRoot:     bytesutil.PadTo([]byte("state root"), 32),
+			ParentRoot:    bytesutil.PadTo([]byte("parent root"), 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	incomingBlock := &ethpb.BeaconBlockHeader{
 		Slot:          1,
 		ProposerIndex: 1,
 		BodyRoot:      bytesutil.PadTo([]byte("body root2"), 32),
+		StateRoot:     bytesutil.PadTo([]byte("state root2"), 32),
+		ParentRoot:    bytesutil.PadTo([]byte("parent root2"), 32),
 	}
 	cfg := &detection.Config{
 		SlasherDB: db,
 	}
 	savedBlockEpoch := helpers.SlotToEpoch(savedBlock.Header.Slot)
 	fork, err := p2putils.Fork(savedBlockEpoch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	domain, err := helpers.Domain(fork, savedBlockEpoch, params.BeaconConfig().DomainBeaconProposer, wantedGenesis.GenesisValidatorsRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bhr, err := stateutil.BlockHeaderRoot(savedBlock.Header)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
+	bhr, err := savedBlock.Header.HashTreeRoot()
+	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(bhr, domain)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	blockSig := keys[savedBlock.Header.ProposerIndex].Sign(root[:])
 	marshalledSig := blockSig.Marshal()
 	savedBlock.Signature = marshalledSig
@@ -348,17 +314,9 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	ds := detection.NewDetectionService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableBlock(ctx, savedBlock)
-	if err != nil {
-		t.Fatalf("got error while trying to detect slashing: %v", err)
-	}
-	if len(slashings.ProposerSlashing) != 0 {
-		t.Fatalf("Found slashings while no slashing should have been found on first block: %v slashing found: %v", savedBlock, slashings)
-	}
+	require.NoError(t, err, "Got error while trying to detect slashing")
+	require.Equal(t, 0, len(slashings.ProposerSlashing), "Found slashings while no slashing should have been found on first block")
 	sl, err := server.IsSlashableBlockNoUpdate(ctx, incomingBlock)
-	if err != nil {
-		t.Fatalf("got error while trying to detect slashing: %v", err)
-	}
-	if sl.Slashable != true {
-		t.Fatalf("block should be found to be slashable. got: %v", sl.Slashable)
-	}
+	require.NoError(t, err, "Got error while trying to detect slashing")
+	require.Equal(t, true, sl.Slashable, "Block should be found to be slashable")
 }
