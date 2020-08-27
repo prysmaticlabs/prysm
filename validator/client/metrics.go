@@ -70,7 +70,7 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorProposeSuccessVec used to count successful voluntary exit proposals.
+	// ValidatorProposeExitSuccessVec used to count successful voluntary exit proposals.
 	ValidatorProposeExitSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
@@ -81,7 +81,7 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorProposeFailVec used to count failed voluntary exit proposals.
+	// ValidatorProposeExitFailVec used to count failed voluntary exit proposals.
 	ValidatorProposeExitFailVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
