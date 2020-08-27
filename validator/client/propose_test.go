@@ -399,6 +399,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 
 	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
 	assert.NotNil(t, err)
+	assert.ErrorContains(t, "uh oh", err)
 	assert.LogsContain(t, hook, "Failed to propose voluntary exit")
 }
 
