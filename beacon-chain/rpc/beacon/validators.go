@@ -528,7 +528,7 @@ func (bs *Server) appendNonFinalizedBlockAttsToState(ctx context.Context, s *sta
 		if err != nil {
 			return nil, err
 		}
-		if bs.BeaconDB.IsFinalizedBlock(ctx, r) {
+		if !bs.BeaconDB.IsFinalizedBlock(ctx, r) {
 			nonFinalizedBlks = append(nonFinalizedBlks, blks[i])
 		}
 	}
