@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -101,7 +100,7 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := ssz.HashTreeRoot(beaconState)
+		_, err := beaconState.HashTreeRoot(context.Background())
 		require.NoError(b, err)
 	}
 }

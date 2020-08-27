@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -36,12 +35,11 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	var blkRoots [][32]byte
 	// Populate the database with blocks that would match the request.
 	for i := 1; i < 11; i++ {
-		blk := &ethpb.BeaconBlock{
-			Slot: uint64(i),
-		}
-		root, err := ssz.HashTreeRoot(blk)
+		blk := testutil.NewBeaconBlock()
+		blk.Block.Slot = uint64(i)
+		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: blk}))
+		require.NoError(t, d.SaveBlock(context.Background(), blk))
 		blkRoots = append(blkRoots, root)
 	}
 
@@ -56,7 +54,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		for i := range blkRoots {
 			expectSuccess(t, r, stream)
-			res := &ethpb.SignedBeaconBlock{}
+			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, &res))
 			if res.Block.Slot != uint64(i+1) {
 				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)
@@ -79,12 +77,14 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.DelaySend = true
 
-	blockA := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 111}}
-	blockB := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 40}}
+	blockA := testutil.NewBeaconBlock()
+	blockA.Block.Slot = 111
+	blockB := testutil.NewBeaconBlock()
+	blockB.Block.Slot = 40
 	// Set up a head state with data we expect.
-	blockARoot, err := stateutil.BlockRoot(blockA.Block)
+	blockARoot, err := blockA.Block.HashTreeRoot()
 	require.NoError(t, err)
-	blockBRoot, err := stateutil.BlockRoot(blockB.Block)
+	blockBRoot, err := blockB.Block.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)

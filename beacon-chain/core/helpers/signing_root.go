@@ -1,11 +1,11 @@
 package helpers
 
 import (
+	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -48,16 +48,14 @@ func ComputeDomainAndSign(state *state.BeaconState, epoch uint64, obj interface{
 //        domain=domain,
 //    ))
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
+	if object == nil {
+		return [32]byte{}, errors.New("cannot compute signing root of nil")
+	}
 	return signingData(func() ([32]byte, error) {
-		switch t := object.(type) {
-		case *ethpb.BeaconBlock:
-			return stateutil.BlockRoot(t)
-		case *ethpb.AttestationData:
-			return stateutil.AttestationDataRoot(t)
-		default:
-			// utilise generic ssz library
-			return ssz.HashTreeRoot(object)
+		if v, ok := object.(fssz.HashRoot); ok {
+			return v.HashTreeRoot()
 		}
+		return ssz.HashTreeRoot(object)
 	}, domain)
 }
 
@@ -72,7 +70,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 		ObjectRoot: objRoot[:],
 		Domain:     domain,
 	}
-	return ssz.HashTreeRoot(container)
+	return container.HashTreeRoot()
 }
 
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
@@ -138,7 +136,7 @@ func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []b
 	}
 	root, err := signingData(func() ([32]byte, error) {
 		// utilize custom block hashing function
-		return stateutil.BlockRoot(blk)
+		return blk.HashTreeRoot()
 	}, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
@@ -161,7 +159,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	root, err := signingData(func() ([32]byte, error) {
-		return stateutil.BlockHeaderRoot(blkHdr)
+		return blkHdr.HashTreeRoot()
 	}, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
@@ -225,10 +223,10 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //        genesis_validators_root=genesis_validators_root,
 //    ))
 func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
-	r, err := ssz.HashTreeRoot(&pb.ForkData{
+	r, err := (&pb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
-	})
+	}).HashTreeRoot()
 	if err != nil {
 		return [32]byte{}, err
 	}

@@ -4,11 +4,9 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -22,11 +20,10 @@ func TestServer_GetBeaconState(t *testing.T) {
 	st := testutil.NewBeaconState()
 	slot := uint64(100)
 	require.NoError(t, st.SetSlot(slot))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
-		Slot: slot,
-	}}
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = slot
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(db, sc)
 	require.NoError(t, gen.SaveState(ctx, gRoot, st))

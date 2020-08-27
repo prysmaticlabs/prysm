@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -110,7 +109,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	encodedDeposits := make([][]byte, numberOfValidators*numberOfDeposits)
 	for i := 0; i < int(numberOfValidators); i++ {
-		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
+		hashedDeposit, err := deposits[i].Data.HashTreeRoot()
 		require.NoError(t, err, "Could not tree hash deposit data")
 		for j := 0; j < int(numberOfDeposits); j++ {
 			encodedDeposits[i*int(numberOfDeposits)+j] = hashedDeposit[:]
