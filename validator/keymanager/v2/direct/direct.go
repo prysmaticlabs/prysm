@@ -8,14 +8,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -28,9 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
@@ -93,10 +92,11 @@ func NewKeymanager(
 	cfg *Config,
 ) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:        wallet,
-		cfg:           cfg,
-		keysCache:     make(map[[48]byte]bls.SecretKey),
-		accountsStore: &AccountStore{},
+		wallet:              wallet,
+		cfg:                 cfg,
+		keysCache:           make(map[[48]byte]bls.SecretKey),
+		accountsStore:       &AccountStore{},
+		accountsChangedFeed: new(event.Feed),
 	}
 
 	walletExists, err := wallet.Exists()
@@ -141,8 +141,7 @@ func NewKeymanager(
 
 	// We begin a goroutine to listen for file changes to our
 	// all-accounts.keystore.json file in the wallet directory.
-	accountsFilePath := filepath.Join(k.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
-	go k.listenForFileChanges(cliCtx.Context, accountsFilePath)
+	go k.listenForAccountChanges(cliCtx.Context)
 	return k, nil
 }
 
@@ -211,9 +210,6 @@ func (c *Config) String() string {
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
 func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
-	if dr.accountsChangedFeed == nil {
-		dr.accountsChangedFeed = new(event.Feed)
-	}
 	return dr.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
@@ -488,89 +484,6 @@ func (dr *Keymanager) createAccountsKeystore(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
-}
-
-func (dr *Keymanager) listenForFileChanges(ctx context.Context, filePath string) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.WithError(err).Error("Could not initialize file watcher")
-		return
-	}
-	defer func() {
-		if err := watcher.Close(); err != nil {
-			log.WithError(err).Error("Could not close file watcher")
-			return
-		}
-	}()
-	if err := watcher.Add(filePath); err != nil {
-		log.WithError(err).Errorf("Could not add file %s to file watcher", filePath)
-		return
-	}
-	for {
-		select {
-		case event := <-watcher.Events:
-			// If a file was modified, we attempt to read that file
-			// and parse it into our accounts store.
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				fileBytes, err := ioutil.ReadFile(event.Name)
-				if err != nil {
-					log.WithError(err).Errorf("Could not read file at path: %s", event.Name)
-					continue
-				}
-				accountsKeystore := &v2keymanager.Keystore{}
-				if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
-					log.WithError(
-						err,
-					).Errorf("Could not read valid, EIP-2335 keystore json file at path: %s", event.Name)
-					continue
-				}
-				if err := dr.reloadAccountsFromKeystore(accountsKeystore); err != nil {
-					log.WithError(
-						err,
-					).Error("Could not replace the accounts store from keystore file")
-				}
-			}
-		case err := <-watcher.Errors:
-			log.WithError(err).Errorf("Could not watch for file changes for: %s", filePath)
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-// Replaces the accounts store struct in the direct keymanager with
-// the contents of a keystore file by decrypting it with the accounts password.
-func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore) error {
-	// If no one is subscribing to account changes, no need to proceed.
-	if dr.accountsChangedFeed == nil {
-		return nil
-	}
-	decryptor := keystorev4.New()
-	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.accountsPassword)
-	if err != nil {
-		return errors.Wrapf(err, "could not decrypt keystore file with public key %s", keystore.Pubkey)
-	}
-	newAccountsStore := &AccountStore{}
-	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
-		return err
-	}
-	dr.lock.Lock()
-	dr.keysCache = make(map[[48]byte]bls.SecretKey)
-	dr.accountsStore = newAccountsStore
-	pubKeys := make([][48]byte, len(dr.accountsStore.PublicKeys))
-	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
-		privKey, err := bls.SecretKeyFromBytes(dr.accountsStore.PrivateKeys[i])
-		if err != nil {
-			return errors.Wrap(err, "could not initialize private key")
-		}
-		pubKeyBytes := privKey.PublicKey().Marshal()
-		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
-		dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
-	}
-	dr.lock.Unlock()
-	log.Info("Reloaded validator keys into keymanager")
-	dr.accountsChangedFeed.Send(pubKeys)
-	return nil
 }
 
 func askUntilPasswordConfirms(

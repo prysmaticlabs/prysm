@@ -302,8 +302,9 @@ func ConstructDialOptions(
 	return dialOpts
 }
 
-// Reloads the validating keys every set interval to check if they have changed and updates
-// their buckets in bolt DB if a bucket for a key does not exist.
+// Reloads the validating keys upon receiving an event over a feed subscription
+// to accounts changes in the keymanager, then updates those keys'
+// buckets in bolt DB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
 	directKeymanager, ok := km.(*direct.Keymanager)
 	if !ok {
