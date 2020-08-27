@@ -53,7 +53,6 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 	// to ensure we are not overwhelmed by a ton of events fired over the channel in
 	// a short span of time.
 	go asyncutil.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
-		log.Info("********HANDLING EVENT********")
 		ev, ok := event.(fsnotify.Event)
 		if !ok {
 			log.Errorf("Type %T is not a valid file system event", event)
