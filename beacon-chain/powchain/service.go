@@ -102,8 +102,7 @@ type Client interface {
 // fetching eth1 data from the clients.
 type RPCDataFetcher interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
-	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
-	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error)
 	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)
 }
 
@@ -133,7 +132,7 @@ type Service struct {
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
-	blockCache              *blockCache // cache to store block hash/block height.
+	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
@@ -181,7 +180,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			BlockHash:          []byte{},
 			LastRequestedBlock: 0,
 		},
-		blockCache:             newBlockCache(),
+		headerCache:            newHeaderCache(),
 		depositContractAddress: config.DepositContract,
 		stateNotifier:          config.StateNotifier,
 		depositTrie:            depositTrie,
@@ -540,7 +539,7 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
 	}).Debug("Latest eth1 chain event")
 
-	if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+	if err := s.headerCache.AddHeader(header); err != nil {
 		s.runError = err
 		log.Errorf("Unable to add block data to cache %v", err)
 	}
@@ -561,7 +560,7 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 		err := error(nil)
 		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), true},
+			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), false},
 			Result: header,
 			Error:  err,
 		})
@@ -579,7 +578,7 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 	}
 	for _, h := range headers {
 		if h != nil {
-			if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h)); err != nil {
+			if err := s.headerCache.AddHeader(h); err != nil {
 				return nil, err
 			}
 		}
