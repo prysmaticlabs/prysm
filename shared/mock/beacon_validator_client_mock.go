@@ -6,13 +6,12 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockBeaconNodeValidatorClient is a mock of BeaconNodeValidatorClient interface
@@ -179,14 +178,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeBlock(arg0, arg1 int
 }
 
 // ProposeExit mocks base method
-func (m *MockBeaconNodeValidatorClient) ProposeExit(arg0 context.Context, arg1 *eth.SignedVoluntaryExit, arg2 ...grpc.CallOption) (*types.Empty, error) {
+func (m *MockBeaconNodeValidatorClient) ProposeExit(arg0 context.Context, arg1 *eth.SignedVoluntaryExit, arg2 ...grpc.CallOption) (*eth.ProposeExitResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ProposeExit", varargs...)
-	ret0, _ := ret[0].(*types.Empty)
+	ret0, _ := ret[0].(*eth.ProposeExitResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
