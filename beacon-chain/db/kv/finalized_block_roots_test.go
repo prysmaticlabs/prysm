@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -25,7 +24,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 	blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
-	root, err := stateutil.BlockRoot(blks[slotsPerEpoch].Block)
+	root, err := blks[slotsPerEpoch].Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	cp := &ethpb.Checkpoint{
@@ -40,12 +39,12 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
 	for i := uint64(0); i < slotsPerEpoch*2; i++ {
-		root, err := stateutil.BlockRoot(blks[i].Block)
+		root, err := blks[i].Block.HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
 	}
 	for i := slotsPerEpoch * 3; i < uint64(len(blks)); i++ {
-		root, err := stateutil.BlockRoot(blks[i].Block)
+		root, err := blks[i].Block.HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, false, db.IsFinalizedBlock(ctx, root), "Block at index %d was considered finalized in the index, but should not have", i)
 	}
@@ -55,8 +54,9 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
-	root, err := stateutil.BlockRoot(blk.Block)
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 0
+	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -129,7 +129,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 }
 
 func sszRootOrDie(t *testing.T, block *ethpb.SignedBeaconBlock) []byte {
-	root, err := stateutil.BlockRoot(block.Block)
+	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
@@ -139,14 +139,11 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot:       j + 1,
-				ParentRoot: parentRoot,
-			},
-		}
+		blocks[j-i] = testutil.NewBeaconBlock()
+		blocks[j-i].Block.Slot = j + 1
+		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
-		previousRoot, err = stateutil.BlockRoot(blocks[j-i].Block)
+		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
 	}
 	return blocks

@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -99,7 +98,7 @@ func ProcessBlockHeaderNoVerify(
 	if parentHeader.Slot >= block.Slot {
 		return nil, fmt.Errorf("block.Slot %d must be greater than state.LatestBlockHeader.Slot %d", block.Slot, parentHeader.Slot)
 	}
-	parentRoot, err := stateutil.BlockHeaderRoot(parentHeader)
+	parentRoot, err := parentHeader.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +117,7 @@ func ProcessBlockHeaderNoVerify(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Body)
+	bodyRoot, err := block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}

@@ -13,7 +13,6 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
@@ -207,7 +206,7 @@ func (s *Service) processBlock(
 	blk *eth.SignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
-	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	blkRoot, err := blk.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -233,7 +232,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return errors.New("0 blocks provided into method")
 	}
 	firstBlock := blks[0]
-	blkRoot, err := stateutil.BlockRoot(firstBlock.Block)
+	blkRoot, err := firstBlock.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -243,7 +242,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 		blks = blks[1:]
 		firstBlock = blks[0]
-		blkRoot, err = stateutil.BlockRoot(firstBlock.Block)
+		blkRoot, err = firstBlock.Block.HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -261,7 +260,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
 				blockRoots[i-1][:], b.Block.ParentRoot)
 		}
-		blkRoot, err := stateutil.BlockRoot(b.Block)
+		blkRoot, err := b.Block.HashTreeRoot()
 		if err != nil {
 			return err
 		}

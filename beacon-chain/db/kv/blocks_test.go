@@ -8,7 +8,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -22,19 +21,14 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	slot := uint64(20)
 	ctx := context.Background()
 	// First we save a previous block to ensure the cache max size is reached.
-	prevBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       slot - 1,
-			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
-		},
-	}
+	prevBlock := testutil.NewBeaconBlock()
+	prevBlock.Block.Slot = slot - 1
+	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	require.NoError(t, db.SaveBlock(ctx, prevBlock))
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       slot,
-			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
-		},
-	}
+
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = slot
+	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	// Even with a full cache, saving new blocks should not cause
 	// duplicated blocks in the DB.
 	for i := 0; i < 100; i++ {
@@ -51,13 +45,12 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       20,
-			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
-		},
-	}
-	blockRoot, err := stateutil.BlockRoot(block.Block)
+
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 20
+	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
@@ -84,7 +77,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = b
 		if i%2 == 0 {
-			r, err := stateutil.BlockRoot(totalBlocks[i].Block)
+			r, err := totalBlocks[i].Block.HashTreeRoot()
 			require.NoError(t, err)
 			blockRoots = append(blockRoots, r)
 		} else {
@@ -113,7 +106,7 @@ func TestStore_GenesisBlock(t *testing.T) {
 	ctx := context.Background()
 	genesisBlock := testutil.NewBeaconBlock()
 	genesisBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	blockRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
 	require.NoError(t, db.SaveBlock(ctx, genesisBlock))
@@ -128,7 +121,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 20
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	blockRoot, err := stateutil.BlockRoot(block.Block)
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
@@ -231,11 +224,11 @@ func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
 	db := setupDB(t)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
-	r1, err := stateutil.BlockRoot(b1.Block)
+	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 2
-	r2, err := stateutil.BlockRoot(b2.Block)
+	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	require.NoError(t, db.SaveBlock(ctx, b1))
@@ -333,7 +326,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
 	assert.Equal(t, true, proto.Equal(block3, highestAt[0]), "Wanted: %v, received: %v", block3, highestAt[0])
 
-	r3, err := stateutil.BlockRoot(block3.Block)
+	r3, err := block3.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.deleteBlock(ctx, r3))
 
@@ -347,7 +340,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 	ctx := context.Background()
 
 	genesisBlock := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
 	require.NoError(t, db.SaveBlock(ctx, genesisBlock))
@@ -372,12 +365,10 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 
 	b := make([]*ethpb.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		b[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				ParentRoot: bytesutil.PadTo([]byte("parent"), 32),
-				Slot:       uint64(i),
-			},
-		}
+		blk := testutil.NewBeaconBlock()
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		blk.Block.Slot = uint64(i)
+		b[i] = blk
 	}
 
 	require.NoError(t, db.SaveBlock(ctx, b[0]))

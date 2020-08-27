@@ -728,7 +728,7 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 			true},
 		{"Not yet finalized",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
-			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{}},
+			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
 			false},
 		{"Incorrect activation epoch",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1},

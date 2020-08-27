@@ -10,7 +10,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -43,15 +42,17 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	}
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 
 	cfg := &detection.Config{
@@ -122,22 +123,26 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	).Return(wantedValidators1, nil)
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 3},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	incomingAtt := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 3},
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 2},
-			Target: &ethpb.Checkpoint{Epoch: 4},
+			Source:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	cfg := &detection.Config{
 		SlasherDB: db,
@@ -193,7 +198,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	).Return(wantedValidators, nil).AnyTimes()
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
 	savedBlock := &ethpb.SignedBeaconBlockHeader{
@@ -201,7 +206,10 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
+			StateRoot:     make([]byte, 32),
+			ParentRoot:    make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 
 	cfg := &detection.Config{
@@ -226,7 +234,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			defer wg.Done()
 			sbbh := state.CopySignedBeaconBlockHeader(savedBlock)
 			sbbh.Header.BodyRoot = bytesutil.PadTo([]byte(fmt.Sprintf("%d", j)), 32)
-			bhr, err := stateutil.BlockHeaderRoot(sbbh.Header)
+			bhr, err := sbbh.Header.HashTreeRoot()
 			assert.NoError(t, err)
 			root, err := helpers.ComputeSigningRoot(bhr, domain)
 			assert.NoError(t, err)
@@ -266,7 +274,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	).Return(wantedValidators, nil)
 
 	wantedGenesis := &ethpb.Genesis{
-		GenesisValidatorsRoot: []byte("I am genesis"),
+		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	savedBlock := &ethpb.SignedBeaconBlockHeader{
@@ -274,12 +282,17 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
+			StateRoot:     bytesutil.PadTo([]byte("state root"), 32),
+			ParentRoot:    bytesutil.PadTo([]byte("parent root"), 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	incomingBlock := &ethpb.BeaconBlockHeader{
 		Slot:          1,
 		ProposerIndex: 1,
 		BodyRoot:      bytesutil.PadTo([]byte("body root2"), 32),
+		StateRoot:     bytesutil.PadTo([]byte("state root2"), 32),
+		ParentRoot:    bytesutil.PadTo([]byte("parent root2"), 32),
 	}
 	cfg := &detection.Config{
 		SlasherDB: db,
@@ -289,7 +302,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	require.NoError(t, err)
 	domain, err := helpers.Domain(fork, savedBlockEpoch, params.BeaconConfig().DomainBeaconProposer, wantedGenesis.GenesisValidatorsRoot)
 	require.NoError(t, err)
-	bhr, err := stateutil.BlockHeaderRoot(savedBlock.Header)
+	bhr, err := savedBlock.Header.HashTreeRoot()
 	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(bhr, domain)
 	require.NoError(t, err)
