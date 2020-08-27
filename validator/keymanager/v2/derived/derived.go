@@ -11,16 +11,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -379,7 +378,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 		nil, /*genesisValidatorsRoot*/
 	)
 	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return "", errors.Wrap(err, "failed to verify deposit signature")
+		return "", errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
 	}
 	// Log the deposit transaction data to the user.
 	fmt.Printf(`
