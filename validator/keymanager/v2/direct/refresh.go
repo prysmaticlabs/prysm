@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/asyncutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -26,6 +27,9 @@ var (
 // ensure we can handle thousands of events fired in a short time-span.
 func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
+	if !fileutil.FileExists(accountsFilePath) {
+		return
+	}
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.WithError(err).Error("Could not initialize file watcher")
@@ -49,7 +53,8 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 	// to ensure we are not overwhelmed by a ton of events fired over the channel in
 	// a short span of time.
 	go asyncutil.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
-		ev, ok := event.(*fsnotify.Event)
+		log.Info("********HANDLING EVENT********")
+		ev, ok := event.(fsnotify.Event)
 		if !ok {
 			log.Errorf("Type %T is not a valid file system event", event)
 			return
