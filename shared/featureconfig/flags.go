@@ -179,6 +179,8 @@ var (
 var devModeFlags = []cli.Flag{
 	checkPtInfoCache,
 	batchBlockVerify,
+	enableFinalizedDepositsCache,
+	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 }
