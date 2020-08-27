@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	// ErrNotABlockInfo will be returned when a cache object is not a pointer to
-	// a blockInfo struct.
-	ErrNotABlockInfo = errors.New("object is not a block info")
+	// ErrNotAHeaderInfo will be returned when a cache object is not a pointer to
+	// a headerInfo struct.
+	ErrNotAHeaderInfo = errors.New("object is not a header info")
 
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
 	// Requests should be only accessing blocks within recent blocks within the
@@ -24,75 +24,75 @@ var (
 	maxCacheSize = 2 * params.BeaconConfig().Eth1FollowDistance
 
 	// Metrics
-	blockCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_block_cache_miss",
-		Help: "The number of block requests that aren't present in the cache.",
+	headerCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_header_cache_miss",
+		Help: "The number of header requests that aren't present in the cache.",
 	})
-	blockCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_block_cache_hit",
-		Help: "The number of block requests that are present in the cache.",
+	headerCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_header_cache_hit",
+		Help: "The number of header requests that are present in the cache.",
 	})
-	blockCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "powchain_block_cache_size",
-		Help: "The number of blocks in the block cache",
+	headerCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "powchain_header_cache_size",
+		Help: "The number of headers in the header cache",
 	})
 )
 
-// blockInfo specifies the block information in the ETH 1.0 chain.
-type blockInfo struct {
+// headerInfo specifies the block header information in the ETH 1.0 chain.
+type headerInfo struct {
 	Number *big.Int
 	Hash   common.Hash
 	Time   uint64
 }
 
-func blockToBlockInfo(blk *gethTypes.Block) *blockInfo {
-	return &blockInfo{
-		Hash:   blk.Hash(),
-		Number: blk.Number(),
-		Time:   blk.Time(),
+func headerToHeaderInfo(hdr *gethTypes.Header) *headerInfo {
+	return &headerInfo{
+		Hash:   hdr.Hash(),
+		Number: new(big.Int).Set(hdr.Number),
+		Time:   hdr.Time,
 	}
 }
 
-// hashKeyFn takes the hex string representation as the key for a blockInfo.
+// hashKeyFn takes the hex string representation as the key for a headerInfo.
 func hashKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*blockInfo)
+	hInfo, ok := obj.(*headerInfo)
 	if !ok {
-		return "", ErrNotABlockInfo
+		return "", ErrNotAHeaderInfo
 	}
 
-	return bInfo.Hash.Hex(), nil
+	return hInfo.Hash.Hex(), nil
 }
 
-// heightKeyFn takes the string representation of the block number as the key
-// for a blockInfo.
+// heightKeyFn takes the string representation of the block header number as the key
+// for a headerInfo.
 func heightKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*blockInfo)
+	hInfo, ok := obj.(*headerInfo)
 	if !ok {
-		return "", ErrNotABlockInfo
+		return "", ErrNotAHeaderInfo
 	}
 
-	return bInfo.Number.String(), nil
+	return hInfo.Number.String(), nil
 }
 
-// blockCache struct with two queues for looking up by hash or by block height.
-type blockCache struct {
+// headerCache struct with two queues for looking up by hash or by block height.
+type headerCache struct {
 	hashCache   *cache.FIFO
 	heightCache *cache.FIFO
 	lock        sync.RWMutex
 }
 
-// newBlockCache creates a new block cache for storing/accessing blockInfo from
+// newHeaderCache creates a new block cache for storing/accessing headerInfo from
 // memory.
-func newBlockCache() *blockCache {
-	return &blockCache{
+func newHeaderCache() *headerCache {
+	return &headerCache{
 		hashCache:   cache.NewFIFO(hashKeyFn),
 		heightCache: cache.NewFIFO(heightKeyFn),
 	}
 }
 
-// BlockInfoByHash fetches blockInfo by its block hash. Returns true with a
-// reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error) {
+// HeaderInfoByHash fetches headerInfo by its header hash. Returns true with a
+// reference to the header info, if exists. Otherwise returns false, nil.
+func (b *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *headerInfo, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -102,23 +102,23 @@ func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error)
 	}
 
 	if exists {
-		blockCacheHit.Inc()
+		headerCacheHit.Inc()
 	} else {
-		blockCacheMiss.Inc()
+		headerCacheMiss.Inc()
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*blockInfo)
+	hInfo, ok := obj.(*headerInfo)
 	if !ok {
-		return false, nil, ErrNotABlockInfo
+		return false, nil, ErrNotAHeaderInfo
 	}
 
-	return true, bInfo, nil
+	return true, hInfo, nil
 }
 
-// BlockInfoByHeight fetches blockInfo by its block number. Returns true with a
-// reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error) {
+// HeaderInfoByHeight fetches headerInfo by its header number. Returns true with a
+// reference to the header info, if exists. Otherwise returns false, nil.
+func (b *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *headerInfo, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -128,42 +128,42 @@ func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error
 	}
 
 	if exists {
-		blockCacheHit.Inc()
+		headerCacheHit.Inc()
 	} else {
-		blockCacheMiss.Inc()
+		headerCacheMiss.Inc()
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*blockInfo)
+	hInfo, ok := obj.(*headerInfo)
 	if !ok {
-		return false, nil, ErrNotABlockInfo
+		return false, nil, ErrNotAHeaderInfo
 	}
 
-	return exists, bInfo, nil
+	return exists, hInfo, nil
 }
 
-// AddBlock adds a blockInfo object to the cache. This method also trims the
-// least recently added block info if the cache size has reached the max cache
-// size limit. This method should be called in sequential block number order if
-// the desired behavior is that the blocks with the highest block number should
+// AddHeader adds a headerInfo object to the cache. This method also trims the
+// least recently added header info if the cache size has reached the max cache
+// size limit. This method should be called in sequential header number order if
+// the desired behavior is that the blocks with the highest header number should
 // be present in the cache.
-func (b *blockCache) AddBlock(blk *gethTypes.Block) error {
+func (b *headerCache) AddHeader(hdr *gethTypes.Header) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	bInfo := blockToBlockInfo(blk)
+	hInfo := headerToHeaderInfo(hdr)
 
-	if err := b.hashCache.AddIfNotPresent(bInfo); err != nil {
+	if err := b.hashCache.AddIfNotPresent(hInfo); err != nil {
 		return err
 	}
-	if err := b.heightCache.AddIfNotPresent(bInfo); err != nil {
+	if err := b.heightCache.AddIfNotPresent(hInfo); err != nil {
 		return err
 	}
 
 	trim(b.hashCache, maxCacheSize)
 	trim(b.heightCache, maxCacheSize)
 
-	blockCacheSize.Set(float64(len(b.hashCache.ListKeys())))
+	headerCacheSize.Set(float64(len(b.hashCache.ListKeys())))
 
 	return nil
 }
