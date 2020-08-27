@@ -48,5 +48,12 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 
 	vs.ExitPool.InsertVoluntaryExit(ctx, s, req)
 
-	return nil, vs.P2P.Broadcast(ctx, req)
+	r, err := req.Exit.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ethpb.ProposeExitResponse{
+		ExitRoot: r[:],
+	}, vs.P2P.Broadcast(ctx, req)
 }

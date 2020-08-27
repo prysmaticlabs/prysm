@@ -485,7 +485,7 @@ func (bs *Server) GetValidatorParticipation(
 		return nil, status.Error(codes.Internal, "Could not get state")
 	}
 
-	requestedState, err = bs.appendNonFinalizedBlockAttsToState(ctx, requestedState, requestedEpoch)
+	//requestedState, err = bs.appendNonFinalizedBlockAttsToState(ctx, requestedState, requestedEpoch)
 
 	v, b, err := precompute.New(ctx, requestedState)
 	if err != nil {
