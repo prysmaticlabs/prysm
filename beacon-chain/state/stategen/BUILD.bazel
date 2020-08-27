@@ -4,12 +4,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "cold.go",
         "epoch_boundary_state_cache.go",
         "errors.go",
         "getter.go",
-        "hot.go",
         "log.go",
+        "metrics.go",
         "migrate.go",
         "replay.go",
         "service.go",
@@ -41,10 +40,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "cold_test.go",
         "epoch_boundary_state_cache_test.go",
         "getter_test.go",
-        "hot_test.go",
         "migrate_test.go",
         "replay_test.go",
         "service_test.go",
@@ -64,6 +61,7 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
