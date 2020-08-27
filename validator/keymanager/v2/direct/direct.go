@@ -261,9 +261,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 
 	// Log the deposit transaction data to the user.
 	fmt.Printf(`
-======================Eth1 Deposit Transaction Data================
+==================Eth1 Deposit Transaction Data=================
 %#x
-========================For the %s network====================`, tx.Data(), params.BeaconConfig().NetworkName)
+================Verified for the %s network================`, tx.Data(), params.BeaconConfig().NetworkName)
 	fmt.Println("")
 
 	// Write the encoded keystore.

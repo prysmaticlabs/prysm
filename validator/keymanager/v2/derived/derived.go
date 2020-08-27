@@ -382,11 +382,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	}
 	// Log the deposit transaction data to the user.
 	fmt.Printf(`
-======================Eth1 Deposit Transaction Data================
+==================Eth1 Deposit Transaction Data=================
 %#x
-======================For the %s network=======================`, tx.Data(), params.BeaconConfig().NetworkName)
+================Verified for the %s network================`, tx.Data(), params.BeaconConfig().NetworkName)
 	fmt.Println("")
-
 	// Finally, write the account creation timestamps as a files.
 	newAccountNumber := dr.seedCfg.NextAccount
 	if logAccountInfo {
