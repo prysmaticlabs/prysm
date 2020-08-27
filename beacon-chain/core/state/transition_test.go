@@ -58,12 +58,12 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	e := beaconState.Eth1Data()
 	e.DepositCount = 100
 	require.NoError(t, beaconState.SetEth1Data(e))
-	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot(), ParentRoot: make([]byte, 32), StateRoot: make([]byte, 32), BodyRoot: make([]byte, 32)}))
+	bh := beaconState.LatestBlockHeader()
+	bh.Slot = beaconState.Slot()
+	require.NoError(t, beaconState.SetLatestBlockHeader(bh))
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	oldMix, err := beaconState.RandaoMixAtIndex(1)
-	require.NoError(t, err)
-	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -72,8 +72,10 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState := beaconState.Copy()
-	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
+	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	require.NoError(t, err)
+	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
