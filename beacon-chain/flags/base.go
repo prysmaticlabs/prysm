@@ -121,7 +121,7 @@ var (
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
 		Name:  "enable-debug-rpc-endpoints",
-		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state. Requires --new-state-mgmt",
+		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
 	}
 	// HistoricalSlasherNode is a set of beacon node flags required for performing historical detection with a slasher.
 	HistoricalSlasherNode = &cli.BoolFlag{
