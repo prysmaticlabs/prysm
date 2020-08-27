@@ -3,24 +3,21 @@ package stategen
 import (
 	"context"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
-// SaveState saves the state in the DB.
-// It knows which cold and hot state section the input state should belong to.
+// SaveState saves the state in the cache and/or DB.
 func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
-	// The state belongs to the cold section if it's below the split slot threshold.
-	if state.Slot() < s.finalizedInfo.slot {
-		return s.saveColdState(ctx, root, state)
-	}
-
-	return s.saveHotState(ctx, root, state)
+	return s.saveStateByRoot(ctx, root, state)
 }
 
 // ForceCheckpoint initiates a cold state save of the given state. This method does not update the
@@ -36,13 +33,54 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 		return nil
 	}
 
-	fs, err := s.loadHotStateByRoot(ctx, root32)
+	fs, err := s.loadStateByRoot(ctx, root32)
 	if err != nil {
 		return err
 	}
 	if err := s.beaconDB.SaveState(ctx, fs, root32); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
+// state summary cache.
+func (s *State) SaveStateSummary(ctx context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
+	// Save State summary
+	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
+		Slot: blk.Block.Slot,
+		Root: blockRoot[:],
+	})
+}
+
+// This saves a post beacon state. On the epoch boundary,
+// it saves a full state. On an intermediate slot, it saves a back pointer to the
+// nearest epoch boundary state.
+func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
+	defer span.End()
+
+	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
+	if s.hotStateCache.Has(blockRoot) {
+		return nil
+	}
+
+	// Only on an epoch boundary slot, saves epoch boundary state in epoch boundary root state cache.
+	if helpers.IsEpochStart(state.Slot()) {
+		if err := s.epochBoundaryStateCache.put(blockRoot, state); err != nil {
+			return err
+		}
+	}
+
+	// On an intermediate slots, save the hot state summary.
+	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
+		Slot: state.Slot(),
+		Root: blockRoot[:],
+	})
+
+	// Store the copied state in the hot state cache.
+	s.hotStateCache.Put(blockRoot, state)
 
 	return nil
 }

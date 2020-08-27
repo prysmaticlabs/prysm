@@ -18,48 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
-
-	gBlk := testutil.NewBeaconBlock()
-	gRoot, err := gBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
-	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, gRoot))
-
-	s, err := service.ComputeStateUpToSlot(ctx, 0)
-	require.NoError(t, err)
-
-	if !proto.Equal(s.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not receive correct genesis state")
-	}
-}
-
-func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
-
-	gBlk := testutil.NewBeaconBlock()
-	gRoot, err := gBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, gBlk))
-	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, gRoot))
-
-	s, err := service.ComputeStateUpToSlot(ctx, params.BeaconConfig().SlotsPerEpoch+1)
-	require.NoError(t, err)
-
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, s.Slot(), "Did not receive correct processed state")
-}
-
 func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
@@ -421,48 +379,6 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 
 	_, err := s.lastSavedState(ctx, s.finalizedInfo.slot+1)
 	assert.ErrorContains(t, errUnknownState.Error(), err)
-}
-
-func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
-
-	r := [32]byte{'a'}
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, db.SaveState(ctx, beaconState, r))
-	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
-	require.NoError(t, err)
-	assert.DeepEqual(t, beaconState.InnerStateUnsafe(), got.InnerStateUnsafe(), "Did not get wanted state")
-	got, err = service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
-	require.NoError(t, err)
-	assert.DeepEqual(t, beaconState.InnerStateUnsafe(), got.InnerStateUnsafe(), "Did not get wanted state")
-}
-
-func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
-	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch)
-	require.NoError(t, err)
-
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, s.Slot(), "Did not receive correct processed state")
-}
-
-func TestProcessStateUpToSlot_CanProcess(t *testing.T) {
-	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-
-	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch+1)
-	require.NoError(t, err)
-
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, s.Slot(), "Did not receive correct processed state")
 }
 
 // tree1 constructs the following tree:
