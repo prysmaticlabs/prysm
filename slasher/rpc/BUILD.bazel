@@ -48,7 +48,6 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/mock:go_default_library",
