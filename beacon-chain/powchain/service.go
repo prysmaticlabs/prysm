@@ -220,6 +220,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
+	// Exit early if eth1 endpoint is not set.
+	if s.httpEndpoint == "" {
+		return
+	}
 	go func() {
 		s.waitForConnection()
 		s.run(s.ctx.Done())
