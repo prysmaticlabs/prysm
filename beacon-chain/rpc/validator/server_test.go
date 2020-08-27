@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -119,10 +119,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
-				ActivationEpoch:       0,
-				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-				PublicKey:             pubKey1,
-				WithdrawalCredentials: make([]byte, 32),
+				ActivationEpoch: 0,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				PublicKey:       pubKey1,
 			},
 		},
 	}
@@ -131,8 +130,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
-		Signature:             make([]byte, 96),
+		WithdrawalCredentials: []byte("hey"),
 	}
 	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)
@@ -338,6 +336,44 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		},
 	).Return(nil)
 	assert.NoError(t, Server.WaitForChainStart(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+}
+
+func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
+	db, _ := dbutil.SetupDB(t)
+	genesisValidatorRoot := [32]byte{0x01, 0x02}
+
+	// Set head state to nil
+	chainService := &mockChain.ChainService{State: nil}
+	notifier := chainService.StateNotifier()
+	Server := &Server{
+		Ctx: context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{
+			ChainFeed: new(event.Feed),
+		},
+		BeaconDB:      db,
+		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
+
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		assert.NoError(t, Server.WaitForChainStart(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		wg.Done()
+	}()
+	// Simulate a late state initialization event, so that
+	// method is able to handle race condition here.
+	notifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{
+			StartTime:             time.Unix(0, 0),
+			GenesisValidatorsRoot: genesisValidatorRoot[:],
+		},
+	})
+	testutil.WaitTimeout(wg, time.Second)
 }
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {

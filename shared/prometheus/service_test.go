@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,25 +28,17 @@ func TestLifecycle(t *testing.T) {
 
 	// Query the service to ensure it really started.
 	resp, err := http.Get("http://localhost:2112/metrics")
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if resp.ContentLength == 0 {
-		t.Error("Unexpected content length 0")
-	}
+	require.NoError(t, err)
+	assert.NotEqual(t, uint64(0), resp.ContentLength, "Unexpected content length 0")
 
 	err = prometheusService.Stop()
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	// Give service time to stop.
 	time.Sleep(time.Second)
 
 	// Query the service to ensure it really stopped.
 	_, err = http.Get("http://localhost:2112/metrics")
-	if err == nil {
-		t.Fatal("Service still running after Stop()")
-	}
+	assert.NotNil(t, err, "Service still running after Stop()")
 }
 
 type mockService struct {
@@ -65,15 +59,11 @@ func (m *mockService) Status() error {
 func TestHealthz(t *testing.T) {
 	registry := shared.NewServiceRegistry()
 	m := &mockService{}
-	if err := registry.RegisterService(m); err != nil {
-		t.Fatalf("failed to registry service %v", err)
-	}
+	require.NoError(t, registry.RegisterService(m), "Failed to register service")
 	s := NewPrometheusService("" /*addr*/, registry)
 
 	req, err := http.NewRequest("GET", "/healthz", nil /*reader*/)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	handler := http.HandlerFunc(s.healthzHandler)
 
@@ -121,15 +111,11 @@ func TestContentNegotiation(t *testing.T) {
 	t.Run("/healthz all services are ok", func(t *testing.T) {
 		registry := shared.NewServiceRegistry()
 		m := &mockService{}
-		if err := registry.RegisterService(m); err != nil {
-			t.Fatalf("failed to registry service %v", err)
-		}
+		require.NoError(t, registry.RegisterService(m), "Failed to register service")
 		s := NewPrometheusService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		handler := http.HandlerFunc(s.healthzHandler)
 		rr := httptest.NewRecorder()
@@ -156,15 +142,11 @@ func TestContentNegotiation(t *testing.T) {
 		registry := shared.NewServiceRegistry()
 		m := &mockService{}
 		m.status = errors.New("something is wrong")
-		if err := registry.RegisterService(m); err != nil {
-			t.Fatalf("failed to registry service %v", err)
-		}
+		require.NoError(t, registry.RegisterService(m), "Failed to register service")
 		s := NewPrometheusService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		handler := http.HandlerFunc(s.healthzHandler)
 		rr := httptest.NewRecorder()

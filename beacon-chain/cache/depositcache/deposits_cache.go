@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -127,7 +128,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		if d.Index > eth1DepositIndex {
 			break
 		}
-		depHash, err := d.Deposit.Data.HashTreeRoot()
+		depHash, err := ssz.HashTreeRoot(d.Deposit.Data)
 		if err != nil {
 			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return

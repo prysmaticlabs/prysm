@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/mputil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,9 +55,7 @@ func BenchmarkHashMP(b *testing.B) {
 		workerResults, err := mputil.Scatter(len(input), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 			return hash(input[offset : offset+entries]), nil
 		})
-		if err != nil {
-			b.Error(err)
-		}
+		require.NoError(b, err)
 		for _, result := range workerResults {
 			copy(output[result.Offset:], result.Extent.([][]byte))
 		}

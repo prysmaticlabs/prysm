@@ -19,15 +19,11 @@ func TestDeleteAttsInPool(t *testing.T) {
 	r := &Service{
 		attPool: attestations.NewPool(),
 	}
-	data := &ethpb.AttestationData{
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
-	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}, Data: data, Signature: make([]byte, 96)}
-	att2 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}, Data: data, Signature: make([]byte, 96)}
-	att3 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}, Data: data, Signature: make([]byte, 96)}
-	att4 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: data, Signature: make([]byte, 96)}
+	data := &ethpb.AttestationData{}
+	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}, Data: data}
+	att2 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}, Data: data}
+	att3 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}, Data: data}
+	att4 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: data}
 	require.NoError(t, r.attPool.SaveAggregatedAttestation(att1))
 	require.NoError(t, r.attPool.SaveAggregatedAttestation(att2))
 	require.NoError(t, r.attPool.SaveAggregatedAttestation(att3))
@@ -45,22 +41,12 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		// Aggregated.
 		{
 			AggregationBits: bitfield.Bitlist{0b00011111},
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			},
-			Signature: make([]byte, 96),
+			Data:            &ethpb.AttestationData{},
 		},
 		// Unaggregated.
 		{
 			AggregationBits: bitfield.Bitlist{0b00010001},
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			},
-			Signature: make([]byte, 96),
+			Data:            &ethpb.AttestationData{},
 		},
 	}
 
@@ -68,10 +54,10 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		msg proto.Message
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "invalid block does not remove attestations",
@@ -83,7 +69,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantedErr: "nil inner state",
 			check: func(t *testing.T, s *Service) {
 				if s.attPool.AggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 aggregated attestation in the pool")
@@ -113,10 +99,12 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 				}
 			}
 			// Perform method under test call.
-			if err := s.beaconBlockSubscriber(context.Background(), tt.args.msg); (err != nil) != tt.wantErr {
-				t.Errorf("beaconBlockSubscriber(ctx, msg) error = %v, wantErr %v", err, tt.wantErr)
+			err := s.beaconBlockSubscriber(context.Background(), tt.args.msg)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			// Perform any test check.
 			if tt.check != nil {
 				tt.check(t, s)
 			}

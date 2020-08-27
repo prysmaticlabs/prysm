@@ -189,6 +189,19 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 				}
 				return stream.Send(res)
 			}
+			// Handle race condition in the event the blockchain
+			// service isn't initialized in time and the saved head state is nil.
+			if event.Type == statefeed.Initialized {
+				data, ok := event.Data.(*statefeed.InitializedData)
+				if !ok {
+					return errors.New("event data is not type *statefeed.InitializedData")
+				}
+				res := &ethpb.ChainStartResponse{
+					Started:     true,
+					GenesisTime: uint64(data.StartTime.Unix()),
+				}
+				return stream.Send(res)
+			}
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-vs.Ctx.Done():

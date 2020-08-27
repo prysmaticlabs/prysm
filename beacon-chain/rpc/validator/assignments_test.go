@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -71,8 +71,8 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		PublicKeys: [][]byte{pubKey},
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.GetDuties(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
+	if _, err := vs.GetDuties(ctx, req); err != nil {
+		assert.ErrorContains(t, want, err)
 	}
 }
 
@@ -265,7 +265,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := genesis.Block.HashTreeRoot()
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
@@ -324,7 +324,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := genesis.Block.HashTreeRoot()
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))

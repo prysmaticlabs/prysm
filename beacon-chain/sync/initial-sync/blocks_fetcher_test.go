@@ -21,11 +21,11 @@ import (
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
@@ -256,10 +256,11 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
+			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 0}})
 			require.NoError(t, err)
 
-			st := testutil.NewBeaconState()
+			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
+			require.NoError(t, err)
 
 			mc := &mock.ChainService{
 				State: st,
@@ -580,12 +581,10 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := fetcher.selectFailOverPeer(tt.args.excludedPID, tt.args.peers)
-			if err != nil && err != tt.wantErr {
-				t.Errorf("selectFailOverPeer() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("selectFailOverPeer() got = %v, want %v", got, tt.want)
+			if tt.wantErr != nil {
+				assert.ErrorContains(t, tt.wantErr.Error(), err)
+			} else {
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -994,8 +993,8 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 				})
 			}
 			_, err := fetcher.requestBlocks(ctx, req, p2.PeerID())
-			if err != nil && err != errFetcherCtxIsDone {
-				t.Error(err)
+			if err != nil {
+				assert.ErrorContains(t, errFetcherCtxIsDone.Error(), err)
 			}
 		}
 	}()

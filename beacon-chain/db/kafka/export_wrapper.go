@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 
-	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -56,13 +55,7 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 		return err
 	}
 
-	var key [32]byte
-	var err error
-	if v, ok := msg.(fssz.HashRoot); ok {
-		key, err = v.HashTreeRoot()
-	} else {
-		key, err = ssz.HashTreeRoot(msg)
-	}
+	key, err := ssz.HashTreeRoot(msg)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
