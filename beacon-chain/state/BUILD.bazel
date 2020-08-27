@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cloners.go",
-        "docs.go",
+        "doc.go",
         "field_trie.go",
         "getters.go",
         "setters.go",
