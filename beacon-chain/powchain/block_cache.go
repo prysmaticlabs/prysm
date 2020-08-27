@@ -66,12 +66,12 @@ func hashKeyFn(obj interface{}) (string, error) {
 // heightKeyFn takes the string representation of the block header number as the key
 // for a headerInfo.
 func heightKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*headerInfo)
+	hInfo, ok := obj.(*headerInfo)
 	if !ok {
 		return "", ErrNotAHeaderInfo
 	}
 
-	return bInfo.Number.String(), nil
+	return hInfo.Number.String(), nil
 }
 
 // headerCache struct with two queues for looking up by hash or by block height.
@@ -108,12 +108,12 @@ func (b *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *headerInfo, err
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*headerInfo)
+	hInfo, ok := obj.(*headerInfo)
 	if !ok {
 		return false, nil, ErrNotAHeaderInfo
 	}
 
-	return true, bInfo, nil
+	return true, hInfo, nil
 }
 
 // HeaderInfoByHeight fetches headerInfo by its header number. Returns true with a

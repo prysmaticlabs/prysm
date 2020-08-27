@@ -11,13 +11,13 @@ import (
 )
 
 func TestHashKeyFn_OK(t *testing.T) {
-	bInfo := &headerInfo{
+	hInfo := &headerInfo{
 		Hash: common.HexToHash("0x0123456"),
 	}
 
-	key, err := hashKeyFn(bInfo)
+	key, err := hashKeyFn(hInfo)
 	require.NoError(t, err)
-	assert.Equal(t, bInfo.Hash.Hex(), key)
+	assert.Equal(t, hInfo.Hash.Hex(), key)
 }
 
 func TestHashKeyFn_InvalidObj(t *testing.T) {
@@ -26,13 +26,13 @@ func TestHashKeyFn_InvalidObj(t *testing.T) {
 }
 
 func TestHeightKeyFn_OK(t *testing.T) {
-	bInfo := &headerInfo{
+	hInfo := &headerInfo{
 		Number: big.NewInt(555),
 	}
 
-	key, err := heightKeyFn(bInfo)
+	key, err := heightKeyFn(hInfo)
 	require.NoError(t, err)
-	assert.Equal(t, bInfo.Number.String(), key)
+	assert.Equal(t, hInfo.Number.String(), key)
 }
 
 func TestHeightKeyFn_InvalidObj(t *testing.T) {
