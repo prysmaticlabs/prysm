@@ -12,7 +12,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -59,7 +58,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := stateutil.BlockRoot(b.Block)
+			root, err := b.Block.HashTreeRoot()
 			if err != nil {
 				return nil, err
 			}
@@ -86,7 +85,7 @@ func (bs *Server) ListBlocks(
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
-		root, err := stateutil.BlockRoot(blk.Block)
+		root, err := blk.Block.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +121,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := stateutil.BlockRoot(b.Block)
+			root, err := b.Block.HashTreeRoot()
 			if err != nil {
 				return nil, err
 			}
@@ -145,7 +144,7 @@ func (bs *Server) ListBlocks(
 		if genBlk == nil {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		root, err := stateutil.BlockRoot(genBlk.Block)
+		root, err := genBlk.Block.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
@@ -250,10 +249,10 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if headBlock == nil {
+	if headBlock == nil || headBlock.Block == nil {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
-	headBlockRoot, err := stateutil.BlockRoot(headBlock.Block)
+	headBlockRoot, err := headBlock.Block.HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}

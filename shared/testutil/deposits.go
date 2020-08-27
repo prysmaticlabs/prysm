@@ -74,7 +74,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
-			sigRoot, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: root[:], Domain: domain})
+			sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
 			if err != nil {
 				return nil, nil, err
 			}
@@ -85,7 +85,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 			}
 			cachedDeposits = append(cachedDeposits, deposit)
 
-			hashedDeposit, err := ssz.HashTreeRoot(deposit.Data)
+			hashedDeposit, err := deposit.Data.HashTreeRoot()
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 			}
@@ -173,7 +173,7 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (*stateTrie.B
 func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
-		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
+		hashedDeposit, err := deposits[i].Data.HashTreeRoot()
 		if err != nil {
 			return nil, [][32]byte{}, errors.Wrap(err, "could not tree hash deposit data")
 		}
@@ -246,7 +246,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
-			sigRoot, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: root[:], Domain: domain})
+			sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data and domain")
 			}
@@ -258,7 +258,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			}
 			cachedDeposits = append(cachedDeposits, deposit)
 
-			hashedDeposit, err := ssz.HashTreeRoot(deposit.Data)
+			hashedDeposit, err := deposit.Data.HashTreeRoot()
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 			}
