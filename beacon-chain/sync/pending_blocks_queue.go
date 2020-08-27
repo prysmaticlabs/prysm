@@ -6,7 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -261,7 +262,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 	}
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if proto.Equal(blk, b) {
+		if ssz.DeepEqual(blk, b) {
 			continue
 		}
 		newBlks = append(newBlks, blk)

@@ -1379,7 +1379,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		AggregationBits: bitfield.NewBitlist(2),
 	}}
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2-1))
 	require.NoError(t, headState.SetValidators(validators))
 	require.NoError(t, headState.SetBalances(balances))
 	require.NoError(t, headState.SetPreviousEpochAttestations(atts))
@@ -1413,7 +1413,7 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 	ctx := context.Background()
 
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2-1))
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
@@ -1869,4 +1869,25 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 		},
 	}
 	assert.DeepEqual(t, wanted, res, "Unexpected response")
+}
+
+func TestServer_appendNonFinalizedBlockAttsToState(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+	}
+	e := uint64(1)
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = e * params.BeaconConfig().SlotsPerEpoch
+	b1.Block.Body.Attestations = []*ethpb.Attestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = e*params.BeaconConfig().SlotsPerEpoch + 1
+	b2.Block.Body.Attestations = []*ethpb.Attestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
+	require.NoError(t, db.SaveBlock(ctx, b1))
+	require.NoError(t, db.SaveBlock(ctx, b2))
+	s := testutil.NewBeaconState()
+	got, err := bs.appendNonFinalizedBlockAttsToState(ctx, s, e)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(got.PreviousEpochAttestations()))
 }
