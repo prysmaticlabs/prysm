@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -268,14 +267,17 @@ func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	service := New(db, ssc)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gBlkRoot, err := stateutil.BlockRoot(gBlk.Block)
+	gBlk := testutil.NewBeaconBlock()
+	gBlkRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(gBlkRoot, beaconState))
 
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 11, ParentRoot: gBlkRoot[:], ProposerIndex: 8}}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 11
+	blk.Block.ProposerIndex = 8
+	blk.Block.ParentRoot = gBlkRoot[:]
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
-	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 10, Root: blkRoot[:]}))
 
@@ -287,22 +289,28 @@ func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 
 func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	db, ssc := testDB.SetupDB(t)
+	service := New(db, ssc)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	gBlk := testutil.NewBeaconBlock()
+	gBlkRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
-	targetSlot := uint64(0)
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: targetSlot, Root: blkRoot[:]}))
+	require.NoError(t, service.epochBoundaryStateCache.put(gBlkRoot, beaconState))
 
-	// This tests where hot state was not cached but doesn't need processing
-	// because it on the epoch boundary slot.
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 11
+	blk.Block.ProposerIndex = 8
+	blk.Block.ParentRoot = gBlkRoot[:]
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 10, Root: blkRoot[:]}))
+
+	// This tests where hot state was not cached and needs processing.
 	loadedState, err := service.loadStateByRoot(ctx, blkRoot)
 	require.NoError(t, err)
-	assert.Equal(t, targetSlot, loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, uint64(10), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
@@ -310,9 +318,9 @@ func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, gRoot))
