@@ -8,7 +8,7 @@ go_library(
         "errors.go",
         "getter.go",
         "log.go",
-        "metric.go",
+        "metrics.go",
         "migrate.go",
         "replay.go",
         "service.go",
