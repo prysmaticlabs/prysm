@@ -214,6 +214,13 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			return nil, errors.Wrap(err, "could not initialize caches")
 		}
 	}
+
+	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
+	// able to generate the genesis state.
+	if !s.chainStartData.Chainstarted && s.httpEndpoint == "" {
+		return nil, errors.New("cannot create genesis state: no eth1 http endpoint defined")
+	}
+
 	return s, nil
 }
 
