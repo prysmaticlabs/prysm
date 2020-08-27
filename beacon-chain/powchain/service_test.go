@@ -72,44 +72,24 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
-func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
 	if g.backend == nil {
-		return gethTypes.NewBlock(
-			&gethTypes.Header{
-				Number: big.NewInt(0),
-			},
-			[]*gethTypes.Transaction{},
-			[]*gethTypes.Header{},
-			[]*gethTypes.Receipt{},
-		), nil
+		return &gethTypes.Header{
+			Number: big.NewInt(0),
+		}, nil
 	}
-	return g.backend.Blockchain().GetBlockByHash(hash), nil
+	return g.backend.Blockchain().GetHeaderByHash(hash), nil
 
-}
-
-func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	if g.backend == nil {
-		return gethTypes.NewBlock(
-			&gethTypes.Header{
-				Number: big.NewInt(15),
-				Time:   150,
-			},
-			[]*gethTypes.Transaction{},
-			[]*gethTypes.Header{},
-			[]*gethTypes.Receipt{},
-		), nil
-	}
-
-	return g.backend.Blockchain().GetBlockByNumber(number.Uint64()), nil
 }
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
 	if g.backend == nil {
 		return &gethTypes.Header{
-			Number: big.NewInt(0),
+			Number: big.NewInt(15),
+			Time:   150,
 		}, nil
 	}
 	if number == nil {
