@@ -6,7 +6,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "docs.go",
+        "doc.go",
         "init.go",
         "public_key.go",
         "secret_key.go",
