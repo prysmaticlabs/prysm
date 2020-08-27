@@ -1880,10 +1880,12 @@ func TestServer_appendNonFinalizedBlockAttsToState(t *testing.T) {
 	e := uint64(1)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = e * params.BeaconConfig().SlotsPerEpoch
-	b1.Block.Body.Attestations = []*ethpb.Attestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
+	a1 := testutil.NewAttestation()
+	a1.Data.Target.Epoch = 1
+	b1.Block.Body.Attestations = []*ethpb.Attestation{a1}
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = e*params.BeaconConfig().SlotsPerEpoch + 1
-	b2.Block.Body.Attestations = []*ethpb.Attestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
+	b2.Block.Body.Attestations = []*ethpb.Attestation{a1}
 	require.NoError(t, db.SaveBlock(ctx, b1))
 	require.NoError(t, db.SaveBlock(ctx, b2))
 	s := testutil.NewBeaconState()
