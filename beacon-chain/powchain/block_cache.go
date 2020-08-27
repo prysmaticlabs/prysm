@@ -38,7 +38,7 @@ var (
 	})
 )
 
-// headerInfo specifies the block information in the ETH 1.0 chain.
+// headerInfo specifies the block header information in the ETH 1.0 chain.
 type headerInfo struct {
 	Number *big.Int
 	Hash   common.Hash
@@ -55,15 +55,15 @@ func headerToHeaderInfo(hdr *gethTypes.Header) *headerInfo {
 
 // hashKeyFn takes the hex string representation as the key for a headerInfo.
 func hashKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*headerInfo)
+	hInfo, ok := obj.(*headerInfo)
 	if !ok {
 		return "", ErrNotAHeaderInfo
 	}
 
-	return bInfo.Hash.Hex(), nil
+	return hInfo.Hash.Hex(), nil
 }
 
-// heightKeyFn takes the string representation of the block number as the key
+// heightKeyFn takes the string representation of the block header number as the key
 // for a headerInfo.
 func heightKeyFn(obj interface{}) (string, error) {
 	bInfo, ok := obj.(*headerInfo)
