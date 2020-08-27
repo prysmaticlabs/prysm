@@ -133,6 +133,35 @@ func TestStart_OK(t *testing.T) {
 	web3Service.cancel()
 }
 
+func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	_, err = NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.ErrorContains(t, "cannot create genesis state: no eth1 http endpoint defined", err)
+}
+
+func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+
+	require.NoError(t, beaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
+		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
+		Trie:           &protodb.SparseMerkleTrie{},
+	}))
+	_, err = NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err)
+}
+
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
