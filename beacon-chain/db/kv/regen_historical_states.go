@@ -11,7 +11,6 @@ import (
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
@@ -99,7 +98,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 					return errors.Wrap(err, "could not regenerate historical state transition")
 				}
 
-				r, err := stateutil.BlockRoot(blocks[i].Block)
+				r, err := blocks[i].Block.HashTreeRoot()
 				if err != nil {
 					return err
 				}
@@ -227,7 +226,7 @@ func (kv *Store) saveArchivedInfo(ctx context.Context,
 		return errors.New("no blocks provided")
 	}
 
-	lastBlocksRoot, err := stateutil.BlockRoot(blocks[len(blocks)-1].Block)
+	lastBlocksRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
 	if err != nil {
 		return nil
 	}

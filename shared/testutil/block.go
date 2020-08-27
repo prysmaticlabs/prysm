@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -54,6 +53,23 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 					BlockHash:   make([]byte, 32),
 				},
 				Graffiti: make([]byte, 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+}
+
+// NewAttestation creates an attestation block with minimum marshalable fields.
+func NewAttestation() *ethpb.Attestation {
+	return &ethpb.Attestation{
+		AggregationBits: bitfield.Bitlist{0b1101},
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -131,7 +147,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 	newHeader.StateRoot = prevStateRoot[:]
-	parentRoot, err := stateutil.BlockHeaderRoot(newHeader)
+	parentRoot, err := newHeader.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +183,7 @@ func GenerateFullBlock(
 			Attestations:      atts,
 			VoluntaryExits:    exits,
 			Deposits:          newDeposits,
+			Graffiti:          make([]byte, 32),
 		},
 	}
 	if err := bState.SetSlot(currentSlot); err != nil {
@@ -253,8 +270,9 @@ func GenerateAttesterSlashingForValidator(
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Slot:           bState.Slot(),
-			CommitteeIndex: 0,
+			Slot:            bState.Slot(),
+			CommitteeIndex:  0,
+			BeaconBlockRoot: make([]byte, 32),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -274,8 +292,9 @@ func GenerateAttesterSlashingForValidator(
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Slot:           bState.Slot(),
-			CommitteeIndex: 0,
+			Slot:            bState.Slot(),
+			CommitteeIndex:  0,
+			BeaconBlockRoot: make([]byte, 32),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  params.BeaconConfig().ZeroHash[:],
