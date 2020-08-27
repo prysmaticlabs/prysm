@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -103,7 +102,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	signedBlock := testutil.NewBeaconBlock()
 	signedBlock.Block.ParentRoot = bytesutil.PadTo(parentRoot[:], 32)
 	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
-	root, err := stateutil.BlockRoot(signedBlock.Block)
+	root, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, signedBlock))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -119,9 +118,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
+	require.DeepEqual(t, wanted, res)
 
 	// Should throw an error if there is more than 1 block
 	// for the genesis slot.
@@ -891,12 +888,8 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		if err := server.StreamIndexedAttestations(
-			&ptypes.Empty{},
-			mockStream,
-		); err != nil && !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Expected context canceled error got: %v", err)
-		}
+		err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream)
+		assert.ErrorContains(t, "Context canceled", err)
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -916,7 +909,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))

@@ -56,23 +56,15 @@ func TestPruneExpired_Ticker(t *testing.T) {
 		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, 96)},
 		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, 96)},
 	}
-	if err := s.pool.SaveUnaggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
-	if s.pool.UnaggregatedAttestationCount() != 2 {
-		t.Fatalf("Unexpected number of attestations: %d", s.pool.UnaggregatedAttestationCount())
-	}
+	require.NoError(t, s.pool.SaveUnaggregatedAttestations(atts))
+	require.Equal(t, 2, s.pool.UnaggregatedAttestationCount(), "Unexpected number of attestations")
 	atts = []*ethpb.Attestation{
 		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, 96)},
 		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, 96)},
 	}
-	if err := s.pool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.pool.SaveAggregatedAttestations(atts))
 	assert.Equal(t, 2, s.pool.AggregatedAttestationCount())
-	if err := s.pool.SaveBlockAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.pool.SaveBlockAttestations(atts))
 
 	// Rewind back one epoch worth of time.
 	s.genesisTime = uint64(roughtime.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
@@ -148,12 +140,8 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	att3 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101}}
 	att4 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1110}}
 	atts := []*ethpb.Attestation{att1, att2, att3, att4}
-	if err := s.pool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.pool.SaveBlockAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.pool.SaveAggregatedAttestations(atts))
+	require.NoError(t, s.pool.SaveBlockAttestations(atts))
 
 	// Rewind back one epoch worth of time.
 	s.genesisTime = uint64(roughtime.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
@@ -178,10 +166,6 @@ func TestPruneExpired_Expired(t *testing.T) {
 
 	// Rewind back one epoch worth of time.
 	s.genesisTime = uint64(roughtime.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
-	if !s.expired(0) {
-		t.Error("Should expired")
-	}
-	if s.expired(1) {
-		t.Error("Should not expired")
-	}
+	assert.Equal(t, true, s.expired(0), "Should be expired")
+	assert.Equal(t, false, s.expired(1), "Should not be expired")
 }

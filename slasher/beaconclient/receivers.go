@@ -9,7 +9,6 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -71,7 +70,7 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 		if res == nil {
 			continue
 		}
-		root, err := stateutil.BlockRoot(res.Block)
+		root, err := res.Block.HashTreeRoot()
 		if err != nil {
 			log.WithError(err).Error("Could not hash block")
 			return

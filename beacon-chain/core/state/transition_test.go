@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -59,12 +58,12 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	e := beaconState.Eth1Data()
 	e.DepositCount = 100
 	require.NoError(t, beaconState.SetEth1Data(e))
-	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}))
+	bh := beaconState.LatestBlockHeader()
+	bh.Slot = beaconState.Slot()
+	require.NoError(t, beaconState.SetLatestBlockHeader(bh))
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	oldMix, err := beaconState.RandaoMixAtIndex(1)
-	require.NoError(t, err)
-	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -73,8 +72,10 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState := beaconState.Copy()
-	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
+	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	require.NoError(t, err)
+	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
@@ -117,10 +118,10 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	e := beaconState.Eth1Data()
 	e.DepositCount = 100
 	require.NoError(t, beaconState.SetEth1Data(e))
-	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: beaconState.Slot()}))
+	bh := beaconState.LatestBlockHeader()
+	bh.Slot = beaconState.Slot()
+	require.NoError(t, beaconState.SetLatestBlockHeader(bh))
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
-	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
-	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := helpers.CurrentEpoch(beaconState)
@@ -128,8 +129,10 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState := beaconState.Copy()
-	require.NoError(t, nextSlotState.SetSlot(beaconState.Slot()+1))
+	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	require.NoError(t, err)
+	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
@@ -281,10 +284,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		Signature:       make([]byte, 96),
 	}
 	attestations := []*ethpb.Attestation{blockAtt}
 	var exits []*ethpb.SignedVoluntaryExit
@@ -292,7 +297,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		exits = append(exits, &ethpb.SignedVoluntaryExit{})
 	}
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
@@ -303,23 +308,15 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	require.NoError(t, err)
 	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: parentRoot[:],
-			Slot:       1,
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal:      make([]byte, 96),
-				ProposerSlashings: proposerSlashings,
-				AttesterSlashings: attesterSlashings,
-				Attestations:      attestations,
-				VoluntaryExits:    exits,
-				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: bytesutil.PadTo([]byte{2}, 32),
-					BlockHash:   bytesutil.PadTo([]byte{3}, 32),
-				},
-			},
-		},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 1
+	block.Block.ParentRoot = parentRoot[:]
+	block.Block.Body.ProposerSlashings = proposerSlashings
+	block.Block.Body.Attestations = attestations
+	block.Block.Body.AttesterSlashings = attesterSlashings
+	block.Block.Body.VoluntaryExits = exits
+	block.Block.Body.Eth1Data.DepositRoot = bytesutil.PadTo([]byte{2}, 32)
+	block.Block.Body.Eth1Data.BlockHash = bytesutil.PadTo([]byte{3}, 32)
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 	cp := beaconState.CurrentJustifiedCheckpoint()
@@ -334,7 +331,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	*ethpb.SignedBeaconBlock, []*ethpb.Attestation, []*ethpb.ProposerSlashing, []*ethpb.SignedVoluntaryExit) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
@@ -484,7 +481,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	require.NoError(t, err)
 	header.StateRoot = prevStateRoot[:]
 	require.NoError(t, beaconState.SetLatestBlockHeader(header))
-	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 	copied := beaconState.Copy()
 	require.NoError(t, copied.SetSlot(beaconState.Slot()+1))
@@ -800,7 +797,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	header.StateRoot = prevStateRoot[:]
 	require.NoError(t, s.SetLatestBlockHeader(header))
 
-	parentRoot, err := stateutil.BlockHeaderRoot(s.LatestBlockHeader())
+	parentRoot, err := s.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
 	nextSlotState := s.Copy()

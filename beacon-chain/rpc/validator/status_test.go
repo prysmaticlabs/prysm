@@ -14,7 +14,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -29,9 +28,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatalf("Could not generate deposits and keys: %v", err)
-	}
+	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
@@ -176,7 +173,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	pubKey := pubKey(1)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	// Pending active because activation epoch is still defaulted at far future slot.
 	state := testutil.NewBeaconState()
@@ -262,7 +259,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	state := &pbp2p.BeaconState{
@@ -319,7 +316,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	state := &pbp2p.BeaconState{
@@ -380,7 +377,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	state := &pbp2p.BeaconState{
@@ -440,7 +437,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -547,7 +544,7 @@ func TestActivationStatus_OK(t *testing.T) {
 		},
 	})
 	block := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	dep := deposits[0]
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
@@ -614,7 +611,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	pbKey := pubKey(5)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	currentSlot := uint64(5000)
 	// Pending active because activation epoch is still defaulted at far future slot.
@@ -741,7 +738,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	activeEpoch := helpers.ActivationExitEpoch(0)
@@ -804,7 +801,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	activeEpoch := helpers.ActivationExitEpoch(0)
@@ -881,7 +878,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		},
 	})
 	block := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
@@ -989,7 +986,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	}
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
 	block := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	vs := &Server{
@@ -1046,9 +1043,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatalf("Could not generate deposits and keys: %v", err)
-	}
+	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
 	deposit.Data.Signature = deposit.Data.Signature[1:]

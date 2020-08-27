@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -26,9 +25,7 @@ var _ = ForkFetcher(&Service{})
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	c := setupBeaconChain(t, db, sc)
-	if !bytes.Equal(c.FinalizedCheckpt().Root, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("Incorrect pre chain start value")
-	}
+	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], c.FinalizedCheckpt().Root, "Incorrect pre chain start value")
 }
 
 func TestHeadRoot_Nil(t *testing.T) {
@@ -36,9 +33,7 @@ func TestHeadRoot_Nil(t *testing.T) {
 	c := setupBeaconChain(t, db, sc)
 	headRoot, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
-	if !bytes.Equal(headRoot, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("Incorrect pre chain start value")
-	}
+	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], headRoot, "Incorrect pre chain start value")
 }
 
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
@@ -59,10 +54,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, db, sc)
 	c.finalizedCheckpt = cp
 	c.genesisRoot = genesisRoot
-
-	if !bytes.Equal(c.FinalizedCheckpt().Root, c.genesisRoot[:]) {
-		t.Errorf("Got: %v, wanted: %v", c.FinalizedCheckpt().Root, c.genesisRoot[:])
-	}
+	assert.DeepEqual(t, c.genesisRoot[:], c.FinalizedCheckpt().Root)
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
@@ -83,10 +75,7 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, db, sc)
 	c.justifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
-
-	if !bytes.Equal(c.CurrentJustifiedCheckpt().Root, c.genesisRoot[:]) {
-		t.Errorf("Got: %v, wanted: %v", c.CurrentJustifiedCheckpt().Root, c.genesisRoot[:])
-	}
+	assert.DeepEqual(t, c.genesisRoot[:], c.CurrentJustifiedCheckpt().Root)
 }
 
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
@@ -95,7 +84,6 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, db, sc)
 	c.prevJustifiedCheckpt = cp
-
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
 
@@ -107,18 +95,13 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, db, sc)
 	c.prevJustifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
-
-	if !bytes.Equal(c.PreviousJustifiedCheckpt().Root, c.genesisRoot[:]) {
-		t.Errorf("Got: %v, wanted: %v", c.PreviousJustifiedCheckpt().Root, c.genesisRoot[:])
-	}
+	assert.DeepEqual(t, c.genesisRoot[:], c.PreviousJustifiedCheckpt().Root)
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
 	s, err := state.InitializeFromProto(&pb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	c.head = &head{slot: 100, state: s}
 	assert.Equal(t, uint64(100), c.headSlot())
 }
@@ -149,9 +132,7 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	c.head = &head{state: s}
 	headState, err := c.HeadState(context.Background())
 	require.NoError(t, err)
-	if !proto.Equal(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
-		t.Error("incorrect head state received")
-	}
+	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Incorrect head state received")
 }
 
 func TestGenesisTime_CanRetrieve(t *testing.T) {

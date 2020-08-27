@@ -19,8 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -152,7 +152,7 @@ func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethp
 		return err
 	}
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
-	signingRoot, err := stateutil.BlockRoot(block.Block)
+	signingRoot, err := block.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (ms *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.Sig
 			return err
 		}
 		ms.BlocksReceived = append(ms.BlocksReceived, block)
-		signingRoot, err := stateutil.BlockRoot(block.Block)
+		signingRoot, err := block.Block.HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBea
 		return err
 	}
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
-	signingRoot, err := stateutil.BlockRoot(block.Block)
+	signingRoot, err := block.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -354,4 +354,34 @@ func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
 // VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
 func (ms *ChainService) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
 	return ms.VerifyBlkDescendantErr
+}
+
+// AttestationCheckPtInfo mocks AttestationCheckPtInfo and always returns nil.
+func (ms *ChainService) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
+	f := ms.State.Fork()
+	g := bytesutil.ToBytes32(ms.State.GenesisValidatorRoot())
+	seed, err := helpers.Seed(ms.State, helpers.SlotToEpoch(att.Data.Slot), params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
+	indices, err := helpers.ActiveValidatorIndices(ms.State, helpers.SlotToEpoch(att.Data.Slot))
+	if err != nil {
+		return nil, err
+	}
+	validators := ms.State.ValidatorsReadOnly()
+	pks := make([][]byte, len(validators))
+	for i := 0; i < len(pks); i++ {
+		pk := validators[i].PublicKey()
+		pks[i] = pk[:]
+	}
+
+	info := &pb.CheckPtInfo{
+		Fork:          f,
+		GenesisRoot:   g[:],
+		Seed:          seed[:],
+		ActiveIndices: indices,
+		PubKeys:       pks,
+	}
+
+	return info, nil
 }

@@ -1,7 +1,6 @@
 package testing
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -25,9 +24,7 @@ type SSZRoots struct {
 }
 
 func runSSZStaticTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, _ := testutil.TestFolders(t, config, "ssz_static")
 	for _, folder := range testFolders {
@@ -37,22 +34,14 @@ func runSSZStaticTests(t *testing.T, config string) {
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
 				serializedBytes, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz")
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				object, err := UnmarshalledSSZ(t, serializedBytes, folder.Name())
-				if err != nil {
-					t.Fatalf("Could not unmarshall serialized SSZ: %v", err)
-				}
+				require.NoError(t, err, "Could not unmarshall serialized SSZ")
 
 				rootsYamlFile, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				rootsYaml := &SSZRoots{}
-				if err := testutil.UnmarshalYaml(rootsYamlFile, rootsYaml); err != nil {
-					t.Fatalf("Failed to Unmarshal: %v", err)
-				}
+				require.NoError(t, testutil.UnmarshalYaml(rootsYamlFile, rootsYaml), "Failed to Unmarshal")
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
@@ -67,20 +56,10 @@ func runSSZStaticTests(t *testing.T, config string) {
 				}
 
 				root, err := htr(object)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				rootBytes, err := hex.DecodeString(rootsYaml.Root[2:])
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(root[:], rootBytes) {
-					t.Fatalf(
-						"Did not receive expected hash tree root, received: %#x, expected: %#x",
-						root[:],
-						rootBytes,
-					)
-				}
+				require.NoError(t, err)
+				require.DeepEqual(t, rootBytes, root[:], "Did not receive expected hash tree root")
 
 				if rootsYaml.SigningRoot == "" {
 					return
@@ -93,20 +72,10 @@ func runSSZStaticTests(t *testing.T, config string) {
 					t.Fatal("object does not meet fssz.HashRoot")
 				}
 
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				signingRootBytes, err := hex.DecodeString(rootsYaml.SigningRoot[2:])
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(signingRoot[:], signingRootBytes) {
-					t.Fatalf(
-						"Did not receive expected signing root, received: %#x, expected: %#x",
-						signingRoot[:],
-						signingRootBytes,
-					)
-				}
+				require.NoError(t, err)
+				require.DeepEqual(t, signingRootBytes, signingRoot[:], "Did not receive expected signing root")
 			})
 		}
 	}

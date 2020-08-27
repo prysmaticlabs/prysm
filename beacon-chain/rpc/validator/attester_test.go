@@ -17,7 +17,6 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -45,7 +44,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	head.Block.Slot = 999
 	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	require.NoError(t, db.SaveBlock(ctx, head))
-	root, err := stateutil.BlockRoot(head.Block)
+	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	validators := make([]*ethpb.Validator, 64)
@@ -113,11 +112,11 @@ func TestGetAttestationData_OK(t *testing.T) {
 	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
-	blockRoot, err := stateutil.BlockRoot(block.Block)
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := stateutil.BlockRoot(targetBlock.Block)
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	beaconState := testutil.NewBeaconState()
@@ -212,11 +211,11 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	epochBoundaryBlock.Block.Slot = helpers.StartSlot(helpers.SlotToEpoch(10000))
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2 // Imagine two skip block
-	blockRoot, err := stateutil.BlockRoot(block.Block)
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	justifiedBlockRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
+	justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash justified block")
-	epochBoundaryRoot, err := stateutil.BlockRoot(epochBoundaryBlock.Block)
+	epochBoundaryRoot, err := epochBoundaryBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash justified block")
 	slot := uint64(10000)
 
@@ -360,14 +359,14 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
-	blockRoot, err := stateutil.BlockRoot(block.Block)
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
 	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, block2))
-	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := stateutil.BlockRoot(targetBlock.Block)
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
 	beaconState := testutil.NewBeaconState()
@@ -448,11 +447,11 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	targetBlock.Block.Slot = 0
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 0
-	blockRoot, err := stateutil.BlockRoot(block.Block)
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := stateutil.BlockRoot(targetBlock.Block)
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
 	beaconState := testutil.NewBeaconState()

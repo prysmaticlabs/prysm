@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -21,7 +20,7 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	br, err := stateutil.BlockRoot(b.Block)
+	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	require.NoError(t, service.epochBoundaryStateCache.put(br, beaconState))
@@ -43,7 +42,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
-	fRoot, err := stateutil.BlockRoot(b.Block)
+	fRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	require.NoError(t, service.epochBoundaryStateCache.put(fRoot, beaconState))
@@ -73,16 +72,11 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 2
-	fRoot, err := stateutil.BlockRoot(blk.Block)
+	fRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, fRoot))
-	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: 1,
-		Root: fRoot[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: fRoot[:]}))
 	service.finalizedInfo = &finalizedInfo{
 		slot:  1,
 		root:  fRoot,

@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -75,6 +74,7 @@ type Service struct {
 	recentCanonicalBlocksLock sync.RWMutex
 	justifiedBalances         []uint64
 	justifiedBalancesLock     sync.RWMutex
+	checkPtInfoCache          *checkPtInfoCache
 }
 
 // Config options for the service.
@@ -119,6 +119,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		initSyncBlocks:        make(map[[32]byte]*ethpb.SignedBeaconBlock),
 		recentCanonicalBlocks: make(map[[32]byte]bool),
 		justifiedBalances:     make([]uint64, 0),
+		checkPtInfoCache:      newCheckPointInfoCache(),
 	}, nil
 }
 
@@ -322,7 +323,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
@@ -386,7 +387,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if genesisBlock == nil {
 		return errors.New("no genesis block in db")
 	}
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	genesisBlkRoot, err := genesisBlock.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
@@ -397,7 +398,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
-		headRoot, err := stateutil.BlockRoot(headBlock.Block)
+		headRoot, err := headBlock.Block.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not hash head block")
 		}

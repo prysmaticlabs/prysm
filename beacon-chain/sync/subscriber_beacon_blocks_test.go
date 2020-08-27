@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -68,22 +69,21 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		msg proto.Message
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "invalid block does not remove attestations",
 			args: args{
-				msg: &ethpb.SignedBeaconBlock{
-					Block: &ethpb.BeaconBlock{
-						// An empty block will return an err in mocked chainService.ReceiveBlock.
-						Body: &ethpb.BeaconBlockBody{Attestations: pooledAttestations},
-					},
-				},
+				msg: func() *ethpb.SignedBeaconBlock {
+					b := testutil.NewBeaconBlock()
+					b.Block.Body.Attestations = pooledAttestations
+					return b
+				}(),
 			},
-			wantErr: true,
+			wantedErr: "nil inner state",
 			check: func(t *testing.T, s *Service) {
 				if s.attPool.AggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 aggregated attestation in the pool")
@@ -99,7 +99,8 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			db, _ := dbtest.SetupDB(t)
 			s := &Service{
 				chain: &chainMock.ChainService{
-					DB: db,
+					DB:   db,
+					Root: make([]byte, 32),
 				},
 				attPool: attestations.NewPool(),
 			}
@@ -113,10 +114,12 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 				}
 			}
 			// Perform method under test call.
-			if err := s.beaconBlockSubscriber(context.Background(), tt.args.msg); (err != nil) != tt.wantErr {
-				t.Errorf("beaconBlockSubscriber(ctx, msg) error = %v, wantErr %v", err, tt.wantErr)
+			err := s.beaconBlockSubscriber(context.Background(), tt.args.msg)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			// Perform any test check.
 			if tt.check != nil {
 				tt.check(t, s)
 			}

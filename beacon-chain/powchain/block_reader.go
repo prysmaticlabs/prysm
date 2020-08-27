@@ -15,24 +15,24 @@ func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
 
-	if exists, blkInfo, err := s.blockCache.BlockInfoByHash(hash); exists || err != nil {
+	if exists, hdrInfo, err := s.headerCache.HeaderInfoByHash(hash); exists || err != nil {
 		if err != nil {
 			return false, nil, err
 		}
 		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
-		return true, blkInfo.Number, nil
+		return true, hdrInfo.Number, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := s.eth1DataFetcher.BlockByHash(ctx, hash)
+	header, err := s.eth1DataFetcher.HeaderByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), errors.Wrap(err, "could not query block with given hash")
 	}
 
-	if err := s.blockCache.AddBlock(block); err != nil {
+	if err := s.headerCache.AddHeader(header); err != nil {
 		return false, big.NewInt(0), err
 	}
 
-	return true, block.Number(), nil
+	return true, new(big.Int).Set(header.Number), nil
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
@@ -40,33 +40,33 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockHashByHeight")
 	defer span.End()
 
-	if exists, blkInfo, err := s.blockCache.BlockInfoByHeight(height); exists || err != nil {
+	if exists, hInfo, err := s.headerCache.HeaderInfoByHeight(height); exists || err != nil {
 		if err != nil {
 			return [32]byte{}, err
 		}
-		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
-		return blkInfo.Hash, nil
+		span.AddAttributes(trace.BoolAttribute("headerCacheHit", true))
+		return hInfo.Hash, nil
 	}
-	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := s.eth1DataFetcher.BlockByNumber(ctx, height)
+	span.AddAttributes(trace.BoolAttribute("headerCacheHit", false))
+	header, err := s.eth1DataFetcher.HeaderByNumber(ctx, height)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, fmt.Sprintf("could not query block with height %d", height.Uint64()))
+		return [32]byte{}, errors.Wrap(err, fmt.Sprintf("could not query header with height %d", height.Uint64()))
 	}
-	if err := s.blockCache.AddBlock(block); err != nil {
+	if err := s.headerCache.AddHeader(header); err != nil {
 		return [32]byte{}, err
 	}
-	return block.Hash(), nil
+	return header.Hash(), nil
 }
 
 // BlockTimeByHeight fetches an eth1.0 block timestamp by its height.
 func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	block, err := s.eth1DataFetcher.BlockByNumber(ctx, height)
+	header, err := s.eth1DataFetcher.HeaderByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, fmt.Sprintf("could not query block with height %d", height.Uint64()))
 	}
-	return block.Time(), nil
+	return header.Time, nil
 }
 
 // BlockNumberByTimestamp returns the most recent block number up to a given timestamp.
@@ -77,30 +77,30 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	head, err := s.eth1DataFetcher.BlockByNumber(ctx, nil)
+	head, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	for bn := head.Number(); ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
+	for bn := head.Number; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
 
-		exists, info, err := s.blockCache.BlockInfoByHeight(bn)
+		exists, info, err := s.headerCache.HeaderInfoByHeight(bn)
 		if err != nil {
 			return nil, err
 		}
 
 		if !exists {
-			blk, err := s.eth1DataFetcher.BlockByNumber(ctx, bn)
+			blk, err := s.eth1DataFetcher.HeaderByNumber(ctx, bn)
 			if err != nil {
 				return nil, err
 			}
-			if err := s.blockCache.AddBlock(blk); err != nil {
+			if err := s.headerCache.AddHeader(blk); err != nil {
 				return nil, err
 			}
-			info = blockToBlockInfo(blk)
+			info = headerToHeaderInfo(blk)
 		}
 
 		if info.Time <= time {

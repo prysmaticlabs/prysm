@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -129,19 +128,17 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 	c.rootCache = make(map[uint64][32]byte)
 	c.parentSlotCache = make(map[uint64]uint64)
 	parentSlot := uint64(0)
-	genesisBlock := &eth.BeaconBlock{
-		Slot: 0,
-	}
-	genesisRoot, err := stateutil.BlockRoot(genesisBlock)
+
+	genesisBlock := testutil.NewBeaconBlock().Block
+	genesisRoot, err := genesisBlock.HashTreeRoot()
 	require.NoError(t, err)
 	c.rootCache[0] = genesisRoot
 	parentRoot := genesisRoot
 	for _, slot := range reqSlots {
-		currentBlock := &eth.BeaconBlock{
-			Slot:       slot,
-			ParentRoot: parentRoot[:],
-		}
-		parentRoot, err = stateutil.BlockRoot(currentBlock)
+		currentBlock := testutil.NewBeaconBlock().Block
+		currentBlock.Slot = slot
+		currentBlock.ParentRoot = parentRoot[:]
+		parentRoot, err = currentBlock.HashTreeRoot()
 		require.NoError(t, err)
 		c.rootCache[slot] = parentRoot
 		c.parentSlotCache[slot] = parentSlot
@@ -170,9 +167,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 	p := p2pt.NewTestP2P(t)
 	p.SetStreamHandler(topic, func(stream network.Stream) {
 		defer func() {
-			if err := stream.Close(); err != nil {
-				t.Log(err)
-			}
+			assert.NoError(t, stream.Close())
 		}()
 
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
@@ -182,12 +177,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 		// Expected failure range
 		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
-			if _, err := stream.Write([]byte{0x01}); err != nil {
-				t.Error(err)
-			}
-			if _, err := p.Encoding().EncodeWithMaxLength(stream, "bad"); err != nil {
-				t.Error(err)
-			}
+			_, err := stream.Write([]byte{0x01})
+			assert.NoError(t, err)
+			_, err = p.Encoding().EncodeWithMaxLength(stream, "bad")
+			assert.NoError(t, err)
 			return
 		}
 
@@ -211,7 +204,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 				blk.Block.ParentRoot = newRoot[:]
 			}
 			ret = append(ret, blk)
-			currRoot, err := stateutil.BlockRoot(blk.Block)
+			currRoot, err := blk.Block.HashTreeRoot()
 			require.NoError(t, err)
 			logrus.Tracef("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 		}

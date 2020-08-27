@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -37,10 +36,10 @@ func TestService_ReceiveBlock(t *testing.T) {
 		block *ethpb.SignedBeaconBlock
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "applies block with state transition",
@@ -139,13 +138,15 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
-			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			gRoot, err := gBlk.Block.HashTreeRoot()
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-			root, err := stateutil.BlockRoot(tt.args.block.Block)
+			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			if err := s.ReceiveBlock(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlock() error = %v, wantErr %v", err, tt.wantErr)
+			err = s.ReceiveBlock(ctx, tt.args.block, root)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
+				assert.NoError(t, err)
 				tt.check(t, s)
 			}
 		})
@@ -177,9 +178,9 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	gBlk, err := s.beaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
-	gRoot, err := stateutil.BlockRoot(gBlk.Block)
+	gRoot, err := gBlk.Block.HashTreeRoot()
 	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-	root, err := stateutil.BlockRoot(b.Block)
+	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -201,9 +202,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		return blk
 	}
 
@@ -211,10 +210,10 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 		block *ethpb.SignedBeaconBlock
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "applies block with state transition",
@@ -261,14 +260,16 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 
-			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			gRoot, err := gBlk.Block.HashTreeRoot()
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-			root, err := stateutil.BlockRoot(tt.args.block.Block)
+			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 
-			if err := s.ReceiveBlockInitialSync(ctx, tt.args.block, root); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlockInitialSync() error = %v, wantErr %v", err, tt.wantErr)
+			err = s.ReceiveBlockInitialSync(ctx, tt.args.block, root)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
+				assert.NoError(t, err)
 				tt.check(t, s)
 			}
 		})
@@ -281,9 +282,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		return blk
 	}
 
@@ -291,10 +290,10 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 		block *ethpb.SignedBeaconBlock
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		check   func(*testing.T, *Service)
+		name      string
+		args      args
+		wantedErr string
+		check     func(*testing.T, *Service)
 	}{
 		{
 			name: "applies block with state transition",
@@ -341,15 +340,17 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 
-			gRoot, err := stateutil.BlockRoot(gBlk.Block)
+			gRoot, err := gBlk.Block.HashTreeRoot()
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
-			root, err := stateutil.BlockRoot(tt.args.block.Block)
+			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 			blks := []*ethpb.SignedBeaconBlock{tt.args.block}
 			roots := [][32]byte{root}
-			if err := s.ReceiveBlockBatch(ctx, blks, roots); (err != nil) != tt.wantErr {
-				t.Errorf("ReceiveBlockBatch() error = %v, wantErr %v", err, tt.wantErr)
+			err = s.ReceiveBlockBatch(ctx, blks, roots)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
+				assert.NoError(t, err)
 				tt.check(t, s)
 			}
 		})

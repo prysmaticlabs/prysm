@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -26,7 +25,7 @@ func TestServer_GetBlock(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 100
 	require.NoError(t, db.SaveBlock(ctx, b))
-	blockRoot, err := stateutil.BlockRoot(b.Block)
+	blockRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	bs := &Server{
 		BeaconDB: db,

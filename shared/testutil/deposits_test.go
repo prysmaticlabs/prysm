@@ -6,19 +6,16 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	entries := 1
 	ResetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(uint64(entries))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, depositDataRoots, err := DeterministicDepositTrie(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if len(deposits) != entries {
 		t.Fatalf("incorrect number of deposits returned, wanted %d but received %d", entries, len(deposits))
@@ -38,9 +35,7 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	dRootAt0 := []byte("4bbc31cfec9602242576e8570b3c72cd09f55e0d5ea4d64fd08fb6ca5cb69f17")
 	dRootAt0B := make([]byte, hex.DecodedLen(len(dRootAt0)))
 	_, err = hex.Decode(dRootAt0B, dRootAt0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !bytes.Equal(depositDataRoots[0][:], dRootAt0B) {
 		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt0B, depositDataRoots[0])
 	}
@@ -48,9 +43,7 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	sigAt0 := []byte("953b44ee497f9fc9abbc1340212597c264b77f3dea441921d65b2542d64195171ba0598fad34905f03c0c1b6d5540faa10bb2c26084fc5eacbafba119d9a81721f56821cae7044a2ff374e9a128f68dee68d3b48406ea60306148498ffe007c7")
 	sigAt0B := make([]byte, hex.DecodedLen(len(sigAt0)))
 	_, err = hex.Decode(sigAt0B, sigAt0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !bytes.Equal(deposits[0].Data.Signature, sigAt0B) {
 		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt0B, deposits[0].Data.Signature)
 	}
@@ -58,13 +51,9 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	entries = 1024
 	ResetCache()
 	deposits, privKeys, err = DeterministicDepositsAndKeys(uint64(entries))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, depositDataRoots, err = DeterministicDepositTrie(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if len(deposits) != entries {
 		t.Fatalf("incorrect number of deposits returned, wanted %d but received %d", entries, len(deposits))
 	}
@@ -95,18 +84,14 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	dRootAt1023 := []byte("564c1afed12430965ae8ff6f519a6cb15118c438328024d16c02ffe3d4652893")
 	dRootAt1023B := make([]byte, hex.DecodedLen(len(dRootAt1023)))
 	_, err = hex.Decode(dRootAt1023B, dRootAt1023)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !bytes.Equal(depositDataRoots[1023][:], dRootAt1023B) {
 		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt1023B, depositDataRoots[1023])
 	}
 	sigAt1023 := []byte("8482cc981976291d19c1d7d298f5e6781ac691151833b89a29ef4d08850f56b972b860ebf7995ada3213b575213c331316c213a8535cf88bff0e98846204b0db186ff84c55903f1c359470be7c1110c94d5aafeef07f4886ed69cb13cb3aadbc")
 	sigAt1023B := make([]byte, hex.DecodedLen(len(sigAt1023)))
 	_, err = hex.Decode(sigAt1023B, sigAt1023)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !bytes.Equal(deposits[1023].Data.Signature, sigAt1023B) {
 		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt1023B, deposits[1023].Data.Signature)
 	}
@@ -116,9 +101,7 @@ func TestDeterministicGenesisState_100Validators(t *testing.T) {
 	validatorCount := uint64(100)
 	beaconState, privKeys := DeterministicGenesisState(t, validatorCount)
 	activeValidators, err := helpers.ActiveValidatorCount(beaconState, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if len(privKeys) != int(validatorCount) {
 		t.Fatalf("expected amount of private keys %d to match requested amount of validators %d", len(privKeys), validatorCount)
@@ -130,18 +113,12 @@ func TestDeterministicGenesisState_100Validators(t *testing.T) {
 
 func TestDepositTrieFromDeposits(t *testing.T) {
 	deposits, _, err := DeterministicDepositsAndKeys(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	eth1Data, err := DeterministicEth1Data(len(deposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	depositTrie, _, err := DepositTrieFromDeposits(deposits)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	root := depositTrie.Root()
 	if !bytes.Equal(root[:], eth1Data.DepositRoot) {

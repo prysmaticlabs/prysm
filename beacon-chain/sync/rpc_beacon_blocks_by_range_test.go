@@ -14,7 +14,6 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -96,7 +95,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	for i, j := endSlot, req.Count-1; i >= req.StartSlot; i -= req.Step {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.Slot = i
-		rt, err := stateutil.BlockRoot(blk.Block)
+		rt, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		expectedRoots[j] = rt
 		require.NoError(t, d.SaveBlock(context.Background(), blk))
@@ -123,7 +122,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 			if res.Block.Slot < prevSlot {
 				t.Errorf("Received block is unsorted with slot %d lower than previous slot %d", res.Block.Slot, prevSlot)
 			}
-			rt, err := stateutil.BlockRoot(res.Block)
+			rt, err := res.Block.HashTreeRoot()
 			require.NoError(t, err)
 			assert.Equal(t, expectedRoots[j], rt, "roots not equal")
 			prevSlot = res.Block.Slot
@@ -160,7 +159,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 
 		// Save genesis block
 		if i == 0 {
-			rt, err := stateutil.BlockRoot(blk.Block)
+			rt, err := blk.Block.HashTreeRoot()
 			require.NoError(t, err)
 			require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), rt))
 		}

@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -129,7 +128,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
-	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
+	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
 	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
@@ -192,7 +191,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
-	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
+	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
 	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
@@ -389,7 +388,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
-	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
+	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
@@ -450,7 +449,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 
 	parent := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), parent))
-	parentRoot, err := stateutil.BlockRoot(parent.Block)
+	parentRoot, err := parent.Block.HashTreeRoot()
 	require.NoError(t, err)
 	chain := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -515,7 +514,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
-	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
+	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
 	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
@@ -578,7 +577,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	parentBlock := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, parentBlock))
-	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
+	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
 	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
@@ -595,7 +594,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 
 	// Mutate Signature
 	copy(msg.Signature[:4], []byte{1, 2, 3, 4})
-	currBlockRoot, err := stateutil.BlockRoot(msg.Block)
+	currBlockRoot, err := msg.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	c, err := lru.New(10)

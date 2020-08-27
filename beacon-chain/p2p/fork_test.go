@@ -87,9 +87,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
 	s, err = NewService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
