@@ -15,12 +15,12 @@ func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
 
-	if exists, blkInfo, err := s.headerCache.HeaderInfoByHash(hash); exists || err != nil {
+	if exists, hdrInfo, err := s.headerCache.HeaderInfoByHash(hash); exists || err != nil {
 		if err != nil {
 			return false, nil, err
 		}
 		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
-		return true, blkInfo.Number, nil
+		return true, hdrInfo.Number, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	header, err := s.eth1DataFetcher.HeaderByHash(ctx, hash)
