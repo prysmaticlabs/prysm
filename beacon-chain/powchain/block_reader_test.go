@@ -66,9 +66,9 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	assert.Equal(t, hexutil.Encode(web3Service.latestEth1Data.BlockHash), header.Hash().Hex())
 	assert.Equal(t, web3Service.latestEth1Data.BlockTime, header.Time)
 
-	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
+	headerInfoExistsInCache, info, err := web3Service.headerCache.HeaderInfoByHash(bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
 	require.NoError(t, err)
-	assert.Equal(t, true, blockInfoExistsInCache, "Expected block info to exist in cache")
+	assert.Equal(t, true, headerInfoExistsInCache, "Expected block info to exist in cache")
 	assert.Equal(t, bytesutil.ToBytes32(info.Hash[:]), bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
 
 }
@@ -84,22 +84,18 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	ctx := context.Background()
 
-	block := gethTypes.NewBlock(
-		&gethTypes.Header{
-			Number: big.NewInt(15),
-			Time:   150,
-		},
-		[]*gethTypes.Transaction{},
-		[]*gethTypes.Header{},
-		[]*gethTypes.Receipt{},
-	)
-	wanted := block.Hash()
+	header := &gethTypes.Header{
+		Number: big.NewInt(15),
+		Time:   150,
+	}
+
+	wanted := header.Hash()
 
 	hash, err := web3Service.BlockHashByHeight(ctx, big.NewInt(0))
 	require.NoError(t, err, "Could not get block hash with given height")
 	require.DeepEqual(t, wanted.Bytes(), hash.Bytes(), "Block hash did not equal expected hash")
 
-	exists, _, err := web3Service.blockCache.BlockInfoByHash(wanted)
+	exists, _, err := web3Service.headerCache.HeaderInfoByHash(wanted)
 	require.NoError(t, err)
 	require.Equal(t, true, exists, "Expected block info to be cached")
 }
@@ -128,7 +124,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 	require.Equal(t, true, exists)
 	require.Equal(t, 0, height.Cmp(block.Number()))
 
-	exists, _, err = web3Service.blockCache.BlockInfoByHeight(height)
+	exists, _, err = web3Service.headerCache.HeaderInfoByHeight(height)
 	require.NoError(t, err)
 	require.Equal(t, true, exists, "Expected block to be cached")
 
@@ -158,22 +154,17 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	// nil eth1DataFetcher would panic if cached value not used
 	web3Service.eth1DataFetcher = nil
 
-	block := gethTypes.NewBlock(
-		&gethTypes.Header{
-			Number: big.NewInt(0),
-		},
-		[]*gethTypes.Transaction{},
-		[]*gethTypes.Header{},
-		[]*gethTypes.Receipt{},
-	)
+	header := &gethTypes.Header{
+		Number: big.NewInt(0),
+	}
 
-	err = web3Service.blockCache.AddBlock(block)
+	err = web3Service.headerCache.AddHeader(header)
 	require.NoError(t, err)
 
-	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())
+	exists, height, err := web3Service.BlockExists(context.Background(), header.Hash())
 	require.NoError(t, err, "Could not get block hash with given height")
 	require.Equal(t, true, exists)
-	require.Equal(t, 0, height.Cmp(block.Number()))
+	require.Equal(t, 0, height.Cmp(header.Number))
 }
 
 func TestBlockNumberByTimestamp(t *testing.T) {
