@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -17,4 +18,12 @@ func TestNewBeaconState(t *testing.T) {
 	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
 		t.Fatal("State did not match after round trip marshal")
 	}
+}
+
+func TestNewBeaconState_HashTreeRoot(t *testing.T) {
+	_, err := st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	state := NewBeaconState()
+	_, err = state.HashTreeRoot(context.Background())
+	require.NoError(t, err)
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -17,7 +16,7 @@ func TestStore_VoluntaryExits_CRUD(t *testing.T) {
 	exit := &ethpb.VoluntaryExit{
 		Epoch: 5,
 	}
-	exitRoot, err := ssz.HashTreeRoot(exit)
+	exitRoot, err := exit.HashTreeRoot()
 	require.NoError(t, err)
 	retrieved, err := db.VoluntaryExit(ctx, exitRoot)
 	require.NoError(t, err)

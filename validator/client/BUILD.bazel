@@ -20,7 +20,6 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/slashing:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/blockutil:go_default_library",
@@ -38,6 +37,7 @@ go_library(
         "//validator/keymanager/v2/direct:go_default_library",
         "//validator/slashing-protection:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",

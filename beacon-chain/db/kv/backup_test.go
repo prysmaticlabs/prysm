@@ -6,8 +6,6 @@ import (
 	"path"
 	"testing"
 
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -16,10 +14,11 @@ func TestStore_Backup(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	head := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 5000}}
+	head := testutil.NewBeaconBlock()
+	head.Block.Slot = 5000
 
 	require.NoError(t, db.SaveBlock(ctx, head))
-	root, err := stateutil.BlockRoot(head.Block)
+	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(ctx, st, root))
