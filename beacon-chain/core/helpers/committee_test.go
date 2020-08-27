@@ -263,7 +263,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 5,
-					Target:         &ethpb.Checkpoint{},
+					Target:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 			},
 			stateSlot: 5,
@@ -274,7 +274,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 10,
-					Target:         &ethpb.Checkpoint{},
+					Target:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 			},
 			stateSlot: 10,
@@ -284,7 +284,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 20,
-					Target:         &ethpb.Checkpoint{},
+					Target:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 			},
 			stateSlot: 20,
@@ -294,7 +294,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 20,
-					Target:         &ethpb.Checkpoint{},
+					Target:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 			},
 			stateSlot: 20,
@@ -304,7 +304,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 5,
-					Target:         &ethpb.Checkpoint{},
+					Target:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 			},
 			stateSlot:           5,
@@ -315,7 +315,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 20,
-					Target:         &ethpb.Checkpoint{},
+					Target:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 				},
 			},
 			stateSlot:           20,

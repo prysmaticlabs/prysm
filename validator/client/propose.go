@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -177,7 +176,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		return sig.Marshal(), nil
 	}
 	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
-		bodyRoot, err := stateutil.BlockBodyRoot(b.Body)
+		bodyRoot, err := b.Body.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
 		}

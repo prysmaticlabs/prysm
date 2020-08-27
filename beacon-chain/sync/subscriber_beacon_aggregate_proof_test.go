@@ -22,7 +22,20 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	a := &ethpb.SignedAggregateAttestationAndProof{Message: &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, AggregationBits: bitfield.Bitlist{0x07}}, AggregatorIndex: 100}}
+	a := &ethpb.SignedAggregateAttestationAndProof{
+		Message: &ethpb.AggregateAttestationAndProof{
+			Aggregate: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
+				},
+				AggregationBits: bitfield.Bitlist{0x07},
+			},
+			AggregatorIndex: 100,
+		},
+		Signature: make([]byte, 96),
+	}
 	require.NoError(t, r.beaconAggregateProofSubscriber(context.Background(), a))
 	assert.DeepEqual(t, []*ethpb.Attestation{a.Message.Aggregate}, r.attPool.AggregatedAttestations(), "Did not save aggregated attestation")
 }
@@ -36,7 +49,24 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	a := &ethpb.SignedAggregateAttestationAndProof{Message: &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, AggregationBits: bitfield.Bitlist{0x03}}, AggregatorIndex: 100}}
+	a := &ethpb.SignedAggregateAttestationAndProof{
+		Message: &ethpb.AggregateAttestationAndProof{
+			Aggregate: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Root: make([]byte, 32),
+					},
+					Source: &ethpb.Checkpoint{
+						Root: make([]byte, 32),
+					},
+					BeaconBlockRoot: make([]byte, 32),
+				},
+				AggregationBits: bitfield.Bitlist{0x03},
+				Signature:       make([]byte, 96),
+			},
+			AggregatorIndex: 100,
+		},
+	}
 	require.NoError(t, r.beaconAggregateProofSubscriber(context.Background(), a))
 
 	atts, err := r.attPool.UnaggregatedAttestations()

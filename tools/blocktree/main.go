@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -60,7 +59,7 @@ func main() {
 	m := make(map[[32]byte]*node)
 	for i := 0; i < len(blks); i++ {
 		b := blks[i]
-		r, err := stateutil.BlockRoot(b.Block)
+		r, err := b.Block.HashTreeRoot()
 		if err != nil {
 			panic(err)
 		}
@@ -79,7 +78,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			rs, err := stateutil.BlockRoot(bs[0].Block)
+			rs, err := bs[0].Block.HashTreeRoot()
 			if err != nil {
 				panic(err)
 			}
