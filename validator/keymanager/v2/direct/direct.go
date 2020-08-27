@@ -20,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
@@ -256,7 +256,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 		nil, /*genesisValidatorsRoot*/
 	)
 	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return "", errors.Wrap(err, "failed to verify deposit signature")
+		return "", errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
 	}
 
 	// Log the deposit transaction data to the user.
