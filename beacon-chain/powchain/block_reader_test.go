@@ -66,9 +66,9 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	assert.Equal(t, hexutil.Encode(web3Service.latestEth1Data.BlockHash), header.Hash().Hex())
 	assert.Equal(t, web3Service.latestEth1Data.BlockTime, header.Time)
 
-	blockInfoExistsInCache, info, err := web3Service.headerCache.HeaderInfoByHash(bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
+	headerInfoExistsInCache, info, err := web3Service.headerCache.HeaderInfoByHash(bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
 	require.NoError(t, err)
-	assert.Equal(t, true, blockInfoExistsInCache, "Expected block info to exist in cache")
+	assert.Equal(t, true, headerInfoExistsInCache, "Expected block info to exist in cache")
 	assert.Equal(t, bytesutil.ToBytes32(info.Hash[:]), bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
 
 }
