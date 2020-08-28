@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -77,7 +76,7 @@ oVV7C5jmJh9VRd2tXIXIZMMNOfThfNf2qDQuJ1S2t5KugozFiRsHUg==
 func TestNewRemoteKeymanager(t *testing.T) {
 	tests := []struct {
 		name       string
-		opts       *Config
+		opts       *KeymanagerOpts
 		clientCert string
 		clientKey  string
 		caCert     string
@@ -85,21 +84,21 @@ func TestNewRemoteKeymanager(t *testing.T) {
 	}{
 		{
 			name: "NoCertificates",
-			opts: &Config{
+			opts: &KeymanagerOpts{
 				RemoteCertificate: nil,
 			},
 			err: "certificates are required",
 		},
 		{
 			name: "NoClientCertificate",
-			opts: &Config{
+			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{},
 			},
 			err: "client certificate is required",
 		},
 		{
 			name: "NoClientKey",
-			opts: &Config{
+			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{
 					ClientCertPath: "/foo/client.crt",
 					ClientKeyPath:  "",
@@ -109,7 +108,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 		},
 		{
 			name: "MissingClientKey",
-			opts: &Config{
+			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{
 					ClientCertPath: "/foo/client.crt",
 					ClientKeyPath:  "/foo/client.key",
@@ -122,7 +121,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			name:       "BadClientCert",
 			clientCert: `bad`,
 			clientKey:  validClientKey,
-			opts: &Config{
+			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{},
 			},
 			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in certificate input",
@@ -131,7 +130,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			name:       "BadClientKey",
 			clientCert: validClientCert,
 			clientKey:  `bad`,
-			opts: &Config{
+			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{},
 			},
 			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in key input",
@@ -140,7 +139,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			name:       "MissingCACert",
 			clientCert: validClientCert,
 			clientKey:  validClientKey,
-			opts: &Config{
+			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{
 					CACertPath: `bad`,
 				},
@@ -173,7 +172,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 					test.opts.RemoteCertificate.ClientKeyPath = clientKeyPath
 				}
 			}
-			_, err := NewKeymanager(context.Background(), 1, test.opts)
+			_, err := NewKeymanager(context.Background(), &SetupConfig{Opts: test.opts, MaxMessageSize: 1})
 			if test.err == "" {
 				require.NoError(t, err)
 			} else {

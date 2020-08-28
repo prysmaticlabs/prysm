@@ -77,6 +77,7 @@ type KeymanagerOpts struct {
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
+	Opts                *KeymanagerOpts
 	Wallet              iface.Wallet
 	SkipMnemonicConfirm bool
 	WalletPassword      string
@@ -182,7 +183,7 @@ func NewKeymanager(
 	}
 	k := &Keymanager{
 		wallet: cfg.Wallet,
-		//cfg:    cfg,
+		opts:   cfg.Opts,
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: cfg.SkipMnemonicConfirm,
 		},
@@ -259,7 +260,7 @@ func KeymanagerForPhrase(
 	}
 	k := &Keymanager{
 		wallet: cfg.Wallet,
-		//cfg:    cfg,
+		opts:   cfg.Opts,
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: true,
 		},
@@ -277,9 +278,9 @@ func KeymanagerForPhrase(
 	return k, nil
 }
 
-// UnmarshalConfigFile attempts to JSON unmarshal a derived keymanager
+// UnmarshalOptionsFile attempts to JSON unmarshal a derived keymanager
 // configuration file into the *Config{} struct.
-func UnmarshalConfigFile(r io.ReadCloser) (*KeymanagerOpts, error) {
+func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -296,13 +297,13 @@ func UnmarshalConfigFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	return cfg, nil
 }
 
-// MarshalConfigFile returns a marshaled configuration file for a keymanager.
-func MarshalConfigFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
+// MarshalOptionsFile returns a marshaled configuration file for a keymanager.
+func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
-// Config returns the derived keymanager configuration.
-func (dr *Keymanager) Config() *KeymanagerOpts {
+// KeymanagerOpts returns the derived keymanager configuration.
+func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return dr.opts
 }
 

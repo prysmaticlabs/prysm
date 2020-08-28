@@ -14,10 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -28,6 +24,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
@@ -85,19 +84,20 @@ func DefaultKeymanagerOpts() *KeymanagerOpts {
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
 	Wallet              iface.Wallet
+	Opts                *KeymanagerOpts
 	SkipMnemonicConfirm bool
 	WalletPassword      string
 	Mnemonic            string
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx *cli.Context, cfg *SetupConfig) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:           cfg.Wallet,
 		accountsPassword: cfg.WalletPassword,
-		//cfg:           cfg,
-		keysCache:     make(map[[48]byte]bls.SecretKey),
-		accountsStore: &AccountStore{},
+		opts:             cfg.Opts,
+		keysCache:        make(map[[48]byte]bls.SecretKey),
+		accountsStore:    &AccountStore{},
 	}
 
 	//walletExists, err := wallet.Exists()
@@ -163,9 +163,9 @@ func NewInteropKeymanager(ctx context.Context, offset uint64, numValidatorKeys u
 	return k, nil
 }
 
-// UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
-// configuration file into the *Config{} struct.
-func UnmarshalConfigFile(r io.ReadCloser) (*KeymanagerOpts, error) {
+// UnmarshalOptionsFile attempts to JSON unmarshal a direct keymanager
+// configuration file into a struct.
+func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -182,21 +182,21 @@ func UnmarshalConfigFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	return cfg, nil
 }
 
-// MarshalConfigFile returns a marshaled configuration file for a keymanager.
-func MarshalConfigFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
+// MarshalOptionsFile returns a marshaled configuration file for a keymanager.
+func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
-// Config for the direct keymanager.
-func (dr *Keymanager) Config() *KeymanagerOpts {
+// KeymanagerOpts for the direct keymanager.
+func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return dr.opts
 }
 
 // String pretty-print of a direct keymanager configuration.
-func (c *KeymanagerOpts) String() string {
+func (opts *KeymanagerOpts) String() string {
 	au := aurora.NewAurora(true)
 	var b strings.Builder
-	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("EIP Version"), c.EIPVersion)
+	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("EIP Version"), opts.EIPVersion)
 	if _, err := b.WriteString(strAddr); err != nil {
 		log.Error(err)
 		return ""
