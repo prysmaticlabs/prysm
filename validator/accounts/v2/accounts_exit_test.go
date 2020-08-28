@@ -45,15 +45,17 @@ func TestExitAccounts_Ok(t *testing.T) {
 		// Flag required for ExitAccounts to work.
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
+		KeymanagerKind: v2keymanager.Direct,
+	})
 	require.NoError(t, err)
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
+	encodedOpts, err := direct.MarshalOptionsFile(ctx, direct.DefaultKeymanagerOpts())
 	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedOpts))
 
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCLI(cliCtx))
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
@@ -71,14 +73,16 @@ func TestExitAccounts_EmptyWalletReturnsError(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
+		KeymanagerKind: v2keymanager.Direct,
+	})
 	require.NoError(t, err)
 	require.NoError(t, wallet.SaveWallet())
 
 	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
+	encodedOpts, err := direct.MarshalOptionsFile(ctx, direct.DefaultKeymanagerOpts())
 	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedOpts))
 
 	err = ExitAccounts(cliCtx, os.Stdin)
 	assert.ErrorContains(t, "wallet is empty, no accounts to perform voluntary exit", err)

@@ -128,4 +128,5 @@ func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}
+	return nil
 }

@@ -71,20 +71,22 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
+		KeymanagerKind: v2keymanager.Direct,
+	})
 	require.NoError(t, err)
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
+	encodedOpts, err := direct.MarshalOptionsFile(ctx, direct.DefaultKeymanagerOpts())
 	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedOpts))
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCLI(cliCtx))
 
 	// Next, we attempt to backup the accounts.
-	require.NoError(t, BackupAccounts(cliCtx))
+	require.NoError(t, BackupAccountsCLI(cliCtx))
 
 	// We check a backup.zip file was created at the output path.
 	zipFilePath := filepath.Join(backupDir, archiveFilename)
