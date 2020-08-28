@@ -69,7 +69,7 @@ var (
 	ValidatorProposeExitSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
-			Name:      "successful_exit_proposals",
+			Name:      "successful_exit_proposals_total",
 		},
 		[]string{
 			"pubkey",
@@ -79,7 +79,7 @@ var (
 	ValidatorProposeExitFailVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
-			Name:      "failed_exit_proposals",
+			Name:      "failed_exit_proposals_total",
 		},
 		[]string{
 			"pubkey",
