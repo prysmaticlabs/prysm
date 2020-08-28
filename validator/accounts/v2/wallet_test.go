@@ -138,8 +138,7 @@ func Test_LockUnlockFile(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWalletCLI(cliCtx)
-	require.NoError(t, err)
+	require.NoError(t, CreateAndSaveWalletCLI(cliCtx))
 
 	// We attempt to open the newly created wallet.
 	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{

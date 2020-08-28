@@ -35,7 +35,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		if err != nil && !errors.Is(err, ErrWalletExists) {
 			return nil, errors.Wrap(err, "could not create new wallet")
 		}
-		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
+		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("wallet-path", w.walletDir).Info(
@@ -43,11 +43,11 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		)
 		return w, err
 	}
-	createdWallet, err := openOrCreateWallet(cliCtx, createDirectWallet)
+	createdWallet, err := openWalletOrElse(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "Successfully created new wallet")
 
-	openedWallet, err := openOrCreateWallet(cliCtx, createDirectWallet)
+	openedWallet, err := openWalletOrElse(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
@@ -63,8 +63,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWalletCLI(cliCtx)
-	require.NoError(t, err)
+	require.NoError(t, CreateAndSaveWalletCLI(cliCtx))
 
 	// We attempt to open the newly created wallet.
 	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
@@ -93,8 +92,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWalletCLI(cliCtx)
-	require.NoError(t, err)
+	require.NoError(t, CreateAndSaveWalletCLI(cliCtx))
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
@@ -144,8 +142,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.
-	_, err := CreateWalletCLI(cliCtx)
-	require.NoError(t, err)
+	require.NoError(t, CreateAndSaveWalletCLI(cliCtx))
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()

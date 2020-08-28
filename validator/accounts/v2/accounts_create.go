@@ -25,7 +25,7 @@ type CreateAccountConfig struct {
 // CreateAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
 func CreateAccountCLI(cliCtx *cli.Context) error {
-	wallet, err := openOrCreateWallet(cliCtx, CreateWalletCLI)
+	wallet, err := openWalletOrElse(cliCtx, CreateAndSaveWalletCLI)
 	if err != nil {
 		return err
 	}

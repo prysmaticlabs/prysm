@@ -17,16 +17,12 @@ import (
 
 // ExitAccounts performs a voluntary exit on one or more accounts.
 func ExitAccounts(cliCtx *cli.Context, r io.Reader) error {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return err
-	}
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir: walletDir,
+	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, no accounts to exit",
+		)
 	})
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
-	} else if err != nil {
+	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 

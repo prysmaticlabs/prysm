@@ -37,9 +37,22 @@ func RecoverWalletCLI(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Derived,
+	walletPassword, err := inputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		newWalletPasswordPromptText,
+		confirmPass,
+		promptutil.ValidatePasswordInput,
+	)
+	if err != nil {
+		return err
+	}
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Derived,
+			WalletPassword: walletPassword,
+		},
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create new wallet")
@@ -63,16 +76,6 @@ func RecoverWalletCLI(cliCtx *cli.Context) error {
 }
 
 func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) error {
-	opts, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
-	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
-	}
-	if err := cfg.Wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet to disk")
-	}
-	if err := cfg.Wallet.WriteKeymanagerConfigToDisk(ctx, opts); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
 	km, err := derived.KeymanagerForPhrase(ctx, &derived.SetupConfig{
 		Opts:     derived.DefaultKeymanagerOpts(),
 		Wallet:   cfg.Wallet,

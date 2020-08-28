@@ -24,19 +24,14 @@ type DeleteAccountConfig struct {
 
 // DeleteAccountCLI deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccountCLI(cliCtx *cli.Context) error {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return err
-	}
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir: walletDir,
+	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, nothing to delete",
+		)
 	})
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
-	} else if err != nil {
+	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-
 	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")

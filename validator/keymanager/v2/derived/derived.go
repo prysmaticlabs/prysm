@@ -8,25 +8,23 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/tyler-smith/go-bip39"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	"github.com/sirupsen/logrus"
-	"github.com/tyler-smith/go-bip39"
-	"github.com/urfave/cli/v2"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
@@ -43,19 +41,7 @@ const (
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
 	// EncryptedSeedFileName for persisting a wallet's seed when using a derived keymanager.
-	EncryptedSeedFileName       = "seed.encrypted.json"
-	newWalletPasswordPromptText = "New wallet password"
-	walletPasswordPromptText    = "Wallet password"
-	confirmPasswordPromptText   = "Confirm password"
-)
-
-type passwordConfirm int
-
-const (
-	// An enum to indicate to the prompt that confirming the password is not needed.
-	noConfirmPass passwordConfirm = iota
-	// An enum to indicate to the prompt to confirm the password entered.
-	confirmPass
+	EncryptedSeedFileName = "seed.encrypted.json"
 )
 
 // SeedConfig json file representation as a Go struct.
@@ -109,41 +95,9 @@ func NewKeymanager(
 	ctx context.Context,
 	cfg *SetupConfig,
 ) (*Keymanager, error) {
-	//walletExists, err := wallet.Exists()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//var accountsPassword string
-	//// If the user does not have any accounts in their wallet, we ask them to
-	//// set a new wallet password, which will be used for encrypting/decrypting
-	//// their wallet secret to and from disk.
-	//if !walletExists {
-	//	accountsPassword, err = inputPassword(
-	//		cliCtx,
-	//		flags.WalletPasswordFileFlag,
-	//		newWalletPasswordPromptText,
-	//		confirmPass,
-	//		promptutil.ValidatePasswordInput,
-	//	)
-	//} else {
-	//	validateExistingPass := func(input string) error {
-	//		if input == "" {
-	//			return errors.New("password input cannot be empty")
-	//		}
-	//		return nil
-	//	}
-	//	accountsPassword, err = inputPassword(
-	//		cliCtx,
-	//		flags.WalletPasswordFileFlag,
-	//		walletPasswordPromptText,
-	//		noConfirmPass,
-	//		validateExistingPass,
-	//	)
-	//}
-	//
-	//// Check if the wallet seed file exists. If it does not, we initialize one
-	//// by creating a new mnemonic and writing the encrypted file to disk.
-	//ctx := context.Background()
+
+	// Check if the wallet seed file exists. If it does not, we initialize one
+	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
 	if !fileutil.FileExists(filepath.Join(cfg.Wallet.AccountsDir(), EncryptedSeedFileName)) {
 		seedConfig, err := initializeWalletSeedFile(cfg.WalletPassword, cfg.SkipMnemonicConfirm)
@@ -514,51 +468,6 @@ func (dr *Keymanager) initializeSecretKeysCache() error {
 		dr.keysCache[bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())] = validatorSigningKey
 	}
 	return nil
-}
-
-func inputPassword(
-	cliCtx *cli.Context,
-	passwordFileFlag *cli.StringFlag,
-	promptText string,
-	confirmPassword passwordConfirm,
-	passwordValidator func(input string) error,
-) (string, error) {
-	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		data, err := fileutil.ReadFileAsBytes(passwordFilePathInput)
-		if err != nil {
-			return "", errors.Wrap(err, "could not read file as bytes")
-		}
-		enteredPassword := strings.TrimRight(string(data), "\r\n")
-		if err := passwordValidator(enteredPassword); err != nil {
-			return "", errors.Wrap(err, "password did not pass validation")
-		}
-		return enteredPassword, nil
-	}
-	var hasValidPassword bool
-	var walletPassword string
-	var err error
-	for !hasValidPassword {
-		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
-		if err != nil {
-			return "", fmt.Errorf("could not read account password: %v", err)
-		}
-
-		if confirmPassword == confirmPass {
-			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
-			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
-			}
-			if walletPassword != passwordConfirmation {
-				log.Error("Passwords do not match")
-				continue
-			}
-			hasValidPassword = true
-		} else {
-			return walletPassword, nil
-		}
-	}
-	return walletPassword, nil
 }
 
 // Creates a new, encrypted seed using a password input

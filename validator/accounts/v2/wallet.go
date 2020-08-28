@@ -7,11 +7,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -25,7 +27,19 @@ const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// DirectoryPermissions for directories created under the wallet path.
-	DirectoryPermissions = os.ModePerm
+	DirectoryPermissions        = os.ModePerm
+	newWalletPasswordPromptText = "New wallet password"
+	walletPasswordPromptText    = "Wallet password"
+	confirmPasswordPromptText   = "Confirm password"
+)
+
+type passwordConfirm int
+
+const (
+	// An enum to indicate to the prompt that confirming the password is not needed.
+	noConfirmPass passwordConfirm = iota
+	// An enum to indicate to the prompt to confirm the password entered.
+	confirmPass
 )
 
 var (
@@ -42,12 +56,19 @@ var (
 		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
 		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
+	validateExistingPass = func(input string) error {
+		if input == "" {
+			return errors.New("password input cannot be empty")
+		}
+		return nil
+	}
 )
 
 // WalletConfig --
 type WalletConfig struct {
 	WalletDir      string
 	KeymanagerKind v2keymanager.Kind
+	WalletPassword string
 }
 
 // Wallet is a primitive in Prysm's v2 account management which
@@ -58,57 +79,40 @@ type Wallet struct {
 	walletDir      string
 	accountsPath   string
 	configFilePath string
+	walletPassword string
 	walletFileLock *flock.Flock
 	keymanagerKind v2keymanager.Kind
 }
 
-// CreateWallet given a set of configuration options, will leverage
-// create and write a new wallet to disk for a Prysm validator.
-func CreateWallet(
-	ctx context.Context,
-	cfg *WalletConfig,
-) (*Wallet, error) {
-	// Check if the user has a wallet at the specified path.
-	// If a user does not have a wallet, we instantiate one
-	// based on specified options.
-	walletExists, err := fileutil.HasDir(cfg.WalletDir)
+// WalletExists check if a wallet at the specified directory
+// exists and has valid information in it.
+func WalletExists(walletDir string) (bool, error) {
+	ok, err := fileutil.HasDir(walletDir)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if wallet exists")
+		return false, errors.Wrap(err, "could not parse wallet directory")
 	}
-	if walletExists {
-		isEmptyWallet, err := isEmptyWallet(cfg.WalletDir)
+	if ok {
+		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not check if wallet has files")
+			return false, errors.Wrap(err, "could not check if wallet has files")
 		}
-		if !isEmptyWallet {
-			return nil, ErrWalletExists
+		if isEmptyWallet {
+			return false, ErrNoWalletFound
 		}
+		return true, nil
 	}
-	accountsPath := filepath.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
-	return &Wallet{
-		accountsPath:   accountsPath,
-		keymanagerKind: cfg.KeymanagerKind,
-		walletDir:      cfg.WalletDir,
-	}, nil
+	return false, ErrNoWalletFound
 }
 
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	ok, err := fileutil.HasDir(cfg.WalletDir)
+	exists, err := WalletExists(cfg.WalletDir)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not parse wallet directory")
+		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
-	if ok {
-		isEmptyWallet, err := isEmptyWallet(cfg.WalletDir)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not check if wallet has files")
-		}
-		if isEmptyWallet {
-			return nil, ErrNoWalletFound
-		}
-	} else {
+	if !exists {
 		return nil, ErrNoWalletFound
 	}
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
@@ -120,6 +124,7 @@ func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 		walletDir:      cfg.WalletDir,
 		accountsPath:   walletPath,
 		keymanagerKind: keymanagerKind,
+		walletPassword: cfg.WalletPassword,
 	}, nil
 }
 
@@ -194,29 +199,6 @@ func (w *Wallet) InitializeKeymanager(
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)
 	}
 	return keymanager, nil
-}
-
-// Exists returns if the wallet provided exists or not.
-func (w *Wallet) Exists() (bool, error) {
-	accountsDir, err := os.Open(w.AccountsDir())
-	if err != nil {
-		return false, err
-	}
-	defer func() {
-		if err := accountsDir.Close(); err != nil {
-			log.WithField(
-				"directory", w.AccountsDir(),
-			).Errorf("Could not close accounts directory: %v", err)
-		}
-	}()
-
-	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
-	if err != nil {
-		return false, errors.Wrapf(err, "could not read files in directory: %s", w.AccountsDir())
-	}
-	// There are 2 files for derived and non-derived wallets if a wallet is properly setup.
-	walletExists := len(list) >= 2
-	return walletExists, nil
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
@@ -371,28 +353,29 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 	return 0, errors.New("no keymanager folder, 'direct', 'remote', nor 'derived' found in wallet path")
 }
 
-func openOrCreateWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
-	directory := cliCtx.String(flags.WalletDirFlag.Name)
-	ok, err := fileutil.HasDir(directory)
+func openWalletOrElse(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
+		return nil, err
 	}
-	if ok {
-		isEmptyWallet, err := isEmptyWallet(directory)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not check if wallet has files")
-		}
-		if !isEmptyWallet {
-			wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-				WalletDir: directory,
-			})
-			if err != nil {
-				return nil, errors.Wrap(err, "could not open wallet")
-			}
-			return wallet, nil
-		}
+	walletExists, err := WalletExists(walletDir)
+	if err != nil && !errors.Is(err, ErrNoWalletFound) {
+		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
-	return creationFunc(cliCtx)
+	if !walletExists {
+		return otherwise(cliCtx)
+	}
+	walletPassword, err := inputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		walletPasswordPromptText,
+		noConfirmPass,
+		validateExistingPass,
+	)
+	return OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir:      walletDir,
+		WalletPassword: walletPassword,
+	})
 }
 
 // isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.
@@ -425,4 +408,49 @@ func isEmptyWallet(name string) (bool, error) {
 	}
 
 	return true, err
+}
+
+func inputPassword(
+	cliCtx *cli.Context,
+	passwordFileFlag *cli.StringFlag,
+	promptText string,
+	confirmPassword passwordConfirm,
+	passwordValidator func(input string) error,
+) (string, error) {
+	if cliCtx.IsSet(passwordFileFlag.Name) {
+		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
+		data, err := fileutil.ReadFileAsBytes(passwordFilePathInput)
+		if err != nil {
+			return "", errors.Wrap(err, "could not read file as bytes")
+		}
+		enteredPassword := strings.TrimRight(string(data), "\r\n")
+		if err := passwordValidator(enteredPassword); err != nil {
+			return "", errors.Wrap(err, "password did not pass validation")
+		}
+		return enteredPassword, nil
+	}
+	var hasValidPassword bool
+	var walletPassword string
+	var err error
+	for !hasValidPassword {
+		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
+		if err != nil {
+			return "", fmt.Errorf("could not read account password: %v", err)
+		}
+
+		if confirmPassword == confirmPass {
+			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
+			if err != nil {
+				return "", fmt.Errorf("could not read password confirmation: %v", err)
+			}
+			if walletPassword != passwordConfirmation {
+				log.Error("Passwords do not match")
+				continue
+			}
+			hasValidPassword = true
+		} else {
+			return walletPassword, nil
+		}
+	}
+	return walletPassword, nil
 }

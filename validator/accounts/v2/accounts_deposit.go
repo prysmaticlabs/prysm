@@ -22,17 +22,12 @@ import (
 // SendDepositCLI transaction for user specified accounts via an interactive
 // CLI process or via command-line flags.
 func SendDepositCLI(cliCtx *cli.Context) error {
-	// Read the wallet from the specified path.
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return err
-	}
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir: walletDir,
+	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, nothing to deposit",
+		)
 	})
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
-	} else if err != nil {
+	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(

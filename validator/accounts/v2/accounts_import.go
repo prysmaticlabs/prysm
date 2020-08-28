@@ -74,20 +74,22 @@ type ImportAccountsConfig struct {
 func ImportAccountsCLI(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	au := aurora.NewAurora(true)
-	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
-		w, err := CreateWallet(cliCtx.Context, &WalletConfig{
-			KeymanagerKind: v2keymanager.Direct,
-		})
-		if err != nil && !errors.Is(err, ErrWalletExists) {
-			return nil, errors.Wrap(err, "could not create new wallet")
-		}
-		if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-			return nil, errors.Wrap(err, "could not create keymanager")
-		}
-		log.WithField("wallet-path", w.walletDir).Info(
-			"Successfully created new wallet",
-		)
-		return w, err
+	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		//w, err := CreateWallet(cliCtx.Context, &WalletConfig{
+		//	KeymanagerKind: v2keymanager.Direct,
+		//})
+		//if err != nil && !errors.Is(err, ErrWalletExists) {
+		//	return nil, errors.Wrap(err, "could not create new wallet")
+		//}
+		//if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
+		//	return nil, errors.Wrap(err, "could not create keymanager")
+		//}
+		//log.WithField("wallet-path", w.walletDir).Info(
+		//	"Successfully created new wallet",
+		//)
+		//CreateWalletWithKeymanager()
+		//return w, err
+		return nil, nil
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")

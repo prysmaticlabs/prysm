@@ -4,22 +4,20 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/urfave/cli/v2"
+
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // EditWalletConfigurationCLI for a user's on-disk wallet, being able to change
 // things such as remote gRPC credentials for remote signing, derivation paths
 // for HD wallets, and more.
 func EditWalletConfigurationCLI(cliCtx *cli.Context) error {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return err
-	}
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir: walletDir,
+	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, no configuration to edit",
+		)
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")

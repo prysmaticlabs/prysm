@@ -29,7 +29,7 @@ var WalletCommands = &cli.Command{
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if _, err := CreateWalletCLI(cliCtx); err != nil {
+				if _, err := CreateAndSaveWalletCLI(cliCtx); err != nil {
 					log.Fatalf("Could not create a wallet: %v", err)
 				}
 				return nil
