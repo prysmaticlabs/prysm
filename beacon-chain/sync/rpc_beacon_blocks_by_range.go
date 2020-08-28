@@ -36,6 +36,12 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	if !ok {
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
+	if err := s.validateRangeRequest(m); err != nil {
+		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
+		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		traceutil.AnnotateError(span, err)
+		return err
+	}
 
 	// The initial count for the first batch to be returned back.
 	count := m.Count
@@ -63,16 +69,15 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
 		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
-	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
 	for startSlot <= endReqSlot {
 		if err := s.rateLimiter.validateRequest(stream, allowedBlocksPerSecond); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 
-		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > maxRequestBlocks {
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, stepError, stream)
-			err := errors.New(stepError)
+		if endSlot-startSlot > rangeLimit {
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, reqError, stream)
+			err := errors.New(reqError)
 			traceutil.AnnotateError(span, err)
 			return err
 		}
@@ -174,6 +179,37 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
+	startSlot := r.StartSlot
+	count := r.Count
+	step := r.Step
+
+	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
+	// Add a buffer for possible large range requests from nodes syncing close to the
+	// head of the chain.
+	buffer := rangeLimit * 2
+	highestExpectedSlot := s.chain.CurrentSlot() + uint64(buffer)
+
+	// Ensure all request params are within appropriate bounds
+	if count == 0 || count > maxRequestBlocks {
+		return errors.New(reqError)
+	}
+
+	if step == 0 || step > rangeLimit {
+		return errors.New(reqError)
+	}
+
+	if startSlot > highestExpectedSlot {
+		return errors.New(reqError)
+	}
+
+	endSlot := startSlot + (step * (count - 1))
+	if endSlot-startSlot > rangeLimit {
+		return errors.New(reqError)
 	}
 	return nil
 }
