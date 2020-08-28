@@ -1,7 +1,6 @@
 package direct
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,13 +9,14 @@ import (
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
+	"github.com/schollz/progressbar/v3"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/schollz/progressbar/v3"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 // ImportKeystores into the direct keymanager from an external source.
@@ -65,7 +65,7 @@ func (dr *Keymanager) ImportKeystores(
 		}
 	}
 	// Write the accounts to disk into a single keystore.
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
 		return err

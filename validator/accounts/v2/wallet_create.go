@@ -1,15 +1,14 @@
 package v2
 
 import (
-	"context"
-
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // CreateWallet from user input with a desired keymanager. If a
@@ -65,18 +64,19 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	defaultConfig := direct.DefaultConfig()
-	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), defaultConfig)
+	ctx := cliCtx.Context
+	keymanagerConfig, err := direct.MarshalConfigFile(ctx, defaultConfig)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
-	if err := wallet.WriteKeymanagerConfigToDisk(context.Background(), keymanagerConfig); err != nil {
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
 	return nil
 }
 
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -100,7 +100,7 @@ func createRemoteKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	if err != nil {
 		return errors.Wrap(err, "could not input remote keymanager config")
 	}
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	keymanagerConfig, err := remote.MarshalConfigFile(ctx, conf)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal config file")

@@ -196,7 +196,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
 		}
-		sig, err = v.keyManager.Sign(pubKey, blockRoot)
+		sig, err = v.keyManager.Sign(ctx, pubKey, blockRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}

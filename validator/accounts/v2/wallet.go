@@ -148,7 +148,7 @@ func (w *Wallet) InitializeKeymanager(
 	cliCtx *cli.Context,
 	skipMnemonicConfirm bool,
 ) (v2keymanager.IKeymanager, error) {
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager config")

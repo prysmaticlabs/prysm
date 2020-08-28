@@ -600,6 +600,7 @@ func safelyHandlePanic() {
 
 func (s *Service) handleETH1FollowDistance() {
 	defer safelyHandlePanic()
+	ctx := context.TODO()
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
@@ -609,7 +610,7 @@ func (s *Service) handleETH1FollowDistance() {
 		log.Warn("eth1 client is not syncing")
 	}
 	if !s.chainStartData.Chainstarted {
-		if err := s.checkBlockNumberForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
+		if err := s.checkBlockNumberForChainStart(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
 			return
@@ -621,7 +622,7 @@ func (s *Service) handleETH1FollowDistance() {
 	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
 		return
 	}
-	if err := s.requestBatchedLogs(context.Background()); err != nil {
+	if err := s.requestBatchedLogs(ctx); err != nil {
 		s.runError = err
 		log.Error(err)
 		return
@@ -640,6 +641,7 @@ func (s *Service) initPOWService() {
 		case <-s.ctx.Done():
 			return
 		default:
+			ctx := context.TODO()
 			err := s.initDataFromContract()
 			if err != nil {
 				log.Errorf("Unable to retrieve data from deposit contract %v", err)
@@ -647,7 +649,7 @@ func (s *Service) initPOWService() {
 				continue
 			}
 
-			header, err := s.eth1DataFetcher.HeaderByNumber(context.Background(), nil)
+			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 				s.retryETH1Node(err)
@@ -658,7 +660,7 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
 
-			if err := s.processPastLogs(context.Background()); err != nil {
+			if err := s.processPastLogs(ctx); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
 				s.retryETH1Node(err)
 				continue

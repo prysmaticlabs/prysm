@@ -1,23 +1,23 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 )
 
 // ExitAccounts performs a voluntary exit on one or more accounts.
 func ExitAccounts(cliCtx *cli.Context, r io.Reader) error {
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	wallet, err := OpenWallet(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")

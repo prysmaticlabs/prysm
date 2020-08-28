@@ -1,18 +1,18 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -20,7 +20,7 @@ var log = logrus.WithField("prefix", "accounts-v2")
 // CreateAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
 func CreateAccount(cliCtx *cli.Context) error {
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	wallet, err := openOrCreateWallet(cliCtx, CreateWallet)
 	if err != nil {
 		return err

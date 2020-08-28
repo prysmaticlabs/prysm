@@ -135,7 +135,7 @@ func NewKeymanager(
 
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	var encodedSeedFile []byte
 	if !fileutil.FileExists(filepath.Join(wallet.AccountsDir(), EncryptedSeedFileName)) {
 		seedConfig, err := initializeWalletSeedFile(accountsPassword, skipMnemonicConfirm)
@@ -234,7 +234,7 @@ func KeymanagerForPhrase(
 
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	var encodedSeedFile []byte
 	seedConfig, err := seedFileFromMnemonic(mnemonic, accountsPassword)
 	if err != nil {

@@ -1,6 +1,7 @@
 package v1_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -41,7 +42,7 @@ func TestDirectListValidatingKeysMultiple(t *testing.T) {
 func TestSignNoSuchKey(t *testing.T) {
 	sks := make([]bls.SecretKey, 0)
 	direct := keymanager.NewDirect(sks)
-	_, err := direct.Sign([48]byte{}, [32]byte{})
+	_, err := direct.Sign(context.Background(), [48]byte{}, [32]byte{})
 	assert.ErrorContains(t, keymanager.ErrNoSuchKey.Error(), err)
 }
 
@@ -52,7 +53,7 @@ func TestSign(t *testing.T) {
 
 	pubKey := bytesutil.ToBytes48(sks[0].PublicKey().Marshal())
 	msg := [32]byte{}
-	sig, err := direct.Sign(pubKey, msg)
+	sig, err := direct.Sign(context.Background(), pubKey, msg)
 	require.NoError(t, err)
 	require.Equal(t, true, sig.Verify(sks[0].PublicKey(), bytesutil.FromBytes32(msg)), "Failed to verify generated signature")
 }

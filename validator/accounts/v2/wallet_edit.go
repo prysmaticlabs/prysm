@@ -1,20 +1,20 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // EditWalletConfiguration for a user's on-disk wallet, being able to change
 // things such as remote gRPC credentials for remote signing, derivation paths
 // for HD wallets, and more.
 func EditWalletConfiguration(cliCtx *cli.Context) error {
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	wallet, err := OpenWallet(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")

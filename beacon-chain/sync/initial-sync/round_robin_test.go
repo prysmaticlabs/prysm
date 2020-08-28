@@ -329,7 +329,7 @@ func TestService_processBlock(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewInitialSync(&Config{
+	s := NewInitialSync(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -388,7 +388,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewInitialSync(&Config{
+	s := NewInitialSync(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{

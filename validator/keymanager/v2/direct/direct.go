@@ -358,7 +358,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 }
 
 func (dr *Keymanager) initializeSecretKeysCache(cliCtx *cli.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), AccountsPath, accountsKeystoreFileName)
+	encoded, err := dr.wallet.ReadFileAtPath(cliCtx.Context, AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.
 		return nil

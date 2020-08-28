@@ -90,7 +90,7 @@ type Service struct {
 // connections are made until the Start function is called during the service registry startup.
 func NewService(cfg *Config) (*Service, error) {
 	var err error
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.TODO())
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cacheNumCounters,

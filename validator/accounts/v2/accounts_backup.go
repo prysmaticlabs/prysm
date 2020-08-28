@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -22,7 +23,6 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -35,7 +35,7 @@ const (
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other eth2 clients.
 func BackupAccounts(cliCtx *cli.Context) error {
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",

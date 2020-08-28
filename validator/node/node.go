@@ -4,7 +4,6 @@
 package node
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -101,7 +100,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 				log.Fatalf("Could not open wallet: %v", err)
 			}
 			ValidatorClient.wallet = wallet
-			ctx := context.Background()
+			ctx := cliCtx.Context
 			keyManagerV2, err = wallet.InitializeKeymanager(
 				cliCtx, false, /* skipMnemonicConfirm */
 			)
@@ -258,7 +257,7 @@ func (s *ValidatorClient) registerClientService(
 	if err := s.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
-	v, err := client.NewValidatorService(context.Background(), &client.Config{
+	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
@@ -291,7 +290,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewSlashingProtectionService(context.Background(), &slashing_protection.Config{
+	sp, err := slashing_protection.NewSlashingProtectionService(s.cliCtx.Context, &slashing_protection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
@@ -312,7 +311,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	}
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
-	server := rpc.NewServer(context.Background(), &rpc.Config{
+	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
 		ValDB:            s.db,
 		Host:             rpcHost,
 		Port:             fmt.Sprintf("%d", rpcPort),
@@ -330,7 +329,7 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := []string{"localhost"}
 	gatewaySrv := gateway.New(
-		context.Background(),
+		cliCtx.Context,
 		rpcAddr,
 		gatewayAddress,
 		allowedOrigins,
@@ -440,7 +439,7 @@ func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV1 v1.KeyMan
 	var pubKeys [][48]byte
 	var err error
 	if featureconfig.Get().EnableAccountsV2 {
-		pubKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
+		pubKeys, err = keyManagerV2.FetchValidatingPublicKeys(cliCtx.Context)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to obtain public keys for validation")
 		}

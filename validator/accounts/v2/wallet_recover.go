@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,13 +9,14 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/tyler-smith/go-bip39"
-	"github.com/tyler-smith/go-bip39/wordlists"
-	"github.com/urfave/cli/v2"
 )
 
 const phraseWordCount = 24
@@ -31,7 +31,7 @@ func RecoverWallet(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not create new wallet")
 	}
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")

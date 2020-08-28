@@ -1,23 +1,23 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/urfave/cli/v2"
 )
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccount(cliCtx *cli.Context) error {
-	ctx := context.Background()
+	ctx := cliCtx.Context
 	wallet, err := OpenWallet(cliCtx)
 	if errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")

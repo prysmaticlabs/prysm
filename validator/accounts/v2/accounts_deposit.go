@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +8,8 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/urfave/cli/v2"
 )
 
 // SendDeposit transaction for user specified accounts via an interactive
@@ -59,7 +59,7 @@ func SendDeposit(cliCtx *cli.Context) error {
 }
 
 func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.SendDepositConfig, error) {
-	pubKeysBytes, err := km.FetchValidatingPublicKeys(context.Background())
+	pubKeysBytes, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch validating public keys")
 	}

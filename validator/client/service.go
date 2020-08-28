@@ -223,7 +223,7 @@ func (v *validator) signObject(
 	if err != nil {
 		return nil, err
 	}
-	return v.keyManager.Sign(pubKey, root)
+	return v.keyManager.Sign(ctx, pubKey, root)
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
