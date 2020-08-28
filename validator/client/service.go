@@ -287,6 +287,7 @@ func ConstructDialOptions(
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
 		),
+		grpc.WithResolvers(&multipleEndpointsGrpcResolverBuilder{}),
 	}
 
 	dialOpts = append(dialOpts, extraOpts...)
