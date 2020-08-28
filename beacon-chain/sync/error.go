@@ -16,7 +16,7 @@ import (
 
 const genericError = "internal service error"
 const rateLimitedError = "rate limited"
-const stepError = "invalid range or step"
+const reqError = "invalid range, step or count"
 const seqError = "invalid sequence number provided"
 const deadlineError = "i/o deadline exceeded"
 
