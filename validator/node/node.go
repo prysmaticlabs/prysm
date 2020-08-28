@@ -108,7 +108,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			if err != nil {
 				log.Fatalf("Could not read existing keymanager for wallet: %v", err)
 			}
-			if err := wallet.LockConfigFile(ctx); err != nil {
+			if err := wallet.LockWalletConfigFile(ctx); err != nil {
 				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 			}
 		}

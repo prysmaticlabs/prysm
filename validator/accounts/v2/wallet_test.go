@@ -149,12 +149,12 @@ func Test_LockUnlockFile(t *testing.T) {
 	_, err = wallet.InitializeKeymanager(cliCtx, true)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	err = wallet.LockConfigFile(ctx)
+	err = wallet.LockWalletConfigFile(ctx)
 	assert.NoError(t, err)
-	err = wallet.LockConfigFile(ctx)
+	err = wallet.LockWalletConfigFile(ctx)
 	assert.ErrorContains(t, "failed to lock wallet config file", err)
 	unlock(t, wallet)
-	err = wallet.LockConfigFile(ctx)
+	err = wallet.LockWalletConfigFile(ctx)
 	assert.NoError(t, err)
 
 }
