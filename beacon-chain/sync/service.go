@@ -33,7 +33,7 @@ import (
 
 var _ = shared.Service(&Service{})
 
-const rangeLimit = 1000
+const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenAttSize = 10000
 const seenExitSize = 100
