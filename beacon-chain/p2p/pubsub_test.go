@@ -11,7 +11,7 @@ import (
 )
 
 func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
-	s, err := NewService(&Config{})
+	s, err := NewService(context.Background(), &Config{})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

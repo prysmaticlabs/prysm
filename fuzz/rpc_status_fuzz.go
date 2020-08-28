@@ -26,7 +26,7 @@ func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 
 	var err error
-	p, err = p2p.NewService(&p2p.Config{
+	p, err = p2p.NewService(context.Background(), &p2p.Config{
 		NoDiscovery: true,
 	})
 	if err != nil {

@@ -25,7 +25,7 @@ func (s *Service) prepareForkChoiceAtts() {
 	for {
 		select {
 		case <-ticker.C:
-			if err := s.batchForkChoiceAtts(context.TODO()); err != nil {
+			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
 		case <-s.ctx.Done():
