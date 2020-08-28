@@ -36,6 +36,11 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	if !ok {
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
+	if err := s.validateRangeRequest(m); err != nil {
+		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
+		traceutil.AnnotateError(span, err)
+		return err
+	}
 
 	// The initial count for the first batch to be returned back.
 	count := m.Count
@@ -71,8 +76,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 
 		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > maxRequestBlocks {
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, stepError, stream)
-			err := errors.New(stepError)
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, reqError, stream)
+			err := errors.New(reqError)
 			traceutil.AnnotateError(span, err)
 			return err
 		}
@@ -174,6 +179,30 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
+	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
+	currentSlot := s.chain.CurrentSlot()
+
+	// Ensure all request params are within appropriate bounds
+	if r.Count == 0 || r.Count > maxRequestBlocks {
+		return errors.New(reqError)
+	}
+
+	if r.StartSlot > currentSlot {
+		return errors.New(reqError)
+	}
+
+	if r.Step == 0 || r.Step > rangeLimit {
+		return errors.New(reqError)
+	}
+
+	endSlot := r.StartSlot + (r.Step * (r.Count - 1))
+	if endSlot > currentSlot {
+		return errors.New(reqError)
 	}
 	return nil
 }
