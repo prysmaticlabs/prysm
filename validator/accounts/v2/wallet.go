@@ -86,34 +86,33 @@ type Wallet struct {
 
 // WalletExists check if a wallet at the specified directory
 // exists and has valid information in it.
-func WalletExists(walletDir string) (bool, error) {
+func WalletExists(walletDir string) error {
 	ok, err := fileutil.HasDir(walletDir)
 	if err != nil {
-		return false, errors.Wrap(err, "could not parse wallet directory")
+		return errors.Wrap(err, "could not parse wallet directory")
 	}
 	if ok {
 		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
-			return false, errors.Wrap(err, "could not check if wallet has files")
+			return errors.Wrap(err, "could not check if wallet has files")
 		}
 		if isEmptyWallet {
-			return false, ErrNoWalletFound
+			return ErrNoWalletFound
 		}
-		return true, nil
+		return nil
 	}
-	return false, ErrNoWalletFound
+	return ErrNoWalletFound
 }
 
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	exists, err := WalletExists(cfg.WalletDir)
-	if err != nil {
+	if err := WalletExists(cfg.WalletDir); err != nil {
+		if errors.Is(err, ErrNoWalletFound) {
+			return nil, ErrNoWalletFound
+		}
 		return nil, errors.Wrap(err, "could not check if wallet exists")
-	}
-	if !exists {
-		return nil, ErrNoWalletFound
 	}
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
 	if err != nil {
@@ -358,12 +357,11 @@ func openWalletOrElse(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (
 	if err != nil {
 		return nil, err
 	}
-	walletExists, err := WalletExists(walletDir)
-	if err != nil && !errors.Is(err, ErrNoWalletFound) {
+	if err := WalletExists(walletDir); err != nil {
+		if errors.Is(err, ErrNoWalletFound) {
+			return otherwise(cliCtx)
+		}
 		return nil, errors.Wrap(err, "could not check if wallet exists")
-	}
-	if !walletExists {
-		return otherwise(cliCtx)
 	}
 	walletPassword, err := inputPassword(
 		cliCtx,

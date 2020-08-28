@@ -34,12 +34,10 @@ func CreateAndSaveWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
 }
 
 func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*Wallet, error) {
-	exists, err := WalletExists(cfg.WalletCfg.WalletDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not check if wallet exists")
-	}
-	if exists {
-		return nil, ErrWalletExists
+	if err := WalletExists(cfg.WalletCfg.WalletDir); err != nil {
+		if !errors.Is(err, ErrNoWalletFound) {
+			return nil, errors.Wrap(err, "could not check if wallet exists")
+		}
 	}
 	accountsPath := filepath.Join(cfg.WalletCfg.WalletDir, cfg.WalletCfg.KeymanagerKind.String())
 	w := &Wallet{
@@ -48,6 +46,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		walletDir:      cfg.WalletCfg.WalletDir,
 		walletPassword: cfg.WalletCfg.WalletPassword,
 	}
+	var err error
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
 		if err = createDirectKeymanagerWallet(ctx, w); err != nil {

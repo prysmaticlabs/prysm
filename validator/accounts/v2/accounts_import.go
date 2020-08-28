@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -65,8 +66,10 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 }
 
 type ImportAccountsConfig struct {
-	Wallet    *Wallet
-	Keystores []*v2keymanager.Keystore
+	Wallet            *Wallet
+	Keystores         []*v2keymanager.Keystore
+	AccountsPassword  string
+	UseWalletPassword bool
 }
 
 // ImportAccountsCLI can import external, EIP-2335 compliant keystore.json files as
@@ -92,7 +95,7 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 		log.WithField("wallet-path", w.walletDir).Info(
 			"Successfully created new wallet",
 		)
-		return nil, nil
+		return w, nil
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
@@ -149,9 +152,27 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 		keystoresImported = append(keystoresImported, keystore)
 	}
 
+	var accountsPassword string
+	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
+		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
+		data, err := ioutil.ReadFile(passwordFilePath)
+		if err != nil {
+			return err
+		}
+		accountsPassword = string(data)
+	} else {
+		accountsPassword, err = promptutil.PasswordPrompt(
+			"Enter the password for your imported accounts", promptutil.NotEmpty,
+		)
+		if err != nil {
+			return fmt.Errorf("could not read account password: %v", err)
+		}
+	}
+
 	if err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
-		Wallet:    wallet,
-		Keystores: keystoresImported,
+		Wallet:           wallet,
+		Keystores:        keystoresImported,
+		AccountsPassword: accountsPassword,
 	}); err != nil {
 		return err
 	}
@@ -186,8 +207,8 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 	return km.ImportKeystores(
 		ctx,
 		cfg.Keystores,
-		"",    // TODO: Use right pass.
-		false, /* do not use wallet password, but instead password provided by user */
+		cfg.AccountsPassword,
+		cfg.UseWalletPassword,
 	)
 }
 
@@ -227,8 +248,10 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
 	if err := ImportAccounts(
 		cliCtx.Context,
 		&ImportAccountsConfig{
-			Wallet:    wallet,
-			Keystores: []*v2keymanager.Keystore{keystore},
+			Wallet:            wallet,
+			AccountsPassword:  wallet.walletPassword,
+			UseWalletPassword: true,
+			Keystores:         []*v2keymanager.Keystore{keystore},
 		},
 	); err != nil {
 		return errors.Wrap(err, "could not import keystore into wallet")

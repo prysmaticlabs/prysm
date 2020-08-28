@@ -3,12 +3,13 @@ package v2
 import (
 	"context"
 	"flag"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -16,8 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
 )
 
 func TestCreateOrOpenWallet(t *testing.T) {
@@ -47,7 +46,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		log.WithField("wallet-path", w.walletDir).Info(
 			"Successfully created new wallet",
 		)
-		return nil, nil
+		return w, nil
 	}
 	createdWallet, err := openWalletOrElse(cliCtx, createDirectWallet)
 	require.NoError(t, err)
@@ -120,10 +119,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
-	walletDir := testutil.TempDir() + "/wallet"
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-	}()
+	walletDir, _, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",
@@ -136,12 +132,14 @@ func TestCreateWallet_Remote(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	keymanagerKind := "remote"
 	set.String(flags.WalletDirFlag.Name, walletDir, "")
+	set.String(flags.WalletPasswordFileFlag.Name, walletDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, keymanagerKind, "")
 	set.String(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr, "")
 	set.String(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath, "")
 	set.String(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath, "")
 	set.String(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath, "")
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, walletPasswordFile))
 	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanagerKind))
 	assert.NoError(t, set.Set(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr))
 	assert.NoError(t, set.Set(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath))
