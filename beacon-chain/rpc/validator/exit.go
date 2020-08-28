@@ -50,7 +50,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 
 	r, err := req.Exit.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get tree hash of exit: %v", err)
 	}
 
 	return &ethpb.ProposeExitResponse{
