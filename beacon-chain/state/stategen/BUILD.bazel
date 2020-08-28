@@ -4,12 +4,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "cold.go",
         "epoch_boundary_state_cache.go",
         "errors.go",
         "getter.go",
-        "hot.go",
         "log.go",
+        "metrics.go",
         "migrate.go",
         "replay.go",
         "service.go",
@@ -24,7 +23,6 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
@@ -42,10 +40,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "cold_test.go",
         "epoch_boundary_state_cache_test.go",
         "getter_test.go",
-        "hot_test.go",
         "migrate_test.go",
         "replay_test.go",
         "service_test.go",
@@ -57,7 +53,6 @@ go_test(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",

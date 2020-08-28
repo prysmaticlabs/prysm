@@ -16,7 +16,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +24,6 @@ import (
 )
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
-
 	p := p2ptest.NewTestP2P(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableDynamicCommitteeSubnets: true})
 	defer resetCfg()
@@ -36,7 +34,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	require.NoError(t, s.SetGenesisTime(uint64(time.Now().Unix())))
 	blk, err := testutil.GenerateFullBlock(s, sKeys, nil, 1)
 	require.NoError(t, err)
-	root, err := stateutil.BlockRoot(blk.Block)
+	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 
@@ -79,9 +77,11 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		Data: &eth.AttestationData{
 			Slot:            0,
 			BeaconBlockRoot: root[:],
-			Target:          &eth.Checkpoint{},
+			Target:          &eth.Checkpoint{Root: make([]byte, 32)},
+			Source:          &eth.Checkpoint{Root: make([]byte, 32)},
 		},
 		AggregationBits: bitfield.Bitlist{0b0101},
+		Signature:       make([]byte, 96),
 	}
 	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)

@@ -11,7 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -474,11 +477,15 @@ func (bs *Server) GetValidatorParticipation(
 			requestedEpoch,
 		)
 	}
-
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch+1))
+	// Calculate the end slot of the next epoch.
+	// Ex: requested epoch 1, this gets slot 95.
+	nextEpochEndSlot := helpers.StartSlot(requestedEpoch+2) - 1
+	requestedState, err := bs.StateGen.StateBySlot(ctx, nextEpochEndSlot)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get state")
 	}
+
+	requestedState, err = bs.appendNonFinalizedBlockAttsToState(ctx, requestedState, requestedEpoch)
 
 	v, b, err := precompute.New(ctx, requestedState)
 	if err != nil {
@@ -486,9 +493,8 @@ func (bs *Server) GetValidatorParticipation(
 	}
 	_, b, err = precompute.ProcessAttestations(ctx, requestedState, v, b)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not pre compute attestations")
+		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 	}
-
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
@@ -498,11 +504,58 @@ func (bs *Server) GetValidatorParticipation(
 		Epoch:     requestedEpoch,
 		Finalized: requestedEpoch <= headState.FinalizedCheckpointEpoch(),
 		Participation: &ethpb.ValidatorParticipation{
-			GlobalParticipationRate: float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
-			VotedEther:              b.PrevEpochTargetAttested,
-			EligibleEther:           b.ActivePrevEpoch,
+			// TODO(7130): Remove these three deprecated fields.
+			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
+			VotedEther:                       b.PrevEpochTargetAttested,
+			EligibleEther:                    b.ActivePrevEpoch,
+			CurrentEpochActiveGwei:           b.ActiveCurrentEpoch,
+			CurrentEpochAttestingGwei:        b.CurrentEpochAttested,
+			CurrentEpochTargetAttestingGwei:  b.CurrentEpochTargetAttested,
+			PreviousEpochActiveGwei:          b.ActivePrevEpoch,
+			PreviousEpochAttestingGwei:       b.PrevEpochAttested,
+			PreviousEpochTargetAttestingGwei: b.PrevEpochTargetAttested,
+			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
 		},
 	}, nil
+}
+
+// This appends non finalized block atts to state. To replay for a state, a node does not replay non canonical
+// nor finalized blocks. To count participation, this includes the attestations from the orphaned block to state.
+func (bs *Server) appendNonFinalizedBlockAttsToState(ctx context.Context, s *statetrie.BeaconState, e uint64) (*statetrie.BeaconState, error) {
+	start := helpers.StartSlot(e)
+	end := helpers.StartSlot(e + 1)
+	f := filters.NewFilter().SetStartSlot(start).SetEndSlot(end)
+	blks, err := bs.BeaconDB.Blocks(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+
+	nonFinalizedBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
+	for i := len(blks) - 1; i >= 0; i-- {
+		r, err := stateutil.BlockRoot(blks[i].Block)
+		if err != nil {
+			return nil, err
+		}
+		if !bs.BeaconDB.IsFinalizedBlock(ctx, r) {
+			nonFinalizedBlks = append(nonFinalizedBlks, blks[i])
+		}
+	}
+	for _, b := range nonFinalizedBlks {
+		for _, a := range b.Block.Body.Attestations {
+			if a.Data.Target.Epoch == e {
+				pa := &pb.PendingAttestation{
+					Data:            a.Data,
+					AggregationBits: a.AggregationBits,
+					InclusionDelay:  params.BeaconConfig().FarFutureEpoch,
+				}
+				if err := s.AppendPreviousEpochAttestations(pa); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return s, nil
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
