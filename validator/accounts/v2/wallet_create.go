@@ -26,7 +26,11 @@ type CreateWalletConfig struct {
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
 func CreateAndSaveWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
-	createWalletConfig, err := extractWalletCreationConfigFromCLI(cliCtx)
+	keymanagerKind, err := extractKeymanagerKindFromCLI(cliCtx)
+	if err != nil {
+		return nil, err
+	}
+	createWalletConfig, err := extractWalletCreationConfigFromCLI(cliCtx, keymanagerKind)
 	if err != nil {
 		return nil, err
 	}
@@ -77,11 +81,11 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	return w, nil
 }
 
-func extractWalletCreationConfigFromCLI(cliCtx *cli.Context) (*CreateWalletConfig, error) {
-	keymanagerKind, err := inputKeymanagerKind(cliCtx)
-	if err != nil {
-		return nil, err
-	}
+func extractKeymanagerKindFromCLI(cliCtx *cli.Context) (v2keymanager.Kind, error) {
+	return inputKeymanagerKind(cliCtx)
+}
+
+func extractWalletCreationConfigFromCLI(cliCtx *cli.Context, keymanagerKind v2keymanager.Kind) (*CreateWalletConfig, error) {
 	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err

@@ -14,7 +14,7 @@ import (
 // things such as remote gRPC credentials for remote signing, derivation paths
 // for HD wallets, and more.
 func EditWalletConfigurationCLI(cliCtx *cli.Context) error {
-	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no configuration to edit",
 		)

@@ -19,7 +19,7 @@ import (
 
 // ListAccountsCLI displays all available validator accounts in a Prysm wallet.
 func ListAccountsCLI(cliCtx *cli.Context) error {
-	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no accounts to list",
 		)

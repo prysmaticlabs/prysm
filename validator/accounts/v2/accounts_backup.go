@@ -34,7 +34,7 @@ const (
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other eth2 clients.
 func BackupAccountsCLI(cliCtx *cli.Context) error {
-	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",
 		)

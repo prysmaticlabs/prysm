@@ -17,7 +17,7 @@ import (
 
 // ExitAccounts performs a voluntary exit on one or more accounts.
 func ExitAccounts(cliCtx *cli.Context, r io.Reader) error {
-	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no accounts to exit",
 		)

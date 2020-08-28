@@ -22,7 +22,7 @@ import (
 // SendDepositCLI transaction for user specified accounts via an interactive
 // CLI process or via command-line flags.
 func SendDepositCLI(cliCtx *cli.Context) error {
-	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to deposit",
 		)

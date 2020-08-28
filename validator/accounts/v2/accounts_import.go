@@ -77,8 +77,8 @@ type ImportAccountsConfig struct {
 func ImportAccountsCLI(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	au := aurora.NewAurora(true)
-	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCLI(cliCtx)
+	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		cfg, err := extractWalletCreationConfigFromCLI(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
 		}

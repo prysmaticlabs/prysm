@@ -11,6 +11,9 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -19,8 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -102,6 +103,32 @@ func WalletExists(walletDir string) error {
 		return nil
 	}
 	return ErrNoWalletFound
+}
+
+// OpenWalletOrElse tries to open the wallet and if it fails or no wallet
+// is found, invokes a callback function.
+func OpenWalletOrElse(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
+	if err := WalletExists(cliCtx.String(flags.WalletDirFlag.Name)); err != nil {
+		if errors.Is(err, ErrNoWalletFound) {
+			return otherwise(cliCtx)
+		}
+		return nil, errors.Wrap(err, "could not check if wallet exists")
+	}
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return nil, err
+	}
+	walletPassword, err := inputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		walletPasswordPromptText,
+		noConfirmPass,
+		validateExistingPass,
+	)
+	return OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir:      walletDir,
+		WalletPassword: walletPassword,
+	})
 }
 
 // OpenWallet instantiates a wallet from a specified path. It checks the
@@ -350,30 +377,6 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 		}
 	}
 	return 0, errors.New("no keymanager folder, 'direct', 'remote', nor 'derived' found in wallet path")
-}
-
-func openWalletOrElse(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return nil, err
-	}
-	if err := WalletExists(walletDir); err != nil {
-		if errors.Is(err, ErrNoWalletFound) {
-			return otherwise(cliCtx)
-		}
-		return nil, errors.Wrap(err, "could not check if wallet exists")
-	}
-	walletPassword, err := inputPassword(
-		cliCtx,
-		flags.WalletPasswordFileFlag,
-		walletPasswordPromptText,
-		noConfirmPass,
-		validateExistingPass,
-	)
-	return OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir:      walletDir,
-		WalletPassword: walletPassword,
-	})
 }
 
 // isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.

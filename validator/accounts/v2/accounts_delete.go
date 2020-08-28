@@ -24,7 +24,7 @@ type DeleteAccountConfig struct {
 
 // DeleteAccountCLI deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccountCLI(cliCtx *cli.Context) error {
-	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to delete",
 		)

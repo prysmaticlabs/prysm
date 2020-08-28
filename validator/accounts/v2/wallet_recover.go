@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,15 +48,27 @@ func RecoverWalletCLI(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
-			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Derived,
-			WalletPassword: walletPassword,
-		},
-	})
+	if err := WalletExists(walletDir); err != nil {
+		if !errors.Is(err, ErrNoWalletFound) {
+			return errors.Wrap(err, "could not check if wallet exists")
+		}
+	}
+	accountsPath := filepath.Join(walletDir, v2keymanager.Derived.String())
+	wallet := &Wallet{
+		accountsPath:   accountsPath,
+		keymanagerKind: v2keymanager.Derived,
+		walletDir:      walletDir,
+		walletPassword: walletPassword,
+	}
+	keymanagerConfig, err := derived.MarshalOptionsFile(cliCtx.Context, derived.DefaultKeymanagerOpts())
 	if err != nil {
-		return errors.Wrap(err, "could not create new wallet")
+		return errors.Wrap(err, "could not marshal keymanager config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, keymanagerConfig); err != nil {
+		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
