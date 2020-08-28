@@ -38,6 +38,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	if err := s.validateRangeRequest(m); err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
+		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -201,6 +202,9 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 
 	endSlot := r.StartSlot + (r.Step * (r.Count - 1))
 	if endSlot > currentSlot {
+		return errors.New(reqError)
+	}
+	if endSlot-r.StartSlot > rangeLimit {
 		return errors.New(reqError)
 	}
 	return nil

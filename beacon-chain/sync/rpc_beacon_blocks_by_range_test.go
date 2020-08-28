@@ -422,6 +422,15 @@ func TestValidateRangeRequests(t *testing.T) {
 			errorToLog:    "validation did not fail with bad end slot",
 		},
 		{
+			name: "Exceed Range Limit",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Step:  3,
+				Count: uint64(slotsSinceGenesis / 2),
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad range",
+		},
+		{
 			name: "Valid Request",
 			req: &pb.BeaconBlocksByRangeRequest{
 				Step:      1,
