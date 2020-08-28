@@ -68,7 +68,7 @@ func TestSub(t *testing.T) {
 
 	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
-	expectedRoot, err := req.HashTreeRoot()
+	expectedRoot, err := req.Exit.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedRoot[:], resp.ExitRoot)
 
