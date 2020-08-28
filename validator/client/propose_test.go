@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -75,6 +74,20 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 	require.LogsContain(t, hook, "Failed to sign randao reveal")
+}
+
+func TestProposeBlock_DomainDataIsNil(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(nil /*response*/, nil)
+
+	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	require.LogsContain(t, hook, "could not get domain data")
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
@@ -379,6 +392,24 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
 }
 
+func TestProposeExit_DomainDataIsNil(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(nil /*response*/, nil)
+
+	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+
+	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, "could not get domain data", err)
+	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
+}
+
 func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
@@ -414,7 +445,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 	m.validatorClient.EXPECT().ProposeExit(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{}),
-	).Return(&types.Empty{}, nil /*error*/)
+	).Return(&ethpb.ProposeExitResponse{}, nil /*error*/)
 
 	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
 

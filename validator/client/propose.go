@@ -156,6 +156,9 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
+	if domain == nil {
+		return nil, errors.New("could not get domain data")
+	}
 
 	var randaoReveal bls.Signature
 	if featureconfig.Get().EnableAccountsV2 {
@@ -188,8 +191,11 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	var sig bls.Signature
+	if domain == nil {
+		return nil, errors.New("could not get domain data")
+	}
 
+	var sig bls.Signature
 	if featureconfig.Get().EnableAccountsV2 {
 		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
@@ -241,13 +247,16 @@ func (v *validator) signVoluntaryExit(ctx context.Context, pubKey [48]byte, exit
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	var sig bls.Signature
+	if domain == nil {
+		return nil, errors.New("could not get domain data")
+	}
 
 	exitRoot, err := helpers.ComputeSigningRoot(exit, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root")
 	}
 
+	var sig bls.Signature
 	if featureconfig.Get().EnableAccountsV2 {
 		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
 			PublicKey:       pubKey[:],
