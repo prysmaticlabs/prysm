@@ -11,7 +11,7 @@ import (
 type multipleEndpointsGrpcResolverBuilder struct{}
 
 func (*multipleEndpointsGrpcResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
-	r := &mulipleEndpointsGrpcResolver{
+	r := &multipleEndpointsGrpcResolver{
 		target: target,
 		cc:     cc,
 	}
@@ -23,12 +23,12 @@ func (*multipleEndpointsGrpcResolverBuilder) Scheme() string {
 	return resolver.GetDefaultScheme()
 }
 
-type mulipleEndpointsGrpcResolver struct {
+type multipleEndpointsGrpcResolver struct {
 	target resolver.Target
 	cc     resolver.ClientConn
 }
 
-func (r *mulipleEndpointsGrpcResolver) start() {
+func (r *multipleEndpointsGrpcResolver) start() {
 	endpoints := strings.Split(r.target.Endpoint, ",")
 	var addrs []resolver.Address
 	for _, endpoint := range endpoints {
@@ -37,6 +37,6 @@ func (r *mulipleEndpointsGrpcResolver) start() {
 	r.cc.UpdateState(resolver.State{Addresses: addrs})
 }
 
-func (*mulipleEndpointsGrpcResolver) ResolveNow(o resolver.ResolveNowOptions) {}
+func (*multipleEndpointsGrpcResolver) ResolveNow(o resolver.ResolveNowOptions) {}
 
-func (*mulipleEndpointsGrpcResolver) Close() {}
+func (*multipleEndpointsGrpcResolver) Close() {}
