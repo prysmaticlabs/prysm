@@ -29,7 +29,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		walletPasswordFile: walletPasswordFile,
 	})
 	createDirectWallet := func(cliCtx *cli.Context) (*Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCLI(cliCtx)
+		cfg, err := extractWalletCreationConfigFromCLI(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
 		}
