@@ -362,7 +362,7 @@ func TestValidateRangeRequests(t *testing.T) {
 		{
 			name: "Over limit Count",
 			req: &pb.BeaconBlocksByRangeRequest{
-				Count: params.BeaconNetworkConfig().MaxRequestBlocks + 100,
+				Count: params.BeaconNetworkConfig().MaxRequestBlocks + 1,
 				Step:  1,
 			},
 			expectedError: reqError,
@@ -371,7 +371,7 @@ func TestValidateRangeRequests(t *testing.T) {
 		{
 			name: "Correct Count",
 			req: &pb.BeaconBlocksByRangeRequest{
-				Count: params.BeaconNetworkConfig().MaxRequestBlocks - 100,
+				Count: params.BeaconNetworkConfig().MaxRequestBlocks - 1,
 				Step:  1,
 			},
 			errorToLog: "validation failed with correct count",
@@ -388,7 +388,7 @@ func TestValidateRangeRequests(t *testing.T) {
 		{
 			name: "Over limit Step",
 			req: &pb.BeaconBlocksByRangeRequest{
-				Step:  rangeLimit + 100,
+				Step:  rangeLimit + 1,
 				Count: 1,
 			},
 			expectedError: reqError,
@@ -397,7 +397,7 @@ func TestValidateRangeRequests(t *testing.T) {
 		{
 			name: "Correct Step",
 			req: &pb.BeaconBlocksByRangeRequest{
-				Step:  rangeLimit - 100,
+				Step:  rangeLimit - 1,
 				Count: 2,
 			},
 			errorToLog: "validation failed with correct step",
@@ -405,7 +405,7 @@ func TestValidateRangeRequests(t *testing.T) {
 		{
 			name: "Over Limit Start Slot",
 			req: &pb.BeaconBlocksByRangeRequest{
-				StartSlot: uint64(slotsSinceGenesis) + 1,
+				StartSlot: uint64(slotsSinceGenesis) + rangeLimit + 1,
 				Step:      1,
 				Count:     1,
 			},
@@ -416,7 +416,7 @@ func TestValidateRangeRequests(t *testing.T) {
 			name: "Over Limit End Slot",
 			req: &pb.BeaconBlocksByRangeRequest{
 				Step:  1,
-				Count: uint64(slotsSinceGenesis) + 10,
+				Count: params.BeaconNetworkConfig().MaxRequestBlocks + 1,
 			},
 			expectedError: reqError,
 			errorToLog:    "validation did not fail with bad end slot",
@@ -434,7 +434,7 @@ func TestValidateRangeRequests(t *testing.T) {
 			name: "Valid Request",
 			req: &pb.BeaconBlocksByRangeRequest{
 				Step:      1,
-				Count:     uint64(params.BeaconNetworkConfig().MaxRequestBlocks) - 100,
+				Count:     uint64(params.BeaconNetworkConfig().MaxRequestBlocks) - 1,
 				StartSlot: 50,
 			},
 			errorToLog: "validation failed with valid params",
