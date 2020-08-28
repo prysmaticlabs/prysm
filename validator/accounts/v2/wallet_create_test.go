@@ -29,7 +29,9 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		walletPasswordFile: walletPasswordFile,
 	})
 	createDirectWallet := func(cliCtx *cli.Context) (*Wallet, error) {
-		w, err := NewWallet(cliCtx, v2keymanager.Direct)
+		w, err := CreateWallet(cliCtx.Context, &WalletConfig{
+			KeymanagerKind: v2keymanager.Direct,
+		})
 		if err != nil && !errors.Is(err, ErrWalletExists) {
 			return nil, errors.Wrap(err, "could not create new wallet")
 		}
@@ -61,22 +63,23 @@ func TestCreateWallet_Direct(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWallet(cliCtx)
+	_, err := CreateWalletCLI(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	encoded, err := wallet.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	assert.NoError(t, err)
-	cfg, err := direct.UnmarshalConfigFile(encoded)
+	cfg, err := direct.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	wantedCfg := direct.DefaultConfig()
+	wantedCfg := direct.DefaultKeymanagerOpts()
 	assert.DeepEqual(t, wantedCfg, cfg)
 }
 
@@ -90,22 +93,24 @@ func TestCreateWallet_Derived(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWallet(cliCtx)
+	_, err := CreateWalletCLI(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
-	cfg, err := derived.UnmarshalConfigFile(encoded)
+	cfg, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	assert.DeepEqual(t, derived.DefaultConfig(), cfg)
+	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), cfg)
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
@@ -113,7 +118,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 	defer func() {
 		assert.NoError(t, os.RemoveAll(walletDir))
 	}()
-	wantCfg := &remote.Config{
+	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",
 			ClientKeyPath:  "/tmp/client.key",
@@ -139,18 +144,20 @@ func TestCreateWallet_Remote(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.
-	_, err := CreateWallet(cliCtx)
+	_, err := CreateWalletCLI(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
-	cfg, err := remote.UnmarshalConfigFile(encoded)
+	cfg, err := remote.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.

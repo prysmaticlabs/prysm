@@ -19,12 +19,14 @@ func TestEditWalletConfiguration(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Remote)
+	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
+		KeymanagerKind: v2keymanager.Remote,
+	})
 	require.NoError(t, err)
 	require.NoError(t, wallet.SaveWallet())
 	ctx := context.Background()
 
-	originalCfg := &remote.Config{
+	originalCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/a.crt",
 			ClientKeyPath:  "/tmp/b.key",
@@ -36,7 +38,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
-	wantCfg := &remote.Config{
+	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",
 			ClientKeyPath:  "/tmp/client.key",
@@ -58,12 +60,12 @@ func TestEditWalletConfiguration(t *testing.T) {
 	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
 	cliCtx = cli.NewContext(&app, set, nil)
 
-	err = EditWalletConfiguration(cliCtx)
+	err = EditWalletConfigurationCLI(cliCtx)
 	require.NoError(t, err)
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 	require.NoError(t, err)
 
-	cfg, err := remote.UnmarshalConfigFile(encoded)
+	cfg, err := remote.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, wantCfg, cfg)
 }
