@@ -405,7 +405,7 @@ func TestValidateRangeRequests(t *testing.T) {
 		{
 			name: "Over Limit Start Slot",
 			req: &pb.BeaconBlocksByRangeRequest{
-				StartSlot: uint64(slotsSinceGenesis) + rangeLimit + 1,
+				StartSlot: uint64(slotsSinceGenesis) + (2 * rangeLimit) + 1,
 				Step:      1,
 				Count:     1,
 			},
