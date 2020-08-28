@@ -13,13 +13,13 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -55,7 +55,7 @@ type Keymanager struct {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(cliCtx *cli.Context, maxMessageSize int, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, maxMessageSize int, cfg *Config) (*Keymanager, error) {
 	// Load the client certificates.
 	if cfg.RemoteCertificate == nil {
 		return nil, errors.New("certificates are required")

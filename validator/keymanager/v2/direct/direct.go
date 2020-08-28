@@ -14,6 +14,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -23,11 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
@@ -53,15 +53,15 @@ const (
 	confirmPass
 )
 
-// Config for a direct keymanager.
-type Config struct {
+// KeymanagerOpts for a direct keymanager.
+type KeymanagerOpts struct {
 	EIPVersion string `json:"direct_eip_version"`
 }
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet           iface.Wallet
-	cfg              *Config
+	opts             *KeymanagerOpts
 	keysCache        map[[48]byte]bls.SecretKey
 	accountsStore    *AccountStore
 	lock             sync.RWMutex
@@ -74,54 +74,64 @@ type AccountStore struct {
 	PublicKeys  [][]byte `json:"public_keys"`
 }
 
-// DefaultConfig for a direct keymanager implementation.
-func DefaultConfig() *Config {
-	return &Config{
+// DefaultKeymanagerOpts for a direct keymanager implementation.
+func DefaultKeymanagerOpts() *KeymanagerOpts {
+	return &KeymanagerOpts{
 		EIPVersion: eipVersion,
 	}
 }
 
+// SetupConfig includes configuration values for initializing
+// a keymanager, such as passwords, the wallet, and more.
+type SetupConfig struct {
+	Wallet              iface.Wallet
+	SkipMnemonicConfirm bool
+	WalletPassword      string
+	Mnemonic            string
+}
+
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx *cli.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:        wallet,
-		cfg:           cfg,
+		wallet:           cfg.Wallet,
+		accountsPassword: cfg.WalletPassword,
+		//cfg:           cfg,
 		keysCache:     make(map[[48]byte]bls.SecretKey),
 		accountsStore: &AccountStore{},
 	}
 
-	walletExists, err := wallet.Exists()
-	if err != nil {
-		return nil, err
-	}
-	var accountsPassword string
-	if !walletExists {
-		accountsPassword, err = inputPassword(
-			ctx,
-			flags.WalletPasswordFileFlag,
-			newWalletPasswordPromptText,
-			confirmPass,
-			promptutil.ValidatePasswordInput,
-		)
-	} else {
-		validateExistingPass := func(input string) error {
-			if input == "" {
-				return errors.New("password input cannot be empty")
-			}
-			return nil
-		}
-		accountsPassword, err = inputPassword(
-			ctx,
-			flags.WalletPasswordFileFlag,
-			walletPasswordPromptText,
-			noConfirmPass,
-			validateExistingPass,
-		)
-	}
-	if err != nil {
-		return nil, err
-	}
-	k.accountsPassword = accountsPassword
+	//walletExists, err := wallet.Exists()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//var accountsPassword string
+	//if !walletExists {
+	//	accountsPassword, err = inputPassword(
+	//		ctx,
+	//		flags.WalletPasswordFileFlag,
+	//		newWalletPasswordPromptText,
+	//		confirmPass,
+	//		promptutil.ValidatePasswordInput,
+	//	)
+	//} else {
+	//	validateExistingPass := func(input string) error {
+	//		if input == "" {
+	//			return errors.New("password input cannot be empty")
+	//		}
+	//		return nil
+	//	}
+	//	accountsPassword, err = inputPassword(
+	//		ctx,
+	//		flags.WalletPasswordFileFlag,
+	//		walletPasswordPromptText,
+	//		noConfirmPass,
+	//		validateExistingPass,
+	//	)
+	//}
+	//if err != nil {
+	//	return nil, err
+	//}
+	//k.accountsPassword = accountsPassword
 
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys
@@ -134,7 +144,7 @@ func NewKeymanager(ctx *cli.Context, wallet iface.Wallet, cfg *Config) (*Keymana
 }
 
 // NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
-func NewInteropKeymanager(ctx *cli.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
+func NewInteropKeymanager(ctx context.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
@@ -155,7 +165,7 @@ func NewInteropKeymanager(ctx *cli.Context, offset uint64, numValidatorKeys uint
 
 // UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
 // configuration file into the *Config{} struct.
-func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
+func UnmarshalConfigFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -165,7 +175,7 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	cfg := &Config{}
+	cfg := &KeymanagerOpts{}
 	if err := json.Unmarshal(enc, cfg); err != nil {
 		return nil, err
 	}
@@ -173,17 +183,17 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 }
 
 // MarshalConfigFile returns a marshaled configuration file for a keymanager.
-func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+func MarshalConfigFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
 // Config for the direct keymanager.
-func (dr *Keymanager) Config() *Config {
-	return dr.cfg
+func (dr *Keymanager) Config() *KeymanagerOpts {
+	return dr.opts
 }
 
 // String pretty-print of a direct keymanager configuration.
-func (c *Config) String() string {
+func (c *KeymanagerOpts) String() string {
 	au := aurora.NewAurora(true)
 	var b strings.Builder
 	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("EIP Version"), c.EIPVersion)
@@ -357,7 +367,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
-func (dr *Keymanager) initializeSecretKeysCache(cliCtx *cli.Context) error {
+func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.

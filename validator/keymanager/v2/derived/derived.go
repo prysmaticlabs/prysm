@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/urfave/cli/v2"
@@ -59,24 +58,6 @@ const (
 	confirmPass
 )
 
-// Config for a derived keymanager.
-type Config struct {
-	DerivedPathStructure string
-	DerivedEIPNumber     string
-}
-
-// Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
-type Keymanager struct {
-	wallet            iface.Wallet
-	cfg               *Config
-	mnemonicGenerator SeedPhraseFactory
-	keysCache         map[[48]byte]bls.SecretKey
-	lock              sync.RWMutex
-	seedCfg           *SeedConfig
-	seed              []byte
-	accountsPassword  string
-}
-
 // SeedConfig json file representation as a Go struct.
 type SeedConfig struct {
 	Crypto      map[string]interface{} `json:"crypto"`
@@ -86,9 +67,37 @@ type SeedConfig struct {
 	Name        string                 `json:"name"`
 }
 
-// DefaultConfig for a derived keymanager implementation.
-func DefaultConfig() *Config {
-	return &Config{
+// KeymanagerOpts defines options for the keymanager that
+// are stored to disk in the wallet.
+type KeymanagerOpts struct {
+	DerivedPathStructure string `json:"derived_path_structure"`
+	DerivedEIPNumber     string `json:"derived_eip_number"`
+}
+
+// SetupConfig includes configuration values for initializing
+// a keymanager, such as passwords, the wallet, and more.
+type SetupConfig struct {
+	Wallet              iface.Wallet
+	SkipMnemonicConfirm bool
+	WalletPassword      string
+	Mnemonic            string
+}
+
+// Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
+type Keymanager struct {
+	wallet            iface.Wallet
+	opts              *KeymanagerOpts
+	mnemonicGenerator SeedPhraseFactory
+	keysCache         map[[48]byte]bls.SecretKey
+	lock              sync.RWMutex
+	seedCfg           *SeedConfig
+	seed              []byte
+	accountsPassword  string
+}
+
+// DefaultKeymanagerOpts for a derived keymanager implementation.
+func DefaultKeymanagerOpts() *KeymanagerOpts {
+	return &KeymanagerOpts{
 		DerivedPathStructure: "m / purpose / coin_type / account_index / withdrawal_key / validating_key",
 		DerivedEIPNumber:     EIPVersion,
 	}
@@ -96,49 +105,47 @@ func DefaultConfig() *Config {
 
 // NewKeymanager instantiates a new derived keymanager from configuration options.
 func NewKeymanager(
-	cliCtx *cli.Context,
-	wallet iface.Wallet,
-	cfg *Config,
-	skipMnemonicConfirm bool,
+	ctx context.Context,
+	cfg *SetupConfig,
 ) (*Keymanager, error) {
-	walletExists, err := wallet.Exists()
-	if err != nil {
-		return nil, err
-	}
-	var accountsPassword string
-	// If the user does not have any accounts in their wallet, we ask them to
-	// set a new wallet password, which will be used for encrypting/decrypting
-	// their wallet secret to and from disk.
-	if !walletExists {
-		accountsPassword, err = inputPassword(
-			cliCtx,
-			flags.WalletPasswordFileFlag,
-			newWalletPasswordPromptText,
-			confirmPass,
-			promptutil.ValidatePasswordInput,
-		)
-	} else {
-		validateExistingPass := func(input string) error {
-			if input == "" {
-				return errors.New("password input cannot be empty")
-			}
-			return nil
-		}
-		accountsPassword, err = inputPassword(
-			cliCtx,
-			flags.WalletPasswordFileFlag,
-			walletPasswordPromptText,
-			noConfirmPass,
-			validateExistingPass,
-		)
-	}
-
-	// Check if the wallet seed file exists. If it does not, we initialize one
-	// by creating a new mnemonic and writing the encrypted file to disk.
-	ctx := context.Background()
+	//walletExists, err := wallet.Exists()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//var accountsPassword string
+	//// If the user does not have any accounts in their wallet, we ask them to
+	//// set a new wallet password, which will be used for encrypting/decrypting
+	//// their wallet secret to and from disk.
+	//if !walletExists {
+	//	accountsPassword, err = inputPassword(
+	//		cliCtx,
+	//		flags.WalletPasswordFileFlag,
+	//		newWalletPasswordPromptText,
+	//		confirmPass,
+	//		promptutil.ValidatePasswordInput,
+	//	)
+	//} else {
+	//	validateExistingPass := func(input string) error {
+	//		if input == "" {
+	//			return errors.New("password input cannot be empty")
+	//		}
+	//		return nil
+	//	}
+	//	accountsPassword, err = inputPassword(
+	//		cliCtx,
+	//		flags.WalletPasswordFileFlag,
+	//		walletPasswordPromptText,
+	//		noConfirmPass,
+	//		validateExistingPass,
+	//	)
+	//}
+	//
+	//// Check if the wallet seed file exists. If it does not, we initialize one
+	//// by creating a new mnemonic and writing the encrypted file to disk.
+	//ctx := context.Background()
 	var encodedSeedFile []byte
-	if !fileutil.FileExists(filepath.Join(wallet.AccountsDir(), EncryptedSeedFileName)) {
-		seedConfig, err := initializeWalletSeedFile(accountsPassword, skipMnemonicConfirm)
+	if !fileutil.FileExists(filepath.Join(cfg.Wallet.AccountsDir(), EncryptedSeedFileName)) {
+		seedConfig, err := initializeWalletSeedFile(cfg.WalletPassword, cfg.SkipMnemonicConfirm)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 		}
@@ -146,11 +153,11 @@ func NewKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not marshal encrypted wallet seed file")
 		}
-		if err = wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
+		if err = cfg.Wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
 			return nil, errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 		}
 	} else {
-		seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+		seedConfigFile, err := cfg.Wallet.ReadEncryptedSeedFromDisk(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
 		}
@@ -169,19 +176,19 @@ func NewKeymanager(
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, accountsPassword)
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.WalletPassword)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
 	k := &Keymanager{
-		wallet: wallet,
-		cfg:    cfg,
+		wallet: cfg.Wallet,
+		//cfg:    cfg,
 		mnemonicGenerator: &EnglishMnemonicGenerator{
-			skipMnemonicConfirm: skipMnemonicConfirm,
+			skipMnemonicConfirm: cfg.SkipMnemonicConfirm,
 		},
 		seedCfg:          seedConfig,
 		seed:             seed,
-		accountsPassword: accountsPassword,
+		accountsPassword: cfg.WalletPassword,
 		keysCache:        make(map[[48]byte]bls.SecretKey),
 	}
 	// We initialize a cache of public key -> secret keys
@@ -195,48 +202,46 @@ func NewKeymanager(
 
 // KeymanagerForPhrase instantiates a new derived keymanager from configuration and an existing mnemonic phrase provided.
 func KeymanagerForPhrase(
-	cliCtx *cli.Context,
-	wallet iface.Wallet,
-	cfg *Config,
-	mnemonic string,
+	ctx context.Context,
+	cfg *SetupConfig,
 ) (*Keymanager, error) {
-	walletExists, err := wallet.Exists()
-	if err != nil {
-		return nil, err
-	}
-	var accountsPassword string
-	// If the user does not have any accounts in their wallet, we ask them to
-	// set a new wallet password, which will be used for encrypting/decrypting
-	// their wallet secret to and from disk.
-	if !walletExists {
-		accountsPassword, err = inputPassword(
-			cliCtx,
-			flags.WalletPasswordFileFlag,
-			newWalletPasswordPromptText,
-			confirmPass,
-			promptutil.ValidatePasswordInput,
-		)
-	} else {
-		validateExistingPass := func(input string) error {
-			if input == "" {
-				return errors.New("password input cannot be empty")
-			}
-			return nil
-		}
-		accountsPassword, err = inputPassword(
-			cliCtx,
-			flags.WalletPasswordFileFlag,
-			walletPasswordPromptText,
-			noConfirmPass,
-			validateExistingPass,
-		)
-	}
-
-	// Check if the wallet seed file exists. If it does not, we initialize one
-	// by creating a new mnemonic and writing the encrypted file to disk.
-	ctx := context.Background()
+	//walletExists, err := wallet.Exists()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//var accountsPassword string
+	//// If the user does not have any accounts in their wallet, we ask them to
+	//// set a new wallet password, which will be used for encrypting/decrypting
+	//// their wallet secret to and from disk.
+	//if !walletExists {
+	//	accountsPassword, err = inputPassword(
+	//		cliCtx,
+	//		flags.WalletPasswordFileFlag,
+	//		newWalletPasswordPromptText,
+	//		confirmPass,
+	//		promptutil.ValidatePasswordInput,
+	//	)
+	//} else {
+	//	validateExistingPass := func(input string) error {
+	//		if input == "" {
+	//			return errors.New("password input cannot be empty")
+	//		}
+	//		return nil
+	//	}
+	//	accountsPassword, err = inputPassword(
+	//		cliCtx,
+	//		flags.WalletPasswordFileFlag,
+	//		walletPasswordPromptText,
+	//		noConfirmPass,
+	//		validateExistingPass,
+	//	)
+	//}
+	//
+	//// Check if the wallet seed file exists. If it does not, we initialize one
+	//// by creating a new mnemonic and writing the encrypted file to disk.
+	//ctx := context.Background()
 	var encodedSeedFile []byte
-	seedConfig, err := seedFileFromMnemonic(mnemonic, accountsPassword)
+	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.WalletPassword)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 	}
@@ -244,23 +249,23 @@ func KeymanagerForPhrase(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal encrypted wallet seed file")
 	}
-	if err = wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
+	if err = cfg.Wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
 		return nil, errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, accountsPassword)
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.WalletPassword)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
 	k := &Keymanager{
-		wallet: wallet,
-		cfg:    cfg,
+		wallet: cfg.Wallet,
+		//cfg:    cfg,
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: true,
 		},
 		seedCfg:          seedConfig,
 		seed:             seed,
-		accountsPassword: accountsPassword,
+		accountsPassword: cfg.WalletPassword,
 		keysCache:        make(map[[48]byte]bls.SecretKey),
 	}
 	// We initialize a cache of public key -> secret keys
@@ -274,7 +279,7 @@ func KeymanagerForPhrase(
 
 // UnmarshalConfigFile attempts to JSON unmarshal a derived keymanager
 // configuration file into the *Config{} struct.
-func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
+func UnmarshalConfigFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -284,7 +289,7 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	cfg := &Config{}
+	cfg := &KeymanagerOpts{}
 	if err := json.Unmarshal(enc, cfg); err != nil {
 		return nil, err
 	}
@@ -292,13 +297,13 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 }
 
 // MarshalConfigFile returns a marshaled configuration file for a keymanager.
-func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+func MarshalConfigFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
 // Config returns the derived keymanager configuration.
-func (dr *Keymanager) Config() *Config {
-	return dr.cfg
+func (dr *Keymanager) Config() *KeymanagerOpts {
+	return dr.opts
 }
 
 // NextAccountNumber managed by the derived keymanager.
