@@ -10,7 +10,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -325,7 +324,7 @@ func TestService_roundRobinSync(t *testing.T) {
 func TestService_processBlock(t *testing.T) {
 	beaconDB, _ := dbtest.SetupDB(t)
 	genesisBlk := testutil.NewBeaconBlock()
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
@@ -349,7 +348,7 @@ func TestService_processBlock(t *testing.T) {
 		blk1 := testutil.NewBeaconBlock()
 		blk1.Block.Slot = 1
 		blk1.Block.ParentRoot = genesisBlkRoot[:]
-		blk1Root, err := stateutil.BlockRoot(blk1.Block)
+		blk1Root, err := blk1.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blk2 := testutil.NewBeaconBlock()
 		blk2.Block.Slot = 2
@@ -384,7 +383,7 @@ func TestService_processBlock(t *testing.T) {
 func TestService_processBlockBatch(t *testing.T) {
 	beaconDB, _ := dbtest.SetupDB(t)
 	genesisBlk := testutil.NewBeaconBlock()
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
@@ -412,7 +411,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1 := testutil.NewBeaconBlock()
 			blk1.Block.Slot = uint64(i)
 			blk1.Block.ParentRoot = parentRoot[:]
-			blk1Root, err := stateutil.BlockRoot(blk1.Block)
+			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
 			err = beaconDB.SaveBlock(context.Background(), blk1)
 			require.NoError(t, err)
@@ -426,7 +425,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1 := testutil.NewBeaconBlock()
 			blk1.Block.Slot = uint64(i)
 			blk1.Block.ParentRoot = parentRoot[:]
-			blk1Root, err := stateutil.BlockRoot(blk1.Block)
+			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
 			err = beaconDB.SaveBlock(context.Background(), blk1)
 			require.NoError(t, err)

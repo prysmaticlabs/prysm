@@ -4,6 +4,7 @@ package blocks
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -13,7 +14,7 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: zeroHash,
-			StateRoot:  stateRoot,
+			StateRoot:  bytesutil.PadTo(stateRoot, 32),
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{

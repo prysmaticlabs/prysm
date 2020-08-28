@@ -2,11 +2,11 @@ package kv
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
@@ -14,9 +14,7 @@ func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 	db := setupDB(t, pubkeys)
 
 	historyForPubKeys, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
@@ -28,13 +26,7 @@ func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 		cleanAttHistoryForPubKeys[pubKey] = clean
 	}
 
-	if !reflect.DeepEqual(cleanAttHistoryForPubKeys, historyForPubKeys) {
-		t.Fatalf(
-			"Expected attestation history epoch bits to be empty, expected %v received %v",
-			cleanAttHistoryForPubKeys,
-			historyForPubKeys,
-		)
-	}
+	require.DeepEqual(t, cleanAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
 
 func TestSaveAttestationHistory_OK(t *testing.T) {
@@ -67,39 +59,22 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 	attestationHistory[pubKeys[0]] = history
 	attestationHistory[pubKeys[1]] = history2
 
-	if err := db.SaveAttestationHistoryForPubKeys(context.Background(), attestationHistory); err != nil {
-		t.Fatalf("Saving attestation history failed: %v", err)
-	}
+	require.NoError(t, db.SaveAttestationHistoryForPubKeys(context.Background(), attestationHistory), "Saving attestation history failed")
 	savedHistories, err := db.AttestationHistoryForPubKeys(context.Background(), pubKeys)
-	if err != nil {
-		t.Fatalf("Failed to get attestation history: %v", err)
-	}
+	require.NoError(t, err, "Failed to get attestation history")
 
-	if savedHistories == nil || !reflect.DeepEqual(attestationHistory, savedHistories) {
-		t.Fatalf("Expected DB to keep object the same, received: %v", history)
-	}
+	require.NotNil(t, savedHistories)
+	require.DeepEqual(t, attestationHistory, savedHistories, "Expected DB to keep object the same, received: %v", history)
 
 	savedHistory := savedHistories[pubKeys[0]]
-	if savedHistory.TargetToSource[2] != newMap[2] {
-		t.Fatalf("Expected target epoch %d to have the same marked source epoch, received %d", 2, savedHistory.TargetToSource[2])
-	}
-	if savedHistory.TargetToSource[1] != newMap[1] {
-		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d ", 1, savedHistory.TargetToSource[1])
-	}
-	if savedHistory.TargetToSource[0] != newMap[0] {
-		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", 0, savedHistory.TargetToSource[0])
-	}
+	require.Equal(t, newMap[2], savedHistory.TargetToSource[2], "Expected target epoch %d to have the same marked source epoch", 2)
+	require.Equal(t, newMap[1], savedHistory.TargetToSource[1], "Expected target epoch %d to have the same marked source epoch", 1)
+	require.Equal(t, newMap[0], savedHistory.TargetToSource[0], "Expected target epoch %d to have the same marked source epoch", 0)
 
 	savedHistory = savedHistories[pubKeys[1]]
-	if savedHistory.TargetToSource[3] != newMap2[3] {
-		t.Fatalf("Expected target epoch %d to have the same marked source epoch, received %d", 3, savedHistory.TargetToSource[3])
-	}
-	if savedHistory.TargetToSource[2] != newMap2[2] {
-		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d ", 2, savedHistory.TargetToSource[2])
-	}
-	if savedHistory.TargetToSource[1] != newMap2[1] {
-		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", 1, savedHistory.TargetToSource[1])
-	}
+	require.Equal(t, newMap2[3], savedHistory.TargetToSource[3], "Expected target epoch %d to have the same marked source epoch", 3)
+	require.Equal(t, newMap2[2], savedHistory.TargetToSource[2], "Expected target epoch %d to have the same marked source epoch", 2)
+	require.Equal(t, newMap2[1], savedHistory.TargetToSource[1], "Expected target epoch %d to have the same marked source epoch", 1)
 }
 
 func TestSaveAttestationHistory_Overwrites(t *testing.T) {
@@ -151,23 +126,16 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 	for _, tt := range tests {
 		attHistory := make(map[[48]byte]*slashpb.AttestationHistory)
 		attHistory[tt.pubkey] = tt.history
-		if err := db.SaveAttestationHistoryForPubKeys(context.Background(), attHistory); err != nil {
-			t.Fatalf("Saving attestation history failed: %v", err)
-		}
+		require.NoError(t, db.SaveAttestationHistoryForPubKeys(context.Background(), attHistory), "Saving attestation history failed")
 		histories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{tt.pubkey})
-		if err != nil {
-			t.Fatalf("Failed to get attestation history: %v", err)
-		}
+		require.NoError(t, err, "Failed to get attestation history")
 
 		history := histories[tt.pubkey]
-		if history == nil || !reflect.DeepEqual(history, tt.history) {
-			t.Fatalf("Expected DB to keep object the same, received: %v", history)
-		}
-		if history.TargetToSource[tt.epoch] != tt.epoch-1 {
-			t.Fatalf("Expected target epoch %d to be marked with correct source epoch %d", tt.epoch, history.TargetToSource[tt.epoch])
-		}
-		if history.TargetToSource[tt.epoch-1] != farFuture {
-			t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", tt.epoch-1, history.TargetToSource[tt.epoch-1])
-		}
+		require.NotNil(t, history)
+		require.DeepEqual(t, tt.history, history, "Expected DB to keep object the same")
+		require.Equal(t, tt.epoch-1, history.TargetToSource[tt.epoch],
+			"Expected target epoch %d to be marked with correct source epoch %d", tt.epoch, history.TargetToSource[tt.epoch])
+		require.Equal(t, farFuture, history.TargetToSource[tt.epoch-1],
+			"Expected target epoch %d to not be marked as attested for, received %d", tt.epoch-1, history.TargetToSource[tt.epoch-1])
 	}
 }

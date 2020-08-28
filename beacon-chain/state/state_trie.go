@@ -248,6 +248,25 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
+// FieldReferencesCount returns the reference count held by each field. This
+// also includes the field trie held by each field.
+func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
+	refMap := make(map[string]uint64)
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	for i, f := range b.sharedFieldReferences {
+		refMap[i.String()] = uint64(f.Refs())
+	}
+	for i, f := range b.stateFieldLeaves {
+		f.lock.RLock()
+		if len(f.fieldLayers) != 0 {
+			refMap[i.String()+"_trie"] = uint64(f.Refs())
+		}
+		f.lock.RUnlock()
+	}
+	return refMap
+}
+
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
 // the resulting layers of the trie based on the appropriate depth. This function
 // pads the leaves to a length of 32.

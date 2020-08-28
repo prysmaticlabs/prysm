@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -360,7 +359,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	// Lower slots should be at the end of the list.
 	for i := len(pendingNodes) - 1; i >= 0; i-- {
 		b := pendingNodes[i]
-		r, err := stateutil.BlockRoot(b)
+		r, err := b.HashTreeRoot()
 		if err != nil {
 			return err
 		}

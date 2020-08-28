@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -85,7 +84,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	}
 
 	b := testutil.NewBeaconBlock()
-	r32, err := stateutil.BlockRoot(b.Block)
+	r32, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b))
@@ -131,7 +130,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	}
 
 	b := testutil.NewBeaconBlock()
-	r32, err := stateutil.BlockRoot(b.Block)
+	r32, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, r.db.SaveBlock(context.Background(), b))
@@ -163,7 +162,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	sb := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), sb))
-	root, err := stateutil.BlockRoot(sb.Block)
+	root, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	aggBits := bitfield.NewBitlist(3)
@@ -221,7 +220,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	}
 
 	sb = testutil.NewBeaconBlock()
-	r32, err := stateutil.BlockRoot(sb.Block)
+	r32, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, r.db.SaveBlock(context.Background(), sb))
 	s := testutil.NewBeaconState()

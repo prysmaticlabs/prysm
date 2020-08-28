@@ -5,7 +5,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 )
 
@@ -20,7 +19,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 	}
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
-		attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
+		attDataRoot, err := att.Data.HashTreeRoot()
 		if err != nil {
 			return err
 		}

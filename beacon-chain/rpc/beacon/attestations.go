@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -351,7 +350,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 				bs.CollectedAttestationsBuffer <- atts
 			}
 		case att := <-bs.ReceivedAttestationsBuffer:
-			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
+			attDataRoot, err := att.Data.HashTreeRoot()
 			if err != nil {
 				log.Errorf("Could not hash tree root data: %v", err)
 				continue

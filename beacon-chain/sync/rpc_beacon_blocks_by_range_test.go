@@ -14,8 +14,8 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -96,7 +96,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	for i, j := endSlot, req.Count-1; i >= req.StartSlot; i -= req.Step {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.Slot = i
-		rt, err := stateutil.BlockRoot(blk.Block)
+		rt, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		expectedRoots[j] = rt
 		require.NoError(t, d.SaveBlock(context.Background(), blk))
@@ -123,7 +123,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 			if res.Block.Slot < prevSlot {
 				t.Errorf("Received block is unsorted with slot %d lower than previous slot %d", res.Block.Slot, prevSlot)
 			}
-			rt, err := stateutil.BlockRoot(res.Block)
+			rt, err := res.Block.HashTreeRoot()
 			require.NoError(t, err)
 			assert.Equal(t, expectedRoots[j], rt, "roots not equal")
 			prevSlot = res.Block.Slot
@@ -160,7 +160,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 
 		// Save genesis block
 		if i == 0 {
-			rt, err := stateutil.BlockRoot(blk.Block)
+			rt, err := blk.Block.HashTreeRoot()
 			require.NoError(t, err)
 			require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), rt))
 		}
@@ -336,4 +336,118 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		expectedCapacity := int64(0) // Whole capacity is used.
 		assert.Equal(t, expectedCapacity, remainingCapacity, "Unexpected rate limiting capacity")
 	})
+}
+
+func TestValidateRangeRequests(t *testing.T) {
+	slotsSinceGenesis := 1000
+	r := &Service{chain: &chainMock.ChainService{
+		Genesis: time.Now().Add(time.Second * time.Duration(-slotsSinceGenesis*int(params.BeaconConfig().SecondsPerSlot))),
+	}}
+
+	tests := []struct {
+		name          string
+		req           *pb.BeaconBlocksByRangeRequest
+		expectedError string
+		errorToLog    string
+	}{
+		{
+			name: "Zero Count",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Count: 0,
+				Step:  1,
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad count",
+		},
+		{
+			name: "Over limit Count",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Count: params.BeaconNetworkConfig().MaxRequestBlocks + 1,
+				Step:  1,
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad count",
+		},
+		{
+			name: "Correct Count",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Count: params.BeaconNetworkConfig().MaxRequestBlocks - 1,
+				Step:  1,
+			},
+			errorToLog: "validation failed with correct count",
+		},
+		{
+			name: "Zero Step",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Step:  0,
+				Count: 1,
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad step",
+		},
+		{
+			name: "Over limit Step",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Step:  rangeLimit + 1,
+				Count: 1,
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad step",
+		},
+		{
+			name: "Correct Step",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Step:  rangeLimit - 1,
+				Count: 2,
+			},
+			errorToLog: "validation failed with correct step",
+		},
+		{
+			name: "Over Limit Start Slot",
+			req: &pb.BeaconBlocksByRangeRequest{
+				StartSlot: uint64(slotsSinceGenesis) + (2 * rangeLimit) + 1,
+				Step:      1,
+				Count:     1,
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad start slot",
+		},
+		{
+			name: "Over Limit End Slot",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Step:  1,
+				Count: params.BeaconNetworkConfig().MaxRequestBlocks + 1,
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad end slot",
+		},
+		{
+			name: "Exceed Range Limit",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Step:  3,
+				Count: uint64(slotsSinceGenesis / 2),
+			},
+			expectedError: reqError,
+			errorToLog:    "validation did not fail with bad range",
+		},
+		{
+			name: "Valid Request",
+			req: &pb.BeaconBlocksByRangeRequest{
+				Step:      1,
+				Count:     uint64(params.BeaconNetworkConfig().MaxRequestBlocks) - 1,
+				StartSlot: 50,
+			},
+			errorToLog: "validation failed with valid params",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectedError != "" {
+				assert.ErrorContains(t, tt.expectedError, r.validateRangeRequest(tt.req), tt.errorToLog)
+			} else {
+				assert.NoError(t, r.validateRangeRequest(tt.req), tt.errorToLog)
+			}
+		})
+	}
 }

@@ -328,14 +328,9 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		require.NoError(t, state.SetSlot(tt.stateSlot))
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
-			if err == nil {
-				t.Error("verification succeeded when it was supposed to fail")
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("%d Failed to verify bitfield: %v", i, err)
-			continue
+			assert.NotNil(t, err, "Verification succeeded when it was supposed to fail")
+		} else {
+			assert.NoError(t, err, "%d Failed to verify bitfield: %v", i, err)
 		}
 	}
 }

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/mputil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestDouble(t *testing.T) {
@@ -52,25 +54,15 @@ func TestDouble(t *testing.T) {
 				return extent, nil
 			})
 			if test.err != nil {
-				if err == nil {
-					t.Fatalf("Missing expected error %v", test.err)
-				}
-				if test.err.Error() != err.Error() {
-					t.Fatalf("Unexpected error value: expected \"%v\", found \"%v\"", test.err, err)
-				}
+				assert.ErrorContains(t, test.err.Error(), err)
 			} else {
-				if err != nil {
-					t.Fatalf("Unexpected error %v", test.err)
-				}
-
+				require.NoError(t, err)
 				for _, result := range workerResults {
 					copy(outValues[result.Offset:], result.Extent.([]int))
 				}
 
 				for i := 0; i < test.inValues; i++ {
-					if outValues[i] != inValues[i]*2 {
-						t.Fatalf("Outvalue at %d mismatch: expected %d, found %d", i, inValues[i]*2, outValues[i])
-					}
+					require.Equal(t, inValues[i]*2, outValues[i], "Outvalue at %d mismatch", i)
 				}
 			}
 		})
@@ -88,9 +80,7 @@ func TestMutex(t *testing.T) {
 		}
 		return nil, nil
 	})
-	if err != nil {
-		t.Fatalf("Unexpected error %v", err)
-	}
+	require.NoError(t, err)
 
 	if val != totalRuns {
 		t.Fatalf("Unexpected value: expected \"%v\", found \"%v\"", totalRuns, val)

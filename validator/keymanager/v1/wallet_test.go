@@ -49,9 +49,7 @@ func wallet(t *testing.T, opts string) keymanager.KeyManager {
 func TestMultiplePassphrases(t *testing.T) {
 	path := SetupWallet(t)
 	defer func() {
-		if err := os.RemoveAll(path); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.RemoveAll(path))
 	}()
 	tests := []struct {
 		name     string
@@ -92,9 +90,7 @@ func TestMultiplePassphrases(t *testing.T) {
 func TestEnvPassphrases(t *testing.T) {
 	path := SetupWallet(t)
 	defer func() {
-		if err := os.RemoveAll(path); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.RemoveAll(path))
 	}()
 
 	err := os.Setenv("TESTENVPASSPHRASES_NEITHER", "neither")

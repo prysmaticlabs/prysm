@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestKV_BlockAttestation_CanSaveRetrieve(t *testing.T) {
@@ -18,9 +19,7 @@ func TestKV_BlockAttestation_CanSaveRetrieve(t *testing.T) {
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
-		if err := cache.SaveBlockAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveBlockAttestation(att))
 	}
 
 	returned := cache.BlockAttestations()
@@ -41,17 +40,11 @@ func TestKV_BlockAttestation_CanDelete(t *testing.T) {
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
-		if err := cache.SaveBlockAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, cache.SaveBlockAttestation(att))
 	}
 
-	if err := cache.DeleteBlockAttestation(att1); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.DeleteBlockAttestation(att3); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, cache.DeleteBlockAttestation(att1))
+	require.NoError(t, cache.DeleteBlockAttestation(att3))
 
 	returned := cache.BlockAttestations()
 	wanted := []*ethpb.Attestation{att2}
