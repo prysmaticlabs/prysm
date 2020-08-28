@@ -184,27 +184,31 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 }
 
 func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
+	startSlot := r.StartSlot
+	count := r.Count
+	step := r.Step
+
 	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
 	currentSlot := s.chain.CurrentSlot()
 
 	// Ensure all request params are within appropriate bounds
-	if r.Count == 0 || r.Count > maxRequestBlocks {
+	if count == 0 || count > maxRequestBlocks {
 		return errors.New(reqError)
 	}
 
-	if r.Step == 0 || r.Step > rangeLimit {
+	if step == 0 || step > rangeLimit {
 		return errors.New(reqError)
 	}
 
-	if r.StartSlot > currentSlot {
+	if startSlot > currentSlot {
 		return errors.New(reqError)
 	}
 
-	endSlot := r.StartSlot + (r.Step * (r.Count - 1))
+	endSlot := startSlot + (step * (count - 1))
 	if endSlot > currentSlot {
 		return errors.New(reqError)
 	}
-	if endSlot-r.StartSlot > rangeLimit {
+	if endSlot-startSlot > rangeLimit {
 		return errors.New(reqError)
 	}
 	return nil
