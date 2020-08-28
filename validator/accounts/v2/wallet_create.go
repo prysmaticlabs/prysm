@@ -2,7 +2,9 @@ package v2
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -119,4 +121,23 @@ func createRemoteKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
 	return nil
+}
+
+func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
+	if cliCtx.IsSet(flags.KeymanagerKindFlag.Name) {
+		return v2keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))
+	}
+	promptSelect := promptui.Select{
+		Label: "Select a type of wallet",
+		Items: []string{
+			keymanagerKindSelections[v2keymanager.Derived],
+			keymanagerKindSelections[v2keymanager.Direct],
+			keymanagerKindSelections[v2keymanager.Remote],
+		},
+	}
+	selection, _, err := promptSelect.Run()
+	if err != nil {
+		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", formatPromptError(err))
+	}
+	return v2keymanager.Kind(selection), nil
 }

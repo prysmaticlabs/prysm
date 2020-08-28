@@ -68,7 +68,6 @@ func CreateWallet(
 	ctx context.Context,
 	cfg *WalletConfig,
 ) (*Wallet, error) {
-	//walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
@@ -97,11 +96,6 @@ func CreateWallet(
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	// Read a wallet's directory from user input.
-	//walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	//if err != nil {
-	//	return nil, err
-	//}
 	ok, err := fileutil.HasDir(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse wallet directory")

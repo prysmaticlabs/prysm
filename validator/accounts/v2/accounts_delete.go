@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -14,7 +15,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
+// DeleteAccountConfig --
+type DeleteAccountConfig struct {
+	Wallet     *Wallet
+	Keymanager v2keymanager.IKeymanager
+	PublicKeys [][]byte
+}
+
+// DeleteAccountCLI deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccountCLI(cliCtx *cli.Context) error {
 	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
@@ -87,27 +95,37 @@ func DeleteAccountCLI(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	switch wallet.KeymanagerKind() {
+	if err := DeleteAccount(cliCtx.Context, &DeleteAccountConfig{
+		Wallet:     wallet,
+		Keymanager: keymanager,
+		PublicKeys: rawPublicKeys,
+	}); err != nil {
+		return err
+	}
+	log.WithField("publicKeys", allAccountStr).Info("Accounts deleted")
+	return nil
+}
+
+func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
+	switch cfg.Wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
 	case v2keymanager.Direct:
-		km, ok := keymanager.(*direct.Keymanager)
+		km, ok := cfg.Keymanager.(*direct.Keymanager)
 		if !ok {
 			return errors.New("not a direct keymanager")
 		}
-		if len(filteredPubKeys) == 1 {
+		if len(cfg.PublicKeys) == 1 {
 			log.Info("Deleting account...")
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		if err := km.DeleteAccounts(cliCtx.Context, rawPublicKeys); err != nil {
+		if err := km.DeleteAccounts(ctx, cfg.PublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	case v2keymanager.Derived:
 		return errors.New("cannot delete accounts for a derived keymanager")
 	default:
-		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
+		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}
-	log.WithField("publicKeys", allAccountStr).Info("Accounts deleted")
-	return nil
 }

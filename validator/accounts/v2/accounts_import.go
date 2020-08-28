@@ -64,6 +64,11 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 	fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 }
 
+type ImportAccountsConfig struct {
+	Wallet    *Wallet
+	Keystores []*v2keymanager.Keystore
+}
+
 // ImportAccountsCLI can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet.
 func ImportAccountsCLI(cliCtx *cli.Context) error {
@@ -87,34 +92,11 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
-	if wallet.KeymanagerKind() != v2keymanager.Direct {
-		return errors.New(
-			"only non-HD wallets can import accounts, try creating a new wallet with wallet-v2 create",
-		)
-	}
-	cfg, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
-	if err != nil {
-		return err
-	}
-	directOpts, err := direct.UnmarshalOptionsFile(cfg)
-	if err != nil {
-		return err
-	}
-	km, err := direct.NewKeymanager(cliCtx.Context, &direct.SetupConfig{
-		Wallet: wallet,
-		Opts:   directOpts,
-	})
-	if err != nil {
-		return err
-	}
-	if err := wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet")
-	}
 
 	// Check if the user wishes to import a one-off, private key directly
 	// as an account into the Prysm validator.
 	if cliCtx.IsSet(flags.ImportPrivateKeyFileFlag.Name) {
-		return importPrivateKeyAsAccount(cliCtx, wallet, km)
+		return importPrivateKeyAsAccount(cliCtx, wallet)
 	}
 
 	keysDir, err := inputDirectory(cliCtx, importKeysDirPromptText, flags.KeysDirFlag)
@@ -162,12 +144,11 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 		keystoresImported = append(keystoresImported, keystore)
 	}
 
-	if err := km.ImportKeystores(
-		cliCtx,
-		keystoresImported,
-		false, /* do not use wallet password, but instead password provided by user */
-	); err != nil {
-		return errors.Wrap(err, "could not import keystores")
+	if err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
+		Wallet:    wallet,
+		Keystores: keystoresImported,
+	}); err != nil {
+		return err
 	}
 	fmt.Printf(
 		"Successfully imported %s accounts, view all of them by running accounts-v2 list\n",
@@ -176,9 +157,41 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
+func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
+	if cfg.Wallet.KeymanagerKind() != v2keymanager.Direct {
+		return errors.New(
+			"only non-HD wallets can import accounts, try creating a new wallet with wallet-v2 create",
+		)
+	}
+	opts, err := cfg.Wallet.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		return err
+	}
+	directOpts, err := direct.UnmarshalOptionsFile(opts)
+	if err != nil {
+		return err
+	}
+	km, err := direct.NewKeymanager(ctx, &direct.SetupConfig{
+		Wallet: cfg.Wallet,
+		Opts:   directOpts,
+	})
+	if err != nil {
+		return err
+	}
+	if err := cfg.Wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet")
+	}
+	return km.ImportKeystores(
+		ctx,
+		cfg.Keystores,
+		"",    // TODO: Use right pass.
+		false, /* do not use wallet password, but instead password provided by user */
+	)
+}
+
 // Imports a one-off file containing a private key as a hex string into
 // the Prysm validator's accounts.
-func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet, km *direct.Keymanager) error {
+func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
 	privKeyFile := cliCtx.String(flags.ImportPrivateKeyFileFlag.Name)
 	fullPath, err := fileutil.ExpandPath(privKeyFile)
 	if err != nil {
@@ -205,14 +218,16 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet, km *direct.K
 	if err != nil {
 		return errors.Wrap(err, "not a valid BLS private key")
 	}
-	keystore, err := createKeystoreFromPrivateKey(privKey, km)
+	keystore, err := createKeystoreFromPrivateKey(privKey, "") // TODO: Use wallet password.
 	if err != nil {
 		return errors.Wrap(err, "could not encrypt private key into a keystore file")
 	}
-	if err := km.ImportKeystores(
-		cliCtx,
-		[]*v2keymanager.Keystore{keystore},
-		true, /* use the wallet password import the one-off private key */
+	if err := ImportAccounts(
+		cliCtx.Context,
+		&ImportAccountsConfig{
+			Wallet:    wallet,
+			Keystores: []*v2keymanager.Keystore{keystore},
+		},
 	); err != nil {
 		return errors.Wrap(err, "could not import keystore into wallet")
 	}
@@ -238,13 +253,13 @@ func readKeystoreFile(ctx context.Context, keystoreFilePath string) (*v2keymanag
 	return keystoreFile, nil
 }
 
-func createKeystoreFromPrivateKey(privKey bls.SecretKey, km *direct.Keymanager) (*v2keymanager.Keystore, error) {
+func createKeystoreFromPrivateKey(privKey bls.SecretKey, walletPassword string) (*v2keymanager.Keystore, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
-	cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), km.AccountsPassword())
+	cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), walletPassword)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
