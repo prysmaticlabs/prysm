@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ExitAccounts performs a voluntary exit on one or more accounts.

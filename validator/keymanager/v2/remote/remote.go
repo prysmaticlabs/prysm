@@ -46,6 +46,8 @@ type CertificateConfig struct {
 	CACertPath     string `json:"ca_crt_path"`
 }
 
+// SetupConfig includes configuration values for initializing
+// a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
 	Opts           *KeymanagerOpts
 	MaxMessageSize int

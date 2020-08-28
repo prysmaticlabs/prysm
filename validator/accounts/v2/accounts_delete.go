@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// DeleteAccountConfig --
+// DeleteAccountConfig specifies parameters to run the delete account function.
 type DeleteAccountConfig struct {
 	Wallet     *Wallet
 	Keymanager v2keymanager.IKeymanager
@@ -23,6 +23,7 @@ type DeleteAccountConfig struct {
 }
 
 // DeleteAccountCLI deletes the accounts that the user requests to be deleted from the wallet.
+// This function uses the CLI to extract necessary values.
 func DeleteAccountCLI(cliCtx *cli.Context) error {
 	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
@@ -101,6 +102,7 @@ func DeleteAccountCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
+// DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case v2keymanager.Remote:

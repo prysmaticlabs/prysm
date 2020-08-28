@@ -4,10 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/urfave/cli/v2"
 )
 
 // EditWalletConfigurationCLI for a user's on-disk wallet, being able to change

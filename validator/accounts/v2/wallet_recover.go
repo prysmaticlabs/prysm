@@ -22,13 +22,15 @@ import (
 
 const phraseWordCount = 24
 
+// RecoverWalletConfig to run the recover wallet function.
 type RecoverWalletConfig struct {
 	Wallet      *Wallet
 	Mnemonic    string
 	NumAccounts int64
 }
 
-// RecoverWalletCLI uses a menmonic seed phrase to recover a wallet into the path provided.
+// RecoverWalletCLI uses a menmonic seed phrase to recover a wallet into the path provided. This
+// uses the CLI to extract necessary values to run the function.
 func RecoverWalletCLI(cliCtx *cli.Context) error {
 	mnemonic, err := inputMnemonic(cliCtx)
 	if err != nil {
@@ -88,6 +90,7 @@ func RecoverWalletCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
+// RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
 func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) error {
 	km, err := derived.KeymanagerForPhrase(ctx, &derived.SetupConfig{
 		Opts:     derived.DefaultKeymanagerOpts(),

@@ -65,6 +65,7 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 	fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 }
 
+// ImportAccountsConfig defines values to run the import accounts function.
 type ImportAccountsConfig struct {
 	Wallet            *Wallet
 	Keystores         []*v2keymanager.Keystore
@@ -73,7 +74,8 @@ type ImportAccountsConfig struct {
 }
 
 // ImportAccountsCLI can import external, EIP-2335 compliant keystore.json files as
-// new accounts into the Prysm validator wallet.
+// new accounts into the Prysm validator wallet. This uses the CLI to extract
+// values necessary to run the function.
 func ImportAccountsCLI(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	au := aurora.NewAurora(true)
@@ -183,6 +185,8 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
+// ImportAccounts can import external, EIP-2335 compliant keystore.json files as
+// new accounts into the Prysm validator wallet.
 func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 	if cfg.Wallet.KeymanagerKind() != v2keymanager.Direct {
 		return errors.New(
@@ -241,7 +245,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
 	if err != nil {
 		return errors.Wrap(err, "not a valid BLS private key")
 	}
-	keystore, err := createKeystoreFromPrivateKey(privKey, "") // TODO: Use wallet password.
+	keystore, err := createKeystoreFromPrivateKey(privKey, wallet.walletPassword)
 	if err != nil {
 		return errors.Wrap(err, "could not encrypt private key into a keystore file")
 	}

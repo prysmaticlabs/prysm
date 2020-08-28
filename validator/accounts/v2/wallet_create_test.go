@@ -7,9 +7,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -17,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
 )
 
 func TestCreateOrOpenWallet(t *testing.T) {

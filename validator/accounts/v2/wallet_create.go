@@ -22,7 +22,7 @@ type CreateWalletConfig struct {
 	SkipMnemonicConfirm  bool
 }
 
-// CreateAndSaveWallet from user input with a desired keymanager. If a
+// CreateAndSaveWalletCLI from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
 func CreateAndSaveWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
@@ -37,6 +37,7 @@ func CreateAndSaveWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
 	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 }
 
+// Creates a wallet with a keymanager specifies in the config.
 func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*Wallet, error) {
 	if err := WalletExists(cfg.WalletCfg.WalletDir); err != nil {
 		if !errors.Is(err, ErrNoWalletFound) {

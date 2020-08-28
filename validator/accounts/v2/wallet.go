@@ -11,9 +11,6 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -22,6 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -65,7 +64,7 @@ var (
 	}
 )
 
-// WalletConfig --
+// WalletConfig to open a wallet programmatically.
 type WalletConfig struct {
 	WalletDir      string
 	KeymanagerKind v2keymanager.Kind
