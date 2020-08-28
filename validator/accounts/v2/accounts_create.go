@@ -16,14 +16,15 @@ import (
 
 var log = logrus.WithField("prefix", "accounts-v2")
 
-// CreateAccountConfig --
+// CreateAccountConfig to run the create account function.
 type CreateAccountConfig struct {
 	Wallet      *Wallet
 	NumAccounts int64
 }
 
-// CreateAccount creates a new validator account from user input by opening
-// a wallet from the user's specified path.
+// CreateAccountCLI creates a new validator account from user input by opening
+// a wallet from the user's specified path. This uses the CLI to extract information
+// to perform account creation.
 func CreateAccountCLI(cliCtx *cli.Context) error {
 	wallet, err := OpenWalletOrElse(cliCtx, CreateAndSaveWalletCLI)
 	if err != nil {
@@ -37,7 +38,8 @@ func CreateAccountCLI(cliCtx *cli.Context) error {
 	})
 }
 
-// CreateAccount --
+// CreateAccount creates a new validator account from user input by opening
+// a wallet from the user's specified path.
 func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 	keymanager, err := cfg.Wallet.InitializeKeymanager(ctx, false /* skip mnemonic confirm */)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
