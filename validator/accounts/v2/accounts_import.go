@@ -75,20 +75,23 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	au := aurora.NewAurora(true)
 	wallet, err := openWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
-		//w, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		//	KeymanagerKind: v2keymanager.Direct,
-		//})
-		//if err != nil && !errors.Is(err, ErrWalletExists) {
-		//	return nil, errors.Wrap(err, "could not create new wallet")
-		//}
-		//if err = createDirectKeymanagerWallet(cliCtx, w); err != nil {
-		//	return nil, errors.Wrap(err, "could not create keymanager")
-		//}
-		//log.WithField("wallet-path", w.walletDir).Info(
-		//	"Successfully created new wallet",
-		//)
-		//CreateWalletWithKeymanager()
-		//return w, err
+		cfg, err := extractWalletCreationConfigFromCLI(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		accountsPath := filepath.Join(cfg.WalletCfg.WalletDir, cfg.WalletCfg.KeymanagerKind.String())
+		w := &Wallet{
+			accountsPath:   accountsPath,
+			keymanagerKind: cfg.WalletCfg.KeymanagerKind,
+			walletDir:      cfg.WalletCfg.WalletDir,
+			walletPassword: cfg.WalletCfg.WalletPassword,
+		}
+		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
+			return nil, errors.Wrap(err, "could not create keymanager")
+		}
+		log.WithField("wallet-path", w.walletDir).Info(
+			"Successfully created new wallet",
+		)
 		return nil, nil
 	})
 	if err != nil {
@@ -179,9 +182,6 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 	})
 	if err != nil {
 		return err
-	}
-	if err := cfg.Wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet")
 	}
 	return km.ImportKeystores(
 		ctx,

@@ -18,14 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -35,21 +33,9 @@ const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// AccountsPath where all direct keymanager keystores are kept.
-	AccountsPath                = "accounts"
-	accountsKeystoreFileName    = "all-accounts.keystore.json"
-	eipVersion                  = "EIP-2335"
-	newWalletPasswordPromptText = "New wallet password"
-	walletPasswordPromptText    = "Wallet password"
-	confirmPasswordPromptText   = "Confirm password"
-)
-
-type passwordConfirm int
-
-const (
-	// An enum to indicate to the prompt that confirming the password is not needed.
-	noConfirmPass passwordConfirm = iota
-	// An enum to indicate to the prompt to confirm the password entered.
-	confirmPass
+	AccountsPath             = "accounts"
+	accountsKeystoreFileName = "all-accounts.keystore.json"
+	eipVersion               = "EIP-2335"
 )
 
 // KeymanagerOpts for a direct keymanager.
@@ -99,39 +85,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		keysCache:        make(map[[48]byte]bls.SecretKey),
 		accountsStore:    &AccountStore{},
 	}
-
-	//walletExists, err := wallet.Exists()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//var accountsPassword string
-	//if !walletExists {
-	//	accountsPassword, err = inputPassword(
-	//		ctx,
-	//		flags.WalletPasswordFileFlag,
-	//		newWalletPasswordPromptText,
-	//		confirmPass,
-	//		promptutil.ValidatePasswordInput,
-	//	)
-	//} else {
-	//	validateExistingPass := func(input string) error {
-	//		if input == "" {
-	//			return errors.New("password input cannot be empty")
-	//		}
-	//		return nil
-	//	}
-	//	accountsPassword, err = inputPassword(
-	//		ctx,
-	//		flags.WalletPasswordFileFlag,
-	//		walletPasswordPromptText,
-	//		noConfirmPass,
-	//		validateExistingPass,
-	//	)
-	//}
-	//if err != nil {
-	//	return nil, err
-	//}
-	//k.accountsPassword = accountsPassword
 
 	// If the wallet has the capability of unlocking accounts using
 	// passphrases, then we initialize a cache of public key -> secret keys
@@ -509,53 +462,4 @@ func (dr *Keymanager) askUntilPasswordConfirms(
 		break
 	}
 	return secretKey, password, nil
-}
-
-func inputPassword(
-	cliCtx *cli.Context,
-	passwordFileFlag *cli.StringFlag,
-	promptText string,
-	confirmPassword passwordConfirm,
-	passwordValidator func(input string) error,
-) (string, error) {
-	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
-		if err != nil {
-			return "", errors.Wrap(err, "could not determine absolute path of password file")
-		}
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return "", errors.Wrap(err, "could not read password file")
-		}
-		enteredPassword := strings.TrimRight(string(data), "\r\n")
-		if err := passwordValidator(enteredPassword); err != nil {
-			return "", errors.Wrap(err, "password did not pass validation")
-		}
-		return enteredPassword, nil
-	}
-	var hasValidPassword bool
-	var walletPassword string
-	var err error
-	for !hasValidPassword {
-		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
-		if err != nil {
-			return "", fmt.Errorf("could not read account password: %v", err)
-		}
-
-		if confirmPassword == confirmPass {
-			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
-			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
-			}
-			if walletPassword != passwordConfirmation {
-				log.Error("Passwords do not match")
-				continue
-			}
-			hasValidPassword = true
-		} else {
-			return walletPassword, nil
-		}
-	}
-	return walletPassword, nil
 }

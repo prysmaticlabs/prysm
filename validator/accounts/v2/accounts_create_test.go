@@ -23,7 +23,7 @@ func TestCreateAccount_Derived(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWalletCLI(cliCtx)
+	_, err := CreateAndSaveWalletCLI(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.

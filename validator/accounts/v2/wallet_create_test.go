@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -29,19 +30,24 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		walletPasswordFile: walletPasswordFile,
 	})
 	createDirectWallet := func(cliCtx *cli.Context) (*Wallet, error) {
-		w, err := CreateWallet(cliCtx.Context, &WalletConfig{
-			KeymanagerKind: v2keymanager.Direct,
-		})
-		if err != nil && !errors.Is(err, ErrWalletExists) {
-			return nil, errors.Wrap(err, "could not create new wallet")
+		cfg, err := extractWalletCreationConfigFromCLI(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		accountsPath := filepath.Join(cfg.WalletCfg.WalletDir, cfg.WalletCfg.KeymanagerKind.String())
+		w := &Wallet{
+			accountsPath:   accountsPath,
+			keymanagerKind: cfg.WalletCfg.KeymanagerKind,
+			walletDir:      cfg.WalletCfg.WalletDir,
+			walletPassword: cfg.WalletCfg.WalletPassword,
 		}
 		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet")
+			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", w.walletDir).Info(
 			"Successfully created new wallet",
 		)
-		return w, err
+		return nil, nil
 	}
 	createdWallet, err := openWalletOrElse(cliCtx, createDirectWallet)
 	require.NoError(t, err)
@@ -63,7 +69,8 @@ func TestCreateWallet_Direct(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	require.NoError(t, CreateAndSaveWalletCLI(cliCtx))
+	_, err := CreateAndSaveWalletCLI(cliCtx)
+	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
@@ -92,7 +99,8 @@ func TestCreateWallet_Derived(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	require.NoError(t, CreateAndSaveWalletCLI(cliCtx))
+	_, err := CreateAndSaveWalletCLI(cliCtx)
+	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
@@ -142,7 +150,8 @@ func TestCreateWallet_Remote(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.
-	require.NoError(t, CreateAndSaveWalletCLI(cliCtx))
+	_, err := CreateAndSaveWalletCLI(cliCtx)
+	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()

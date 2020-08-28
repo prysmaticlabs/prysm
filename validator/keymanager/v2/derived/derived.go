@@ -12,11 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -25,6 +20,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	"github.com/sirupsen/logrus"
+	"github.com/tyler-smith/go-bip39"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "derived-keymanager-v2")
@@ -95,7 +94,6 @@ func NewKeymanager(
 	ctx context.Context,
 	cfg *SetupConfig,
 ) (*Keymanager, error) {
-
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
@@ -160,41 +158,8 @@ func KeymanagerForPhrase(
 	ctx context.Context,
 	cfg *SetupConfig,
 ) (*Keymanager, error) {
-	//walletExists, err := wallet.Exists()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//var accountsPassword string
-	//// If the user does not have any accounts in their wallet, we ask them to
-	//// set a new wallet password, which will be used for encrypting/decrypting
-	//// their wallet secret to and from disk.
-	//if !walletExists {
-	//	accountsPassword, err = inputPassword(
-	//		cliCtx,
-	//		flags.WalletPasswordFileFlag,
-	//		newWalletPasswordPromptText,
-	//		confirmPass,
-	//		promptutil.ValidatePasswordInput,
-	//	)
-	//} else {
-	//	validateExistingPass := func(input string) error {
-	//		if input == "" {
-	//			return errors.New("password input cannot be empty")
-	//		}
-	//		return nil
-	//	}
-	//	accountsPassword, err = inputPassword(
-	//		cliCtx,
-	//		flags.WalletPasswordFileFlag,
-	//		walletPasswordPromptText,
-	//		noConfirmPass,
-	//		validateExistingPass,
-	//	)
-	//}
-	//
-	//// Check if the wallet seed file exists. If it does not, we initialize one
-	//// by creating a new mnemonic and writing the encrypted file to disk.
-	//ctx := context.Background()
+	// Check if the wallet seed file exists. If it does not, we initialize one
+	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
 	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.WalletPassword)
 	if err != nil {

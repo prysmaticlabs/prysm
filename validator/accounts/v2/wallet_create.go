@@ -26,39 +26,9 @@ type CreateWalletConfig struct {
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
 func CreateAndSaveWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
-	keymanagerKind, err := inputKeymanagerKind(cliCtx)
+	createWalletConfig, err := extractWalletCreationConfigFromCLI(cliCtx)
 	if err != nil {
 		return nil, err
-	}
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return nil, err
-	}
-	walletPassword, err := inputPassword(
-		cliCtx,
-		flags.WalletPasswordFileFlag,
-		newWalletPasswordPromptText,
-		confirmPass,
-		promptutil.ValidatePasswordInput,
-	)
-	if err != nil {
-		return nil, err
-	}
-	createWalletConfig := &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanagerKind,
-			WalletPassword: walletPassword,
-		},
-		SkipMnemonicConfirm: cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name),
-	}
-
-	if keymanagerKind == v2keymanager.Remote {
-		opts, err := inputRemoteKeymanagerConfig(cliCtx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not input remote keymanager config")
-		}
-		createWalletConfig.RemoteKeymanagerOpts = opts
 	}
 	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 }
@@ -106,6 +76,44 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
 	}
 	return w, nil
+}
+
+func extractWalletCreationConfigFromCLI(cliCtx *cli.Context) (*CreateWalletConfig, error) {
+	keymanagerKind, err := inputKeymanagerKind(cliCtx)
+	if err != nil {
+		return nil, err
+	}
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return nil, err
+	}
+	walletPassword, err := inputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		newWalletPasswordPromptText,
+		confirmPass,
+		promptutil.ValidatePasswordInput,
+	)
+	if err != nil {
+		return nil, err
+	}
+	createWalletConfig := &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanagerKind,
+			WalletPassword: walletPassword,
+		},
+		SkipMnemonicConfirm: cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name),
+	}
+
+	if keymanagerKind == v2keymanager.Remote {
+		opts, err := inputRemoteKeymanagerConfig(cliCtx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not input remote keymanager config")
+		}
+		createWalletConfig.RemoteKeymanagerOpts = opts
+	}
+	return createWalletConfig, nil
 }
 
 func createDirectKeymanagerWallet(ctx context.Context, wallet *Wallet) error {

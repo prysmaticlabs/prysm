@@ -31,21 +31,6 @@ func (dr *Keymanager) ImportKeystores(
 	if useWalletPassword {
 		password = dr.accountsPassword
 	} else {
-		//if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-		//	passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		//	data, err := ioutil.ReadFile(passwordFilePath)
-		//	if err != nil {
-		//		return err
-		//	}
-		//	password = string(data)
-		//} else {
-		//	password, err = promptutil.PasswordPrompt(
-		//		"Enter the password for your imported accounts", promptutil.NotEmpty,
-		//	)
-		//	if err != nil {
-		//		return fmt.Errorf("could not read account password: %v", err)
-		//	}
-		//}
 		password = importsPassword
 	}
 	fmt.Println("Importing accounts, this may take a while...")

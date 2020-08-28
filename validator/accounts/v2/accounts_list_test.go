@@ -38,12 +38,14 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		keymanagerKind:     v2keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Direct,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -105,13 +107,14 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keymanagerKind:     v2keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Derived,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Derived,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
 
 	keymanager, err := derived.NewKeymanager(
 		cliCtx.Context,
@@ -126,7 +129,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, err := keymanager.CreateAccount(cliCtx.Context, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		enc, err := keymanager.DepositDataForAccount(uint64(i))
 		require.NoError(t, err)
@@ -152,9 +155,9 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		t.Error("Did not find Keymanager kind in output")
 	}
 
-	accountNames, err := keymanager.ValidatingAccountNames(ctx)
+	accountNames, err := keymanager.ValidatingAccountNames(cliCtx.Context)
 	require.NoError(t, err)
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 
 	for i := 0; i < numAccounts; i++ {

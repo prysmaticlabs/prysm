@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -51,15 +50,14 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		// Flags required for DeleteAccounts to work.
 		deletePublicKeys: deletePublicKeys,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		KeymanagerKind: v2keymanager.Direct,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	encodedOpts, err := direct.MarshalOptionsFile(ctx, direct.DefaultKeymanagerOpts())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedOpts))
 
 	// We attempt to import accounts.
 	require.NoError(t, ImportAccountsCLI(cliCtx))
@@ -75,7 +73,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	remainingAccounts, err := keymanager.FetchValidatingPublicKeys(ctx)
+	remainingAccounts, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, len(remainingAccounts), 1)
 	remainingPublicKey, err := hex.DecodeString(k3.Pubkey)

@@ -1,16 +1,16 @@
 package v2
 
 import (
-	"context"
 	"flag"
 	"testing"
+
+	"github.com/urfave/cli/v2"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
@@ -19,12 +19,14 @@ func TestEditWalletConfiguration(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		KeymanagerKind: v2keymanager.Remote,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Remote,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
 
 	originalCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
@@ -34,9 +36,9 @@ func TestEditWalletConfiguration(t *testing.T) {
 		},
 		RemoteAddr: "my.server.com:4000",
 	}
-	encodedCfg, err := remote.MarshalConfigFile(ctx, originalCfg)
+	encodedCfg, err := remote.MarshalConfigFile(cliCtx.Context, originalCfg)
 	assert.NoError(t, err)
-	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg))
 
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
@@ -62,7 +64,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 
 	err = EditWalletConfigurationCLI(cliCtx)
 	require.NoError(t, err)
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	encoded, err := wallet.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	require.NoError(t, err)
 
 	cfg, err := remote.UnmarshalOptionsFile(encoded)

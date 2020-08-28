@@ -43,14 +43,14 @@ func TestImport_Noninteractive(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		KeymanagerKind: v2keymanager.Direct,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	encodedOpts, err := direct.MarshalOptionsFile(cliCtx.Context, direct.DefaultKeymanagerOpts())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedOpts))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -102,15 +102,14 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Direct,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	encodedOpts, err := direct.MarshalOptionsFile(cliCtx.Context, direct.DefaultKeymanagerOpts())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedOpts))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -163,15 +162,14 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Direct,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	encodedOpts, err := direct.MarshalOptionsFile(cliCtx.Context, direct.DefaultKeymanagerOpts())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedOpts))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -287,15 +285,14 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		walletPasswordFile: passwordFilePath,
 		privateKeyFile:     privKeyFileName,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Direct,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	encodedOpts, err := direct.MarshalOptionsFile(cliCtx.Context, direct.DefaultKeymanagerOpts())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedOpts))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{

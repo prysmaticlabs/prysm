@@ -2,7 +2,6 @@ package v2
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -15,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -45,15 +43,14 @@ func TestExitAccounts_Ok(t *testing.T) {
 		// Flag required for ExitAccounts to work.
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		KeymanagerKind: v2keymanager.Direct,
+	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	encodedOpts, err := direct.MarshalOptionsFile(ctx, direct.DefaultKeymanagerOpts())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedOpts))
 
 	require.NoError(t, ImportAccountsCLI(cliCtx))
 
@@ -73,17 +70,14 @@ func TestExitAccounts_EmptyWalletReturnsError(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-		KeymanagerKind: v2keymanager.Direct,
+	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-
-	ctx := context.Background()
-	encodedOpts, err := direct.MarshalOptionsFile(ctx, direct.DefaultKeymanagerOpts())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedOpts))
-
 	err = ExitAccounts(cliCtx, os.Stdin)
 	assert.ErrorContains(t, "wallet is empty, no accounts to perform voluntary exit", err)
 }
