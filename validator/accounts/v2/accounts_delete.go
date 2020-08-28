@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -16,20 +15,25 @@ import (
 )
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(cliCtx *cli.Context) error {
-	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+func DeleteAccountCLI(cliCtx *cli.Context) error {
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return err
+	}
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	if errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
 	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}
@@ -96,7 +100,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		if err := km.DeleteAccounts(ctx, rawPublicKeys); err != nil {
+		if err := km.DeleteAccounts(cliCtx.Context, rawPublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	case v2keymanager.Derived:

@@ -15,12 +15,19 @@ import (
 // CreateWallet from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
+func CreateWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
 	keymanagerKind, err := inputKeymanagerKind(cliCtx)
 	if err != nil {
 		return nil, err
 	}
-	w, err := NewWallet(cliCtx, keymanagerKind)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return nil, err
+	}
+	w, err := CreateWallet(cliCtx.Context, &WalletConfig{
+		WalletDir:      walletDir,
+		KeymanagerKind: keymanagerKind,
+	})
 	if err != nil && !errors.Is(err, ErrWalletExists) {
 		return nil, errors.Wrap(err, "could not check if wallet directory exists")
 	}
@@ -64,8 +71,8 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	defaultConfig := direct.DefaultConfig()
-	keymanagerConfig, err := direct.MarshalConfigFile(context.Background(), defaultConfig)
+	defaultOpts := direct.DefaultKeymanagerOpts()
+	keymanagerConfig, err := direct.MarshalOptionsFile(context.Background(), defaultOpts)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
@@ -77,7 +84,7 @@ func createDirectKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 
 func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 	ctx := context.Background()
-	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
+	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
@@ -88,7 +95,7 @@ func createDerivedKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
 	skipMnemonic := cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name)
-	_, err = wallet.InitializeKeymanager(cliCtx, skipMnemonic)
+	_, err = wallet.InitializeKeymanager(cliCtx.Context, skipMnemonic)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

@@ -19,14 +19,14 @@ var log = logrus.WithField("prefix", "accounts-v2")
 
 // CreateAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
-func CreateAccount(cliCtx *cli.Context) error {
+func CreateAccountCLI(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	wallet, err := openOrCreateWallet(cliCtx, CreateWallet)
+	wallet, err := openOrCreateWallet(cliCtx, CreateWalletCLI)
 	if err != nil {
 		return err
 	}
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}

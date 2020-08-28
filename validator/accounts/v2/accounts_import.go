@@ -64,13 +64,15 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 	fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 }
 
-// ImportAccounts can import external, EIP-2335 compliant keystore.json files as
+// ImportAccountsCLI can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet.
-func ImportAccounts(cliCtx *cli.Context) error {
+func ImportAccountsCLI(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	au := aurora.NewAurora(true)
 	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
-		w, err := NewWallet(cliCtx, v2keymanager.Direct)
+		w, err := CreateWallet(cliCtx.Context, &WalletConfig{
+			KeymanagerKind: v2keymanager.Direct,
+		})
 		if err != nil && !errors.Is(err, ErrWalletExists) {
 			return nil, errors.Wrap(err, "could not create new wallet")
 		}
@@ -94,11 +96,14 @@ func ImportAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	directCfg, err := direct.UnmarshalConfigFile(cfg)
+	directOpts, err := direct.UnmarshalOptionsFile(cfg)
 	if err != nil {
 		return err
 	}
-	km, err := direct.NewKeymanager(cliCtx, wallet, directCfg)
+	km, err := direct.NewKeymanager(cliCtx.Context, &direct.SetupConfig{
+		Wallet: wallet,
+		Opts:   directOpts,
+	})
 	if err != nil {
 		return err
 	}

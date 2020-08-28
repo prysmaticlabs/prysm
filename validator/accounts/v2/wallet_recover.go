@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -21,32 +20,42 @@ import (
 
 const phraseWordCount = 24
 
-// RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
-func RecoverWallet(cliCtx *cli.Context) error {
+// RecoverWalletCLI uses a menmonic seed phrase to recover a wallet into the path provided.
+func RecoverWalletCLI(cliCtx *cli.Context) error {
 	mnemonic, err := inputMnemonic(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get mnemonic phrase")
 	}
-	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return err
+	}
+	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
+		WalletDir:      walletDir,
+		KeymanagerKind: v2keymanager.Derived,
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not create new wallet")
 	}
-	ctx := context.Background()
-	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
+	opts, err := derived.MarshalOptionsFile(cliCtx.Context, derived.DefaultKeymanagerOpts())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+	if err := wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, opts); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	km, err := derived.KeymanagerForPhrase(cliCtx, wallet, derived.DefaultConfig(), mnemonic)
+	km, err := derived.KeymanagerForPhrase(cliCtx.Context, &derived.SetupConfig{
+		Opts:     derived.DefaultKeymanagerOpts(),
+		Wallet:   wallet,
+		Mnemonic: mnemonic,
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not make keymanager for given phrase")
 	}
-	if err := km.WriteEncryptedSeedToWallet(ctx, mnemonic); err != nil {
+	if err := km.WriteEncryptedSeedToWallet(cliCtx.Context, mnemonic); err != nil {
 		return err
 	}
 	numAccounts, err := inputNumAccounts(cliCtx)
@@ -54,12 +63,12 @@ func RecoverWallet(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
 	if numAccounts == 1 {
-		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
+		if _, err := km.CreateAccount(cliCtx.Context, true /*logAccountInfo*/); err != nil {
 			return errors.Wrap(err, "could not create account in wallet")
 		}
 	} else {
 		for i := 0; i < int(numAccounts); i++ {
-			if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
+			if _, err := km.CreateAccount(cliCtx.Context, false /*logAccountInfo*/); err != nil {
 				return errors.Wrap(err, "could not create account in wallet")
 			}
 		}

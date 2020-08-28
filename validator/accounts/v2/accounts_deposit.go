@@ -19,18 +19,24 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// SendDeposit transaction for user specified accounts via an interactive
+// SendDepositCLI transaction for user specified accounts via an interactive
 // CLI process or via command-line flags.
-func SendDeposit(cliCtx *cli.Context) error {
+func SendDepositCLI(cliCtx *cli.Context) error {
 	// Read the wallet from the specified path.
-	wallet, err := OpenWallet(cliCtx)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return err
+	}
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	if errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
 	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	keymanager, err := wallet.InitializeKeymanager(
-		cliCtx,
+		cliCtx.Context,
 		true, /* skip mnemonic confirm */
 	)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {

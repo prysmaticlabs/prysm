@@ -44,6 +44,12 @@ var (
 	}
 )
 
+// WalletConfig --
+type WalletConfig struct {
+	WalletDir      string
+	KeymanagerKind v2keymanager.Kind
+}
+
 // Wallet is a primitive in Prysm's v2 account management which
 // has the capability of creating new accounts, reading existing accounts,
 // and providing secure access to eth2 secrets depending on an
@@ -56,22 +62,22 @@ type Wallet struct {
 	keymanagerKind v2keymanager.Kind
 }
 
-// NewWallet given a set of configuration options, will leverage
+// CreateWallet given a set of configuration options, will leverage
 // create and write a new wallet to disk for a Prysm validator.
-func NewWallet(
-	cliCtx *cli.Context,
-	keymanagerKind v2keymanager.Kind,
+func CreateWallet(
+	ctx context.Context,
+	cfg *WalletConfig,
 ) (*Wallet, error) {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	//walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
-	walletExists, err := fileutil.HasDir(walletDir)
+	walletExists, err := fileutil.HasDir(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
 	if walletExists {
-		isEmptyWallet, err := isEmptyWallet(walletDir)
+		isEmptyWallet, err := isEmptyWallet(cfg.WalletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -79,29 +85,29 @@ func NewWallet(
 			return nil, ErrWalletExists
 		}
 	}
-	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
+	accountsPath := filepath.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	return &Wallet{
 		accountsPath:   accountsPath,
-		keymanagerKind: keymanagerKind,
-		walletDir:      walletDir,
+		keymanagerKind: cfg.KeymanagerKind,
+		walletDir:      cfg.WalletDir,
 	}, nil
 }
 
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
-func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
+func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	// Read a wallet's directory from user input.
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
-	if err != nil {
-		return nil, err
-	}
-	ok, err := fileutil.HasDir(walletDir)
+	//walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	//if err != nil {
+	//	return nil, err
+	//}
+	ok, err := fileutil.HasDir(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse wallet directory")
 	}
 	if ok {
-		isEmptyWallet, err := isEmptyWallet(walletDir)
+		isEmptyWallet, err := isEmptyWallet(cfg.WalletDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
@@ -111,14 +117,13 @@ func OpenWallet(cliCtx *cli.Context) (*Wallet, error) {
 	} else {
 		return nil, ErrNoWalletFound
 	}
-	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager kind for wallet")
 	}
-	walletPath := filepath.Join(walletDir, keymanagerKind.String())
-	log.Infof("%s %s", au.BrightMagenta("(wallet directory)"), walletDir)
+	walletPath := filepath.Join(cfg.WalletDir, keymanagerKind.String())
 	return &Wallet{
-		walletDir:      walletDir,
+		walletDir:      cfg.WalletDir,
 		accountsPath:   walletPath,
 		keymanagerKind: keymanagerKind,
 	}, nil
@@ -145,10 +150,9 @@ func (w *Wallet) AccountsDir() string {
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) InitializeKeymanager(
-	cliCtx *cli.Context,
+	ctx context.Context,
 	skipMnemonicConfirm bool,
 ) (v2keymanager.IKeymanager, error) {
-	ctx := context.Background()
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager config")
@@ -156,29 +160,39 @@ func (w *Wallet) InitializeKeymanager(
 	var keymanager v2keymanager.IKeymanager
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
-		cfg, err := direct.UnmarshalConfigFile(configFile)
+		opts, err := direct.UnmarshalOptionsFile(configFile)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
+			return nil, errors.Wrap(err, "could not unmarshal keymanageropts file")
 		}
-		keymanager, err = direct.NewKeymanager(cliCtx, w, cfg)
+		keymanager, err = direct.NewKeymanager(ctx, &direct.SetupConfig{
+			Wallet: w,
+			Opts:   opts,
+		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
 	case v2keymanager.Derived:
-		cfg, err := derived.UnmarshalConfigFile(configFile)
+		opts, err := derived.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = derived.NewKeymanager(cliCtx, w, cfg, skipMnemonicConfirm)
+		keymanager, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
+			Opts:                opts,
+			Wallet:              w,
+			SkipMnemonicConfirm: skipMnemonicConfirm,
+		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
 	case v2keymanager.Remote:
-		cfg, err := remote.UnmarshalConfigFile(configFile)
+		opts, err := remote.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = remote.NewKeymanager(cliCtx, 100000000, cfg)
+		keymanager, err = remote.NewKeymanager(ctx, &remote.SetupConfig{
+			Opts:           opts,
+			MaxMessageSize: 100000000,
+		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
@@ -375,7 +389,9 @@ func openOrCreateWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 			return nil, errors.Wrap(err, "could not check if wallet has files")
 		}
 		if !isEmptyWallet {
-			wallet, err := OpenWallet(cliCtx)
+			wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+				WalletDir: directory,
+			})
 			if err != nil {
 				return nil, errors.Wrap(err, "could not open wallet")
 			}

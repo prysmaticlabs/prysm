@@ -1,35 +1,40 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 )
 
 // ExitAccounts performs a voluntary exit on one or more accounts.
 func ExitAccounts(cliCtx *cli.Context, r io.Reader) error {
-	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return err
+	}
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	if errors.Is(err, ErrNoWalletFound) {
 		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
 	} else if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}
