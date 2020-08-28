@@ -22,7 +22,6 @@ var (
 			Help:      "validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED",
 		},
 		[]string{
-			// Validator pubkey.
 			"pubkey",
 		},
 	)
@@ -33,7 +32,6 @@ var (
 			Name:      "successful_aggregations",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -44,7 +42,6 @@ var (
 			Name:      "failed_aggregations",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -55,7 +52,6 @@ var (
 			Name:      "successful_proposals",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -66,7 +62,6 @@ var (
 			Name:      "failed_proposals",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -77,7 +72,6 @@ var (
 			Name:      "successful_exit_proposals",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -88,7 +82,6 @@ var (
 			Name:      "failed_exit_proposals",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -99,7 +92,6 @@ var (
 			Help: "Count the block proposals rejected by slashing protection.",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -111,7 +103,6 @@ var (
 			Help:      "current validator balance.",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -122,7 +113,6 @@ var (
 			Name:      "successful_attestations",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -133,7 +123,6 @@ var (
 			Name:      "failed_attestations",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
@@ -144,7 +133,6 @@ var (
 			Help: "Count the attestations rejected by slashing protection.",
 		},
 		[]string{
-			// validator pubkey
 			"pubkey",
 		},
 	)
