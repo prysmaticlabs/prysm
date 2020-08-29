@@ -115,7 +115,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 // UnmarshalOptionsFile attempts to JSON unmarshal a keymanager
-// configuration file into a struct.
+// options file into a struct.
 func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -126,11 +126,11 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	cfg := &KeymanagerOpts{}
-	if err := json.Unmarshal(enc, cfg); err != nil {
+	opts := &KeymanagerOpts{}
+	if err := json.Unmarshal(enc, opts); err != nil {
 		return nil, errors.Wrap(err, "could not JSON unmarshal")
 	}
-	return cfg, nil
+	return opts, nil
 }
 
 // MarshalOptionsFile for the keymanager.
@@ -138,7 +138,7 @@ func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
-// String pretty-print of a remote keymanager configuration.
+// String pretty-print of a remote keymanager options.
 func (opts *KeymanagerOpts) String() string {
 	au := aurora.NewAurora(true)
 	var b strings.Builder
