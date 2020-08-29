@@ -213,7 +213,7 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	if err := json.Unmarshal(enc, opts); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	return opts, nil
 }
 
 // MarshalOptionsFile returns a marshaled options file for a keymanager.
