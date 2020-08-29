@@ -41,7 +41,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 		ObjectRoot: signedData,
 		Domain:     domain,
 	}
-	root, err := ssz.HashTreeRoot(signingData)
+	root, err := signingData.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not hash container")
 	}
