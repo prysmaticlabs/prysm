@@ -198,7 +198,7 @@ func KeymanagerForPhrase(
 }
 
 // UnmarshalOptionsFile attempts to JSON unmarshal a derived keymanager
-// configuration file into the *Config{} struct.
+// options file into the *Config{} struct.
 func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -209,19 +209,19 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	cfg := &KeymanagerOpts{}
-	if err := json.Unmarshal(enc, cfg); err != nil {
+	opts := &KeymanagerOpts{}
+	if err := json.Unmarshal(enc, opts); err != nil {
 		return nil, err
 	}
 	return cfg, nil
 }
 
-// MarshalOptionsFile returns a marshaled configuration file for a keymanager.
-func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
-	return json.MarshalIndent(cfg, "", "\t")
+// MarshalOptionsFile returns a marshaled options file for a keymanager.
+func MarshalOptionsFile(ctx context.Context, opts *KeymanagerOpts) ([]byte, error) {
+	return json.MarshalIndent(opts, "", "\t")
 }
 
-// KeymanagerOpts returns the derived keymanager configuration.
+// KeymanagerOpts returns the derived keymanager options.
 func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return dr.opts
 }
