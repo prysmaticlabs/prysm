@@ -3435,9 +3435,9 @@ def prysm_deps():
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/c2a2ff3180eab45ad1c60312c5165e7fabdb6459.tar.gz",
+            "https://github.com/supranational/blst/archive/d75dab4fb87df7fc753d348b17be671c69b625f5.tar.gz",
         ],
-        strip_prefix = "blst-c2a2ff3180eab45ad1c60312c5165e7fabdb6459",
+        strip_prefix = "blst-d75dab4fb87df7fc753d348b17be671c69b625f5",
         build_file = "//third_party:blst/blst.BUILD",
         #   sha256 = "ac0d7d84118de40f59acfcee737b889a1cb056b5f2a82a7ba0da330542dcb859",
     )
