@@ -298,6 +298,7 @@ func TestService_roundRobinSync(t *testing.T) {
 				},
 			} // no-op mock
 			s := &Service{
+				ctx:          context.Background(),
 				chain:        mc,
 				p2p:          p,
 				db:           beaconDB,
@@ -527,6 +528,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 		},
 	} // no-op mock
 	s := &Service{
+		ctx:          context.Background(),
 		chain:        mc,
 		p2p:          p,
 		db:           beaconDB,

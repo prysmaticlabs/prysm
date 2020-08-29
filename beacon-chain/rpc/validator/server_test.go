@@ -300,6 +300,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
 		err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream)
 		assert.ErrorContains(tt, "Context canceled", err)
