@@ -117,7 +117,7 @@ func NewInteropKeymanager(ctx context.Context, offset uint64, numValidatorKeys u
 }
 
 // UnmarshalOptionsFile attempts to JSON unmarshal a direct keymanager
-// configuration file into a struct.
+// options file into a struct.
 func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -128,16 +128,16 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	cfg := &KeymanagerOpts{}
-	if err := json.Unmarshal(enc, cfg); err != nil {
+	opts := &KeymanagerOpts{}
+	if err := json.Unmarshal(enc, opts); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	return opts, nil
 }
 
-// MarshalOptionsFile returns a marshaled configuration file for a keymanager.
-func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
-	return json.MarshalIndent(cfg, "", "\t")
+// MarshalOptionsFile returns a marshaled options file for a keymanager.
+func MarshalOptionsFile(ctx context.Context, opts *KeymanagerOpts) ([]byte, error) {
+	return json.MarshalIndent(opts, "", "\t")
 }
 
 // KeymanagerOpts for the direct keymanager.
@@ -145,7 +145,7 @@ func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return dr.opts
 }
 
-// String pretty-print of a direct keymanager configuration.
+// String pretty-print of a direct keymanager options.
 func (opts *KeymanagerOpts) String() string {
 	au := aurora.NewAurora(true)
 	var b strings.Builder
