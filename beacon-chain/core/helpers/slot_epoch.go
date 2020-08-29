@@ -11,8 +11,8 @@ import (
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
-// incoming objects. (20 mins with mainnet spec)
-const MaxSlotBuffer = uint64(100)
+// incoming objects. (24 mins with mainnet spec)
+const MaxSlotBuffer = uint64(1 << 7)
 
 // SlotToEpoch returns the epoch number of the input slot.
 //
