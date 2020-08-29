@@ -66,8 +66,11 @@ func TestSub(t *testing.T) {
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 
-	_, err = server.ProposeExit(context.Background(), req)
+	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
+	expectedRoot, err := req.Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedRoot[:], resp.ExitRoot)
 
 	// Ensure the state notification was broadcast.
 	notificationFound := false
@@ -142,6 +145,9 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
-	_, err = server.ProposeExit(context.Background(), req)
+	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
+	expectedRoot, err := req.Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedRoot[:], resp.ExitRoot)
 }
