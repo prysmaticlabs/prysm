@@ -277,7 +277,7 @@ func TestVerifySlotTime(t *testing.T) {
 			name: "max future slot",
 			args: args{
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
-				slot:        106,
+				slot:        MaxSlotBuffer + 6,
 			},
 			wantedErr: "exceeds max allowed value relative to the local clock",
 		},
