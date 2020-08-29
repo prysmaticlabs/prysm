@@ -1,3 +1,5 @@
+// +build linux,amd64
+
 package blst
 
 import blst "github.com/supranational/blst/bindings/go"

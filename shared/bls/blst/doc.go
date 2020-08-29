@@ -3,4 +3,6 @@
 // verifying and aggregating BLS signatures used by Ethereum 2.0.
 //
 // This implementation uses the library written by Supranational, blst.
+//
+// Only linux_amd64 is supported at the moment.
 package blst
