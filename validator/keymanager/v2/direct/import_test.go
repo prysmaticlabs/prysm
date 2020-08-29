@@ -110,7 +110,6 @@ func TestDirectKeymanager_ImportKeystores(t *testing.T) {
 		ctx,
 		keystores,
 		password,
-		false, /* do not use wallet pass */
 	))
 
 	// Ensure the single, all-encompassing accounts keystore was written
