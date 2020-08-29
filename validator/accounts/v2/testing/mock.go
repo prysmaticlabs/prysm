@@ -37,29 +37,9 @@ func (m *Wallet) AccountsDir() string {
 	return m.InnerAccountsDir
 }
 
-// ListDirs --
-func (m *Wallet) ListDirs() ([]string, error) {
-	return m.Directories, nil
-}
-
-// WritePasswordToDisk --
-func (m *Wallet) WritePasswordToDisk(ctx context.Context, passwordFileName string, password string) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	m.AccountPasswords[passwordFileName] = password
-	return nil
-}
-
-// ReadPasswordFromDisk --
-func (m *Wallet) ReadPasswordFromDisk(ctx context.Context, passwordFileName string) (string, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	for name, password := range m.AccountPasswords {
-		if name == passwordFileName {
-			return password, nil
-		}
-	}
-	return "", errors.New("account not found")
+// Exists --
+func (m *Wallet) Exists() (bool, error) {
+	return len(m.Directories) > 0, nil
 }
 
 // WriteFileAtPath --
@@ -82,7 +62,7 @@ func (m *Wallet) ReadFileAtPath(ctx context.Context, pathName string, fileName s
 			return v, nil
 		}
 	}
-	return nil, errors.New("file not found")
+	return nil, errors.New("no files found")
 }
 
 // ReadEncryptedSeedFromDisk --

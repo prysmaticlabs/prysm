@@ -42,7 +42,7 @@ func TestCreateAccount_Derived(t *testing.T) {
 
 	require.NoError(t, CreateAccount(cliCtx))
 
-	keymanager, err := wallet.InitializeKeymanager(ctx, true)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx, true)
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {

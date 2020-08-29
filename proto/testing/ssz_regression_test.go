@@ -3,12 +3,15 @@ package testing
 import (
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	sszspectest "github.com/prysmaticlabs/go-ssz/spectests"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // Regression tests for investigating discrepancies between ssz signing root of
@@ -68,30 +71,39 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			root1, err := ssz.HashTreeRoot(tt.header1)
-			if err != nil {
-				t.Error(err)
-			}
+			root1, err := tt.header1.HashTreeRoot()
+			assert.NoError(t, err)
 			root2, err := ssz.HashTreeRoot(tt.header2)
-			if err != nil {
-				t.Error(err)
-			}
-
-			if root1 != root2 {
-				t.Errorf("Root1 = %#x, root2 = %#x. These should be equal!", root1, root2)
-			}
-
-			if root1 != tt.expectedRoot {
-				t.Errorf("Root1 = %#x, wanted %#x", root1, tt.expectedRoot)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, root1, root2)
+			assert.Equal(t, tt.expectedRoot, root1)
 		})
 	}
 }
 
 func hexDecodeOrDie(t *testing.T, h string) []byte {
 	b, err := hex.DecodeString(h)
+	require.NoError(t, err)
+	return b
+}
+
+func TestFastSSZBitlistBug(t *testing.T) {
+	// See fix: https://github.com/ferranbt/fastssz/pull/18
+	// beacon_block_151906.ssz hashes to 0x684fd51e500001fd596ef4d4061863b6713846133f7d48e828cee4e15a0d7978.
+	// This test can be removed when this case is included as an upstream spec test.
+	b, err := ioutil.ReadFile("data/beacon_block_151906.ssz")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return b
+	sb := &ethpb.SignedBeaconBlock{}
+	if err := sb.UnmarshalSSZ(b); err != nil {
+		t.Fatal(err)
+	}
+	r, err := sb.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rStr := fmt.Sprintf("%#x", r); rStr != "0x684fd51e500001fd596ef4d4061863b6713846133f7d48e828cee4e15a0d7978" {
+		t.Errorf("Received wrong root. Got %s, wanted %s", rStr, "0x684fd51e500001fd596ef4d4061863b6713846133f7d48e828cee4e15a0d7978")
+	}
 }

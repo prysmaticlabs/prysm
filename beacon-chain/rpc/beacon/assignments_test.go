@@ -10,12 +10,10 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -55,9 +53,9 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
@@ -96,9 +94,9 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	headState, err := db.HeadState(ctx)
 	require.NoError(t, err)
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := stateutil.BlockRoot(b.Block)
+	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
@@ -141,29 +139,30 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		withdrawalCred := make([]byte, 32)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        pubKey,
-				ExitEpoch:        0,
-				ActivationEpoch:  0,
-				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+				PublicKey:             pubKey,
+				WithdrawalCredentials: withdrawalCred,
+				ExitEpoch:             0,
+				ActivationEpoch:       0,
+				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        pubKey,
-				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-				ActivationEpoch:  0,
+				PublicKey:             pubKey,
+				WithdrawalCredentials: withdrawalCred,
+				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+				ActivationEpoch:       0,
 			})
 		}
 	}
 
-	blk := &ethpb.BeaconBlock{
-		Slot: 0,
-	}
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blk := testutil.NewBeaconBlock().Block
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
 	s := testutil.NewBeaconState()
@@ -221,16 +220,20 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
+	withdrawCreds := make([]byte, 32)
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		validators = append(validators, &ethpb.Validator{PublicKey: pubKey, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		val := &ethpb.Validator{
+			PublicKey:             pubKey,
+			WithdrawalCredentials: withdrawCreds,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+		validators = append(validators, val)
 	}
 
-	blk := &ethpb.BeaconBlock{
-		Slot: 0,
-	}
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blk := testutil.NewBeaconBlock().Block
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, s.SetValidators(validators))
@@ -285,16 +288,20 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
+	withdrawCred := make([]byte, 32)
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		validators = append(validators, &ethpb.Validator{PublicKey: pubKey, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		val := &ethpb.Validator{
+			PublicKey:             pubKey,
+			WithdrawalCredentials: withdrawCred,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+		validators = append(validators, val)
 	}
 
-	blk := &ethpb.BeaconBlock{
-		Slot: 0,
-	}
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blk := testutil.NewBeaconBlock().Block
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	s := testutil.NewBeaconState()
 	require.NoError(t, s.SetValidators(validators))

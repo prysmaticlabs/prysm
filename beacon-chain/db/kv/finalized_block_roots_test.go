@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
@@ -18,19 +19,13 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 
 	blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
-	if err := db.SaveBlocks(ctx, blks); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlocks(ctx, blks))
 
-	root, err := stateutil.BlockRoot(blks[slotsPerEpoch].Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	root, err := blks[slotsPerEpoch].Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	cp := &ethpb.Checkpoint{
 		Epoch: 1,
@@ -39,32 +34,19 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 
 	st := testutil.NewBeaconState()
 	// a state is required to save checkpoint
-	if err := db.SaveState(ctx, st, root); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
 	for i := uint64(0); i < slotsPerEpoch*2; i++ {
-		root, err := stateutil.BlockRoot(blks[i].Block)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !db.IsFinalizedBlock(ctx, root) {
-			t.Errorf("Block at index %d was not considered finalized in the index", i)
-		}
+		root, err := blks[i].Block.HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
 	}
 	for i := slotsPerEpoch * 3; i < uint64(len(blks)); i++ {
-		root, err := stateutil.BlockRoot(blks[i].Block)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if db.IsFinalizedBlock(ctx, root) {
-			t.Errorf("Block at index %d was considered finalized in the index, but should not have", i)
-		}
+		root, err := blks[i].Block.HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, false, db.IsFinalizedBlock(ctx, root), "Block at index %d was considered finalized in the index, but should not have", i)
 	}
 }
 
@@ -72,20 +54,13 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
-	root, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
-		t.Fatal(err)
-	}
-	if finalized := db.IsFinalizedBlock(ctx, root); !finalized {
-		t.Error("Finalized genesis block doesn't exist in db")
-	}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 0
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+	assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Finalized genesis block doesn't exist in db")
 }
 
 // This test scenario is to test a specific edge case where the finalized block root is not part of
@@ -110,18 +85,10 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlocks(ctx, blocks0); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlocks(ctx, blocks1); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlocks(ctx, blocks2); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
+	require.NoError(t, db.SaveBlocks(ctx, blocks0))
+	require.NoError(t, db.SaveBlocks(ctx, blocks1))
+	require.NoError(t, db.SaveBlocks(ctx, blocks2))
 
 	// First checkpoint
 	checkpoint1 := &ethpb.Checkpoint{
@@ -131,18 +98,12 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 
 	st := testutil.NewBeaconState()
 	// A state is required to save checkpoint
-	if err := db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveFinalizedCheckpoint(ctx, checkpoint1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint1))
 	// All blocks in blocks0 and blocks1 should be finalized and canonical.
 	for i, block := range append(blocks0, blocks1...) {
 		root := sszRootOrDie(t, block)
-		if !db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)) {
-			t.Errorf("%d - Expected block %#x to be finalized", i, root)
-		}
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
 	}
 
 	// Second checkpoint
@@ -151,18 +112,12 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 2,
 	}
 	// A state is required to save checkpoint
-	if err := db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint2.Root)); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveFinalizedCheckpoint(ctx, checkpoint2); err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint2.Root)))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint2))
 	// All blocks in blocks0 and blocks2 should be finalized and canonical.
 	for i, block := range append(blocks0, blocks2...) {
 		root := sszRootOrDie(t, block)
-		if !db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)) {
-			t.Errorf("%d - Expected block %#x to be finalized", i, root)
-		}
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
 	}
 	// All blocks in blocks1 should be finalized and canonical, except blocks1[0].
 	for i, block := range blocks1 {
@@ -174,10 +129,8 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 }
 
 func sszRootOrDie(t *testing.T, block *ethpb.SignedBeaconBlock) []byte {
-	root, err := stateutil.BlockRoot(block.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	root, err := block.Block.HashTreeRoot()
+	require.NoError(t, err)
 	return root[:]
 }
 
@@ -186,17 +139,12 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot:       j + 1,
-				ParentRoot: parentRoot,
-			},
-		}
+		blocks[j-i] = testutil.NewBeaconBlock()
+		blocks[j-i].Block.Slot = j + 1
+		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
-		previousRoot, err = stateutil.BlockRoot(blocks[j-i].Block)
-		if err != nil {
-			t.Fatal(err)
-		}
+		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
+		require.NoError(t, err)
 	}
 	return blocks
 }

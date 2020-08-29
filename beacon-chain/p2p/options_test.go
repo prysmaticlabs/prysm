@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -18,9 +19,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 	file, err := ioutil.TempFile(testutil.TempDir(), "key")
 	require.NoError(t, err)
 	defer func() {
-		if err := os.Remove(file.Name()); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.Remove(file.Name()))
 	}()
 	key, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	require.NoError(t, err, "Could not generate key")

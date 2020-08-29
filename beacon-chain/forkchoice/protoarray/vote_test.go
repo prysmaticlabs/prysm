@@ -247,9 +247,9 @@ func TestVotes_CanFindHead(t *testing.T) {
 	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 1")
 
 	// Verify pruning below the prune threshold does not affect head.
-	f.store.PruneThreshold = 1000
+	f.store.pruneThreshold = 1000
 	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
-	assert.Equal(t, 11, len(f.store.Nodes), "Incorrect nodes length after prune")
+	assert.Equal(t, 11, len(f.store.nodes), "Incorrect nodes length after prune")
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
 	require.NoError(t, err)
@@ -271,9 +271,9 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//          8
 	//         / \
 	//        9  10
-	f.store.PruneThreshold = 1
+	f.store.pruneThreshold = 1
 	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
-	assert.Equal(t, 6, len(f.store.Nodes), "Incorrect nodes length after prune")
+	assert.Equal(t, 6, len(f.store.nodes), "Incorrect nodes length after prune")
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
 	require.NoError(t, err)

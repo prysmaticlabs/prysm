@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -35,27 +34,23 @@ func TestInitializeFromProto(t *testing.T) {
 				Slot:       4,
 				Validators: nil,
 			},
-			error: "",
 		},
 		{
 			name:  "empty state",
 			state: &pbp2p.BeaconState{},
-			error: "",
 		},
 		{
 			name:  "full state",
 			state: testState.InnerStateUnsafe(),
-			error: "",
 		},
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := state.InitializeFromProto(tt.state)
-			if err != nil && err.Error() != tt.error {
-				t.Errorf("Unexpected error, expected %v, recevied %v", tt.error, err)
-			}
-			if err == nil && tt.error != "" {
-				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
+			if tt.error != "" {
+				assert.ErrorContains(t, tt.error, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -81,27 +76,23 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 				Slot:       4,
 				Validators: nil,
 			},
-			error: "",
 		},
 		{
 			name:  "empty state",
 			state: &pbp2p.BeaconState{},
-			error: "",
 		},
 		{
 			name:  "full state",
 			state: testState.InnerStateUnsafe(),
-			error: "",
 		},
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := state.InitializeFromProtoUnsafe(tt.state)
-			if err != nil && err.Error() != tt.error {
-				t.Errorf("Unexpected error, expected %v, recevied %v", tt.error, err)
-			}
-			if err == nil && tt.error != "" {
-				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
+			if tt.error != "" {
+				assert.ErrorContains(t, tt.error, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -160,7 +151,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			genericHTR, err := ssz.HashTreeRoot(testState.InnerStateUnsafe())
+			genericHTR, err := testState.InnerStateUnsafe().HashTreeRoot()
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
@@ -231,7 +222,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			genericHTR, err := ssz.HashTreeRoot(testState.InnerStateUnsafe())
+			genericHTR, err := testState.InnerStateUnsafe().HashTreeRoot()
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
@@ -255,13 +246,8 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 	originalCount := st1.NumValidators()
 
 	val := &eth.Validator{Slashed: true}
-	if err := st0.AppendValidator(val); err != nil {
-		t.Error(err)
-	}
-	if count := st1.NumValidators(); count != originalCount {
-		t.Errorf("st1 NumValidators mutated. Wanted %d, got %d", originalCount, count)
-	}
-	if _, ok := st1.ValidatorIndexByPubkey(bytesutil.ToBytes48(val.PublicKey)); ok {
-		t.Error("Expected no validator index to be present in st1 for the newly inserted pubkey")
-	}
+	assert.NoError(t, st0.AppendValidator(val))
+	assert.Equal(t, originalCount, st1.NumValidators(), "st1 NumValidators mutated")
+	_, ok := st1.ValidatorIndexByPubkey(bytesutil.ToBytes48(val.PublicKey))
+	assert.Equal(t, false, ok, "Expected no validator index to be present in st1 for the newly inserted pubkey")
 }

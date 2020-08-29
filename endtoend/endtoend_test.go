@@ -22,6 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 
 	"google.golang.org/grpc"
 )
@@ -33,25 +35,30 @@ func init() {
 func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
-	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
+	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
+
+	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	keystorePath := components.StartEth1Node(t)
+	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
 	bootnodeENR := components.StartBootnode(t)
 	components.StartBeaconNodes(t, config, bootnodeENR)
 	components.StartValidatorClients(t, config, keystorePath)
 	defer helpers.LogOutput(t, config)
+	if config.UsePprof {
+		defer func() {
+			for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+				assert.NoError(t, helpers.WritePprofFiles(e2e.TestParams.LogPath, i))
+			}
+		}()
+	}
 
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
 	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	require.NoError(t, err)
 	t.Run("chain started", func(t *testing.T) {
-		if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
-			t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
-		}
+		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"), "Chain did not start")
 	})
 
 	// Failing early in case chain doesn't start.
@@ -60,19 +67,17 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	if config.TestSlasher {
-		components.StartSlashers(t)
+		go components.StartSlashers(t)
 	}
 	if config.TestDeposits {
-		components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
-		components.SendAndMineDeposits(t, keystorePath, int(e2e.DepositCount), int(params.BeaconConfig().MinGenesisActiveValidatorCount))
+		go components.StartNewValidatorClient(t, config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+		go components.SendAndMineDeposits(t, keystorePath, int(e2e.DepositCount), minGenesisActiveCount)
 	}
 
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < len(conns); i++ {
 		conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+i), grpc.WithInsecure())
-		if err != nil {
-			t.Fatalf("Failed to dial: %v", err)
-		}
+		require.NoError(t, err, "Failed to dial")
 		conns[i] = conn
 		defer func() {
 			if err := conn.Close(); err != nil {
@@ -82,9 +87,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	nodeClient := eth.NewNodeClient(conns[0])
 	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	epochSecondsHalf := time.Duration(int64(epochSeconds*1000)/2) * time.Millisecond
@@ -102,9 +105,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 				continue
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				if err := evaluator.Evaluation(conns...); err != nil {
-					t.Errorf("evaluation failed for epoch %d: %v", currentEpoch, err)
-				}
+				assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for epoch %d: %v", currentEpoch, err)
 			})
 		}
 
@@ -124,25 +125,19 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	index := e2e.TestParams.BeaconNodeCount
 	components.StartNewBeaconNode(t, config, index, bootnodeENR)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("Failed to dial: %v", err)
-	}
+	require.NoError(t, err, "Failed to dial")
 	conns = append(conns, syncConn)
 
-	// Sleep a second for every 8 blocks that need to be synced for the newly started node.
-	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 8 * config.EpochsToRun)
+	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
+	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 4 * config.EpochsToRun)
 	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
 	time.Sleep(time.Until(waitForSync))
 
 	syncLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
 	t.Run("sync completed", func(t *testing.T) {
-		if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
-			t.Errorf("Failed to sync: %v", err)
-		}
+		assert.NoError(t, helpers.WaitForTextInFile(syncLogFile, "Synced up to"), "Failed to sync")
 	})
 	if t.Failed() {
 		return
@@ -153,9 +148,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	syncEvaluators := []types.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 	for _, evaluator := range syncEvaluators {
 		t.Run(evaluator.Name, func(t *testing.T) {
-			if err := evaluator.Evaluation(conns...); err != nil {
-				t.Errorf("evaluation failed for sync node: %v", err)
-			}
+			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
 		})
 	}
 }

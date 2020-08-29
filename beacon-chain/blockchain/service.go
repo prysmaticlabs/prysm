@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -63,10 +62,8 @@ type Service struct {
 	finalizedCheckpt          *ethpb.Checkpoint
 	prevFinalizedCheckpt      *ethpb.Checkpoint
 	nextEpochBoundarySlot     uint64
-	voteLock                  sync.RWMutex
 	initSyncState             map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots             [][32]byte
-	initSyncStateLock         sync.RWMutex
 	checkpointState           *cache.CheckpointStateCache
 	checkpointStateLock       sync.Mutex
 	stateGen                  *stategen.State
@@ -77,6 +74,7 @@ type Service struct {
 	recentCanonicalBlocksLock sync.RWMutex
 	justifiedBalances         []uint64
 	justifiedBalancesLock     sync.RWMutex
+	checkPtInfoCache          *checkPtInfoCache
 }
 
 // Config options for the service.
@@ -121,6 +119,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		initSyncBlocks:        make(map[[32]byte]*ethpb.SignedBeaconBlock),
 		recentCanonicalBlocks: make(map[[32]byte]bool),
 		justifiedBalances:     make([]uint64, 0),
+		checkPtInfoCache:      newCheckPointInfoCache(),
 	}, nil
 }
 
@@ -152,8 +151,8 @@ func (s *Service) Start() {
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
-		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
-		s.opsService.SetGenesisTime(beaconState.GenesisTime())
+		s.genesisTime = time.Unix(int64(helpers.GenesisTime(beaconState)), 0)
+		s.opsService.SetGenesisTime(helpers.GenesisTime(beaconState))
 		if err := s.initializeChainInfo(s.ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -176,7 +175,7 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
 		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
@@ -287,7 +286,7 @@ func (s *Service) initializeBeaconChain(
 		return nil, err
 	}
 
-	s.opsService.SetGenesisTime(genesisState.GenesisTime())
+	s.opsService.SetGenesisTime(helpers.GenesisTime(genesisState))
 
 	return genesisState, nil
 }
@@ -324,7 +323,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
@@ -388,7 +387,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if genesisBlock == nil {
 		return errors.New("no genesis block in db")
 	}
-	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlock.Block)
+	genesisBlkRoot, err := genesisBlock.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
@@ -399,7 +398,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
-		headRoot, err := stateutil.BlockRoot(headBlock.Block)
+		headRoot, err := headBlock.Block.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not hash head block")
 		}

@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -20,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -42,7 +39,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
 	genesis := testutil.NewBeaconBlock()
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -72,8 +69,8 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		PublicKeys: [][]byte{pubKey},
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.GetDuties(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
+	if _, err := vs.GetDuties(ctx, req); err != nil {
+		assert.ErrorContains(t, want, err)
 	}
 }
 
@@ -88,7 +85,7 @@ func TestGetDuties_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
@@ -162,7 +159,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	// Set state to non-epoch start slot.
 	require.NoError(t, bState.SetSlot(5))
 
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))
@@ -203,7 +200,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))
@@ -266,7 +263,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
@@ -325,7 +322,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	pubKeys := make([][]byte, len(deposits))
@@ -399,7 +396,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
-	receivedTime := exp.Round(time.Second).Sub(time.Now())
+	receivedTime := time.Until(exp.Round(time.Second))
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
 	}
@@ -416,7 +413,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	require.NoError(b, err)
 	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	require.NoError(b, err, "Could not setup genesis bs")
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(b, err, "Could not get signing root")
 
 	pubKeys := make([][48]byte, len(deposits))

@@ -20,7 +20,6 @@ import (
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -73,44 +72,24 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
-func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
 	if g.backend == nil {
-		return gethTypes.NewBlock(
-			&gethTypes.Header{
-				Number: big.NewInt(0),
-			},
-			[]*gethTypes.Transaction{},
-			[]*gethTypes.Header{},
-			[]*gethTypes.Receipt{},
-		), nil
+		return &gethTypes.Header{
+			Number: big.NewInt(0),
+		}, nil
 	}
-	return g.backend.Blockchain().GetBlockByHash(hash), nil
+	return g.backend.Blockchain().GetHeaderByHash(hash), nil
 
-}
-
-func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	if g.backend == nil {
-		return gethTypes.NewBlock(
-			&gethTypes.Header{
-				Number: big.NewInt(15),
-				Time:   150,
-			},
-			[]*gethTypes.Transaction{},
-			[]*gethTypes.Header{},
-			[]*gethTypes.Receipt{},
-		), nil
-	}
-
-	return g.backend.Blockchain().GetBlockByNumber(number.Uint64()), nil
 }
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
 	if g.backend == nil {
 		return &gethTypes.Header{
-			Number: big.NewInt(0),
+			Number: big.NewInt(15),
+			Time:   150,
 		}, nil
 	}
 	if number == nil {
@@ -152,6 +131,35 @@ func TestStart_OK(t *testing.T) {
 	}
 	hook.Reset()
 	web3Service.cancel()
+}
+
+func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	_, err = NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.ErrorContains(t, "cannot create genesis state: no eth1 http endpoint defined", err)
+}
+
+func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+
+	require.NoError(t, beaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
+		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
+		Trie:           &protodb.SparseMerkleTrie{},
+	}))
+	_, err = NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err)
 }
 
 func TestStop_OK(t *testing.T) {
@@ -307,5 +315,5 @@ func TestHandlePanic_OK(t *testing.T) {
 	// nil eth1DataFetcher would panic if cached value not used
 	web3Service.eth1DataFetcher = nil
 	web3Service.processBlockHeader(nil)
-	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
+	require.LogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }

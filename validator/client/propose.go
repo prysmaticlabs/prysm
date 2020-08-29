@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -107,6 +106,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
+		"graffiti":        string(b.Body.Graffiti),
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {
@@ -126,10 +126,28 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
 
-	randaoReveal, err := v.signObject(ctx, pubKey, epoch, domain.SignatureDomain)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not sign reveal")
+	var randaoReveal bls.Signature
+	if featureconfig.Get().EnableAccountsV2 {
+		root, err := helpers.ComputeSigningRoot(epoch, domain.SignatureDomain)
+		if err != nil {
+			return nil, err
+		}
+		randaoReveal, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey:       pubKey[:],
+			SigningRoot:     root[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_Epoch{Epoch: epoch},
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		randaoReveal, err = v.signObject(ctx, pubKey, epoch, domain.SignatureDomain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not sign reveal")
+		}
 	}
+
 	return randaoReveal.Marshal(), nil
 }
 
@@ -147,8 +165,10 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 			return nil, errors.Wrap(err, "could not get signing root")
 		}
 		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
-			PublicKey:   pubKey[:],
-			SigningRoot: blockRoot[:],
+			PublicKey:       pubKey[:],
+			SigningRoot:     blockRoot[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_Block{Block: b},
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
@@ -156,7 +176,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		return sig.Marshal(), nil
 	}
 	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
-		bodyRoot, err := stateutil.BlockBodyRoot(b.Body)
+		bodyRoot, err := b.Body.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
 		}

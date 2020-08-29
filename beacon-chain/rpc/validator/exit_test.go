@@ -14,7 +14,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,7 +32,7 @@ func TestSub(t *testing.T) {
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	// Set genesis time to be 100 epochs ago.
@@ -67,8 +66,11 @@ func TestSub(t *testing.T) {
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 
-	_, err = server.ProposeExit(context.Background(), req)
+	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
+	expectedRoot, err := req.Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedRoot[:], resp.ExitRoot)
 
 	// Ensure the state notification was broadcast.
 	notificationFound := false
@@ -99,7 +101,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
-	genesisRoot, err := stateutil.BlockRoot(block.Block)
+	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
 	// Set genesis time to be 100 epochs ago.
@@ -143,6 +145,9 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
-	_, err = server.ProposeExit(context.Background(), req)
+	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
+	expectedRoot, err := req.Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedRoot[:], resp.ExitRoot)
 }

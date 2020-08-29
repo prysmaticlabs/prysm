@@ -40,7 +40,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 
 	// Update and save head block after fork choice.
 	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-		return errors.Wrap(err, "could not update head")
+		log.WithError(err).Warn("Could not update head")
 	}
 
 	// Send notification of the processed block to the state feed.

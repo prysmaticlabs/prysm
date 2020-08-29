@@ -179,10 +179,8 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
-	} else {
-		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-			return nil, err
-		}
+	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
+		return nil, err
 	}
 
 	return beaconState, nil
@@ -199,7 +197,7 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 	}
 
 	receiptRoot := eth1Data.DepositRoot
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := deposit.Data.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
@@ -208,12 +206,14 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 		leaf[:],
 		int(beaconState.Eth1DepositIndex()),
 		deposit.Proof,
+		params.BeaconConfig().DepositContractTreeDepth,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",
 			receiptRoot,
 		)
 	}
+
 	return nil
 }
 
@@ -250,7 +250,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 			ObjectRoot: root[:],
 			Domain:     domain,
 		}
-		ctrRoot, err := ssz.HashTreeRoot(signingData)
+		ctrRoot, err := signingData.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not get container root")
 		}

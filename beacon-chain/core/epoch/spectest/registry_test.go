@@ -8,12 +8,11 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func runRegistryUpdatesTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/registry_updates/pyspec_tests")
 	for _, folder := range testFolders {
@@ -26,8 +25,6 @@ func runRegistryUpdatesTests(t *testing.T, config string) {
 
 func processRegistryUpdatesWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
 	state, err := epoch.ProcessRegistryUpdates(state)
-	if err != nil {
-		t.Fatalf("could not process registry updates: %v", err)
-	}
+	require.NoError(t, err, "Could not process registry updates")
 	return state, nil
 }

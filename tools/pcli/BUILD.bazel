@@ -12,7 +12,6 @@ go_library(
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_kr_pretty//:go_default_library",

@@ -40,8 +40,6 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 	for i := 0; i < beaconNodeNum; i++ {
 		go StartNewValidatorClient(t, config, validatorsPerNode, i, validatorsPerNode*i)
 	}
-
-	SendAndMineDeposits(t, keystorePath, validatorNum, 0)
 }
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
@@ -67,9 +65,9 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
 		fmt.Sprintf("--interop-start-index=%d", offset),
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
+		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
 		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
-		"--verbosity=trace",
 		"--force-clear-db",
 		"--e2e-config",
 	}

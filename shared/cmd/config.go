@@ -33,7 +33,7 @@ func Init(c *Flags) {
 // InitWithReset sets the global config and returns function that is used to reset configuration.
 func InitWithReset(c *Flags) func() {
 	resetFunc := func() {
-		Init(&Flags{})
+		Init(nil)
 	}
 	Init(c)
 	return resetFunc
@@ -43,12 +43,10 @@ func InitWithReset(c *Flags) func() {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := newConfig(ctx)
-	maxPageSize := params.BeaconConfig().DefaultPageSize
 	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
-		maxPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
-		log.Warnf("Starting beacon chain with max RPC page size of %d", maxPageSize)
+		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
+		log.Warnf("Starting beacon chain with max RPC page size of %d", cfg.MaxRPCPageSize)
 	}
-	cfg.MaxRPCPageSize = maxPageSize
 	Init(cfg)
 }
 
@@ -56,12 +54,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
 	cfg := newConfig(ctx)
-	maxPageSize := params.BeaconConfig().DefaultPageSize
 	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
-		maxPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
-		log.Warnf("Starting slasher with max RPC page size of %d", maxPageSize)
+		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
+		log.Warnf("Starting slasher with max RPC page size of %d", cfg.MaxRPCPageSize)
 	}
-	cfg.MaxRPCPageSize = maxPageSize
 	Init(cfg)
 }
 
@@ -73,7 +69,7 @@ func ConfigureValidator(ctx *cli.Context) {
 }
 
 func newConfig(ctx *cli.Context) *Flags {
-	cfg := &Flags{}
+	cfg := Get()
 	if ctx.Bool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true

@@ -100,13 +100,20 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	if cliCtx.IsSet(flags.HistoricalSlasherNode.Name) {
+	if cliCtx.Bool(flags.HistoricalSlasherNode.Name) {
 		c := params.BeaconConfig()
-		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch
+		// Save a state every 4 epochs.
+		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 4
 		params.OverrideBeaconConfig(c)
 		cmdConfig := cmd.Get()
+		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
 		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
 		cmd.Init(cmdConfig)
+		log.Warnf(
+			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
+			c.SlotsPerArchivedPoint,
+			cmdConfig.MaxRPCPageSize,
+		)
 	}
 
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
@@ -130,6 +137,16 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		networkCfg := params.BeaconNetworkConfig()
 		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
 		params.OverrideBeaconNetworkConfig(networkCfg)
+	}
+	if cliCtx.IsSet(flags.ChainID.Name) {
+		c := params.BeaconNetworkConfig()
+		c.ChainID = cliCtx.Uint64(flags.ChainID.Name)
+		params.OverrideBeaconNetworkConfig(c)
+	}
+	if cliCtx.IsSet(flags.NetworkID.Name) {
+		c := params.BeaconNetworkConfig()
+		c.NetworkID = cliCtx.Uint64(flags.NetworkID.Name)
+		params.OverrideBeaconNetworkConfig(c)
 	}
 
 	registry := shared.NewServiceRegistry()
@@ -302,12 +319,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
-	} else {
 		// Only check if historical states were deleted and needed to recompute when
 		// user doesn't want to skip.
-		if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
-			return err
-		}
+	} else if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
+		return err
 	}
 
 	if err := d.RunMigrations(b.ctx); err != nil {
@@ -458,8 +473,9 @@ func (b *BeaconNode) registerPOWChainService() error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	if !b.cliCtx.IsSet(flags.HTTPWeb3ProviderFlag.Name) {
-		log.Warn("Using default ETH1 connection provided by Prysmatic Labs. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
+	if b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
+		log.Error("No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
+		log.Error("You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
@@ -682,6 +698,10 @@ func (b *BeaconNode) registerInteropServices() error {
 			DepositCache:  b.depositCache,
 			GenesisPath:   genesisStatePath,
 		})
+
+		cfg := params.BeaconConfig()
+		cfg.GenesisTime = svc.PreGenesisState().GenesisTime()
+		params.OverrideBeaconConfig(cfg)
 
 		return b.services.RegisterService(svc)
 	}

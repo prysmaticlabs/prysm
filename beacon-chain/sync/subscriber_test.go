@@ -55,7 +55,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	})
 	r.chainStarted = true
 
-	p2p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}})
+	p2p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -185,7 +185,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		panic("bad")
 	})
 	r.chainStarted = true
-	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}})
+	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -222,7 +222,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	require.NoError(t, err)
 
 	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
-	testutil.AssertLogsDoNotContain(t, hook, "Failed to unregister topic validator")
+	require.LogsDoNotContain(t, hook, "Failed to unregister topic validator")
 }
 
 func TestStaticSubnets(t *testing.T) {

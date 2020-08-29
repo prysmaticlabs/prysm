@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,7 +17,6 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -46,14 +44,16 @@ func TestProposeAttestation_OK(t *testing.T) {
 	head.Block.Slot = 999
 	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	require.NoError(t, db.SaveBlock(ctx, head))
-	root, err := stateutil.BlockRoot(head.Block)
+	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	validators := make([]*ethpb.Validator, 64)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			PublicKey:             make([]byte, 48),
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 		}
 	}
 
@@ -69,8 +69,8 @@ func TestProposeAttestation_OK(t *testing.T) {
 		Signature: sig.Marshal(),
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{},
-			Target:          &ethpb.Checkpoint{},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
 	}
 	_, err = attesterServer.ProposeAttestation(context.Background(), req)
@@ -91,9 +91,11 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 
 	req := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{},
-			Target: &ethpb.Checkpoint{},
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
 		},
+		Signature: make([]byte, 96),
 	}
 	wanted := "Incorrect attestation signature"
 	_, err := attesterServer.ProposeAttestation(context.Background(), req)
@@ -104,20 +106,17 @@ func TestGetAttestationData_OK(t *testing.T) {
 	ctx := context.Background()
 	db, _ := dbutil.SetupDB(t)
 
-	block := &ethpb.BeaconBlock{
-		Slot: 3*params.BeaconConfig().SlotsPerEpoch + 1,
-	}
-	targetBlock := &ethpb.BeaconBlock{
-		Slot: 1 * params.BeaconConfig().SlotsPerEpoch,
-	}
-	justifiedBlock := &ethpb.BeaconBlock{
-		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
-	}
-	blockRoot, err := stateutil.BlockRoot(block)
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
+	targetBlock := testutil.NewBeaconBlock()
+	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
+	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := stateutil.BlockRoot(targetBlock)
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	beaconState := testutil.NewBeaconState()
@@ -153,7 +152,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 		StateNotifier: chainService.StateNotifier(),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveBlock(ctx, block))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
@@ -206,20 +205,17 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 
-	block := &ethpb.BeaconBlock{
-		Slot: 10000,
-	}
-	epochBoundaryBlock := &ethpb.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(10000)),
-	}
-	justifiedBlock := &ethpb.BeaconBlock{
-		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
-	}
-	blockRoot, err := stateutil.BlockRoot(block)
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 10000
+	epochBoundaryBlock := testutil.NewBeaconBlock()
+	epochBoundaryBlock.Block.Slot = helpers.StartSlot(helpers.SlotToEpoch(10000))
+	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock.Block.Slot = helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2 // Imagine two skip block
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	justifiedBlockRoot, err := stateutil.BlockRoot(justifiedBlock)
+	justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash justified block")
-	epochBoundaryRoot, err := stateutil.BlockRoot(epochBoundaryBlock)
+	epochBoundaryRoot, err := epochBoundaryBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash justified block")
 	slot := uint64(10000)
 
@@ -251,7 +247,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		StateNotifier:      chainService.StateNotifier(),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveBlock(ctx, block))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
@@ -302,7 +298,7 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	}
 
 	res := &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 55},
+		Target: &ethpb.Checkpoint{Epoch: 55, Root: make([]byte, 32)},
 	}
 
 	require.NoError(t, server.AttestationCache.MarkInProgress(req))
@@ -355,24 +351,22 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	db, sc := dbutil.SetupDB(t)
 
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-	block := &ethpb.BeaconBlock{
-		Slot: slot,
-	}
-	block2 := &ethpb.BeaconBlock{Slot: slot - 1}
-	targetBlock := &ethpb.BeaconBlock{
-		Slot: 1 * params.BeaconConfig().SlotsPerEpoch,
-	}
-	justifiedBlock := &ethpb.BeaconBlock{
-		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
-	}
-	blockRoot, err := stateutil.BlockRoot(block)
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = slot
+	block2 := testutil.NewBeaconBlock()
+	block2.Block.Slot = slot - 1
+	targetBlock := testutil.NewBeaconBlock()
+	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
+	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	blockRoot2, err := ssz.HashTreeRoot(block2)
+	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block2}))
-	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
+	require.NoError(t, db.SaveBlock(ctx, block2))
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := stateutil.BlockRoot(targetBlock)
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
 	beaconState := testutil.NewBeaconState()
@@ -414,7 +408,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		StateGen:            stategen.New(db, sc),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveBlock(ctx, block))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
@@ -447,20 +441,17 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 
 	slot := uint64(5)
-	block := &ethpb.BeaconBlock{
-		Slot: slot,
-	}
-	targetBlock := &ethpb.BeaconBlock{
-		Slot: 0,
-	}
-	justifiedBlock := &ethpb.BeaconBlock{
-		Slot: 0,
-	}
-	blockRoot, err := stateutil.BlockRoot(block)
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = slot
+	targetBlock := testutil.NewBeaconBlock()
+	targetBlock.Block.Slot = 0
+	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock.Block.Slot = 0
+	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := stateutil.BlockRoot(targetBlock)
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
 	beaconState := testutil.NewBeaconState()
@@ -493,7 +484,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		StateNotifier:      chainService.StateNotifier(),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}))
+	require.NoError(t, db.SaveBlock(ctx, block))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{

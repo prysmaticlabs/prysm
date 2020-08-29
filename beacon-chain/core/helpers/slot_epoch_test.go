@@ -2,11 +2,12 @@ package helpers
 
 import (
 	"math"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -25,9 +26,7 @@ func TestSlotToEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		if tt.epoch != SlotToEpoch(tt.slot) {
-			t.Errorf("SlotToEpoch(%d) = %d, wanted: %d", tt.slot, SlotToEpoch(tt.slot), tt.epoch)
-		}
+		assert.Equal(t, tt.epoch, SlotToEpoch(tt.slot), "SlotToEpoch(%d)", tt.slot)
 	}
 }
 
@@ -44,12 +43,8 @@ func TestCurrentEpoch_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tt.epoch != CurrentEpoch(state) {
-			t.Errorf("ActiveCurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.epoch, CurrentEpoch(state), "ActiveCurrentEpoch(%d)", state.Slot())
 	}
 }
 
@@ -64,12 +59,8 @@ func TestPrevEpoch_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tt.epoch != PrevEpoch(state) {
-			t.Errorf("ActivePrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.epoch, PrevEpoch(state), "ActivePrevEpoch(%d)", state.Slot())
 	}
 }
 
@@ -86,12 +77,8 @@ func TestNextEpoch_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tt.epoch != NextEpoch(state) {
-			t.Errorf("NextEpoch(%d) = %d, wanted: %d", state.Slot(), NextEpoch(state), tt.epoch)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.epoch, NextEpoch(state), "NextEpoch(%d)", state.Slot())
 	}
 }
 
@@ -106,9 +93,7 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.epoch}
-		if tt.startSlot != StartSlot(tt.epoch) {
-			t.Errorf("StartSlot(%d) = %d, wanted: %d", state.Slot, StartSlot(tt.epoch), tt.startSlot)
-		}
+		assert.Equal(t, tt.startSlot, StartSlot(tt.epoch), "StartSlot(%d)", state.Slot)
 	}
 }
 
@@ -138,9 +123,7 @@ func TestIsEpochStart(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if IsEpochStart(tt.slot) != tt.result {
-			t.Errorf("IsEpochStart(%d) = %v, wanted %v", tt.slot, IsEpochStart(tt.slot), tt.result)
-		}
+		assert.Equal(t, tt.result, IsEpochStart(tt.slot), "IsEpochStart(%d)", tt.slot)
 	}
 }
 
@@ -166,9 +149,7 @@ func TestIsEpochEnd(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if IsEpochEnd(tt.slot) != tt.result {
-			t.Errorf("IsEpochEnd(%d) = %v, wanted %v", tt.slot, IsEpochEnd(tt.slot), tt.result)
-		}
+		assert.Equal(t, tt.result, IsEpochEnd(tt.slot), "IsEpochEnd(%d)", tt.slot)
 	}
 }
 
@@ -184,9 +165,7 @@ func TestSlotsSinceEpochStarts(t *testing.T) {
 		{slots: 10*params.BeaconConfig().SlotsPerEpoch + 2, wantedSlots: 2},
 	}
 	for _, tt := range tests {
-		if got := SlotsSinceEpochStarts(tt.slots); got != tt.wantedSlots {
-			t.Errorf("SlotsSinceEpochStarts() = %v, want %v", got, tt.wantedSlots)
-		}
+		assert.Equal(t, tt.wantedSlots, SlotsSinceEpochStarts(tt.slots))
 	}
 }
 
@@ -200,9 +179,7 @@ func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 		{startSlot: 10*params.BeaconConfig().SlotsPerEpoch - (params.BeaconConfig().SlotsPerEpoch - 1), roundedUpSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, tt := range tests {
-		if tt.roundedUpSlot != RoundUpToNearestEpoch(tt.startSlot) {
-			t.Errorf("RoundUpToNearestEpoch(%d) = %d, wanted: %d", tt.startSlot, RoundUpToNearestEpoch(tt.startSlot), tt.roundedUpSlot)
-		}
+		assert.Equal(t, tt.roundedUpSlot, RoundUpToNearestEpoch(tt.startSlot), "RoundUpToNearestEpoch(%d)", tt.startSlot)
 	}
 }
 
@@ -212,10 +189,10 @@ func TestSlotToTime(t *testing.T) {
 		slot           uint64
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    time.Time
-		wantErr bool
+		name      string
+		args      args
+		want      time.Time
+		wantedErr string
 	}{
 		{
 			name: "slot_0",
@@ -223,8 +200,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 0,
 				slot:           0,
 			},
-			want:    time.Unix(0, 0),
-			wantErr: false,
+			want: time.Unix(0, 0),
 		},
 		{
 			name: "slot_1",
@@ -232,8 +208,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 0,
 				slot:           1,
 			},
-			want:    time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
-			wantErr: false,
+			want: time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
 		},
 		{
 			name: "slot_12",
@@ -241,8 +216,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 500,
 				slot:           12,
 			},
-			want:    time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
-			wantErr: false,
+			want: time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
 		},
 		{
 			name: "overflow",
@@ -250,13 +224,17 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 500,
 				slot:           math.MaxUint64,
 			},
-			wantErr: true,
+			wantedErr: "is in the far distant future",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); (err != nil) != tt.wantErr && !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SlotToTime() = %v, want %v", got, tt.want)
+			got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+				assert.DeepEqual(t, tt.want, got)
 			}
 		})
 	}
@@ -269,9 +247,9 @@ func TestVerifySlotTime(t *testing.T) {
 		timeTolerance time.Duration
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name      string
+		args      args
+		wantedErr string
 	}{
 		{
 			name: "Past slot",
@@ -279,7 +257,6 @@ func TestVerifySlotTime(t *testing.T) {
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
 				slot:        3,
 			},
-			wantErr: false,
 		},
 		{
 			name: "within tolerance",
@@ -287,7 +264,6 @@ func TestVerifySlotTime(t *testing.T) {
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Add(20 * time.Millisecond).Unix(),
 				slot:        5,
 			},
-			wantErr: false,
 		},
 		{
 			name: "future slot",
@@ -295,13 +271,52 @@ func TestVerifySlotTime(t *testing.T) {
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
 				slot:        6,
 			},
-			wantErr: true,
+			wantedErr: "could not process slot from the future",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := VerifySlotTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance); (err != nil) != tt.wantErr {
-				t.Errorf("VerifySlotTime() error = %v, wantErr %v", err, tt.wantErr)
+			err := VerifySlotTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGenesisTime(t *testing.T) {
+	type args struct {
+		configTime uint64
+		stateTime  uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want uint64
+	}{
+		{
+			name: "Use config genesis time",
+			args: args{configTime: 1, stateTime: 2},
+			want: 1,
+		},
+		{
+			name: "Use state genesis time",
+			args: args{configTime: 0, stateTime: 2},
+			want: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := params.BeaconConfig()
+			c.GenesisTime = tt.args.configTime
+			params.OverrideBeaconConfig(c)
+			s := &pb.BeaconState{GenesisTime: tt.args.stateTime}
+			state, err := beaconstate.InitializeFromProto(s)
+			require.NoError(t, err)
+			if got := GenesisTime(state); got != tt.want {
+				t.Errorf("GenesisTime() = %v, want %v", got, tt.want)
 			}
 		})
 	}

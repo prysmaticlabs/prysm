@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -331,7 +330,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	ticker := slotutil.GetSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case _ = <-ticker.C():
+		case <-ticker.C():
 			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
@@ -351,7 +350,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 				bs.CollectedAttestationsBuffer <- atts
 			}
 		case att := <-bs.ReceivedAttestationsBuffer:
-			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
+			attDataRoot, err := att.Data.HashTreeRoot()
 			if err != nil {
 				log.Errorf("Could not hash tree root data: %v", err)
 				continue

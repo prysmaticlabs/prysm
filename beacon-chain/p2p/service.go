@@ -23,6 +23,8 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -55,7 +57,7 @@ const maxBadResponses = 5
 const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
 // maxDialTimeout is the timeout for a single peer dial.
-const maxDialTimeout = 30 * time.Second
+var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -73,6 +75,8 @@ type Service struct {
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
 	joinedTopicsLock      sync.Mutex
+	subnetsLock           map[uint64]*sync.RWMutex
+	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -105,6 +109,7 @@ func NewService(cfg *Config) (*Service, error) {
 		exclusionList: cache,
 		isPreGenesis:  true,
 		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
+		subnetsLock:   make(map[uint64]*sync.RWMutex),
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -143,8 +148,8 @@ func NewService(cfg *Config) (*Service, error) {
 	// account previously added peers when creating the gossipsub
 	// object.
 	psOpts := []pubsub.Option{
-		pubsub.WithMessageSigning(false),
-		pubsub.WithStrictSignatureVerification(false),
+		pubsub.WithMessageSignaturePolicy(pubsub.LaxNoSign),
+		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 	// Set the pubsub global parameters that we require.
@@ -352,7 +357,7 @@ func (s *Service) pingPeers() {
 	for _, pid := range s.peers.Connected() {
 		go func(id peer.ID) {
 			if err := s.pingMethod(s.ctx, id); err != nil {
-				log.WithField("peer", id).WithError(err).Error("Failed to ping peer")
+				log.WithField("peer", id).WithError(err).Debug("Failed to ping peer")
 			}
 		}(pid)
 	}
@@ -390,21 +395,24 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	for _, info := range addrInfos {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
-			if err := s.connectWithPeer(info); err != nil {
+			if err := s.connectWithPeer(s.ctx, info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(info)
 	}
 }
 
-func (s *Service) connectWithPeer(info peer.AddrInfo) error {
+func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.connectWithPeer")
+	defer span.End()
+
 	if info.ID == s.host.ID() {
 		return nil
 	}
 	if s.Peers().IsBad(info.ID) {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(s.ctx, maxDialTimeout)
+	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 	if err := s.host.Connect(ctx, info); err != nil {
 		s.Peers().Scorers().BadResponsesScorer().Increment(info.ID)

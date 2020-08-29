@@ -6,7 +6,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStore_VoluntaryExits_CRUD(t *testing.T) {
@@ -15,34 +16,16 @@ func TestStore_VoluntaryExits_CRUD(t *testing.T) {
 	exit := &ethpb.VoluntaryExit{
 		Epoch: 5,
 	}
-	exitRoot, err := ssz.HashTreeRoot(exit)
-	if err != nil {
-		t.Fatal(err)
-	}
+	exitRoot, err := exit.HashTreeRoot()
+	require.NoError(t, err)
 	retrieved, err := db.VoluntaryExit(ctx, exitRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if retrieved != nil {
-		t.Errorf("Expected nil voluntary exit, received %v", retrieved)
-	}
-	if err := db.SaveVoluntaryExit(ctx, exit); err != nil {
-		t.Fatal(err)
-	}
-	if !db.HasVoluntaryExit(ctx, exitRoot) {
-		t.Error("Expected voluntary exit to exist in the db")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, (*ethpb.VoluntaryExit)(nil), retrieved, "Expected nil voluntary exit")
+	require.NoError(t, db.SaveVoluntaryExit(ctx, exit))
+	assert.Equal(t, true, db.HasVoluntaryExit(ctx, exitRoot), "Expected voluntary exit to exist in the db")
 	retrieved, err = db.VoluntaryExit(ctx, exitRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(exit, retrieved) {
-		t.Errorf("Wanted %v, received %v", exit, retrieved)
-	}
-	if err := db.deleteVoluntaryExit(ctx, exitRoot); err != nil {
-		t.Fatal(err)
-	}
-	if db.HasVoluntaryExit(ctx, exitRoot) {
-		t.Error("Expected voluntary exit to have been deleted from the db")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(exit, retrieved), "Wanted %v, received %v", exit, retrieved)
+	require.NoError(t, db.deleteVoluntaryExit(ctx, exitRoot))
+	assert.Equal(t, false, db.HasVoluntaryExit(ctx, exitRoot), "Expected voluntary exit to have been deleted from the db")
 }

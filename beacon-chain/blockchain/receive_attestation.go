@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,6 +25,7 @@ type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
 	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
+	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -61,7 +63,7 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 		return false
 	}
 
-	if err := blocks.VerifyAttestation(ctx, baseState, att); err != nil {
+	if err := blocks.VerifyAttestationSignature(ctx, baseState, att); err != nil {
 		log.WithError(err).Error("Failed to validate attestation")
 		return false
 	}
@@ -72,6 +74,12 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 // AttestationPreState returns the pre state of attestation.
 func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error) {
 	return s.getAttPreState(ctx, att.Data.Target)
+}
+
+// AttestationCheckPtInfo returns the check point info of attestation that can be used to verify the attestation
+// contents and signatures.
+func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
+	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
