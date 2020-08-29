@@ -295,7 +295,7 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 
 }
 
-// LockWaletConfigFile lock read and write to wallet file in order to prevent
+// LockWalletConfigFile lock read and write to wallet file in order to prevent
 // two validators from using the same keys.
 func (w *Wallet) LockWalletConfigFile(ctx context.Context) error {
 	fileLock := flock.New(w.configFilePath)

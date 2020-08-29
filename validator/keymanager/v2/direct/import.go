@@ -20,24 +20,17 @@ func (dr *Keymanager) ImportKeystores(
 	ctx context.Context,
 	keystores []*v2keymanager.Keystore,
 	importsPassword string,
-	useWalletPassword bool,
 ) error {
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(keystores))
 	pubKeys := make([][]byte, len(keystores))
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
-	var password string
 	var err error
-	if useWalletPassword {
-		password = dr.accountsPassword
-	} else {
-		password = importsPassword
-	}
 	fmt.Println("Importing accounts, this may take a while...")
 	var privKeyBytes []byte
 	var pubKeyBytes []byte
 	for i := 0; i < len(keystores); i++ {
-		privKeyBytes, pubKeyBytes, password, err = dr.attemptDecryptKeystore(decryptor, keystores[i], password)
+		privKeyBytes, pubKeyBytes, importsPassword, err = dr.attemptDecryptKeystore(decryptor, keystores[i], importsPassword)
 		if err != nil {
 			return err
 		}

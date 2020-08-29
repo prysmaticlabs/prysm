@@ -42,7 +42,7 @@ func EditWalletConfigurationCLI(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not get keymanager config")
 		}
-		encodedCfg, err := remote.MarshalConfigFile(cliCtx.Context, newCfg)
+		encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, newCfg)
 		if err != nil {
 			return errors.Wrap(err, "could not marshal config file")
 		}

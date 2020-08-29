@@ -35,7 +35,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 		},
 		RemoteAddr: "my.server.com:4000",
 	}
-	encodedCfg, err := remote.MarshalConfigFile(cliCtx.Context, originalCfg)
+	encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, originalCfg)
 	assert.NoError(t, err)
 	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg))
 

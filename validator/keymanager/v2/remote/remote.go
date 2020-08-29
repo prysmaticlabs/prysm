@@ -134,7 +134,7 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 }
 
 // MarshalOptionsFile for the keymanager.
-func MarshalConfigFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
+func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 

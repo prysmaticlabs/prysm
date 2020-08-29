@@ -16,6 +16,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// CreateWalletConfig defines the parameters needed to call the create wallet functions.
 type CreateWalletConfig struct {
 	WalletCfg            *WalletConfig
 	RemoteKeymanagerOpts *remote.KeymanagerOpts
@@ -37,7 +38,7 @@ func CreateAndSaveWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
 	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 }
 
-// Creates a wallet with a keymanager specifies in the config.
+// CreateWalletWithKeymanager specified by configuration options.
 func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*Wallet, error) {
 	if err := WalletExists(cfg.WalletCfg.WalletDir); err != nil {
 		if !errors.Is(err, ErrNoWalletFound) {
@@ -157,7 +158,7 @@ func createDerivedKeymanagerWallet(ctx context.Context, wallet *Wallet, skipMnem
 }
 
 func createRemoteKeymanagerWallet(ctx context.Context, wallet *Wallet, opts *remote.KeymanagerOpts) error {
-	keymanagerConfig, err := remote.MarshalConfigFile(ctx, opts)
+	keymanagerConfig, err := remote.MarshalOptionsFile(ctx, opts)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal config file")
 	}

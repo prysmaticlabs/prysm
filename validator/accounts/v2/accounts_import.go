@@ -67,10 +67,10 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 
 // ImportAccountsConfig defines values to run the import accounts function.
 type ImportAccountsConfig struct {
-	Wallet            *Wallet
-	Keystores         []*v2keymanager.Keystore
-	AccountsPassword  string
-	UseWalletPassword bool
+	Wallet          *Wallet
+	Keystores       []*v2keymanager.Keystore
+	AccountPassword string
+	WalletPassword  string
 }
 
 // ImportAccountsCLI can import external, EIP-2335 compliant keystore.json files as
@@ -172,9 +172,10 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 	}
 
 	if err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
-		Wallet:           wallet,
-		Keystores:        keystoresImported,
-		AccountsPassword: accountsPassword,
+		Wallet:          wallet,
+		Keystores:       keystoresImported,
+		AccountPassword: accountsPassword,
+		WalletPassword:  wallet.walletPassword,
 	}); err != nil {
 		return err
 	}
@@ -202,8 +203,9 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 		return err
 	}
 	km, err := direct.NewKeymanager(ctx, &direct.SetupConfig{
-		Wallet: cfg.Wallet,
-		Opts:   directOpts,
+		Wallet:         cfg.Wallet,
+		WalletPassword: cfg.WalletPassword,
+		Opts:           directOpts,
 	})
 	if err != nil {
 		return err
@@ -211,8 +213,7 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 	return km.ImportKeystores(
 		ctx,
 		cfg.Keystores,
-		cfg.AccountsPassword,
-		cfg.UseWalletPassword,
+		cfg.AccountPassword,
 	)
 }
 
@@ -252,10 +253,10 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
 	if err := ImportAccounts(
 		cliCtx.Context,
 		&ImportAccountsConfig{
-			Wallet:            wallet,
-			AccountsPassword:  wallet.walletPassword,
-			UseWalletPassword: true,
-			Keystores:         []*v2keymanager.Keystore{keystore},
+			Wallet:          wallet,
+			AccountPassword: wallet.walletPassword,
+			WalletPassword:  wallet.walletPassword,
+			Keystores:       []*v2keymanager.Keystore{keystore},
 		},
 	); err != nil {
 		return errors.Wrap(err, "could not import keystore into wallet")

@@ -285,19 +285,21 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		walletPasswordFile: passwordFilePath,
 		privateKeyFile:     privKeyFileName,
 	})
+	walletPass := "Passwordz0320$"
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: "Passwordz0320$",
+			WalletPassword: walletPass,
 		},
 	})
 	require.NoError(t, err)
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
-			Wallet: wallet,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Wallet:         wallet,
+			WalletPassword: walletPass,
+			Opts:           direct.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -307,8 +309,9 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	keymanager, err = direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
-			Wallet: wallet,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Wallet:         wallet,
+			Opts:           direct.DefaultKeymanagerOpts(),
+			WalletPassword: walletPass,
 		},
 	)
 	require.NoError(t, err)
