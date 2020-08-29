@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-// Specifies the max buffer given to slots from
+// MaxSlotBuffer specifies the max buffer given to slots from
 // incoming objects. (20 mins with mainnet spec)
 const MaxSlotBuffer = uint64(100)
 
