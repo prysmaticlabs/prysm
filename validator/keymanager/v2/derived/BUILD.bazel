@@ -15,6 +15,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//contracts/deposit-contract:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
