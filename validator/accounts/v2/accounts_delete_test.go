@@ -54,7 +54,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		WalletCfg: &WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: "Passwordz0320$",
+			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)

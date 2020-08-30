@@ -78,7 +78,6 @@ type Keymanager struct {
 	lock              sync.RWMutex
 	seedCfg           *SeedConfig
 	seed              []byte
-	accountsPassword  string
 }
 
 // DefaultKeymanagerOpts for a derived keymanager implementation.
@@ -139,10 +138,9 @@ func NewKeymanager(
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: cfg.SkipMnemonicConfirm,
 		},
-		seedCfg:          seedConfig,
-		seed:             seed,
-		accountsPassword: cfg.WalletPassword,
-		keysCache:        make(map[[48]byte]bls.SecretKey),
+		seedCfg:   seedConfig,
+		seed:      seed,
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// We initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via the unlocked wallet.
@@ -183,10 +181,9 @@ func KeymanagerForPhrase(
 		mnemonicGenerator: &EnglishMnemonicGenerator{
 			skipMnemonicConfirm: true,
 		},
-		seedCfg:          seedConfig,
-		seed:             seed,
-		accountsPassword: cfg.WalletPassword,
-		keysCache:        make(map[[48]byte]bls.SecretKey),
+		seedCfg:   seedConfig,
+		seed:      seed,
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// We initialize a cache of public key -> secret keys
 	// used to retrieve secrets keys for the accounts via the unlocked wallet.
@@ -234,7 +231,7 @@ func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
 // WriteEncryptedSeedToWallet given a mnemonic phrase, is able to regenerate a wallet seed
 // encrypt it, and write it to the wallet's path.
 func (dr *Keymanager) WriteEncryptedSeedToWallet(ctx context.Context, mnemonic string) error {
-	seedConfig, err := seedFileFromMnemonic(mnemonic, dr.accountsPassword)
+	seedConfig, err := seedFileFromMnemonic(mnemonic, dr.wallet.Password())
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
 	}

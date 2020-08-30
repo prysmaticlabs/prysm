@@ -45,12 +45,11 @@ type KeymanagerOpts struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet           iface.Wallet
-	opts             *KeymanagerOpts
-	keysCache        map[[48]byte]bls.SecretKey
-	accountsStore    *AccountStore
-	lock             sync.RWMutex
-	accountsPassword string
+	wallet        iface.Wallet
+	opts          *KeymanagerOpts
+	keysCache     map[[48]byte]bls.SecretKey
+	accountsStore *AccountStore
+	lock          sync.RWMutex
 }
 
 // AccountStore --
@@ -72,18 +71,16 @@ type SetupConfig struct {
 	Wallet              iface.Wallet
 	Opts                *KeymanagerOpts
 	SkipMnemonicConfirm bool
-	WalletPassword      string
 	Mnemonic            string
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:           cfg.Wallet,
-		accountsPassword: cfg.WalletPassword,
-		opts:             cfg.Opts,
-		keysCache:        make(map[[48]byte]bls.SecretKey),
-		accountsStore:    &AccountStore{},
+		wallet:        cfg.Wallet,
+		opts:          cfg.Opts,
+		keysCache:     make(map[[48]byte]bls.SecretKey),
+		accountsStore: &AccountStore{},
 	}
 
 	// If the wallet has the capability of unlocking accounts using
@@ -155,11 +152,6 @@ func (opts *KeymanagerOpts) String() string {
 		return ""
 	}
 	return b.String()
-}
-
-// AccountsPassword for the direct keymanager.
-func (dr *Keymanager) AccountsPassword() string {
-	return dr.accountsPassword
 }
 
 // ValidatingAccountNames for a direct keymanager.
@@ -335,12 +327,13 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
+	password := dr.wallet.Password()
 	decryptor := keystorev4.New()
-	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.accountsPassword)
+	enc, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		enc, dr.accountsPassword, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
+		enc, password, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
@@ -418,7 +411,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, err
 	}
-	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.accountsPassword)
+	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}

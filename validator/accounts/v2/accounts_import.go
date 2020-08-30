@@ -70,7 +70,6 @@ type ImportAccountsConfig struct {
 	Wallet          *Wallet
 	Keystores       []*v2keymanager.Keystore
 	AccountPassword string
-	WalletPassword  string
 }
 
 // ImportAccountsCLI can import external, EIP-2335 compliant keystore.json files as
@@ -175,7 +174,6 @@ func ImportAccountsCLI(cliCtx *cli.Context) error {
 		Wallet:          wallet,
 		Keystores:       keystoresImported,
 		AccountPassword: accountsPassword,
-		WalletPassword:  wallet.walletPassword,
 	}); err != nil {
 		return err
 	}
@@ -203,9 +201,8 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 		return err
 	}
 	km, err := direct.NewKeymanager(ctx, &direct.SetupConfig{
-		Wallet:         cfg.Wallet,
-		WalletPassword: cfg.WalletPassword,
-		Opts:           directOpts,
+		Wallet: cfg.Wallet,
+		Opts:   directOpts,
 	})
 	if err != nil {
 		return err
@@ -255,7 +252,6 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
 		&ImportAccountsConfig{
 			Wallet:          wallet,
 			AccountPassword: wallet.walletPassword,
-			WalletPassword:  wallet.walletPassword,
 			Keystores:       []*v2keymanager.Keystore{keystore},
 		},
 	); err != nil {

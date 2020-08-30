@@ -171,6 +171,11 @@ func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
 }
 
+// Password for the wallet.
+func (w *Wallet) Password() string {
+	return w.walletPassword
+}
+
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) InitializeKeymanager(
