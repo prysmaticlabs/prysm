@@ -13,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/bloxapp/vault-plugin-secrets-eth2.0/keymanager"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -393,6 +394,8 @@ func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
 		km, help, err = v1.NewWallet(opts)
 	case "remote":
 		km, help, err = v1.NewRemoteWallet(opts)
+	case "remote-http":
+		km, help, err = keymanager.NewVaultRemoteHTTPWalletFromOpts(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}

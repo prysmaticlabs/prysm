@@ -104,7 +104,7 @@ var (
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
 		Name:  "keymanager",
-		Usage: "The keymanger to use (unencrypted, interop, keystore, wallet)",
+		Usage: "The keymanger to use (unencrypted, interop, keystore, wallet, remote, remote-http)",
 		Value: "",
 	}
 	// KeyManagerOpts specifies the key manager options.
