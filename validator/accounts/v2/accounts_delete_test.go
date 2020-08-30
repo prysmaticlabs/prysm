@@ -60,10 +60,10 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to import accounts.
-	require.NoError(t, ImportAccountsCLI(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	// We attempt to delete the accounts specified.
-	require.NoError(t, DeleteAccountCLI(cliCtx))
+	require.NoError(t, DeleteAccountCli(cliCtx))
 
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,

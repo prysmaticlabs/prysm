@@ -72,14 +72,14 @@ type ImportAccountsConfig struct {
 	AccountPassword string
 }
 
-// ImportAccountsCLI can import external, EIP-2335 compliant keystore.json files as
+// ImportAccountsCli can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet. This uses the CLI to extract
 // values necessary to run the function.
-func ImportAccountsCLI(cliCtx *cli.Context) error {
+func ImportAccountsCli(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	au := aurora.NewAurora(true)
-	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCLI(cliCtx, v2keymanager.Direct)
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
 		}

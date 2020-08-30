@@ -33,15 +33,6 @@ const (
 	confirmPasswordPromptText   = "Confirm password"
 )
 
-type passwordConfirm int
-
-const (
-	// An enum to indicate to the prompt that confirming the password is not needed.
-	noConfirmPass passwordConfirm = iota
-	// An enum to indicate to the prompt to confirm the password entered.
-	confirmPass
-)
-
 var (
 	// ErrNoWalletFound signifies there was no wallet directory found on-disk.
 	ErrNoWalletFound = errors.New(
@@ -104,9 +95,9 @@ func WalletExists(walletDir string) error {
 	return ErrNoWalletFound
 }
 
-// OpenWalletOrElse tries to open the wallet and if it fails or no wallet
+// OpenWalletOrElseCli tries to open the wallet and if it fails or no wallet
 // is found, invokes a callback function.
-func OpenWalletOrElse(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
+func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
 	if err := WalletExists(cliCtx.String(flags.WalletDirFlag.Name)); err != nil {
 		if errors.Is(err, ErrNoWalletFound) {
 			return otherwise(cliCtx)
@@ -121,7 +112,7 @@ func OpenWalletOrElse(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		walletPasswordPromptText,
-		noConfirmPass,
+		false, /* Do not confirm password */
 		validateExistingPass,
 	)
 	return OpenWallet(cliCtx.Context, &WalletConfig{
@@ -419,7 +410,7 @@ func inputPassword(
 	cliCtx *cli.Context,
 	passwordFileFlag *cli.StringFlag,
 	promptText string,
-	confirmPassword passwordConfirm,
+	confirmPassword bool,
 	passwordValidator func(input string) error,
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
@@ -443,7 +434,7 @@ func inputPassword(
 			return "", fmt.Errorf("could not read account password: %v", err)
 		}
 
-		if confirmPassword == confirmPass {
+		if confirmPassword {
 			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
 			if err != nil {
 				return "", fmt.Errorf("could not read password confirmation: %v", err)

@@ -28,7 +28,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		walletPasswordFile: walletPasswordFile,
 	})
 	createDirectWallet := func(cliCtx *cli.Context) (*Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCLI(cliCtx, v2keymanager.Direct)
+		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
 		}
@@ -47,11 +47,11 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		)
 		return w, nil
 	}
-	createdWallet, err := OpenWalletOrElse(cliCtx, createDirectWallet)
+	createdWallet, err := OpenWalletOrElseCli(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "Successfully created new wallet")
 
-	openedWallet, err := OpenWalletOrElse(cliCtx, createDirectWallet)
+	openedWallet, err := OpenWalletOrElseCli(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
@@ -67,7 +67,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCLI(cliCtx)
+	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
@@ -97,7 +97,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCLI(cliCtx)
+	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
@@ -147,7 +147,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCLI(cliCtx)
+	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.

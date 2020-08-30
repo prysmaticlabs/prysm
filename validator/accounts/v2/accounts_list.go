@@ -17,9 +17,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// ListAccountsCLI displays all available validator accounts in a Prysm wallet.
-func ListAccountsCLI(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+// ListAccountsCli displays all available validator accounts in a Prysm wallet.
+func ListAccountsCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no accounts to list",
 		)
@@ -57,7 +57,7 @@ func ListAccountsCLI(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listRemoteKeymanagerAccounts(wallet, km); err != nil {
+		if err := listRemoteKeymanagerAccounts(wallet, km, km.KeymanagerOpts()); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
 	default:
@@ -179,7 +179,8 @@ func listDerivedKeymanagerAccounts(
 
 func listRemoteKeymanagerAccounts(
 	wallet *Wallet,
-	keymanager *remote.Keymanager,
+	keymanager v2keymanager.IKeymanager,
+	opts *remote.KeymanagerOpts,
 ) error {
 	au := aurora.NewAurora(true)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
@@ -190,7 +191,7 @@ func listRemoteKeymanagerAccounts(
 	ctx := context.Background()
 	fmt.Println(" ")
 	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
-	fmt.Println(keymanager.KeymanagerOpts())
+	fmt.Println(opts)
 	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")

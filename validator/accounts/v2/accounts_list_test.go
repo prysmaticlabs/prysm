@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -181,77 +184,79 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	}
 }
 
-//func TestListAccounts_RemoteKeymanager(t *testing.T) {
-//	walletDir, _, _ := setupWalletAndPasswordsDir(t)
-//	cliCtx := setupWalletCtx(t, &testWalletConfig{
-//		walletDir:      walletDir,
-//		keymanagerKind: v2keymanager.Remote,
-//	})
-//	wallet, err := CreateWallet(cliCtx.Context, &WalletConfig{
-//		WalletDir:      walletDir,
-//		KeymanagerKind: v2keymanager.Remote,
-//	})
-//	require.NoError(t, err)
-//	require.NoError(t, wallet.SaveWallet())
-//
-//	rescueStdout := os.Stdout
-//	r, w, err := os.Pipe()
-//	require.NoError(t, err)
-//	os.Stdout = w
-//
-//	numAccounts := 3
-//	pubKeys := make([][48]byte, numAccounts)
-//	for i := 0; i < numAccounts; i++ {
-//		key := make([]byte, 48)
-//		copy(key, strconv.Itoa(i))
-//		pubKeys[i] = bytesutil.ToBytes48(key)
-//	}
-//	km := &mockRemoteKeymanager{
-//		publicKeys: pubKeys,
-//		opts: &remote.KeymanagerOpts{
-//			RemoteCertificate: &remote.CertificateConfig{
-//				ClientCertPath: "/tmp/client.crt",
-//				ClientKeyPath:  "/tmp/client.key",
-//				CACertPath:     "/tmp/ca.crt",
-//			},
-//			RemoteAddr: "localhost:4000",
-//		},
-//	}
-//	// We call the list remote keymanager accounts function.
-//	require.NoError(t, listRemoteKeymanagerAccounts(km))
-//
-//	require.NoError(t, w.Close())
-//	out, err := ioutil.ReadAll(r)
-//	require.NoError(t, err)
-//	os.Stdout = rescueStdout
-//
-//	// Assert the keymanager kind is printed to stdout.
-//	stringOutput := string(out)
-//	if !strings.Contains(stringOutput, wallet.KeymanagerKind().String()) {
-//		t.Error("Did not find keymanager kind in output")
-//	}
-//
-//	// Assert the keymanager configuration is printed to stdout.
-//	if !strings.Contains(stringOutput, cfg.String()) {
-//		t.Error("Did not find remote config in output")
-//	}
-//
-//	// Assert the wallet accounts path is in stdout.
-//	if !strings.Contains(stringOutput, wallet.accountsPath) {
-//		t.Errorf("Did not find accounts path %s in output", wallet.accountsPath)
-//	}
-//
-//	for i := 0; i < numAccounts; i++ {
-//		accountName := petnames.DeterministicName(pubKeys[i][:], "-")
-//		// Assert the account name is printed to stdout.
-//		if !strings.Contains(stringOutput, accountName) {
-//			t.Errorf("Did not find account %s in output", accountName)
-//		}
-//		key := pubKeys[i]
-//
-//		// Assert every public key is printed to stdout.
-//		if !strings.Contains(stringOutput, fmt.Sprintf("%#x", key)) {
-//			t.Errorf("Did not find pubkey %#x in output", key)
-//		}
-//	}
-//}
+func TestListAccounts_RemoteKeymanager(t *testing.T) {
+	walletDir, _, _ := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		keymanagerKind: v2keymanager.Remote,
+	})
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Remote,
+			WalletPassword: password,
+		},
+	})
+	require.NoError(t, err)
+
+	rescueStdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	numAccounts := 3
+	pubKeys := make([][48]byte, numAccounts)
+	for i := 0; i < numAccounts; i++ {
+		key := make([]byte, 48)
+		copy(key, strconv.Itoa(i))
+		pubKeys[i] = bytesutil.ToBytes48(key)
+	}
+	km := &mockRemoteKeymanager{
+		publicKeys: pubKeys,
+		opts: &remote.KeymanagerOpts{
+			RemoteCertificate: &remote.CertificateConfig{
+				ClientCertPath: "/tmp/client.crt",
+				ClientKeyPath:  "/tmp/client.key",
+				CACertPath:     "/tmp/ca.crt",
+			},
+			RemoteAddr: "localhost:4000",
+		},
+	}
+	// We call the list remote keymanager accounts function.
+	require.NoError(t, listRemoteKeymanagerAccounts(wallet, km, km.opts))
+
+	require.NoError(t, w.Close())
+	out, err := ioutil.ReadAll(r)
+	require.NoError(t, err)
+	os.Stdout = rescueStdout
+
+	// Assert the keymanager kind is printed to stdout.
+	stringOutput := string(out)
+	if !strings.Contains(stringOutput, wallet.KeymanagerKind().String()) {
+		t.Error("Did not find keymanager kind in output")
+	}
+
+	// Assert the keymanager configuration is printed to stdout.
+	if !strings.Contains(stringOutput, km.opts.String()) {
+		t.Error("Did not find remote config in output")
+	}
+
+	// Assert the wallet accounts path is in stdout.
+	if !strings.Contains(stringOutput, wallet.accountsPath) {
+		t.Errorf("Did not find accounts path %s in output", wallet.accountsPath)
+	}
+
+	for i := 0; i < numAccounts; i++ {
+		accountName := petnames.DeterministicName(pubKeys[i][:], "-")
+		// Assert the account name is printed to stdout.
+		if !strings.Contains(stringOutput, accountName) {
+			t.Errorf("Did not find account %s in output", accountName)
+		}
+		key := pubKeys[i]
+
+		// Assert every public key is printed to stdout.
+		if !strings.Contains(stringOutput, fmt.Sprintf("%#x", key)) {
+			t.Errorf("Did not find pubkey %#x in output", key)
+		}
+	}
+}

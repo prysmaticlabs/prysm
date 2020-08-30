@@ -51,7 +51,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(numAccounts))))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	require.NoError(t, RecoverWalletCLI(cliCtx))
+	require.NoError(t, RecoverWalletCli(cliCtx))
 
 	ctx := context.Background()
 	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{

@@ -29,9 +29,9 @@ type RecoverWalletConfig struct {
 	NumAccounts int64
 }
 
-// RecoverWalletCLI uses a menmonic seed phrase to recover a wallet into the path provided. This
+// RecoverWalletCli uses a menmonic seed phrase to recover a wallet into the path provided. This
 // uses the CLI to extract necessary values to run the function.
-func RecoverWalletCLI(cliCtx *cli.Context) error {
+func RecoverWalletCli(cliCtx *cli.Context) error {
 	mnemonic, err := inputMnemonic(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get mnemonic phrase")
@@ -44,7 +44,7 @@ func RecoverWalletCLI(cliCtx *cli.Context) error {
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		newWalletPasswordPromptText,
-		confirmPass,
+		true, /* Should confirm password */
 		promptutil.ValidatePasswordInput,
 	)
 	if err != nil {

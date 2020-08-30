@@ -30,11 +30,11 @@ const (
 	backupPromptText = "Enter the directory where your backup.zip file will be written to"
 )
 
-// BackupAccountsCLI allows users to select validator accounts from their wallet
+// BackupAccountsCli allows users to select validator accounts from their wallet
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other eth2 clients.
-func BackupAccountsCLI(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+func BackupAccountsCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",
 		)

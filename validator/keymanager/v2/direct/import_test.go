@@ -93,7 +93,7 @@ func TestDirectKeymanager_ImportKeystores(t *testing.T) {
 	// Setup the keymanager.
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
-		WalletPassword: "Mypassw0rdz932",
+		WalletPassword: password,
 	}
 	dr := &Keymanager{
 		wallet:        wallet,

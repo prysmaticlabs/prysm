@@ -23,7 +23,7 @@ func TestCreateAccount_Derived(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCLI(cliCtx)
+	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
@@ -42,7 +42,7 @@ func TestCreateAccount_Derived(t *testing.T) {
 	// We assert the created configuration was as desired.
 	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), opts)
 
-	require.NoError(t, CreateAccountCLI(cliCtx))
+	require.NoError(t, CreateAccountCli(cliCtx))
 
 	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)

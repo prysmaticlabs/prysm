@@ -9,11 +9,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// EditWalletConfigurationCLI for a user's on-disk wallet, being able to change
+// EditWalletConfigurationCli for a user's on-disk wallet, being able to change
 // things such as remote gRPC credentials for remote signing, derivation paths
 // for HD wallets, and more.
-func EditWalletConfigurationCLI(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+func EditWalletConfigurationCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no configuration to edit",
 		)

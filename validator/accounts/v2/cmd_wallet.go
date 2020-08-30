@@ -29,7 +29,7 @@ var WalletCommands = &cli.Command{
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if _, err := CreateAndSaveWalletCLI(cliCtx); err != nil {
+				if _, err := CreateAndSaveWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not create a wallet: %v", err)
 				}
 				return nil
@@ -49,7 +49,7 @@ var WalletCommands = &cli.Command{
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := EditWalletConfigurationCLI(cliCtx); err != nil {
+				if err := EditWalletConfigurationCli(cliCtx); err != nil {
 					log.Fatalf("Could not edit wallet configuration: %v", err)
 				}
 				return nil
@@ -68,7 +68,7 @@ var WalletCommands = &cli.Command{
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := RecoverWalletCLI(cliCtx); err != nil {
+				if err := RecoverWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not recover wallet: %v", err)
 				}
 				return nil

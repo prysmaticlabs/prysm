@@ -96,7 +96,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			}
 		} else {
 			// Read the wallet from the specified path.
-			wallet, err := accountsv2.OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
+			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
 				return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
 			})
 			if err != nil {

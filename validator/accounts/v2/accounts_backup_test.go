@@ -80,10 +80,10 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.
-	require.NoError(t, ImportAccountsCLI(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	// Next, we attempt to backup the accounts.
-	require.NoError(t, BackupAccountsCLI(cliCtx))
+	require.NoError(t, BackupAccountsCli(cliCtx))
 
 	// We check a backup.zip file was created at the output path.
 	zipFilePath := filepath.Join(backupDir, archiveFilename)

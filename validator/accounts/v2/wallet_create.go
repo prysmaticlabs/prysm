@@ -23,15 +23,15 @@ type CreateWalletConfig struct {
 	SkipMnemonicConfirm  bool
 }
 
-// CreateAndSaveWalletCLI from user input with a desired keymanager. If a
+// CreateAndSaveWalletCli from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateAndSaveWalletCLI(cliCtx *cli.Context) (*Wallet, error) {
-	keymanagerKind, err := extractKeymanagerKindFromCLI(cliCtx)
+func CreateAndSaveWalletCli(cliCtx *cli.Context) (*Wallet, error) {
+	keymanagerKind, err := extractKeymanagerKindFromCli(cliCtx)
 	if err != nil {
 		return nil, err
 	}
-	createWalletConfig, err := extractWalletCreationConfigFromCLI(cliCtx, keymanagerKind)
+	createWalletConfig, err := extractWalletCreationConfigFromCli(cliCtx, keymanagerKind)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +83,11 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	return w, nil
 }
 
-func extractKeymanagerKindFromCLI(cliCtx *cli.Context) (v2keymanager.Kind, error) {
+func extractKeymanagerKindFromCli(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	return inputKeymanagerKind(cliCtx)
 }
 
-func extractWalletCreationConfigFromCLI(cliCtx *cli.Context, keymanagerKind v2keymanager.Kind) (*CreateWalletConfig, error) {
+func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2keymanager.Kind) (*CreateWalletConfig, error) {
 	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func extractWalletCreationConfigFromCLI(cliCtx *cli.Context, keymanagerKind v2ke
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		newWalletPasswordPromptText,
-		confirmPass,
+		true, /* Should confirm password */
 		promptutil.ValidatePasswordInput,
 	)
 	if err != nil {

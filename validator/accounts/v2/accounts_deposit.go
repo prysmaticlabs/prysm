@@ -19,10 +19,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// SendDepositCLI transaction for user specified accounts via an interactive
+// SendDepositCli transaction for user specified accounts via an interactive
 // CLI process or via command-line flags.
-func SendDepositCLI(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElse(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+func SendDepositCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to deposit",
 		)

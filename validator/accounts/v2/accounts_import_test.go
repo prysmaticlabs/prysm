@@ -70,7 +70,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	time.Sleep(time.Second)
 	createKeystore(t, keysDir)
 
-	require.NoError(t, ImportAccountsCLI(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	wallet, err = OpenWallet(cliCtx.Context, &WalletConfig{
 		WalletDir:      walletDir,
@@ -130,7 +130,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 	time.Sleep(time.Second)
 	createRandomNameKeystore(t, keysDir)
 
-	require.NoError(t, ImportAccountsCLI(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	wallet, err = OpenWallet(cliCtx.Context, &WalletConfig{
 		WalletDir:      walletDir,
@@ -186,7 +186,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(accounts), 0)
 
-	require.NoError(t, ImportAccountsCLI(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	wallet, err = OpenWallet(cliCtx.Context, &WalletConfig{
 		WalletDir:      walletDir,

@@ -22,11 +22,11 @@ type CreateAccountConfig struct {
 	NumAccounts int64
 }
 
-// CreateAccountCLI creates a new validator account from user input by opening
+// CreateAccountCli creates a new validator account from user input by opening
 // a wallet from the user's specified path. This uses the CLI to extract information
 // to perform account creation.
-func CreateAccountCLI(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElse(cliCtx, CreateAndSaveWalletCLI)
+func CreateAccountCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	if err != nil {
 		return err
 	}
