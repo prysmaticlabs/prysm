@@ -13,7 +13,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/bloxapp/vault-plugin-secrets-eth2.0/keymanager"
+	"github.com/bloxapp/key-vault/keymanager"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
