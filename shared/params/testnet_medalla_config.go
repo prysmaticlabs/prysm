@@ -29,6 +29,7 @@ func MedallaConfig() *BeaconChainConfig {
 	cfg.MinGenesisTime = 1596546000
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x01}
 	cfg.GenesisTime = 1596546008
+	cfg.NetworkName = "Medalla"
 	return cfg
 }
 
