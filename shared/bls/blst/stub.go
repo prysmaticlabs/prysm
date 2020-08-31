@@ -1,4 +1,4 @@
-// +build darwin,amd64 windows,amd64
+// +build windows,amd64
 
 package blst
 
