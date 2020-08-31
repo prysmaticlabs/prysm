@@ -5,11 +5,11 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_toolchains",
-    sha256 = "db48eed61552e25d36fe051a65d2a329cc0fb08442627e8f13960c5ab087a44e",
-    strip_prefix = "bazel-toolchains-3.2.0",
+    sha256 = "caf516464966470c075c33fae53c33ada5f32f1d43dbeaaea7388fe6e006d001",
+    strip_prefix = "bazel-toolchains-3.4.2",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/releases/download/3.2.0/bazel-toolchains-3.2.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-toolchains/releases/download/3.2.0/bazel-toolchains-3.2.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/releases/download/3.4.2/bazel-toolchains-3.4.2.tar.gz",
+        "https://github.com/bazelbuild/bazel-toolchains/releases/download/3.4.2/bazel-toolchains-3.4.2.tar.gz",
     ],
 )
 
@@ -47,10 +47,10 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "97e70364e9249702246c0e9444bccdc4b847bed1eb03c5a3ece4f83dfe6abc44",
+    sha256 = "1c531376ac7e5a180e0237938a2536de0c54d93f5c278634818e0efc952dd56c",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.3/bazel-skylib-1.0.3.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.3/bazel-skylib-1.0.3.tar.gz",
     ],
 )
 
@@ -60,10 +60,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
+    sha256 = "d4113967ab451dd4d2d767c3ca5f927fec4b30f3b2c6f8135a2033b9c05a5687",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.0/bazel-gazelle-v0.22.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.0/bazel-gazelle-v0.22.0.tar.gz",
     ],
 )
 
@@ -76,9 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "dc97fccceacd4c6be14e800b2a00693d5e8d07f69ee187babfd04a80a9f8e250",
-    strip_prefix = "rules_docker-0.14.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.14.1.tar.gz",
+    sha256 = "4521794f0fba2e20f3bf15846ab5e01d5332e587e9ce81629c7f96c793bb7036",
+    strip_prefix = "rules_docker-0.14.4",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.14.4.tar.gz",
 )
 
 http_archive(
@@ -89,10 +89,10 @@ http_archive(
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
     ],
-    sha256 = "7b9bbe3ea1fccb46dcfa6c3f3e29ba7ec740d8733370e21cdc8937467b4a4349",
+    sha256 = "08369b54a7cbe9348eea474e36c9bbb19d47101e8860cec75cbf1ccd4f749281",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.22.4/rules_go-v0.22.4.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.22.4/rules_go-v0.22.4.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.0/rules_go-v0.24.0.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.0/rules_go-v0.24.0.tar.gz",
     ],
 )
 
@@ -114,8 +114,8 @@ git_repository(
 http_archive(
     name = "fuzzit_linux",
     build_file_content = "exports_files([\"fuzzit\"])",
-    sha256 = "9ca76ac1c22d9360936006efddf992977ebf8e4788ded8e5f9d511285c9ac774",
-    urls = ["https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.76/fuzzit_Linux_x86_64.zip"],
+    sha256 = "1fdfe9af3f1db1881fd3f544975697a97219fae14c46e913f556e5ad97bba673",
+    urls = ["https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.77/fuzzit_Linux_x86_64.zip"],
 )
 
 git_repository(
@@ -292,9 +292,9 @@ rules_foreign_cc_dependencies([
 http_archive(
     name = "librdkafka",
     build_file_content = all_content,
-    sha256 = "3b99a36c082a67ef6295eabd4fb3e32ab0bff7c6b0d397d6352697335f4e57eb",
-    strip_prefix = "librdkafka-1.4.2",
-    urls = ["https://github.com/edenhill/librdkafka/archive/v1.4.2.tar.gz"],
+    sha256 = "f7fee59fdbf1286ec23ef0b35b2dfb41031c8727c90ced6435b8cf576f23a656",
+    strip_prefix = "librdkafka-1.5.0",
+    urls = ["https://github.com/edenhill/librdkafka/archive/v1.5.0.tar.gz"],
 )
 
 http_archive(
