@@ -273,6 +273,24 @@ func TestVerifySlotTime(t *testing.T) {
 			},
 			wantedErr: "could not process slot from the future",
 		},
+		{
+			name: "max future slot",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
+				slot:        MaxSlotBuffer + 6,
+			},
+			wantedErr: "exceeds max allowed value relative to the local clock",
+		},
+		{
+			name: "evil future slot",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 24 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(), // 24 slots in the past
+				// Gets multiplied with slot duration, and results in an overflow. Wraps around to a valid time.
+				// Lower than max signed int. And chosen specifically to wrap to a valid slot 24
+				slot: ((^uint64(0)) / params.BeaconConfig().SecondsPerSlot) + 24,
+			},
+			wantedErr: "is in the far distant future",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
