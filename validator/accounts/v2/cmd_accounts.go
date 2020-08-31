@@ -83,6 +83,7 @@ this command outputs a deposit data string which is required to become a validat
 				"list of hex string public keys",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
 				flags.BackupDirFlag,
 				flags.BackupPublicKeysFlag,
 				flags.BackupPasswordFile,

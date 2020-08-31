@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
@@ -47,14 +48,16 @@ type KeymanagerOpts struct {
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet        iface.Wallet
-	opts          *KeymanagerOpts
-	keysCache     map[[48]byte]bls.SecretKey
-	accountsStore *AccountStore
-	lock          sync.RWMutex
+	wallet              iface.Wallet
+	opts                *KeymanagerOpts
+	keysCache           map[[48]byte]bls.SecretKey
+	accountsStore       *AccountStore
+	lock                sync.RWMutex
+	accountsChangedFeed *event.Feed
 }
 
-// AccountStore --
+// AccountStore defines a struct containing 1-to-1 corresponding
+// private keys and public keys for eth2 validators.
 type AccountStore struct {
 	PrivateKeys [][]byte `json:"private_keys"`
 	PublicKeys  [][]byte `json:"public_keys"`
@@ -79,10 +82,11 @@ type SetupConfig struct {
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
-		wallet:        cfg.Wallet,
-		opts:          cfg.Opts,
-		keysCache:     make(map[[48]byte]bls.SecretKey),
-		accountsStore: &AccountStore{},
+		wallet:              cfg.Wallet,
+		opts:                cfg.Opts,
+		keysCache:           make(map[[48]byte]bls.SecretKey),
+		accountsStore:       &AccountStore{},
+		accountsChangedFeed: new(event.Feed),
 	}
 
 	// If the wallet has the capability of unlocking accounts using
@@ -92,13 +96,18 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err := k.initializeSecretKeysCache(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not initialize keys cache")
 	}
+
+	// We begin a goroutine to listen for file changes to our
+	// all-accounts.keystore.json file in the wallet directory.
+	go k.listenForAccountChanges(ctx)
 	return k, nil
 }
 
 // NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
 func NewInteropKeymanager(ctx context.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		keysCache:           make(map[[48]byte]bls.SecretKey),
+		accountsChangedFeed: new(event.Feed),
 	}
 	if numValidatorKeys == 0 {
 		return k, nil
@@ -154,6 +163,13 @@ func (opts *KeymanagerOpts) String() string {
 		return ""
 	}
 	return b.String()
+}
+
+// SubscribeAccountChanges creates an event subscription for a channel
+// to listen for public key changes at runtime, such as when new validator accounts
+// are imported into the keymanager while the validator process is running.
+func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	return dr.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
 // ValidatingAccountNames for a direct keymanager.
@@ -343,7 +359,7 @@ func (dr *Keymanager) initializeSecretKeysCache(ctx context.Context) error {
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		enc, password, err = dr.askUntilPasswordConfirms(decryptor, keystoreFile)
+		enc, password, err = askUntilPasswordConfirms(decryptor, keystoreFile)
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
@@ -379,7 +395,6 @@ func (dr *Keymanager) createAccountsKeystore(
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
-	au := aurora.NewAurora(true)
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -410,7 +425,6 @@ func (dr *Keymanager) createAccountsKeystore(
 			_, privKeyExists := existingPrivKeys[string(sk)]
 			_, pubKeyExists := existingPubKeys[string(pk)]
 			if privKeyExists || pubKeyExists {
-				fmt.Printf("Public key %#x already exists\n", au.BrightMagenta(bytesutil.Trunc(pk)))
 				continue
 			}
 			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
@@ -433,7 +447,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	}, nil
 }
 
-func (dr *Keymanager) askUntilPasswordConfirms(
+func askUntilPasswordConfirms(
 	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore,
 ) ([]byte, string, error) {
 	au := aurora.NewAurora(true)
