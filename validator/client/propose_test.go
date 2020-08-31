@@ -87,7 +87,7 @@ func TestProposeBlock_DomainDataIsNil(t *testing.T) {
 	).Return(nil /*response*/, nil)
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
-	require.LogsContain(t, hook, "could not get domain data")
+	require.LogsContain(t, hook, domainDataErr)
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
@@ -387,7 +387,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 
 	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
 	assert.NotNil(t, err)
-	assert.ErrorContains(t, "could not get domain data", err)
+	assert.ErrorContains(t, domainDataErr, err)
 	assert.ErrorContains(t, "uh oh", err)
 	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
 }
@@ -406,7 +406,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 
 	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
 	assert.NotNil(t, err)
-	assert.ErrorContains(t, "could not get domain data", err)
+	assert.ErrorContains(t, domainDataErr, err)
 	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
 }
 
