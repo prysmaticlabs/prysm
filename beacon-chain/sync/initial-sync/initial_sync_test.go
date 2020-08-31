@@ -55,7 +55,6 @@ func TestMain(m *testing.M) {
 	logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		NewStateMgmt:     true,
 		BatchBlockVerify: true,
 		EnablePeerScorer: true,
 	})
