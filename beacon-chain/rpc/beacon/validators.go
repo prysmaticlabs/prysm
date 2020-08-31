@@ -14,7 +14,6 @@ import (
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -262,7 +261,7 @@ func (bs *Server) ListValidators(
 		}
 	}
 
-	if !featureconfig.Get().NewStateMgmt && requestedEpoch < currentEpoch {
+	if requestedEpoch < currentEpoch {
 		stopIdx := len(validatorList)
 		for idx, item := range validatorList {
 			// The first time we see a validator with an activation epoch > the requested epoch,
