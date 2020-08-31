@@ -202,6 +202,7 @@ func getValueOfTopic(pageContent string, topic string) (int, error) {
 	}
 	var result float64
 	for i, stringIndex := range indexesFound {
+		// Only performing every third result found since theres 2 comments above every metric.
 		if i == 0 || i%2 != 0 {
 			continue
 		}
@@ -214,7 +215,7 @@ func getValueOfTopic(pageContent string, topic string) (int, error) {
 		metricValue := pageContent[startOfValue : startOfValue+endOfValue]
 		floatResult, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			return -1, errors.Wrapf(err, "could not parse %s for int in %s", metricValue, pageContent)
+			return -1, errors.Wrapf(err, "could not parse %s for int", metricValue)
 		}
 		result += floatResult
 	}
@@ -223,6 +224,5 @@ func getValueOfTopic(pageContent string, topic string) (int, error) {
 
 func formatTopic(topic string) string {
 	replacedD := strings.Replace(topic, "%d", "\\w*", 1)
-	fmt.Println(replacedD)
 	return replacedD
 }
