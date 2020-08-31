@@ -25,9 +25,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// validateFunc is a function that validates a block with a given state. It does not mutate the state.
-type validateFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBeaconBlock) error
-
 // processFunc is a function that processes a block with a given state. State is mutated.
 type processFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
 
@@ -37,17 +34,12 @@ var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
 	b.ProcessEth1DataInBlock,
+	verifyOperationLengths,
 	b.ProcessProposerSlashings,
 	b.ProcessAttesterSlashings,
-	b.ProcessAttestationsNoVerifySignature,
+	b.ProcessAttestations,
 	b.ProcessDeposits,
 	b.ProcessVoluntaryExits,
-}
-
-// Additional verification steps defined in the eth2 spec.
-var validatingPipeline = []validateFunc{
-	verifyOperationLengths,
-	b.VerifyAttestationsSignatures,
 }
 
 // ExecuteStateTransition defines the procedure for a state transition function.
@@ -425,12 +417,6 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	for _, v := range validatingPipeline {
-		if err := v(ctx, state, signed); err != nil {
-			return nil, errors.Wrap(err, "Could not validate block")
-		}
-	}
-
 	var err error
 	for _, p := range processingPipeline {
 		state, err = p(ctx, state, signed)
@@ -584,7 +570,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
-	if err := verifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
+	if _, err := verifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
@@ -612,14 +598,14 @@ func ProcessOperationsNoVerifyAttsSigs(
 	return state, nil
 }
 
-func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) error {
+func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	if b.Block == nil || b.Block.Body == nil {
-		return errors.New("block and block body can't be nil")
+		return nil, errors.New("block and block body can't be nil")
 	}
 	body := b.Block.Body
 
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
 			len(body.ProposerSlashings),
 			params.BeaconConfig().MaxProposerSlashings,
@@ -627,7 +613,7 @@ func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b
 	}
 
 	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"number of attester slashings (%d) in block body exceeds allowed threshold of %d",
 			len(body.AttesterSlashings),
 			params.BeaconConfig().MaxAttesterSlashings,
@@ -635,7 +621,7 @@ func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b
 	}
 
 	if uint64(len(body.Attestations)) > params.BeaconConfig().MaxAttestations {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"number of attestations (%d) in block body exceeds allowed threshold of %d",
 			len(body.Attestations),
 			params.BeaconConfig().MaxAttestations,
@@ -643,7 +629,7 @@ func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b
 	}
 
 	if uint64(len(body.VoluntaryExits)) > params.BeaconConfig().MaxVoluntaryExits {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
 			len(body.VoluntaryExits),
 			params.BeaconConfig().MaxVoluntaryExits,
@@ -651,19 +637,19 @@ func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b
 	}
 	eth1Data := state.Eth1Data()
 	if eth1Data == nil {
-		return errors.New("nil eth1data in state")
+		return nil, errors.New("nil eth1data in state")
 	}
 	if state.Eth1DepositIndex() > eth1Data.DepositCount {
-		return fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
+		return nil, fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
 	}
 	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
 	// Verify outstanding deposits are processed up to max number of deposits
 	if uint64(len(body.Deposits)) != maxDeposits {
-		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 			maxDeposits, len(body.Deposits))
 	}
 
-	return nil
+	return state, nil
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.
