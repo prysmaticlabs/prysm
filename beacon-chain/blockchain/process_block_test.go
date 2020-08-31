@@ -19,7 +19,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -227,8 +226,6 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
@@ -252,8 +249,6 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 }
 
 func TestCachedPreState_CanGetFromDB(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)

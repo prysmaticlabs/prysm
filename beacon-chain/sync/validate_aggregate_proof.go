@@ -198,7 +198,7 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 	a := satt.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
-	hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
+	hasStateSummary := s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
 	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
 	hasBlock := s.db.HasBlock(ctx, blockRoot) || s.chain.HasInitSyncBlock(blockRoot)
 	if !(hasState && hasBlock) {
