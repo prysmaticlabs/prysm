@@ -17,11 +17,11 @@ func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
+		WalletPassword:   password,
 	}
 	dr := &Keymanager{
 		wallet:              wallet,
 		keysCache:           make(map[[48]byte]bls.SecretKey),
-		accountsPassword:    password,
 		accountsChangedFeed: new(event.Feed),
 	}
 
