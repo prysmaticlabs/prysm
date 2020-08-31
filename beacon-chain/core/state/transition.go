@@ -31,11 +31,8 @@ type validateFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBea
 // processFunc is a function that processes a block with a given state. State is mutated.
 type processFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
 
-var validatingPipeline = []validateFunc{
-	verifyOperationLengths,
-	b.VerifyAttestationsSignatures,
-}
-
+// This defines the processing block routine as outlined in eth2 spec:
+// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
@@ -45,6 +42,12 @@ var processingPipeline = []processFunc{
 	b.ProcessAttestationsNoVerifySignature,
 	b.ProcessDeposits,
 	b.ProcessVoluntaryExits,
+}
+
+// Additional verification steps defined in the eth2 spec.
+var validatingPipeline = []validateFunc{
+	verifyOperationLengths,
+	b.VerifyAttestationsSignatures,
 }
 
 // ExecuteStateTransition defines the procedure for a state transition function.
