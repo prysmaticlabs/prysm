@@ -96,7 +96,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 // the contents of a keystore file by decrypting it with the accounts password.
 func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore) error {
 	decryptor := keystorev4.New()
-	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.accountsPassword)
+	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.wallet.Password())
 	if err != nil {
 		return errors.Wrapf(err, "could not decrypt keystore file with public key %s", keystore.Pubkey)
 	}

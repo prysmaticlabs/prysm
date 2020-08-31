@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -21,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 func TestBackupAccounts_Noninteractive(t *testing.T) {
@@ -71,20 +69,21 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	// Next, we attempt to backup the accounts.
-	require.NoError(t, BackupAccounts(cliCtx))
+	require.NoError(t, BackupAccountsCli(cliCtx))
 
 	// We check a backup.zip file was created at the output path.
 	zipFilePath := filepath.Join(backupDir, archiveFilename)

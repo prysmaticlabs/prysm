@@ -51,22 +51,24 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(numAccounts))))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	require.NoError(t, RecoverWallet(cliCtx))
+	require.NoError(t, RecoverWalletCli(cliCtx))
 
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	assert.NoError(t, err)
 
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
-	cfg, err := derived.UnmarshalConfigFile(encoded)
+	cfg, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	wantCfg := derived.DefaultConfig()
+	wantCfg := derived.DefaultKeymanagerOpts()
 	assert.DeepEqual(t, wantCfg, cfg)
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, true)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {
