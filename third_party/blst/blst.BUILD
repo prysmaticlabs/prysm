@@ -58,7 +58,6 @@ cc_library(
 cc_library(
     name = "asm_hdrs",
     hdrs = glob([
-        # TODO: This could be more clever based on target OS.
         "build/**/*.s",
         "build/**/*.S",
     ], exclude = ["build/assembly.s"]),
