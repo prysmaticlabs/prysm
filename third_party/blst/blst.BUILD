@@ -10,12 +10,12 @@ go_library(
     cgo = True,
     copts = [
         "-D__BLST_CGO__",
-        "-D__ADX__",
         "-Ibindings",
         "-Isrc",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",
+            "-D__ADX__",
         ],
         "//conditions:default": [],
     }),
