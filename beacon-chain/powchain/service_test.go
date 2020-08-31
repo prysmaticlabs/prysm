@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -134,18 +136,45 @@ func TestStart_OK(t *testing.T) {
 }
 
 func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
+	hook := logTest.NewGlobal()
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	_, err = NewService(context.Background(), &Web3ServiceConfig{
+	s, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    "", // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
-	require.ErrorContains(t, "cannot create genesis state: no eth1 http endpoint defined", err)
+	require.NoError(t, err)
+	s.Start()
+	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
+	hook.Reset()
+}
+
+func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	st, _ := testutil.DeterministicGenesisState(t, 10)
+	b := testutil.NewBeaconBlock()
+	genRoot, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
+	s, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err)
+
+	s.Start()
+	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
+	hook.Reset()
 }
 
 func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
+	hook := logTest.NewGlobal()
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
@@ -154,12 +183,16 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
 		Trie:           &protodb.SparseMerkleTrie{},
 	}))
-	_, err = NewService(context.Background(), &Web3ServiceConfig{
+	s, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    "", // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
 	require.NoError(t, err)
+
+	s.Start()
+	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
+	hook.Reset()
 }
 
 func TestStop_OK(t *testing.T) {
