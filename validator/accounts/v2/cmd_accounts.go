@@ -31,7 +31,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := CreateAccount(cliCtx); err != nil {
+				if err := CreateAccountCli(cliCtx); err != nil {
 					log.Fatalf("Could not create new account: %v", err)
 				}
 				return nil
@@ -50,7 +50,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := DeleteAccount(cliCtx); err != nil {
+				if err := DeleteAccountCli(cliCtx); err != nil {
 					log.Fatalf("Could not delete account: %v", err)
 				}
 				return nil
@@ -69,7 +69,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ListAccounts(cliCtx); err != nil {
+				if err := ListAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
@@ -91,7 +91,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := BackupAccounts(cliCtx); err != nil {
+				if err := BackupAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not backup accounts: %v", err)
 				}
 				return nil
@@ -112,7 +112,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ImportAccounts(cliCtx); err != nil {
+				if err := ImportAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil
@@ -156,7 +156,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := SendDeposit(cliCtx); err != nil {
+				if err := SendDepositCli(cliCtx); err != nil {
 					log.Fatalf("Could not send validator deposit(s): %v", err)
 				}
 				return nil

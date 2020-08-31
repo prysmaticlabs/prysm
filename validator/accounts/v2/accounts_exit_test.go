@@ -2,7 +2,6 @@ package v2
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -15,11 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestExitAccounts_Ok(t *testing.T) {
+func TestExitAccountsCli_Ok(t *testing.T) {
 	logHook := logTest.NewGlobal()
 
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
@@ -45,25 +43,26 @@ func TestExitAccounts_Ok(t *testing.T) {
 		// Flag required for ExitAccounts to work.
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
 	stdin.Write([]byte("Y\n"))
 
-	require.NoError(t, ExitAccounts(cliCtx, &stdin))
+	require.NoError(t, ExitAccountsCli(cliCtx, &stdin))
 	assert.LogsContain(t, logHook, "Voluntary exit was successful")
 }
 
-func TestExitAccounts_EmptyWalletReturnsError(t *testing.T) {
+func TestExitAccountsCli_EmptyWalletReturnsError(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
@@ -71,15 +70,14 @@ func TestExitAccounts_EmptyWalletReturnsError(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-
-	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
-
-	err = ExitAccounts(cliCtx, os.Stdin)
+	err = ExitAccountsCli(cliCtx, os.Stdin)
 	assert.ErrorContains(t, "wallet is empty, no accounts to perform voluntary exit", err)
 }
