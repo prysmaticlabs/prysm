@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -15,21 +14,22 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ExitAccounts performs a voluntary exit on one or more accounts.
-func ExitAccounts(cliCtx *cli.Context, r io.Reader) error {
-	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
-	} else if err != nil {
+// ExitAccountsCli performs a voluntary exit on one or more accounts.
+func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, no accounts to exit",
+		)
+	})
+	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}

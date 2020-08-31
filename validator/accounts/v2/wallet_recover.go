@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,58 +22,101 @@ import (
 
 const phraseWordCount = 24
 
-// RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
-func RecoverWallet(cliCtx *cli.Context) error {
+// RecoverWalletConfig to run the recover wallet function.
+type RecoverWalletConfig struct {
+	Wallet      *Wallet
+	Mnemonic    string
+	NumAccounts int64
+}
+
+// RecoverWalletCli uses a menmonic seed phrase to recover a wallet into the path provided. This
+// uses the CLI to extract necessary values to run the function.
+func RecoverWalletCli(cliCtx *cli.Context) error {
 	mnemonic, err := inputMnemonic(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get mnemonic phrase")
 	}
-	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
+	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
-		return errors.Wrap(err, "could not create new wallet")
+		return err
 	}
-	ctx := context.Background()
-	keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
+	walletPassword, err := inputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		newWalletPasswordPromptText,
+		true, /* Should confirm password */
+		promptutil.ValidatePasswordInput,
+	)
+	if err != nil {
+		return err
+	}
+	if err := WalletExists(walletDir); err != nil {
+		if !errors.Is(err, ErrNoWalletFound) {
+			return errors.Wrap(err, "could not check if wallet exists")
+		}
+	}
+	accountsPath := filepath.Join(walletDir, v2keymanager.Derived.String())
+	wallet := &Wallet{
+		accountsPath:   accountsPath,
+		keymanagerKind: v2keymanager.Derived,
+		walletDir:      walletDir,
+		walletPassword: walletPassword,
+	}
+	keymanagerConfig, err := derived.MarshalOptionsFile(cliCtx.Context, derived.DefaultKeymanagerOpts())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+	if err := wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
-	km, err := derived.KeymanagerForPhrase(cliCtx, wallet, derived.DefaultConfig(), mnemonic)
-	if err != nil {
-		return errors.Wrap(err, "could not make keymanager for given phrase")
-	}
-	if err := km.WriteEncryptedSeedToWallet(ctx, mnemonic); err != nil {
-		return err
 	}
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
-	if numAccounts == 1 {
-		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
-			return errors.Wrap(err, "could not create account in wallet")
-		}
-	} else {
-		for i := 0; i < int(numAccounts); i++ {
-			if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
-				return errors.Wrap(err, "could not create account in wallet")
-			}
-		}
-		log.WithField("wallet-path", wallet.AccountsDir()).Infof(
-			"Successfully recovered HD wallet with %d accounts. Please use accounts-v2 list to view details for your accounts",
-			numAccounts,
-		)
-		return nil
+	if err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
+		Wallet:      wallet,
+		Mnemonic:    mnemonic,
+		NumAccounts: numAccounts,
+	}); err != nil {
+		return err
 	}
-
 	log.Infof(
 		"Successfully recovered HD wallet and saved configuration to disk. " +
 			"Make a new validator account with ./prysm.sh validator accounts-v2 create",
+	)
+	return nil
+}
+
+// RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
+func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) error {
+	km, err := derived.KeymanagerForPhrase(ctx, &derived.SetupConfig{
+		Opts:     derived.DefaultKeymanagerOpts(),
+		Wallet:   cfg.Wallet,
+		Mnemonic: cfg.Mnemonic,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not make keymanager for given phrase")
+	}
+	if err := km.WriteEncryptedSeedToWallet(ctx, cfg.Mnemonic); err != nil {
+		return err
+	}
+	if cfg.NumAccounts == 1 {
+		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
+			return errors.Wrap(err, "could not create account in wallet")
+		}
+		return nil
+	}
+	for i := int64(0); i < cfg.NumAccounts; i++ {
+		if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
+			return errors.Wrap(err, "could not create account in wallet")
+		}
+	}
+	log.WithField("wallet-path", cfg.Wallet.AccountsDir()).Infof(
+		"Successfully recovered HD wallet with %d accounts. Please use accounts-v2 list to view details for your accounts",
+		cfg.NumAccounts,
 	)
 	return nil
 }

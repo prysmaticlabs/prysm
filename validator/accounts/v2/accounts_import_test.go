@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -44,17 +43,20 @@ func TestImport_Noninteractive(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: password,
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		direct.DefaultConfig(),
+		cliCtx.Context,
+		&direct.SetupConfig{
+			Wallet: wallet,
+			Opts:   direct.DefaultKeymanagerOpts(),
+		},
 	)
 	require.NoError(t, err)
 
@@ -68,13 +70,16 @@ func TestImport_Noninteractive(t *testing.T) {
 	time.Sleep(time.Second)
 	createKeystore(t, keysDir)
 
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	wallet, err = OpenWallet(cliCtx)
+	wallet, err = OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir:      walletDir,
+		WalletPassword: password,
+	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(cliCtx, true)
+	km, err := wallet.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
-	keys, err := km.FetchValidatingPublicKeys(ctx)
+	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, len(keys))
@@ -98,17 +103,20 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: password,
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		direct.DefaultConfig(),
+		cliCtx.Context,
+		&direct.SetupConfig{
+			Wallet: wallet,
+			Opts:   direct.DefaultKeymanagerOpts(),
+		},
 	)
 	require.NoError(t, err)
 
@@ -122,13 +130,16 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 	time.Sleep(time.Second)
 	createRandomNameKeystore(t, keysDir)
 
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	wallet, err = OpenWallet(cliCtx)
+	wallet, err = OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir:      walletDir,
+		WalletPassword: password,
+	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(cliCtx, true)
+	km, err := wallet.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
-	keys, err := km.FetchValidatingPublicKeys(ctx)
+	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, len(keys))
@@ -153,18 +164,20 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: password,
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	keymanagerCfg := direct.DefaultConfig()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		keymanagerCfg,
+		cliCtx.Context,
+		&direct.SetupConfig{
+			Wallet: wallet,
+			Opts:   direct.DefaultKeymanagerOpts(),
+		},
 	)
 	require.NoError(t, err)
 
@@ -173,13 +186,16 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(accounts), 0)
 
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	wallet, err = OpenWallet(cliCtx)
+	wallet, err = OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir:      walletDir,
+		WalletPassword: password,
+	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(cliCtx, true)
+	km, err := wallet.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
-	keys, err := km.FetchValidatingPublicKeys(ctx)
+	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, len(keys))
@@ -272,32 +288,35 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		walletPasswordFile: passwordFilePath,
 		privateKeyFile:     privKeyFileName,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	walletPass := "Passwordz0320$"
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: walletPass,
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-
-	// We create a new direct keymanager for the wallet.
-	ctx := context.Background()
-	keymanagerCfg := direct.DefaultConfig()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, keymanagerCfg)
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 	keymanager, err := direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		keymanagerCfg,
+		cliCtx.Context,
+		&direct.SetupConfig{
+			Wallet: wallet,
+			Opts:   direct.DefaultKeymanagerOpts(),
+		},
 	)
 	require.NoError(t, err)
-	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
+	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet))
 
 	// We re-instantiate the keymanager and check we now have 1 public key.
 	keymanager, err = direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		keymanagerCfg,
+		cliCtx.Context,
+		&direct.SetupConfig{
+			Wallet: wallet,
+			Opts:   direct.DefaultKeymanagerOpts(),
+		},
 	)
 	require.NoError(t, err)
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pubKeys))
 	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))

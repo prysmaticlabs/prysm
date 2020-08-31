@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -32,8 +31,8 @@ var (
 	ErrSigningDenied = errors.New("signing request was denied by remote server")
 )
 
-// Config for a remote keymanager.
-type Config struct {
+// KeymanagerOpts for a remote keymanager.
+type KeymanagerOpts struct {
 	RemoteCertificate *CertificateConfig `json:"remote_cert"`
 	RemoteAddr        string             `json:"remote_address"`
 }
@@ -47,34 +46,41 @@ type CertificateConfig struct {
 	CACertPath     string `json:"ca_crt_path"`
 }
 
+// SetupConfig includes configuration values for initializing
+// a keymanager, such as passwords, the wallet, and more.
+type SetupConfig struct {
+	Opts           *KeymanagerOpts
+	MaxMessageSize int
+}
+
 // Keymanager implementation using remote signing keys via gRPC.
 type Keymanager struct {
-	cfg              *Config
+	opts             *KeymanagerOpts
 	client           validatorpb.RemoteSignerClient
 	accountsByPubkey map[[48]byte]string
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(cliCtx *cli.Context, maxMessageSize int, cfg *Config) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	// Load the client certificates.
-	if cfg.RemoteCertificate == nil {
+	if cfg.Opts.RemoteCertificate == nil {
 		return nil, errors.New("certificates are required")
 	}
-	if cfg.RemoteCertificate.ClientCertPath == "" {
+	if cfg.Opts.RemoteCertificate.ClientCertPath == "" {
 		return nil, errors.New("client certificate is required")
 	}
-	if cfg.RemoteCertificate.ClientKeyPath == "" {
+	if cfg.Opts.RemoteCertificate.ClientKeyPath == "" {
 		return nil, errors.New("client key is required")
 	}
-	clientPair, err := tls.LoadX509KeyPair(cfg.RemoteCertificate.ClientCertPath, cfg.RemoteCertificate.ClientKeyPath)
+	clientPair, err := tls.LoadX509KeyPair(cfg.Opts.RemoteCertificate.ClientCertPath, cfg.Opts.RemoteCertificate.ClientKeyPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
 	}
 
 	// Load the CA for the server certificate if present.
 	cp := x509.NewCertPool()
-	if cfg.RemoteCertificate.CACertPath != "" {
-		serverCA, err := ioutil.ReadFile(cfg.RemoteCertificate.CACertPath)
+	if cfg.Opts.RemoteCertificate.CACertPath != "" {
+		serverCA, err := ioutil.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to obtain server's CA certificate")
 		}
@@ -93,24 +99,24 @@ func NewKeymanager(cliCtx *cli.Context, maxMessageSize int, cfg *Config) (*Keyma
 		// Require TLS with client certificate.
 		grpc.WithTransportCredentials(clientCreds),
 		// Receive large messages without erroring.
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMessageSize)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(cfg.MaxMessageSize)),
 	}
-	conn, err := grpc.Dial(cfg.RemoteAddr, grpcOpts...)
+	conn, err := grpc.Dial(cfg.Opts.RemoteAddr, grpcOpts...)
 	if err != nil {
 		return nil, errors.New("failed to connect to remote wallet")
 	}
 	client := validatorpb.NewRemoteSignerClient(conn)
 	k := &Keymanager{
-		cfg:              cfg,
+		opts:             cfg.Opts,
 		client:           client,
 		accountsByPubkey: make(map[[48]byte]string),
 	}
 	return k, nil
 }
 
-// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
-// configuration file into the *Config{} struct.
-func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
+// UnmarshalOptionsFile attempts to JSON unmarshal a keymanager
+// options file into a struct.
+func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read config")
@@ -120,43 +126,43 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	cfg := &Config{}
-	if err := json.Unmarshal(enc, cfg); err != nil {
+	opts := &KeymanagerOpts{}
+	if err := json.Unmarshal(enc, opts); err != nil {
 		return nil, errors.Wrap(err, "could not JSON unmarshal")
 	}
-	return cfg, nil
+	return opts, nil
 }
 
-// MarshalConfigFile for the keymanager.
-func MarshalConfigFile(ctx context.Context, cfg *Config) ([]byte, error) {
+// MarshalOptionsFile for the keymanager.
+func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 
-// String pretty-print of a remote keymanager configuration.
-func (c *Config) String() string {
+// String pretty-print of a remote keymanager options.
+func (opts *KeymanagerOpts) String() string {
 	au := aurora.NewAurora(true)
 	var b strings.Builder
-	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("Remote gRPC address"), c.RemoteAddr)
+	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("Remote gRPC address"), opts.RemoteAddr)
 	if _, err := b.WriteString(strAddr); err != nil {
 		log.Error(err)
 		return ""
 	}
 	strCrt := fmt.Sprintf(
-		"%s: %s\n", au.BrightMagenta("Client cert path"), c.RemoteCertificate.ClientCertPath,
+		"%s: %s\n", au.BrightMagenta("Client cert path"), opts.RemoteCertificate.ClientCertPath,
 	)
 	if _, err := b.WriteString(strCrt); err != nil {
 		log.Error(err)
 		return ""
 	}
 	strKey := fmt.Sprintf(
-		"%s: %s\n", au.BrightMagenta("Client key path"), c.RemoteCertificate.ClientKeyPath,
+		"%s: %s\n", au.BrightMagenta("Client key path"), opts.RemoteCertificate.ClientKeyPath,
 	)
 	if _, err := b.WriteString(strKey); err != nil {
 		log.Error(err)
 		return ""
 	}
 	strCa := fmt.Sprintf(
-		"%s: %s\n", au.BrightMagenta("CA cert path"), c.RemoteCertificate.CACertPath,
+		"%s: %s\n", au.BrightMagenta("CA cert path"), opts.RemoteCertificate.CACertPath,
 	)
 	if _, err := b.WriteString(strCa); err != nil {
 		log.Error(err)
@@ -165,9 +171,9 @@ func (c *Config) String() string {
 	return b.String()
 }
 
-// Config for the remote keymanager.
-func (k *Keymanager) Config() *Config {
-	return k.cfg
+// KeymanagerOpts for the remote keymanager.
+func (k *Keymanager) KeymanagerOpts() *KeymanagerOpts {
+	return k.opts
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.

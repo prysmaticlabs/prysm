@@ -17,6 +17,7 @@ type Wallet struct {
 	Files             map[string]map[string][]byte
 	EncryptedSeedFile []byte
 	AccountPasswords  map[string]string
+	WalletPassword    string
 	UnlockAccounts    bool
 	lock              sync.RWMutex
 }
@@ -40,6 +41,11 @@ func (m *Wallet) AccountsDir() string {
 // Exists --
 func (m *Wallet) Exists() (bool, error) {
 	return len(m.Directories) > 0, nil
+}
+
+// Password --
+func (m *Wallet) Password() string {
+	return m.WalletPassword
 }
 
 // WriteFileAtPath --

@@ -90,25 +90,26 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 			offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx, offset, numValidatorKeys)
+			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
 			if err != nil {
 				log.Fatalf("Could not generate interop keys: %v", err)
 			}
 		} else {
 			// Read the wallet from the specified path.
-			wallet, err := accountsv2.OpenWallet(cliCtx)
+			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
+				return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
+			})
 			if err != nil {
 				log.Fatalf("Could not open wallet: %v", err)
 			}
 			ValidatorClient.wallet = wallet
-			ctx := context.Background()
 			keyManagerV2, err = wallet.InitializeKeymanager(
-				cliCtx, false, /* skipMnemonicConfirm */
+				cliCtx.Context, false, /* skipMnemonicConfirm */
 			)
 			if err != nil {
 				log.Fatalf("Could not read existing keymanager for wallet: %v", err)
 			}
-			if err := wallet.LockConfigFile(ctx); err != nil {
+			if err := wallet.LockWalletConfigFile(cliCtx.Context); err != nil {
 				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 			}
 		}
