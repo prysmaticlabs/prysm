@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
@@ -63,7 +62,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		attestations := s.blkRootToPendingAtts[bRoot]
 		s.pendingAttsLock.RUnlock()
 		// Has the pending attestation's missing block arrived and the node processed block yet?
-		hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
+		hasStateSummary := s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
 		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || hasStateSummary) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, signedAtt := range attestations {

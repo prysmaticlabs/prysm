@@ -27,7 +27,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -87,8 +86,6 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 
 func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
@@ -375,8 +372,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 
 func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
+
 	ctx := context.Background()
 	setupValidators(t, db, 1)
 
@@ -433,9 +429,6 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 
 func TestServer_ListValidators_NoResults(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
-
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
@@ -1070,8 +1063,6 @@ func TestServer_GetValidator(t *testing.T) {
 
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 8)
@@ -1318,9 +1309,6 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
-
 	ctx := context.Background()
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(0))
@@ -1347,8 +1335,6 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 
 func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	ctx := context.Background()
 	validatorCount := uint64(100)
@@ -1727,8 +1713,6 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 }
 
 func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
 	req := &ethpb.IndividualVotesRequest{
 		Epoch: helpers.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
@@ -1739,8 +1723,6 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 }
 
 func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
@@ -1813,8 +1795,6 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 
 func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	helpers.ClearCache()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
@@ -1878,27 +1858,4 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 		},
 	}
 	assert.DeepEqual(t, wanted, res, "Unexpected response")
-}
-
-func TestServer_appendNonFinalizedBlockAttsToState(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-	bs := &Server{
-		BeaconDB: db,
-	}
-	e := uint64(1)
-	b1 := testutil.NewBeaconBlock()
-	b1.Block.Slot = e * params.BeaconConfig().SlotsPerEpoch
-	a1 := testutil.NewAttestation()
-	a1.Data.Target.Epoch = 1
-	b1.Block.Body.Attestations = []*ethpb.Attestation{a1}
-	b2 := testutil.NewBeaconBlock()
-	b2.Block.Slot = e*params.BeaconConfig().SlotsPerEpoch + 1
-	b2.Block.Body.Attestations = []*ethpb.Attestation{a1}
-	require.NoError(t, db.SaveBlock(ctx, b1))
-	require.NoError(t, db.SaveBlock(ctx, b2))
-	s := testutil.NewBeaconState()
-	got, err := bs.appendNonFinalizedBlockAttsToState(ctx, s, e)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(got.PreviousEpochAttestations()))
 }
