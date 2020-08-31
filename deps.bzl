@@ -3439,7 +3439,7 @@ def prysm_deps():
         ],
         strip_prefix = "blst-d75dab4fb87df7fc753d348b17be671c69b625f5",
         build_file = "//third_party:blst/blst.BUILD",
-        #   sha256 = "ac0d7d84118de40f59acfcee737b889a1cb056b5f2a82a7ba0da330542dcb859",
+	sha256 = "c541403e73fb0553a55d7ebfef6db695f48f18855fff1a87c7fd08f69827da51"
     )
     go_repository(
         name = "com_github_nbutton23_zxcvbn_go",
