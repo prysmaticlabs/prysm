@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -145,7 +146,26 @@ func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 		BeaconDB:        beaconDB,
 	})
 	require.NoError(t, err)
-	s.Start()
+	// Set custom exit func so test can proceed
+	log.Logger.ExitFunc = func(i int) {
+		panic(i)
+	}
+	defer func() {
+		log.Logger.ExitFunc = nil
+	}()
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	// Expect Start function to fail from a fatal call due
+	// to no state existing.
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				wg.Done()
+			}
+		}()
+		s.Start()
+	}()
+	testutil.WaitTimeout(wg, time.Second)
 	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -160,6 +180,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	genRoot, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(context.Background(), genRoot))
 	s, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    "", // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
@@ -167,7 +188,15 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	s.Start()
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+
+	go func() {
+		s.Start()
+		wg.Done()
+	}()
+	s.cancel()
+	testutil.WaitTimeout(wg, time.Second)
 	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
