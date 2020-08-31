@@ -225,7 +225,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
 	require.NoError(t, err)
 
-	want := "Could not validate block: expected non-empty attesting indices"
+	want := "could not verify attestation"
 	_, err = state.ProcessBlock(context.Background(), beaconState, block)
 	assert.ErrorContains(t, want, err)
 }
@@ -323,8 +323,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	cp.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
-	_, err = state.ProcessBlock(context.Background(), beaconState, block)
-	wanted := "Could not validate block: number of voluntary exits (17) in block body exceeds allowed threshold of 16"
+	_, err = state.VerifyOperationLengths(context.Background(), beaconState, block)
+	wanted := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -868,7 +868,7 @@ func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
-	_, err := state.ProcessBlock(context.Background(), &beaconstate.BeaconState{}, b)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -883,7 +883,7 @@ func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
-	_, err := state.ProcessBlock(context.Background(), &beaconstate.BeaconState{}, b)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -897,7 +897,7 @@ func TestProcessBlock_OverMaxAttestations(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
-	_, err := state.ProcessBlock(context.Background(), &beaconstate.BeaconState{}, b)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -912,7 +912,7 @@ func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.VoluntaryExits), maxExits)
-	_, err := state.ProcessBlock(context.Background(), &beaconstate.BeaconState{}, b)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -932,7 +932,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 	}
 	want := fmt.Sprintf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(b.Block.Body.Deposits))
-	_, err = state.ProcessBlock(context.Background(), s, b)
+	_, err = state.VerifyOperationLengths(context.Background(), s, b)
 	assert.ErrorContains(t, want, err)
 }
 

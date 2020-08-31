@@ -34,7 +34,7 @@ var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
 	b.ProcessEth1DataInBlock,
-	verifyOperationLengths,
+	VerifyOperationLengths,
 	b.ProcessProposerSlashings,
 	b.ProcessAttesterSlashings,
 	b.ProcessAttestations,
@@ -570,7 +570,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
-	if _, err := verifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
+	if _, err := VerifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
@@ -598,7 +598,8 @@ func ProcessOperationsNoVerifyAttsSigs(
 	return state, nil
 }
 
-func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
+// VerifyOperationLengths verifies that block operation lengths are valid.
+func VerifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	if b.Block == nil || b.Block.Body == nil {
 		return nil, errors.New("block and block body can't be nil")
 	}

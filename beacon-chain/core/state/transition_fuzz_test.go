@@ -179,7 +179,7 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		_, err := verifyOperationLengths(context.Background(), state, bb)
+		_, err := VerifyOperationLengths(context.Background(), state, bb)
 		_ = err
 	}
 }
