@@ -206,7 +206,6 @@ func getValueOfTopic(pageContent string, topic string) (int, error) {
 		if i == 0 || i%2 != 0 {
 			continue
 		}
-		fmt.Println(pageContent[stringIndex[0]:stringIndex[1]])
 		startOfValue := stringIndex[1]
 		endOfValue := strings.Index(pageContent[startOfValue:], "\n")
 		if endOfValue == -1 {
