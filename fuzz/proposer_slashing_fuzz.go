@@ -29,7 +29,7 @@ func BeaconFuzzProposerSlashing(b []byte) ([]byte, bool) {
 	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Body: &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{input.ProposerSlashing}},
+			Body: &ethpb.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{input.ProposerSlashing}},
 		},
 	}
 	post, err := blocks.ProcessProposerSlashings(context.Background(), st, block)
