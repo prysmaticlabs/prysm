@@ -25,6 +25,28 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// validateFunc is a function that validates a block with a given state. It does not mutate the state.
+type validateFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBeaconBlock) error
+
+// processFunc is a function that processes a block with a given state. State is mutated.
+type processFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
+
+var validatingPipeline = []validateFunc{
+	verifyOperationLengths,
+	b.VerifyAttestationsSignatures,
+}
+
+var processingPipeline = []processFunc{
+	b.ProcessBlockHeader,
+	b.ProcessRandao,
+	b.ProcessEth1DataInBlock,
+	b.ProcessProposerSlashings,
+	b.ProcessAttesterSlashings,
+	b.ProcessAttestationsNoVerifySignature,
+	b.ProcessDeposits,
+	b.ProcessVoluntaryExits,
+}
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
@@ -400,28 +422,18 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeader(state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process block header")
+	for _, v := range validatingPipeline {
+		if err := v(ctx, state, signed); err != nil {
+			return nil, errors.Wrap(err, "Could not validate block")
+		}
 	}
 
-	state, err = b.ProcessRandao(state, signed.Block.Body)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not verify and process randao")
-	}
-
-	state, err = b.ProcessEth1DataInBlock(state, signed.Block)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process eth1 data")
-	}
-
-	state, err = ProcessOperations(ctx, state, signed.Block.Body)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process block operation")
+	var err error
+	for _, p := range processingPipeline {
+		state, err = p(ctx, state, signed)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not process block")
+		}
 	}
 
 	return state, nil
@@ -446,25 +458,25 @@ func ProcessBlockNoVerifyAttSigs(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeader(state, signed)
+	state, err := b.ProcessBlockHeader(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	state, err = b.ProcessRandao(state, signed.Block.Body)
+	state, err = b.ProcessRandao(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
-	state, err = b.ProcessEth1DataInBlock(state, signed.Block)
+	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
@@ -514,13 +526,13 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
-	state, err = b.ProcessEth1DataInBlock(state, signed.Block)
+	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block operation")
@@ -535,66 +547,6 @@ func ProcessBlockNoVerifyAnySig(
 	set.Join(bSet).Join(rSet).Join(aSet)
 
 	return set, state, nil
-}
-
-// ProcessOperations processes the operations in the beacon block and updates beacon state
-// with the operations in block.
-//
-// Spec pseudocode definition:
-//
-//  def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
-//    # Verify that outstanding deposits are processed up to the maximum number of deposits
-//    assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
-//    # Verify that there are no duplicate transfers
-//    assert len(body.transfers) == len(set(body.transfers))
-//
-//    all_operations = (
-//        (body.proposer_slashings, process_proposer_slashing),
-//        (body.attester_slashings, process_attester_slashing),
-//        (body.attestations, process_attestation),
-//        (body.deposits, process_deposit),
-//        (body.voluntary_exits, process_voluntary_exit),
-//        (body.transfers, process_transfer),
-//    )  # type: Sequence[Tuple[List, Callable]]
-//    for operations, function in all_operations:
-//        for operation in operations:
-//            function(state, operation)
-func ProcessOperations(
-	ctx context.Context,
-	state *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
-	defer span.End()
-
-	if err := verifyOperationLengths(state, body); err != nil {
-		return nil, errors.Wrap(err, "could not verify operation lengths")
-	}
-
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block proposer slashings")
-	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attester slashings")
-	}
-	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attestations")
-	}
-	if err := b.VerifyAttestationsSignatures(ctx, state, body.Attestations); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestations")
-	}
-	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block validator deposits")
-	}
-	state, err = b.ProcessVoluntaryExits(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process validator exits")
-	}
-
-	return state, nil
 }
 
 // ProcessOperationsNoVerifyAttsSigs processes the operations in the beacon block and updates beacon state
@@ -625,31 +577,31 @@ func ProcessOperations(
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody) (*stateTrie.BeaconState, error) {
+	signedBeaconBlock *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
-	if err := verifyOperationLengths(state, body); err != nil {
+	if err := verifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
+	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, body)
+	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, body)
+	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
+	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(ctx, state, body)
+	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}
@@ -657,7 +609,12 @@ func ProcessOperationsNoVerifyAttsSigs(
 	return state, nil
 }
 
-func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBlockBody) error {
+func verifyOperationLengths(ctx context.Context, state *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) error {
+	if b.Block == nil || b.Block.Body == nil {
+		return errors.New("block and block body can't be nil")
+	}
+	body := b.Block.Body
+
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
 		return fmt.Errorf(
 			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
@@ -783,13 +740,13 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
-	state, err = b.ProcessEth1DataInBlock(state, signed.Block)
+	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
