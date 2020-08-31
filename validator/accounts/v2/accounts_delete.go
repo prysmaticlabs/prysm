@@ -15,21 +15,29 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(cliCtx *cli.Context) error {
-	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		return errors.Wrap(err, "no wallet found at path, create a new wallet with wallet-v2 create")
-	} else if err != nil {
+// DeleteAccountConfig specifies parameters to run the delete account function.
+type DeleteAccountConfig struct {
+	Wallet     *Wallet
+	Keymanager v2keymanager.IKeymanager
+	PublicKeys [][]byte
+}
+
+// DeleteAccountCli deletes the accounts that the user requests to be deleted from the wallet.
+// This function uses the CLI to extract necessary values.
+func DeleteAccountCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, nothing to delete",
+		)
+	})
+	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}
@@ -83,27 +91,39 @@ func DeleteAccount(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	switch wallet.KeymanagerKind() {
+	if err := DeleteAccount(cliCtx.Context, &DeleteAccountConfig{
+		Wallet:     wallet,
+		Keymanager: keymanager,
+		PublicKeys: rawPublicKeys,
+	}); err != nil {
+		return err
+	}
+	log.WithField("publicKeys", allAccountStr).Info("Accounts deleted")
+	return nil
+}
+
+// DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
+func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
+	switch cfg.Wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
 	case v2keymanager.Direct:
-		km, ok := keymanager.(*direct.Keymanager)
+		km, ok := cfg.Keymanager.(*direct.Keymanager)
 		if !ok {
 			return errors.New("not a direct keymanager")
 		}
-		if len(filteredPubKeys) == 1 {
+		if len(cfg.PublicKeys) == 1 {
 			log.Info("Deleting account...")
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		if err := km.DeleteAccounts(ctx, rawPublicKeys); err != nil {
+		if err := km.DeleteAccounts(ctx, cfg.PublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	case v2keymanager.Derived:
 		return errors.New("cannot delete accounts for a derived keymanager")
 	default:
-		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
+		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}
-	log.WithField("publicKeys", allAccountStr).Info("Accounts deleted")
 	return nil
 }
