@@ -106,7 +106,8 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 // NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
 func NewInteropKeymanager(ctx context.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		keysCache:           make(map[[48]byte]bls.SecretKey),
+		accountsChangedFeed: new(event.Feed),
 	}
 	if numValidatorKeys == 0 {
 		return k, nil
