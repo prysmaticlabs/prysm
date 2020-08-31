@@ -8,15 +8,12 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_GetBeaconState(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -58,8 +55,6 @@ func TestServer_GetBeaconState(t *testing.T) {
 }
 
 func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
 	req := &pbrpc.BeaconStateRequest{
