@@ -70,10 +70,10 @@ cc_library(
         "build/assembly.S",
     ],
     copts = [
-        "-D__ADX__",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",
+            "-D__ADX__",
         ],
         "//conditions:default": [],
     }),
