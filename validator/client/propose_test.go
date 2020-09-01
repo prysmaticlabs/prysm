@@ -76,6 +76,20 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 	require.LogsContain(t, hook, "Failed to sign randao reveal")
 }
 
+func TestProposeBlock_DomainDataIsNil(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(nil /*response*/, nil)
+
+	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	require.LogsContain(t, hook, domainDataErr)
+}
+
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
@@ -357,4 +371,83 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 	assert.Equal(t, string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
+}
+
+func TestProposeExit_DomainDataFailed(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(nil /*response*/, errors.New("uh oh"))
+
+	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+
+	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, domainDataErr, err)
+	assert.ErrorContains(t, "uh oh", err)
+	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
+}
+
+func TestProposeExit_DomainDataIsNil(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(nil /*response*/, nil)
+
+	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+
+	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, domainDataErr, err)
+	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
+}
+
+func TestProposeBlock_ProposeExitFailed(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeExit(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{}),
+	).Return(nil /*response*/, errors.New("uh oh"))
+
+	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+
+	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, "uh oh", err)
+	assert.LogsContain(t, hook, "Failed to propose voluntary exit")
+}
+
+func TestProposeExit_BroadcastsBlock(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeExit(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{}),
+	).Return(&ethpb.ProposeExitResponse{}, nil /*error*/)
+
+	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+
+	assert.NoError(t, validator.ProposeExit(context.Background(), exit, validatorPubKey))
 }

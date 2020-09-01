@@ -14,6 +14,7 @@ type ValidatorDB interface {
 	io.Closer
 	DatabasePath() string
 	ClearDB() error
+	UpdatePublicKeysBuckets(publicKeys [][48]byte) error
 	// Proposer protection related methods.
 	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
 	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error

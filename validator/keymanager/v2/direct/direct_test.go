@@ -22,12 +22,12 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files: make(map[string]map[string][]byte),
+		Files:          make(map[string]map[string][]byte),
+		WalletPassword: password,
 	}
 	dr := &Keymanager{
-		wallet:           wallet,
-		accountsStore:    &AccountStore{},
-		accountsPassword: password,
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
 	}
 	ctx := context.Background()
 	accountName, err := dr.CreateAccount(ctx)
@@ -66,12 +66,12 @@ func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files: make(map[string]map[string][]byte),
+		Files:          make(map[string]map[string][]byte),
+		WalletPassword: password,
 	}
 	dr := &Keymanager{
-		wallet:           wallet,
-		accountsStore:    &AccountStore{},
-		accountsPassword: password,
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
 	}
 	numAccounts := 5
 	ctx := context.Background()
@@ -115,12 +115,12 @@ func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
 func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
-		Files: make(map[string]map[string][]byte),
+		Files:          make(map[string]map[string][]byte),
+		WalletPassword: password,
 	}
 	dr := &Keymanager{
-		wallet:           wallet,
-		accountsStore:    &AccountStore{},
-		accountsPassword: password,
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -149,11 +149,11 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
+		WalletPassword:   password,
 	}
 	dr := &Keymanager{
-		wallet:           wallet,
-		accountsStore:    &AccountStore{},
-		accountsPassword: password,
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
 	}
 
 	// First, generate accounts and their keystore.json files.
@@ -177,7 +177,7 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
 	decryptor := keystorev4.New()
-	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.accountsPassword)
+	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
 	require.NoError(t, err)
 	store := &AccountStore{}
 	require.NoError(t, json.Unmarshal(enc, store))
