@@ -1,7 +1,7 @@
 package featureconfig
 
 import (
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -535,11 +535,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedSlasherCertFlag = &cli.StringFlag{
-		Name:   "slasher-tls-cert",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedSlasherProviderFlag = &cli.StringFlag{
 		Name:   "slasher-provider",
 		Usage:  deprecatedUsage,
@@ -622,7 +617,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCustomGenesisDelay,
 	deprecatedNewBeaconStateLocks,
 	deprectedForceMaxCoverAttestationAggregation,
-	deprecatedSlasherCertFlag,
 	deprecatedSlasherProviderFlag,
 	deprecatedEnableSlasherFlag,
 }
