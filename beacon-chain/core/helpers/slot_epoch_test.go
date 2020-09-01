@@ -99,6 +99,11 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	}
 }
 
+func TestEpochStartSlot_Overflow(t *testing.T) {
+	_, err := StartSlot(1 << 59)
+	require.ErrorContains(t, "start slot calculation overflows", err)
+}
+
 func TestIsEpochStart(t *testing.T) {
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 
