@@ -104,9 +104,6 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore
 	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
 		return err
 	}
-	dr.lock.Lock()
-	defer dr.lock.Unlock()
-	dr.keysCache = make(map[[48]byte]bls.SecretKey)
 	dr.accountsStore = newAccountsStore
 	pubKeys := make([][48]byte, len(dr.accountsStore.PublicKeys))
 	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
@@ -116,7 +113,9 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore
 		}
 		pubKeyBytes := privKey.PublicKey().Marshal()
 		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
-		dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)] = privKey
+	}
+	if err := dr.initializeKeysCachesFromKeystore(); err != nil {
+		return err
 	}
 	log.Info("Reloaded validator keys into keymanager")
 	dr.accountsChangedFeed.Send(pubKeys)

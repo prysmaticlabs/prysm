@@ -70,7 +70,13 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	if !ok {
 		return errors.New("message is not type [][32]byte")
 	}
+	if err := s.rateLimiter.validateRequest(stream, uint64(len(blockRoots))); err != nil {
+		return err
+	}
 	if len(blockRoots) == 0 {
+		// Add to rate limiter in the event no
+		// roots are requested.
+		s.rateLimiter.add(stream, 1)
 		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
 		if err != nil {
 			log.WithError(err).Debug("Failed to generate a response error")
@@ -78,9 +84,6 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 			log.WithError(err).Debugf("Failed to write to stream")
 		}
 		return errors.New("no block roots provided")
-	}
-	if err := s.rateLimiter.validateRequest(stream, uint64(len(blockRoots))); err != nil {
-		return err
 	}
 
 	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
