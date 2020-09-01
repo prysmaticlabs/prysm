@@ -68,7 +68,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 
 	blockRoots, ok := msg.([][32]byte)
 	if !ok {
-		return errors.New("message is not type BeaconBlocksByRootRequest")
+		return errors.New("message is not type [][32]byte")
 	}
 	if len(blockRoots) == 0 {
 		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
