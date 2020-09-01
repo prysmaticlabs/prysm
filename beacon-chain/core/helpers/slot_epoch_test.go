@@ -93,7 +93,9 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.epoch}
-		assert.Equal(t, tt.startSlot, StartSlot(tt.epoch), "StartSlot(%d)", state.Slot)
+		ss, err := StartSlot(tt.epoch)
+		require.NoError(t, err)
+		assert.Equal(t, tt.startSlot, ss, "StartSlot(%d)", state.Slot)
 	}
 }
 

@@ -32,7 +32,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
 
 	epochStartSlot, err := helpers.StartSlot(c.Epoch)
@@ -43,7 +43,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		baseState = baseState.Copy()
 		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 		}
 		if err := s.checkpointState.AddCheckpointState(c, baseState); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
@@ -80,7 +80,7 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 	// Retrieve checkpoint state to compute checkpoint info.
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
 	epochStartSlot, err := helpers.StartSlot(c.Epoch)
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 		baseState = baseState.Copy()
 		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 		}
 	}
 	f := baseState.Fork()

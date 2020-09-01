@@ -352,13 +352,16 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		return nil
 	}
 	// Set deadline to end of epoch.
-	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(helpers.StartSlot(helpers.SlotToEpoch(slot)+1)))
+	ss, err := helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(ss))
 	defer cancel()
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
 	var validatingKeys [][48]byte
-	var err error
 	if featureconfig.Get().EnableAccountsV2 {
 		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 	} else {
@@ -644,7 +647,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 		attesterKeys[i] = make([]string, 0)
 	}
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
-	slotOffset := helpers.StartSlot(helpers.SlotToEpoch(slot))
+	slotOffset := slot - (slot % params.BeaconConfig().SlotsPerEpoch)
 
 	for _, duty := range duties {
 		if v.emitAccountMetrics {

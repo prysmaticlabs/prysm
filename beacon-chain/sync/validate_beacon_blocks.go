@@ -101,7 +101,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
-	if helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch) >= blk.Block.Slot {
+	startSlot, err := helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch)
+	if err != nil {
+		return pubsub.ValidationIgnore
+	}
+	if startSlot >= blk.Block.Slot {
 		log.Debug("Block slot older/equal than last finalized epoch start slot, rejecting it")
 		return pubsub.ValidationIgnore
 	}

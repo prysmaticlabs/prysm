@@ -2,7 +2,6 @@
 package mathutil
 
 import (
-	"fmt"
 	"math"
 	"math/bits"
 )
@@ -97,6 +96,5 @@ func Min(a uint64, b uint64) uint64 {
 // is an overflow for uint64.
 func MulOverflows(a uint64, b uint64) bool {
 	h, _ := bits.Mul64(a, b)
-	fmt.Println(h)
 	return h > 0
 }
