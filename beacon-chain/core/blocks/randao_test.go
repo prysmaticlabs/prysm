@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"testing"
 
@@ -29,14 +30,15 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	require.NoError(t, err)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(root[:])
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature.Marshal(),
 		},
 	}
 
 	want := "block randao: signature did not verify"
-	_, err = blocks.ProcessRandao(beaconState, block.Body)
+	_, err = blocks.ProcessRandao(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -47,15 +49,17 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	epochSignature, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature,
 		},
 	}
 
 	newState, err := blocks.ProcessRandao(
+		context.Background(),
 		beaconState,
-		block.Body,
+		b,
 	)
 	require.NoError(t, err, "Unexpected error processing block randao")
 	currentEpoch := helpers.CurrentEpoch(beaconState)

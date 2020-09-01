@@ -75,6 +75,10 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	}
 	key := stream.Conn().RemotePeer().String()
 	remaining := collector.Remaining(key)
+	// Treat each request as a minimum of 1.
+	if amt == 0 {
+		amt = 1
+	}
 	if amt > uint64(remaining) {
 		l.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		if l.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
