@@ -23,26 +23,28 @@ func TestCreateAccount_Derived(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWallet(cliCtx)
+	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
 	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
-	cfg, err := derived.UnmarshalConfigFile(encoded)
+	opts, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	assert.DeepEqual(t, derived.DefaultConfig(), cfg)
+	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), opts)
 
-	require.NoError(t, CreateAccount(cliCtx))
+	require.NoError(t, CreateAccountCli(cliCtx))
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, true)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {

@@ -74,7 +74,7 @@ func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 	return walletPassword, nil
 }
 
-func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
+func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
 	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
@@ -129,7 +129,7 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	newCfg := &remote.Config{
+	newCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: crtPath,
 			ClientKeyPath:  keyPath,

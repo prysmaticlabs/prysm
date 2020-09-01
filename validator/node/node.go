@@ -14,7 +14,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -89,25 +88,26 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 			offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx, offset, numValidatorKeys)
+			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
 			if err != nil {
 				log.Fatalf("Could not generate interop keys: %v", err)
 			}
 		} else {
 			// Read the wallet from the specified path.
-			wallet, err := accountsv2.OpenWallet(cliCtx)
+			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
+				return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
+			})
 			if err != nil {
 				log.Fatalf("Could not open wallet: %v", err)
 			}
 			ValidatorClient.wallet = wallet
-			ctx := cliCtx.Context
 			keyManagerV2, err = wallet.InitializeKeymanager(
-				cliCtx, false, /* skipMnemonicConfirm */
+				cliCtx.Context, false, /* skipMnemonicConfirm */
 			)
 			if err != nil {
 				log.Fatalf("Could not read existing keymanager for wallet: %v", err)
 			}
-			if err := wallet.LockConfigFile(ctx); err != nil {
+			if err := wallet.LockWalletConfigFile(cliCtx.Context); err != nil {
 				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 			}
 		}
@@ -118,22 +118,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 
-	pubKeys, err := ExtractPublicKeysFromKeymanager(cliCtx, keyManagerV1, keyManagerV2)
-	if err != nil {
-		return nil, err
-	}
-	if len(pubKeys) == 0 {
-		log.Error("No keys found. Please verify `--keystore-path` is the correct path")
-	} else {
-		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
-		for _, key := range pubKeys {
-			log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:]))).Info("Validating for public key")
-		}
-	}
-
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	validatingPubKeys := make([][48]byte, 0)
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -145,13 +133,21 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			}
 
 		}
-		if err := clearDB(dataDir, pubKeys, forceClearFlag); err != nil {
+		if featureconfig.Get().EnableAccountsV2 {
+			validatingPubKeys, err = keyManagerV2.FetchValidatingPublicKeys(cliCtx.Context)
+		} else {
+			validatingPubKeys, err = keyManagerV1.FetchValidatingKeys()
+		}
+		if err != nil {
+			return nil, err
+		}
+		if err := clearDB(dataDir, validatingPubKeys, forceClearFlag); err != nil {
 			return nil, err
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(dataDir, pubKeys)
+	valDB, err := kv.NewKVStore(dataDir, validatingPubKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize db")
 	}
@@ -165,7 +161,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
-	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2, pubKeys); err != nil {
+	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2); err != nil {
 		return nil, err
 	}
 
@@ -241,7 +237,6 @@ func (s *ValidatorClient) registerPrometheusService() error {
 func (s *ValidatorClient) registerClientService(
 	keyManager v1.KeyManager,
 	keyManagerV2 v2.IKeymanager,
-	validatingPubKeys [][48]byte,
 ) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
@@ -266,7 +261,6 @@ func (s *ValidatorClient) registerClientService(
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
 		GraffitiFlag:               graffiti,
-		ValidatingPubKeys:          validatingPubKeys,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
@@ -432,18 +426,4 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	return nil
-}
-
-// ExtractPublicKeysFromKeymanager extracts only the public keys from the specified key manager.
-func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV1 v1.KeyManager, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
-	var pubKeys [][48]byte
-	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		pubKeys, err = keyManagerV2.FetchValidatingPublicKeys(cliCtx.Context)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to obtain public keys for validation")
-		}
-		return pubKeys, nil
-	}
-	return keyManagerV1.FetchValidatingKeys()
 }

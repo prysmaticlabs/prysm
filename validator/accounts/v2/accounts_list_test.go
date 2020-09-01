@@ -20,15 +20,16 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 )
 
-type mockKeymanager struct {
+type mockRemoteKeymanager struct {
 	publicKeys [][48]byte
+	opts       *remote.KeymanagerOpts
 }
 
-func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return m.publicKeys, nil
 }
 
-func (m *mockKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
+func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
 }
 
@@ -40,20 +41,26 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		keymanagerKind:     v2keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: "Passwordz0320$",
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
 	keymanager, err := direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		direct.DefaultConfig(),
+		cliCtx.Context,
+		&direct.SetupConfig{
+			Wallet: wallet,
+			Opts:   direct.DefaultKeymanagerOpts(),
+		},
 	)
 	require.NoError(t, err)
 
 	numAccounts := 5
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx)
+		_, err := keymanager.CreateAccount(cliCtx.Context)
 		require.NoError(t, err)
 	}
 	rescueStdout := os.Stdout
@@ -62,7 +69,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	os.Stdout = w
 
 	// We call the list direct keymanager accounts function.
-	require.NoError(t, listDirectKeymanagerAccounts(ctx, true, wallet, keymanager))
+	require.NoError(t, listDirectKeymanagerAccounts(context.Background(), true /* show deposit data */, keymanager))
 
 	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
@@ -77,7 +84,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 
 	accountNames, err := keymanager.ValidatingAccountNames()
 	require.NoError(t, err)
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 
 	for i := 0; i < numAccounts; i++ {
@@ -103,23 +110,29 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keymanagerKind:     v2keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Derived)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Derived,
+			WalletPassword: "Passwordz0320$",
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
 
 	keymanager, err := derived.NewKeymanager(
-		cliCtx,
-		wallet,
-		derived.DefaultConfig(),
-		true, /* skip confirm */
+		cliCtx.Context,
+		&derived.SetupConfig{
+			Opts:                derived.DefaultKeymanagerOpts(),
+			Wallet:              wallet,
+			SkipMnemonicConfirm: true,
+		},
 	)
 	require.NoError(t, err)
 
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, err := keymanager.CreateAccount(cliCtx.Context, false /*logAccountInfo*/)
 		require.NoError(t, err)
 		enc, err := keymanager.DepositDataForAccount(uint64(i))
 		require.NoError(t, err)
@@ -132,7 +145,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	os.Stdout = w
 
 	// We call the list direct keymanager accounts function.
-	require.NoError(t, listDerivedKeymanagerAccounts(ctx, true, wallet, keymanager))
+	require.NoError(t, listDerivedKeymanagerAccounts(true /* show deposit data */, keymanager))
 
 	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
@@ -145,9 +158,9 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		t.Error("Did not find Keymanager kind in output")
 	}
 
-	accountNames, err := keymanager.ValidatingAccountNames(ctx)
+	accountNames, err := keymanager.ValidatingAccountNames(cliCtx.Context)
 	require.NoError(t, err)
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 
 	for i := 0; i < numAccounts; i++ {
@@ -177,9 +190,14 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Remote)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Remote,
+			WalletPassword: password,
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
 
 	rescueStdout := os.Stdout
 	r, w, err := os.Pipe()
@@ -193,19 +211,19 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		copy(key, strconv.Itoa(i))
 		pubKeys[i] = bytesutil.ToBytes48(key)
 	}
-	km := &mockKeymanager{
+	km := &mockRemoteKeymanager{
 		publicKeys: pubKeys,
+		opts: &remote.KeymanagerOpts{
+			RemoteCertificate: &remote.CertificateConfig{
+				ClientCertPath: "/tmp/client.crt",
+				ClientKeyPath:  "/tmp/client.key",
+				CACertPath:     "/tmp/ca.crt",
+			},
+			RemoteAddr: "localhost:4000",
+		},
 	}
 	// We call the list remote keymanager accounts function.
-	cfg := &remote.Config{
-		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: "/tmp/client.crt",
-			ClientKeyPath:  "/tmp/client.key",
-			CACertPath:     "/tmp/ca.crt",
-		},
-		RemoteAddr: "localhost:4000",
-	}
-	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), wallet, km, cfg))
+	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), wallet, km, km.opts))
 
 	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
@@ -219,7 +237,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	}
 
 	// Assert the keymanager configuration is printed to stdout.
-	if !strings.Contains(stringOutput, cfg.String()) {
+	if !strings.Contains(stringOutput, km.opts.String()) {
 		t.Error("Did not find remote config in output")
 	}
 
