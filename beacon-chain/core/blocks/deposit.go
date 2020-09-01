@@ -25,7 +25,8 @@ func ProcessPreGenesisDeposits(
 	deposits []*ethpb.Deposit,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
+	beaconState, err = ProcessDeposits(ctx, beaconState, &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Deposits: deposits}}})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
@@ -66,10 +67,14 @@ func ProcessPreGenesisDeposits(
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	deposits []*ethpb.Deposit,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	var err error
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
 
+	deposits := b.Block.Body.Deposits
+	var err error
 	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	if err != nil {
 		return nil, err

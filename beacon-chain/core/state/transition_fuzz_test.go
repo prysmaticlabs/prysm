@@ -138,13 +138,13 @@ func TestFuzzProcessOperations_1000(t *testing.T) {
 	defer SkipSlotCache.Enable()
 	ctx := context.Background()
 	state := &stateTrie.BeaconState{}
-	bb := &ethpb.BeaconBlockBody{}
+	bb := &ethpb.SignedBeaconBlock{}
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		s, err := ProcessOperations(ctx, state, bb)
+		s, err := ProcessBlock(ctx, state, bb)
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for block body: %v", s, err, bb)
 		}
@@ -156,7 +156,7 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	defer SkipSlotCache.Enable()
 	ctx := context.Background()
 	state := &stateTrie.BeaconState{}
-	bb := &ethpb.BeaconBlockBody{}
+	bb := &ethpb.SignedBeaconBlock{}
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	for i := 0; i < 1000; i++ {
@@ -173,13 +173,13 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	SkipSlotCache.Disable()
 	defer SkipSlotCache.Enable()
 	state := &stateTrie.BeaconState{}
-	bb := &ethpb.BeaconBlockBody{}
+	bb := &ethpb.SignedBeaconBlock{}
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		err := verifyOperationLengths(state, bb)
+		_, err := VerifyOperationLengths(context.Background(), state, bb)
 		_ = err
 	}
 }
