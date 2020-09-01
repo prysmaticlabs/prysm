@@ -13,13 +13,13 @@ import (
 
 func TestDerivedKeymanager_ExtractKeystores(t *testing.T) {
 	dr := &Keymanager{
-		keysCache: make(map[[48]byte]bls.SecretKey),
+		secretKeysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	validatingKeys := make([]bls.SecretKey, 10)
 	for i := 0; i < len(validatingKeys); i++ {
 		secretKey := bls.RandKey()
 		validatingKeys[i] = secretKey
-		dr.keysCache[bytesutil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
+		dr.secretKeysCache[bytesutil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
 	}
 	ctx := context.Background()
 	password := "password"
