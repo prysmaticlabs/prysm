@@ -5,56 +5,32 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/schollz/progressbar/v3"
-	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 // ImportKeystores into the direct keymanager from an external source.
 func (dr *Keymanager) ImportKeystores(
-	cliCtx *cli.Context,
+	ctx context.Context,
 	keystores []*v2keymanager.Keystore,
-	useAccountsPassword bool,
+	importsPassword string,
 ) error {
 	decryptor := keystorev4.New()
 	privKeys := make([][]byte, len(keystores))
 	pubKeys := make([][]byte, len(keystores))
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
-	var password string
 	var err error
-	if useAccountsPassword {
-		password = dr.accountsPassword
-	} else {
-		if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-			passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-			data, err := ioutil.ReadFile(passwordFilePath)
-			if err != nil {
-				return err
-			}
-			password = string(data)
-		} else {
-			password, err = promptutil.PasswordPrompt(
-				"Enter the password for your imported accounts", promptutil.NotEmpty,
-			)
-			if err != nil {
-				return fmt.Errorf("could not read account password: %v", err)
-			}
-		}
-	}
 	fmt.Println("Importing accounts, this may take a while...")
 	var privKeyBytes []byte
 	var pubKeyBytes []byte
 	for i := 0; i < len(keystores); i++ {
-		privKeyBytes, pubKeyBytes, password, err = dr.attemptDecryptKeystore(decryptor, keystores[i], password)
+		privKeyBytes, pubKeyBytes, importsPassword, err = dr.attemptDecryptKeystore(decryptor, keystores[i], importsPassword)
 		if err != nil {
 			return err
 		}
@@ -65,7 +41,6 @@ func (dr *Keymanager) ImportKeystores(
 		}
 	}
 	// Write the accounts to disk into a single keystore.
-	ctx := context.Background()
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
 		return err
@@ -90,7 +65,7 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
-		privKeyBytes, password, err = dr.askUntilPasswordConfirms(enc, keystore)
+		privKeyBytes, password, err = askUntilPasswordConfirms(enc, keystore)
 		if err != nil {
 			return nil, nil, "", errors.Wrap(err, "could not confirm password via prompt")
 		}

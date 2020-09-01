@@ -58,17 +58,16 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
+		WalletPassword:   "secretPassw0rd$1999",
 	}
 	seed := make([]byte, 32)
 	copy(seed, "hello world")
-	password := "secretPassw0rd$1999"
 	dr := &Keymanager{
 		wallet: wallet,
 		seed:   seed,
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		accountsPassword: password,
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	ctx := context.Background()
@@ -98,14 +97,14 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
+		WalletPassword:   "secretPassw0rd$1999",
 	}
 	dr := &Keymanager{
 		wallet: wallet,
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		seed:             make([]byte, 32),
-		accountsPassword: "hello world",
+		seed: make([]byte, 32),
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	// First, generate accounts and their keystore.json files.
@@ -136,6 +135,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
+		WalletPassword:   "secretPassw0rd$1999",
 	}
 	seed := make([]byte, 32)
 	copy(seed, "hello world")
@@ -145,7 +145,6 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
-		accountsPassword: "hello world",
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 

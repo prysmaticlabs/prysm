@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -17,24 +16,39 @@ import (
 
 var log = logrus.WithField("prefix", "accounts-v2")
 
-// CreateAccount creates a new validator account from user input by opening
-// a wallet from the user's specified path.
-func CreateAccount(cliCtx *cli.Context) error {
-	ctx := context.Background()
-	wallet, err := openOrCreateWallet(cliCtx, CreateWallet)
+// CreateAccountConfig to run the create account function.
+type CreateAccountConfig struct {
+	Wallet      *Wallet
+	NumAccounts int64
+}
+
+// CreateAccountCli creates a new validator account from user input by opening
+// a wallet from the user's specified path. This uses the CLI to extract information
+// to perform account creation.
+func CreateAccountCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	if err != nil {
 		return err
 	}
+	numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
+	log.Info("Creating a new account...")
+	return CreateAccount(cliCtx.Context, &CreateAccountConfig{
+		Wallet:      wallet,
+		NumAccounts: numAccounts,
+	})
+}
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, false /* skip mnemonic confirm */)
+// CreateAccount creates a new validator account from user input by opening
+// a wallet from the user's specified path.
+func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
+	keymanager, err := cfg.Wallet.InitializeKeymanager(ctx, false /* skip mnemonic confirm */)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	log.Info("Creating a new account...")
-	switch wallet.KeymanagerKind() {
+	switch cfg.Wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return errors.New("cannot create a new account for a remote keymanager")
 	case v2keymanager.Direct:
@@ -52,40 +66,25 @@ func CreateAccount(cliCtx *cli.Context) error {
 			return errors.New("not a derived keymanager")
 		}
 		startNum := km.NextAccountNumber(ctx)
-		numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
-		if numAccounts == 1 {
+		if cfg.NumAccounts == 1 {
 			if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
 				return errors.Wrap(err, "could not create account in wallet")
 			}
 		} else {
-			for i := 0; i < int(numAccounts); i++ {
+			for i := 0; i < int(cfg.NumAccounts); i++ {
 				if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
 					return errors.Wrap(err, "could not create account in wallet")
 				}
 			}
-			log.Infof("Successfully created %d accounts. Please use accounts-v2 list to view details for accounts %d through %d.", numAccounts, startNum, startNum+uint64(numAccounts)-1)
+			log.Infof(
+				"Successfully created %d accounts. Please use accounts-v2 list to view details for accounts %d through %d",
+				cfg.NumAccounts,
+				startNum,
+				startNum+uint64(cfg.NumAccounts)-1,
+			)
 		}
 	default:
-		return fmt.Errorf("keymanager kind %s not supported", wallet.KeymanagerKind())
+		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}
 	return nil
-}
-
-func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
-	if cliCtx.IsSet(flags.KeymanagerKindFlag.Name) {
-		return v2keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))
-	}
-	promptSelect := promptui.Select{
-		Label: "Select a type of wallet",
-		Items: []string{
-			keymanagerKindSelections[v2keymanager.Derived],
-			keymanagerKindSelections[v2keymanager.Direct],
-			keymanagerKindSelections[v2keymanager.Remote],
-		},
-	}
-	selection, _, err := promptSelect.Run()
-	if err != nil {
-		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", formatPromptError(err))
-	}
-	return v2keymanager.Kind(selection), nil
 }

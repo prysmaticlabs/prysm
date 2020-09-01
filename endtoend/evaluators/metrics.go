@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -25,7 +26,7 @@ const maxMemStatsBytes = 2000000000 // 2 GiB.
 // overall health is good. Not checking the first 2 epochs so the sample size isn't too small.
 var MetricsCheck = types.Evaluator{
 	Name:       "metrics_check_epoch_%d",
-	Policy:     afterNthEpoch(1),
+	Policy:     afterNthEpoch(0),
 	Evaluation: metricsTest,
 }
 
@@ -63,15 +64,9 @@ var metricComparisonTests = []comparisonTest{
 		expectedComparison: 0.8,
 	},
 	{
-		name:               "committee index 0 beacon attestation",
-		topic1:             fmt.Sprintf(p2pFailValidationTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 0)),
-		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 0)),
-		expectedComparison: 0.15,
-	},
-	{
-		name:               "committee index 1 beacon attestation",
-		topic1:             fmt.Sprintf(p2pFailValidationTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 1)),
-		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, fmt.Sprintf(formatTopic(p2p.AttestationSubnetTopicFormat), 1)),
+		name:               "committee index beacon attestations",
+		topic1:             fmt.Sprintf(p2pFailValidationTopic, formatTopic(p2p.AttestationSubnetTopicFormat)),
+		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, formatTopic(p2p.AttestationSubnetTopicFormat)),
 		expectedComparison: 0.15,
 	},
 	{
@@ -197,30 +192,36 @@ func metricCheckComparison(pageContent string, topic1 string, topic2 string, com
 }
 
 func getValueOfTopic(pageContent string, topic string) (int, error) {
-	// Adding a space to search exactly.
-	startIdx := strings.LastIndex(pageContent, topic+" ")
-	if startIdx == -1 {
-		return -1, fmt.Errorf("did not find requested text %s in %s", topic, pageContent)
-	}
-	endOfTopic := startIdx + len(topic)
-	// Adding 1 to skip the space after the topic name.
-	startOfValue := endOfTopic + 1
-	endOfValue := strings.Index(pageContent[startOfValue:], "\n")
-	if endOfValue == -1 {
-		return -1, fmt.Errorf("could not find next space in %s", pageContent[startOfValue:])
-	}
-	metricValue := pageContent[startOfValue : startOfValue+endOfValue]
-	floatResult, err := strconv.ParseFloat(metricValue, 64)
+	regexExp, err := regexp.Compile(topic + " ")
 	if err != nil {
-		return -1, errors.Wrapf(err, "could not parse %s for int", metricValue)
+		return -1, errors.Wrap(err, "could not create regex expression")
 	}
-	return int(floatResult), nil
+	indexesFound := regexExp.FindAllStringIndex(pageContent, 8)
+	if indexesFound == nil {
+		return -1, fmt.Errorf("no strings found for %s", topic)
+	}
+	var result float64
+	for i, stringIndex := range indexesFound {
+		// Only performing every third result found since theres 2 comments above every metric.
+		if i == 0 || i%2 != 0 {
+			continue
+		}
+		startOfValue := stringIndex[1]
+		endOfValue := strings.Index(pageContent[startOfValue:], "\n")
+		if endOfValue == -1 {
+			return -1, fmt.Errorf("could not find next space in %s", pageContent[startOfValue:])
+		}
+		metricValue := pageContent[startOfValue : startOfValue+endOfValue]
+		floatResult, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			return -1, errors.Wrapf(err, "could not parse %s for int", metricValue)
+		}
+		result += floatResult
+	}
+	return int(result), nil
 }
 
 func formatTopic(topic string) string {
-	startIndex := strings.Index(topic, "%x")
-	if startIndex == -1 {
-		return topic
-	}
-	return topic[:startIndex] + "%" + topic[startIndex:]
+	replacedD := strings.Replace(topic, "%d", "\\w*", 1)
+	return replacedD
 }

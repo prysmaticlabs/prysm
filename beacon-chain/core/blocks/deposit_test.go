@@ -25,7 +25,8 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			// 3 deposits from the same validator
 			Deposits: []*ethpb.Deposit{dep[0], dep[1], dep[2]},
@@ -48,7 +49,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b)
 	require.NoError(t, err, "Expected block deposits to process correctly")
 
 	assert.Equal(t, 2, len(newState.Validators()), "Incorrect validator count")
@@ -72,7 +73,8 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	require.NoError(t, err, "Could not generate proof")
 
 	deposit.Proof = proof
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Deposits: []*ethpb.Deposit{deposit},
 		},
@@ -85,7 +87,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	})
 	require.NoError(t, err)
 	want := "deposit root did not verify"
-	_, err = blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
+	_, err = blocks.ProcessDeposits(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -95,7 +97,8 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
 
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Deposits: []*ethpb.Deposit{dep[0]},
 		},
@@ -117,7 +120,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b)
 	require.NoError(t, err, "Expected block deposits to process correctly")
 	if newState.Balances()[1] != dep[0].Data.Amount {
 		t.Errorf(
@@ -152,7 +155,8 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	require.NoError(t, err, "Could not generate proof")
 
 	deposit.Proof = proof
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Deposits: []*ethpb.Deposit{deposit},
 		},
@@ -177,7 +181,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b)
 	require.NoError(t, err, "Process deposit failed")
 	assert.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }

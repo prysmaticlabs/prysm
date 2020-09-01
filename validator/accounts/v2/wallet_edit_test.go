@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"flag"
 	"testing"
 
@@ -19,12 +18,16 @@ func TestEditWalletConfiguration(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Remote)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Remote,
+			WalletPassword: "Passwordz0320$",
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
 
-	originalCfg := &remote.Config{
+	originalCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/a.crt",
 			ClientKeyPath:  "/tmp/b.key",
@@ -32,11 +35,11 @@ func TestEditWalletConfiguration(t *testing.T) {
 		},
 		RemoteAddr: "my.server.com:4000",
 	}
-	encodedCfg, err := remote.MarshalConfigFile(ctx, originalCfg)
+	encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, originalCfg)
 	assert.NoError(t, err)
-	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg))
 
-	wantCfg := &remote.Config{
+	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",
 			ClientKeyPath:  "/tmp/client.key",
@@ -58,12 +61,12 @@ func TestEditWalletConfiguration(t *testing.T) {
 	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
 	cliCtx = cli.NewContext(&app, set, nil)
 
-	err = EditWalletConfiguration(cliCtx)
+	err = EditWalletConfigurationCli(cliCtx)
 	require.NoError(t, err)
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	encoded, err := wallet.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	require.NoError(t, err)
 
-	cfg, err := remote.UnmarshalConfigFile(encoded)
+	cfg, err := remote.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, wantCfg, cfg)
 }
