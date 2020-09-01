@@ -22,10 +22,14 @@ import (
 func ProcessAttestations(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
+
 	var err error
-	for idx, attestation := range body.Attestations {
+	for idx, attestation := range b.Block.Body.Attestations {
 		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
@@ -80,8 +84,12 @@ func ProcessAttestation(
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
+	body := b.Block.Body
 	var err error
 	for idx, attestation := range body.Attestations {
 		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation)
@@ -205,9 +213,10 @@ func ProcessAttestationNoVerifySignature(
 // of the provided attestations must have valid signatures or this method will return an error.
 // This method does not determine which attestation signature is invalid, only that one or more
 // attestation signatures were not valid.
-func VerifyAttestationsSignatures(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) error {
+func VerifyAttestationsSignatures(ctx context.Context, beaconState *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationsSignatures")
 	defer span.End()
+	atts := b.Block.Body.Attestations
 	span.AddAttributes(trace.Int64Attribute("attestations", int64(len(atts))))
 
 	if len(atts) == 0 {

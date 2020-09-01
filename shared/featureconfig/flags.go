@@ -1,7 +1,7 @@
 package featureconfig
 
 import (
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -107,10 +107,6 @@ var (
 	dontPruneStateStartUp = &cli.BoolFlag{
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
-	}
-	disableNewStateMgmt = &cli.BoolFlag{
-		Name:  "disable-new-state-mgmt",
-		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
@@ -535,6 +531,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedNewStateMgmtFlag = &cli.BoolFlag{
+		Name:   "disable-new-state-mgmt",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedSlasherProviderFlag = &cli.StringFlag{
 		Name:   "slasher-provider",
 		Usage:  deprecatedUsage,
@@ -617,6 +618,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCustomGenesisDelay,
 	deprecatedNewBeaconStateLocks,
 	deprectedForceMaxCoverAttestationAggregation,
+	deprecatedNewStateMgmtFlag,
 	deprecatedSlasherProviderFlag,
 	deprecatedEnableSlasherFlag,
 }
@@ -662,7 +664,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,

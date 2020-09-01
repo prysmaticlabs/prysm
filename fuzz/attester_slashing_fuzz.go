@@ -25,7 +25,12 @@ func BeaconFuzzAttesterSlashing(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessAttesterSlashings(context.Background(), st, &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{input.AttesterSlashing}})
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Body: &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{input.AttesterSlashing}},
+		},
+	}
+	post, err := blocks.ProcessAttesterSlashings(context.Background(), st, block)
 	if err != nil {
 		return fail(err)
 	}

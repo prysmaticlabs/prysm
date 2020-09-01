@@ -61,6 +61,19 @@ func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []by
 	return err
 }
 
+// UpdatePublicKeysBuckets for a specified list of keys.
+func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
+	return store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicProposalsBucket)
+		for _, pubKey := range pubKeys {
+			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
+				return errors.Wrap(err, "failed to create proposal history bucket")
+			}
+		}
+		return nil
+	})
+}
+
 func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
@@ -76,16 +89,4 @@ func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 		}
 	}
 	return nil
-}
-
-func (store *Store) initializeSubBuckets(pubKeys [][48]byte) error {
-	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(historicProposalsBucket)
-		for _, pubKey := range pubKeys {
-			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
-				return errors.Wrap(err, "failed to create proposal history bucket")
-			}
-		}
-		return nil
-	})
 }

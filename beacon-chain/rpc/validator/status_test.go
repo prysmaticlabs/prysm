@@ -1077,3 +1077,9 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 	require.NoError(t, err, "Could not get validator status")
 	assert.Equal(t, ethpb.ValidatorStatus_INVALID, resp.Status)
 }
+
+func Test_DepositStatus(t *testing.T) {
+	assert.Equal(t, depositStatus(0), ethpb.ValidatorStatus_PENDING)
+	assert.Equal(t, depositStatus(params.BeaconConfig().MinDepositAmount), ethpb.ValidatorStatus_PARTIALLY_DEPOSITED)
+	assert.Equal(t, depositStatus(params.BeaconConfig().MaxEffectiveBalance), ethpb.ValidatorStatus_DEPOSITED)
+}

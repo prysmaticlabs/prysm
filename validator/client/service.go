@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -51,7 +52,6 @@ type ValidatorService struct {
 	logValidatorBalances bool
 	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
-	validatingPubKeys    [][48]byte
 	grpcRetries          uint
 	grpcRetryDelay       time.Duration
 	grpcHeaders          []string
@@ -64,7 +64,6 @@ type Config struct {
 	DataDir                    string
 	CertFlag                   string
 	GraffitiFlag               string
-	ValidatingPubKeys          [][48]byte
 	KeyManager                 keymanager.KeyManager
 	KeyManagerV2               v2.IKeymanager
 	LogValidatorBalances       bool
@@ -91,7 +90,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
 		keyManagerV2:         cfg.KeyManagerV2,
-		validatingPubKeys:    cfg.ValidatingPubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -169,7 +167,26 @@ func (v *ValidatorService) Start() {
 		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 	}
+	var validatingKeys [][48]byte
 	go run(v.ctx, v.validator)
+	if featureconfig.Get().EnableAccountsV2 {
+		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(v.ctx)
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+		go recheckValidatingKeysBucket(v.ctx, v.db, v.keyManagerV2)
+	} else {
+		validatingKeys, err = v.keyManager.FetchValidatingKeys()
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+	}
 }
 
 // Stop the validator service.
@@ -291,6 +308,30 @@ func ConstructDialOptions(
 
 	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
+}
+
+// Reloads the validating keys upon receiving an event over a feed subscription
+// to accounts changes in the keymanager, then updates those keys'
+// buckets in bolt DB if a bucket for a key does not exist.
+func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
+	directKeymanager, ok := km.(*direct.Keymanager)
+	if !ok {
+		return
+	}
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	sub := directKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case keys := <-validatingPubKeysChan:
+			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
+				log.WithError(err).Debug("Could not update public keys buckets")
+				continue
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // ValidatorBalances returns the validator balances mapping keyed by public keys.

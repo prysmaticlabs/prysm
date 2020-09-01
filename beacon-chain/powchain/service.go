@@ -214,18 +214,25 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			return nil, errors.Wrap(err, "could not initialize caches")
 		}
 	}
-
-	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
-	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && s.httpEndpoint == "" {
-		return nil, errors.New("cannot create genesis state: no eth1 http endpoint defined")
-	}
-
 	return s, nil
 }
 
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
+	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
+	// able to generate the genesis state.
+	if !s.chainStartData.Chainstarted && s.httpEndpoint == "" {
+		// check for genesis state before shutting down the node,
+		// if a genesis state exists, we can continue on.
+		genState, err := s.beaconDB.GenesisState(s.ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if genState == nil {
+			log.Fatal("cannot create genesis state: no eth1 http endpoint defined")
+		}
+	}
+
 	// Exit early if eth1 endpoint is not set.
 	if s.httpEndpoint == "" {
 		return
