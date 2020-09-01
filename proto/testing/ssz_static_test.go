@@ -127,7 +127,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
 	case "SignedAggregateAndProof":
-		obj = &pb.SignedAggregateAndProof{}
+		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
 		obj = &ethpb.SignedBeaconBlock{}
 	case "SignedBeaconBlockHeader":
