@@ -140,6 +140,38 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	}
 }
 
+func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	d, _ := db.SetupDB(t)
+
+	r := &Service{p2p: p1, db: d, rateLimiter: newRateLimiter(p1)}
+	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		expectFailure(t, 1, "no block roots provided in request", stream)
+	})
+
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
+	require.NoError(t, err)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), [][32]byte{}, stream1)
+	assert.ErrorContains(t, "no block roots provided", err)
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	lter, err := r.rateLimiter.retrieveCollector(topic)
+	require.NoError(t, err)
+	assert.Equal(t, 1, int(lter.Count(stream1.Conn().RemotePeer().String())))
+}
+
 type testList [][32]byte
 
 func (*testList) Limit() uint64 {

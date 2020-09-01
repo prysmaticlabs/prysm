@@ -71,6 +71,9 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		return errors.New("message is not type BeaconBlocksByRootRequest")
 	}
 	if len(blockRoots) == 0 {
+		// Add to rate limiter in the event no
+		// roots are requested.
+		s.rateLimiter.add(stream, 1)
 		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
 		if err != nil {
 			log.WithError(err).Debug("Failed to generate a response error")
