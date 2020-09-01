@@ -318,7 +318,7 @@ func (s *Service) handleEpochBoundary(postState *stateTrie.BeaconState) error {
 		reportEpochMetrics(postState)
 		var err error
 		s.nextEpochBoundarySlot, err = helpers.StartSlot(helpers.NextEpoch(postState))
-		if ErrTargetRootNotInDB != nil {
+		if err != nil {
 			return err
 		}
 		// Update committees cache at epoch boundary slot.

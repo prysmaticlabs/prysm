@@ -408,7 +408,7 @@ func fetchBlockRootsBySlotRange(
 		if err != nil {
 			return nil, err
 		}
-		endSlot = +params.BeaconConfig().SlotsPerEpoch - 1
+		endSlot = endSlot + params.BeaconConfig().SlotsPerEpoch - 1
 	}
 	min := bytesutil.Uint64ToBytesBigEndian(startSlot)
 	max := bytesutil.Uint64ToBytesBigEndian(endSlot)
