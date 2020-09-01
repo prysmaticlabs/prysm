@@ -8,8 +8,6 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/urfave/cli/v2"
 )
 
 // SendDepositCli transaction for user specified accounts via an interactive
