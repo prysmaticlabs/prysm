@@ -316,8 +316,11 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 func (s *Service) handleEpochBoundary(postState *stateTrie.BeaconState) error {
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		reportEpochMetrics(postState)
-		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
-
+		var err error
+		s.nextEpochBoundarySlot, err = helpers.StartSlot(helpers.NextEpoch(postState))
+		if ErrTargetRootNotInDB != nil {
+			return err
+		}
 		// Update committees cache at epoch boundary slot.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err

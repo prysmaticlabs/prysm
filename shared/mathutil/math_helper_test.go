@@ -279,3 +279,29 @@ func TestMinValue(t *testing.T) {
 		require.Equal(t, tt.result, mathutil.Min(tt.a, tt.b))
 	}
 }
+
+func TestMulOverflows(t *testing.T) {
+	type args struct {
+		a uint64
+		b uint64
+	}
+	tests := []struct {
+		args args
+		want bool
+	}{
+		{args: args{0, 1}, want: false},
+		{args: args{1 << 32, 1}, want: false},
+		{args: args{1 << 32, 100}, want: false},
+		{args: args{1 << 32, 1 << 31}, want: false},
+		{args: args{1 << 32, 1 << 32}, want: true},
+		{args: args{1 << 62, 2}, want: false},
+		{args: args{1 << 62, 4}, want: true},
+		{args: args{1 << 63, 1}, want: false},
+		{args: args{1 << 63, 2}, want: true},
+	}
+	for _, tt := range tests {
+		if got := mathutil.MulOverflows(tt.args.a, tt.args.b); got != tt.want {
+			t.Errorf("MulOverflows() = %v, want %v", got, tt.want)
+		}
+	}
+}

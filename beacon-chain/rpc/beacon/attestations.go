@@ -295,7 +295,11 @@ func (bs *Server) StreamIndexedAttestations(
 			}
 			// We use the retrieved committees for the epoch to convert all attestations
 			// into indexed form effectively.
-			startSlot := helpers.StartSlot(targetEpoch)
+			startSlot, err := helpers.StartSlot(targetEpoch)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
 			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 			for _, att := range aggAtts {
 				// Out of range check, the attestation slot cannot be greater
