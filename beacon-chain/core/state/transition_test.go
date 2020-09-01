@@ -194,7 +194,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
 	require.NoError(t, err)
-	want := "could not process block proposer slashing"
+	want := "could not verify proposer slashing"
 	_, err = state.ProcessBlock(context.Background(), beaconState, block)
 	assert.ErrorContains(t, want, err)
 }
@@ -225,7 +225,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
 	require.NoError(t, err)
 
-	want := "could not verify attestations"
+	want := "could not verify attestation"
 	_, err = state.ProcessBlock(context.Background(), beaconState, block)
 	assert.ErrorContains(t, want, err)
 }
@@ -323,8 +323,9 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	cp.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
-	_, err = state.ProcessBlock(context.Background(), beaconState, block)
-	assert.ErrorContains(t, "could not process block header", err)
+	_, err = state.VerifyOperationLengths(context.Background(), beaconState, block)
+	wanted := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
+	assert.ErrorContains(t, wanted, err)
 }
 
 func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
@@ -856,77 +857,82 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	}
 }
 
-func TestProcessOperations_OverMaxProposerSlashings(t *testing.T) {
+func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
 	maxSlashings := params.BeaconConfig().MaxProposerSlashings
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			ProposerSlashings: make([]*ethpb.ProposerSlashing, maxSlashings+1),
+	b := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Body: &ethpb.BeaconBlockBody{
+				ProposerSlashings: make([]*ethpb.ProposerSlashing, maxSlashings+1),
+			},
 		},
 	}
-
 	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
-		len(block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
-	_, err := state.ProcessOperations(context.Background(), &beaconstate.BeaconState{}, block.Body)
+		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
-func TestProcessOperations_OverMaxAttesterSlashings(t *testing.T) {
+func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
 	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			AttesterSlashings: make([]*ethpb.AttesterSlashing, maxSlashings+1),
+	b := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Body: &ethpb.BeaconBlockBody{
+				AttesterSlashings: make([]*ethpb.AttesterSlashing, maxSlashings+1),
+			},
 		},
 	}
-
 	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
-		len(block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
-	_, err := state.ProcessOperations(context.Background(), &beaconstate.BeaconState{}, block.Body)
+		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
-func TestProcessOperations_OverMaxAttestations(t *testing.T) {
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Attestations: make([]*ethpb.Attestation, params.BeaconConfig().MaxAttestations+1),
+func TestProcessBlock_OverMaxAttestations(t *testing.T) {
+	b := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Body: &ethpb.BeaconBlockBody{
+				Attestations: make([]*ethpb.Attestation, params.BeaconConfig().MaxAttestations+1),
+			},
 		},
 	}
-
 	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
-		len(block.Body.Attestations), params.BeaconConfig().MaxAttestations)
-	_, err := state.ProcessOperations(context.Background(), &beaconstate.BeaconState{}, block.Body)
+		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
-func TestProcessOperation_OverMaxVoluntaryExits(t *testing.T) {
+func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
 	maxExits := params.BeaconConfig().MaxVoluntaryExits
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			VoluntaryExits: make([]*ethpb.SignedVoluntaryExit, maxExits+1),
+	b := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Body: &ethpb.BeaconBlockBody{
+				VoluntaryExits: make([]*ethpb.SignedVoluntaryExit, maxExits+1),
+			},
 		},
 	}
-
 	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
-		len(block.Body.VoluntaryExits), maxExits)
-	_, err := state.ProcessOperations(context.Background(), &beaconstate.BeaconState{}, block.Body)
+		len(b.Block.Body.VoluntaryExits), maxExits)
+	_, err := state.VerifyOperationLengths(context.Background(), &beaconstate.BeaconState{}, b)
 	assert.ErrorContains(t, want, err)
 }
 
-func TestProcessOperations_IncorrectDeposits(t *testing.T) {
+func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 	base := &pb.BeaconState{
 		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
 		Eth1DepositIndex: 98,
 	}
 	s, err := beaconstate.InitializeFromProto(base)
 	require.NoError(t, err)
-	block := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Deposits: []*ethpb.Deposit{{}},
+	b := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Body: &ethpb.BeaconBlockBody{
+				Deposits: []*ethpb.Deposit{{}},
+			},
 		},
 	}
-
 	want := fmt.Sprintf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(block.Body.Deposits))
-	_, err = state.ProcessOperations(context.Background(), s, block.Body)
+		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(b.Block.Body.Deposits))
+	_, err = state.VerifyOperationLengths(context.Background(), s, b)
 	assert.ErrorContains(t, want, err)
 }
 
