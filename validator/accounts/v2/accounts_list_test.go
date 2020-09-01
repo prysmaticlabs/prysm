@@ -145,7 +145,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	os.Stdout = w
 
 	// We call the list direct keymanager accounts function.
-	require.NoError(t, listDerivedKeymanagerAccounts(true /* show deposit data */, keymanager))
+	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true /* show deposit data */, keymanager))
 
 	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
