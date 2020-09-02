@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -42,12 +43,13 @@ var log = logrus.WithField("prefix", "node")
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
-	cliCtx   *cli.Context
-	db       *kv.Store
-	services *shared.ServiceRegistry // Lifecycle and service store.
-	lock     sync.RWMutex
-	wallet   *accountsv2.Wallet
-	stop     chan struct{} // Channel to wait for termination notifications.
+	cliCtx            *cli.Context
+	db                *kv.Store
+	services          *shared.ServiceRegistry // Lifecycle and service store.
+	lock              sync.RWMutex
+	wallet            *accountsv2.Wallet
+	walletInitialized *event.Feed
+	stop              chan struct{} // Channel to wait for termination notifications.
 }
 
 // NewValidatorClient creates a new, Prysm validator client.
@@ -71,9 +73,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
-		cliCtx:   cliCtx,
-		services: registry,
-		stop:     make(chan struct{}),
+		cliCtx:            cliCtx,
+		services:          registry,
+		walletInitialized: new(event.Feed),
+		stop:              make(chan struct{}),
 	}
 
 	featureconfig.ConfigureValidator(cliCtx)
@@ -365,9 +368,10 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	server := rpc.NewServer(context.Background(), &rpc.Config{
-		ValDB: s.db,
-		Host:  rpcHost,
-		Port:  fmt.Sprintf("%d", rpcPort),
+		ValDB:                 s.db,
+		Host:                  rpcHost,
+		Port:                  fmt.Sprintf("%d", rpcPort),
+		WalletInitializedFeed: s.walletInitialized,
 		//ValidatorService: vs,
 	})
 	return s.services.RegisterService(server)
