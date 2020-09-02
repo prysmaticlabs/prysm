@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
 )
@@ -81,13 +80,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 
 // Start the gRPC server.
 func (s *Server) Start() {
-	// We first check if the user has a wallet to fire an event over
-	// a global feed signifying wallet initialization.
-	if err := v2.WalletExists(s.walletDir); err == nil {
-		s.walletInitialized = true
-		s.walletInitializedFeed.Send(true)
-	}
-
 	// Setup the gRPC server options and TLS configuration.
 	address := fmt.Sprintf("%s:%s", s.host, s.port)
 	lis, err := net.Listen("tcp", address)
@@ -141,7 +133,7 @@ func (s *Server) Start() {
 	reflection.Register(s.grpcServer)
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
-	//pb.RegisterHealthServer(s.grpcServer, s)
+	pb.RegisterHealthServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {

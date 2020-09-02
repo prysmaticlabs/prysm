@@ -59,7 +59,7 @@ func (g *Gateway) Start() {
 	handlers := []func(context.Context, *gwruntime.ServeMux, string, []grpc.DialOption) error{
 		pb.RegisterAuthHandlerFromEndpoint,
 		pb.RegisterWalletHandlerFromEndpoint,
-		//pb.RegisterHealthHandlerFromEndpoint,
+		pb.RegisterHealthHandlerFromEndpoint,
 	}
 	for _, h := range handlers {
 		if err := h(ctx, gwmux, g.remoteAddr, opts); err != nil {

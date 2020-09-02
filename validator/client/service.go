@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -39,45 +40,47 @@ var log = logrus.WithField("prefix", "validator")
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	db                    db.Database
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	validator             Validator
-	graffiti              []byte
-	conn                  *grpc.ClientConn
-	endpoint              string
-	withCert              string
-	dataDir               string
-	keyManager            keymanager.KeyManager
-	keyManagerV2          v2.IKeymanager
-	logValidatorBalances  bool
+	useWeb                bool
 	emitAccountMetrics    bool
-	maxCallRecvMsgSize    int
-	grpcRetries           uint
+	logValidatorBalances  bool
+	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
-	grpcHeaders           []string
-	protector             slashingprotection.Protector
+	grpcRetries           uint
+	maxCallRecvMsgSize    int
 	walletInitializedFeed *event.Feed
+	cancel                context.CancelFunc
+	db                    db.Database
+	keyManager            keymanager.KeyManager
+	dataDir               string
+	withCert              string
+	endpoint              string
+	validator             Validator
+	protector             slashingprotection.Protector
+	ctx                   context.Context
+	keyManagerV2          v2.IKeymanager
+	grpcHeaders           []string
+	graffiti              []byte
 }
 
 // Config for the validator service.
 type Config struct {
-	Endpoint                   string
-	DataDir                    string
-	CertFlag                   string
-	GraffitiFlag               string
-	KeyManager                 keymanager.KeyManager
-	KeyManagerV2               v2.IKeymanager
+	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
-	GrpcMaxCallRecvMsgSizeFlag int
+	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
-	GrpcHeadersFlag            string
+	GrpcMaxCallRecvMsgSizeFlag int
 	Protector                  slashingprotection.Protector
-	ValDB                      db.Database
+	Endpoint                   string
 	Validator                  Validator
-	WalletInitializedFeed      *event.Feed
+	ValDB                      db.Database
+	KeyManagerV2               v2.IKeymanager
+	KeyManager                 keymanager.KeyManager
+	GraffitiFlag               string
+	CertFlag                   string
+	DataDir                    string
+	GrpcHeadersFlag            string
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -103,6 +106,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
+		useWeb:                cfg.UseWeb,
 	}, nil
 }
 
@@ -170,6 +174,8 @@ func (v *ValidatorService) Start() {
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
+		useWeb:                         v.useWeb,
+		walletInitializedFeed:          v.walletInitializedFeed,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
@@ -185,9 +191,7 @@ func (v *ValidatorService) Stop() error {
 	return nil
 }
 
-// Status ...
-//
-// WIP - not done.
+// Status of the validator service.
 func (v *ValidatorService) Status() error {
 	if v.conn == nil {
 		return errors.New("no connection to beacon RPC")
@@ -197,10 +201,19 @@ func (v *ValidatorService) Status() error {
 
 func (v *ValidatorService) recheckKeys(ctx context.Context) {
 	if featureconfig.Get().EnableAccountsV2 {
-		initializedChan := make(chan bool)
-		sub := v.walletInitializedFeed.Subscribe(initializedChan)
-		defer sub.Unsubscribe()
-		<-initializedChan
+		if v.useWeb {
+			initializedChan := make(chan *accountsv2.Wallet)
+			sub := v.walletInitializedFeed.Subscribe(initializedChan)
+			defer sub.Unsubscribe()
+			wallet := <-initializedChan
+			keyManagerV2, err := wallet.InitializeKeymanager(
+				ctx, true, /* skipMnemonicConfirm */
+			)
+			if err != nil {
+				log.Fatalf("Could not read keymanager for wallet: %v", err)
+			}
+			v.keyManagerV2 = keyManagerV2
+		}
 		validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch validating keys")
