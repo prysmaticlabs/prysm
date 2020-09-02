@@ -56,11 +56,15 @@ func (g *Gateway) Start() {
 		),
 	)
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	if err := pb.RegisterAuthHandlerFromEndpoint(ctx, gwmux, g.remoteAddr, opts); err != nil {
-		log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
+	handlers := []func(context.Context, *gwruntime.ServeMux, string, []grpc.DialOption) error{
+		pb.RegisterAuthHandlerFromEndpoint,
+		pb.RegisterWalletHandlerFromEndpoint,
+		//pb.RegisterHealthHandlerFromEndpoint,
 	}
-	if err := pb.RegisterHealthHandlerFromEndpoint(ctx, gwmux, g.remoteAddr, opts); err != nil {
-		log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
+	for _, h := range handlers {
+		if err := h(ctx, gwmux, g.remoteAddr, opts); err != nil {
+			log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
+		}
 	}
 	g.mux.Handle("/", g.corsMiddleware(gwmux))
 	g.server = &http.Server{
