@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,7 +33,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "validator index exceeds validator set length")
 	}
-	if err := blocks.VerifyExitAndSignature(val, helpers.StartSlot(req.Exit.Epoch), s.Fork(), req, s.GenesisValidatorRoot()); err != nil {
+	if err := blocks.VerifyExitAndSignature(val, s.Slot(), s.Fork(), req, s.GenesisValidatorRoot()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
