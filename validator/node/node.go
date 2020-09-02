@@ -266,6 +266,9 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	if err := s.registerClientService(nil, nil); err != nil {
+		return err
+	}
 	if err := s.registerRPCService(cliCtx); err != nil {
 		return err
 	}
@@ -317,6 +320,8 @@ func (s *ValidatorClient) registerClientService(
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
 		ValDB:                      s.db,
+		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
+		WalletInitializedFeed:      s.walletInitialized,
 	})
 
 	if err != nil {
@@ -349,10 +354,10 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 }
 
 func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
-	//var vs *client.ValidatorService
-	//if err := s.services.FetchService(&vs); err != nil {
-	//	return err
-	//}
+	var vs *client.ValidatorService
+	if err := s.services.FetchService(&vs); err != nil {
+		return err
+	}
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	server := rpc.NewServer(context.Background(), &rpc.Config{
@@ -360,7 +365,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		Host:                  rpcHost,
 		Port:                  fmt.Sprintf("%d", rpcPort),
 		WalletInitializedFeed: s.walletInitialized,
-		//ValidatorService: vs,
+		ValidatorService:      vs,
 	})
 	return s.services.RegisterService(server)
 }

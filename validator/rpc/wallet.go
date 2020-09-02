@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,7 +19,40 @@ import (
 
 // CreateWallet --
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	if req.NumAccounts < 1 {
+		return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+	}
+	defaultWalletPath := filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
+	switch req.Keymanager {
+	case pb.CreateWalletRequest_DIRECT:
+	case pb.CreateWalletRequest_DERIVED:
+		wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+			WalletCfg: &v2.WalletConfig{
+				WalletDir:      defaultWalletPath,
+				KeymanagerKind: v2keymanager.Derived,
+				WalletPassword: req.WalletPassword,
+			},
+			SkipMnemonicConfirm: true,
+		})
+		if err != nil {
+			return nil, err
+		}
+		// Create the required accounts.
+		if err := v2.CreateAccount(ctx, &v2.CreateAccountConfig{
+			Wallet:      wallet,
+			NumAccounts: int64(req.NumAccounts),
+		}); err != nil {
+			return nil, err
+		}
+		return &pb.WalletResponse{
+			WalletPath: defaultWalletPath,
+		}, nil
+	case pb.CreateWalletRequest_REMOTE:
+		return nil, status.Error(codes.Unimplemented, "Remote keymanager not yet supported")
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T not yet supported", req.Keymanager)
+	}
+	return nil, status.Error(codes.Internal, "could not select any keymanager")
 }
 
 // EditConfig --
