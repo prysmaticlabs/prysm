@@ -46,11 +46,6 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 		return nil, err
 	}
 
-	// Verify block is a descendent of a finalized block.
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
-		return nil, err
-	}
-
 	// Verify block is later than the finalized epoch slot.
 	if err := s.verifyBlkFinalizedSlot(b); err != nil {
 		return nil, err
@@ -71,6 +66,11 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
 	}
+
+	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		return err
+	}
+
 	has, err := s.stateGen.HasState(ctx, parentRoot)
 	if err != nil {
 		return err
