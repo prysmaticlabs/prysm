@@ -349,3 +349,12 @@ func TestGenesisTime(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
+	genTime := roughtime.Now().Add(-1 * time.Duration(MaxSlotBuffer) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix()
+
+	assert.NoError(t, ValidateSlotClock(MaxSlotBuffer, uint64(genTime)), "unexpected error validating slot")
+	assert.NoError(t, ValidateSlotClock(2*MaxSlotBuffer, uint64(genTime)), "unexpected error validating slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(2*MaxSlotBuffer+1, uint64(genTime)), "no error from bad slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(1<<63, uint64(genTime)), "no error from bad slot")
+}
