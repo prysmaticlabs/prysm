@@ -81,3 +81,5 @@ func TestExitAccountsCli_EmptyWalletReturnsError(t *testing.T) {
 	err = ExitAccountsCli(cliCtx, os.Stdin)
 	assert.ErrorContains(t, "wallet is empty, no accounts to perform voluntary exit", err)
 }
+
+// TODO: Write an integration test?

@@ -1,15 +1,20 @@
 package v2
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -101,7 +106,42 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 		return nil
 	}
 
-	log.WithField("publicKeys", allAccountStr).Info("Voluntary exit was successful")
+	dialOpts := client.ConstructDialOptions(
+		cmd.GrpcMaxCallRecvMsgSizeFlag.Value,
+		flags.CertFlag.Value,
+		strings.Split(flags.GrpcHeadersFlag.Value, ","),
+		flags.GrpcRetriesFlag.Value,
+		flags.GrpcRetryDelayFlag.Value,
+	)
+	if dialOpts == nil {
+		return errors.New("failed to construct dial options")
+	}
+	conn, err := grpc.DialContext(cliCtx.Context, cliCtx.String(flags.BeaconRPCProviderFlag.Name), dialOpts...)
+	if err != nil {
+		return errors.Wrapf(err, "could not dial endpoint %s", flags.BeaconRPCProviderFlag.Name)
+	}
+	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
+
+	var rawNotExitedKeys [][]byte
+	for _, key := range rawPublicKeys {
+		if err := client.ProposeExit(cliCtx.Context, validatorClient, keymanager, key); err != nil {
+			rawNotExitedKeys = append(rawNotExitedKeys, key)
+			log.WithError(err).Errorf("voluntary exit failed for account %s", key)
+		}
+	}
+	var formattedExitedKeys []string
+	for _, notExited := range rawNotExitedKeys {
+		for i, key := range rawPublicKeys {
+			if bytes.Equal(notExited, key) {
+				formattedExitedKeys = append(formattedExitedKeys, formattedPubKeys[i])
+				break
+			}
+		}
+	}
+
+	log.WithField("publicKeys", strings.Join(formattedExitedKeys, ", ")).
+		Info("Voluntary exit was successful for the accounts listed")
+
 	return nil
 }
 
