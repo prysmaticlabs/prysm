@@ -86,22 +86,25 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	tests := []struct {
 		epoch     uint64
 		startSlot uint64
+		error     bool
 	}{
-		{epoch: 0, startSlot: 0 * params.BeaconConfig().SlotsPerEpoch},
-		{epoch: 1, startSlot: 1 * params.BeaconConfig().SlotsPerEpoch},
-		{epoch: 10, startSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
+		{epoch: 0, startSlot: 0 * params.BeaconConfig().SlotsPerEpoch, error: false},
+		{epoch: 1, startSlot: 1 * params.BeaconConfig().SlotsPerEpoch, error: false},
+		{epoch: 10, startSlot: 10 * params.BeaconConfig().SlotsPerEpoch, error: false},
+		{epoch: 1 << 58, startSlot: 1 << 63, error: false},
+		{epoch: 1 << 59, startSlot: 1 << 63, error: true},
+		{epoch: 1 << 60, startSlot: 1 << 63, error: true},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.epoch}
 		ss, err := StartSlot(tt.epoch)
-		require.NoError(t, err)
-		assert.Equal(t, tt.startSlot, ss, "StartSlot(%d)", state.Slot)
+		if !tt.error {
+			require.NoError(t, err)
+			assert.Equal(t, tt.startSlot, ss, "StartSlot(%d)", state.Slot)
+		} else {
+			require.ErrorContains(t, "start slot calculation overflow", err)
+		}
 	}
-}
-
-func TestEpochStartSlot_Overflow(t *testing.T) {
-	_, err := StartSlot(1 << 59)
-	require.ErrorContains(t, "start slot calculation overflows", err)
 }
 
 func TestIsEpochStart(t *testing.T) {

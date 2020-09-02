@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/bits"
 	"time"
 
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
@@ -76,10 +76,11 @@ func NextEpoch(state *stateTrie.BeaconState) uint64 {
 //    """
 //    return Slot(epoch * SLOTS_PER_EPOCH)
 func StartSlot(epoch uint64) (uint64, error) {
-	if mathutil.MulOverflows(epoch, params.BeaconConfig().SlotsPerEpoch) {
-		return 0, errors.New("start slot calculation overflows")
+	overflows, slot := bits.Mul64(epoch, params.BeaconConfig().SlotsPerEpoch)
+	if overflows > 0 {
+		return slot, errors.New("start slot calculation overflows")
 	}
-	return epoch * params.BeaconConfig().SlotsPerEpoch, nil
+	return slot, nil
 }
 
 // IsEpochStart returns true if the given slot number is an epoch starting slot
