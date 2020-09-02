@@ -172,7 +172,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
-		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+(req.Count*req.Step))
+		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+((req.Count-1)*req.Step))
 
 		// Expected failure range
 		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
