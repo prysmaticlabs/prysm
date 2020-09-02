@@ -130,7 +130,7 @@ func ProposeExit(
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
 
-	// TODO: Potrzebne?
+	// TODO: Is this needed?
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
@@ -138,7 +138,7 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve validator index from the client")
 	}
-	// TODO: Pobieranie epoki
+	// TODO: How to get the epoch?
 	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: indexResponse.Index}
 	sig, err := signVoluntaryExit(ctx, validatorClient, keyManager, pubKey, exit)
 	if err != nil {

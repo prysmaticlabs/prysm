@@ -129,7 +129,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.AccountPasswordFileFlag,
 				flags.VoluntaryExitPublicKeysFlag,
 				flags.BeaconRPCProviderFlag,
-				// TODO: Wszystkie te flagi warto podawać?
+				// TODO: Are all flags useful for the user?
 				cmd.GrpcMaxCallRecvMsgSizeFlag,
 				flags.CertFlag,
 				flags.GrpcHeadersFlag,
