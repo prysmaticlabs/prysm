@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
@@ -489,7 +490,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint6
 	pidHead := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourFinalizedSlot := helpers.StartSlot(ourFinalizedEpoch)
+	ourFinalizedSlot := ourFinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourFinalizedSlot {

@@ -230,8 +230,10 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 		}
 	}
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, uint64(len(slotsWithProposers)), "Unexpected slots")
-	startSlot := StartSlot(epoch)
-	endSlot := StartSlot(epoch + 1)
+	startSlot, err := StartSlot(epoch)
+	require.NoError(t, err)
+	endSlot, err := StartSlot(epoch + 1)
+	require.NoError(t, err)
 	for i := startSlot; i < endSlot; i++ {
 		hasProposer := slotsWithProposers[i]
 		assert.Equal(t, true, hasProposer, "Expected every slot in epoch 1 to have a proposer, slot %d did not", i)
@@ -390,7 +392,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 
-	indices, err = committeeCache.Committee(StartSlot(epoch), seed, idx)
+	indices, err = committeeCache.Committee(epoch*params.BeaconConfig().SlotsPerEpoch, seed, idx)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
 }

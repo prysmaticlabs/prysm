@@ -1,8 +1,10 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"math/bits"
 	"time"
 
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -72,9 +74,13 @@ func NextEpoch(state *stateTrie.BeaconState) uint64 {
 //    """
 //    Return the start slot of ``epoch``.
 //    """
-//    return Slot(epoch * SLOTS_PER_EPOCH
-func StartSlot(epoch uint64) uint64 {
-	return epoch * params.BeaconConfig().SlotsPerEpoch
+//    return Slot(epoch * SLOTS_PER_EPOCH)
+func StartSlot(epoch uint64) (uint64, error) {
+	overflows, slot := bits.Mul64(epoch, params.BeaconConfig().SlotsPerEpoch)
+	if overflows > 0 {
+		return slot, errors.New("start slot calculation overflows")
+	}
+	return slot, nil
 }
 
 // IsEpochStart returns true if the given slot number is an epoch starting slot
@@ -91,7 +97,7 @@ func IsEpochEnd(slot uint64) bool {
 
 // SlotsSinceEpochStarts returns number of slots since the start of the epoch.
 func SlotsSinceEpochStarts(slot uint64) uint64 {
-	return slot - StartSlot(SlotToEpoch(slot))
+	return slot % params.BeaconConfig().SlotsPerEpoch
 }
 
 // VerifySlotTime validates the input slot is not from the future.

@@ -32,14 +32,18 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
 
-	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
+	epochStartSlot, err := helpers.StartSlot(c.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	if epochStartSlot > baseState.Slot() {
 		baseState = baseState.Copy()
-		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 		}
 		if err := s.checkpointState.AddCheckpointState(c, baseState); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
@@ -76,13 +80,17 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 	// Retrieve checkpoint state to compute checkpoint info.
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
-	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
+	epochStartSlot, err := helpers.StartSlot(c.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	if epochStartSlot > baseState.Slot() {
 		baseState = baseState.Copy()
-		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 		}
 	}
 	f := baseState.Fork()
@@ -155,7 +163,10 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 
 // verifyLMDFFGConsistent verifies LMD GHOST and FFG votes are consistent with each other.
 func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot []byte, lmdRoot []byte) error {
-	ffgSlot := helpers.StartSlot(ffgEpoch)
+	ffgSlot, err := helpers.StartSlot(ffgEpoch)
+	if err != nil {
+		return err
+	}
 	r, err := s.ancestor(ctx, lmdRoot, ffgSlot)
 	if err != nil {
 		return err

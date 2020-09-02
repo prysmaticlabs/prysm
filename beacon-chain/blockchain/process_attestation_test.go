@@ -90,7 +90,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			name:          "no pre state for attestations's target block",
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			wantErr:       true,
-			wantErrString: "could not get pre state for slot 0",
+			wantErrString: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
@@ -212,7 +212,7 @@ func TestStore_OnAttestationUsingCheckptCache(t *testing.T) {
 			name:          "no pre state for attestations's target block",
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			wantErr:       true,
-			wantErrString: "could not get pre state for slot 0",
+			wantErrString: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
@@ -363,7 +363,9 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	require.NoError(t, err)
-	baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(newCheckpoint.Epoch))
+	s, err := helpers.StartSlot(newCheckpoint.Epoch)
+	require.NoError(t, err)
+	baseState, err = state.ProcessSlots(ctx, baseState, s)
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
 
