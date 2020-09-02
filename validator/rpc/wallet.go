@@ -10,8 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,41 +17,7 @@ import (
 
 // CreateWallet --
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
-	switch req.Keymanager {
-	case pb.CreateWalletRequest_DERIVED:
-		walletPath := filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
-		w, err := v2.NewWallet(ctx, &v2.CreateWalletConfig{
-			WalletDir:      walletPath,
-			KeymanagerKind: v2keymanager.Derived,
-		})
-		keymanagerConfig, err := derived.MarshalConfigFile(ctx, derived.DefaultConfig())
-		if err != nil {
-			return nil, err
-		}
-		if err := w.SaveWallet(); err != nil {
-			return nil, err
-		}
-		if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-			return nil, err
-		}
-		if _, err = derived.NewKeymanager(
-			ctx,
-			w,
-			derived.DefaultConfig(),
-			false,
-			req.WalletPassword,
-		); err != nil {
-			return nil, errors.Wrap(err, "could not initialize derived keymanager")
-		}
-		return &pb.WalletResponse{
-			WalletPath: walletPath,
-		}, nil
-	case pb.CreateWalletRequest_DIRECT:
-	case pb.CreateWalletRequest_REMOTE:
-	default:
-		return nil, status.Error(codes.InvalidArgument, "Unsupported keymanager kind")
-	}
-	return nil, status.Error(codes.InvalidArgument, "No keymanager specified")
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // EditConfig --

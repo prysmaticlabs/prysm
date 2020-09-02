@@ -32,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -152,47 +151,46 @@ func (s *ValidatorClient) Close() {
 }
 
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
-	var keyManagerV1 v1.KeyManager
-	var keyManagerV2 v2.IKeymanager
-	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
-			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
-			offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
-			if err != nil {
-				return errors.Wrap(err, "could not generate interop keys")
-			}
-		} else {
-			// Read the wallet from the specified path.
-			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
-				return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
-			})
-			if err != nil {
-				return errors.Wrap(err, "could not open wallet")
-			}
-			s.wallet = wallet
-			keyManagerV2, err = wallet.InitializeKeymanager(
-				cliCtx.Context, false, /* skipMnemonicConfirm */
-			)
-			if err != nil {
-				return errors.Wrap(err, "could not read keymanager for wallet")
-			}
-			if err := wallet.LockWalletConfigFile(cliCtx.Context); err != nil {
-				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
-			}
-		}
-	} else {
-		keyManagerV1, err = selectV1Keymanager(cliCtx)
-		if err != nil {
-			return err
-		}
-	}
+	//var keyManagerV1 v1.KeyManager
+	//var keyManagerV2 v2.IKeymanager
+	//var err error
+	//if featureconfig.Get().EnableAccountsV2 {
+	//	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
+	//		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
+	//		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
+	//		keyManagerV2, err = direct.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
+	//		if err != nil {
+	//			return errors.Wrap(err, "could not generate interop keys")
+	//		}
+	//	} else {
+	//		// Read the wallet from the specified path.
+	//		wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
+	//			return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
+	//		})
+	//		if err != nil {
+	//			return errors.Wrap(err, "could not open wallet")
+	//		}
+	//		s.wallet = wallet
+	//		keyManagerV2, err = wallet.InitializeKeymanager(
+	//			cliCtx.Context, false, /* skipMnemonicConfirm */
+	//		)
+	//		if err != nil {
+	//			return errors.Wrap(err, "could not read keymanager for wallet")
+	//		}
+	//		if err := wallet.LockWalletConfigFile(cliCtx.Context); err != nil {
+	//			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
+	//		}
+	//	}
+	//} else {
+	//	keyManagerV1, err = selectV1Keymanager(cliCtx)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	validatingPubKeys := make([][48]byte, 0)
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -204,21 +202,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			}
 
 		}
-		if featureconfig.Get().EnableAccountsV2 {
-			validatingPubKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
-		} else {
-			validatingPubKeys, err = keyManagerV1.FetchValidatingKeys()
-		}
-		if err != nil {
-			return err
-		}
-		if err := clearDB(dataDir, validatingPubKeys, forceClearFlag); err != nil {
+		if err := clearDB(dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(dataDir, validatingPubKeys)
+	valDB, err := kv.NewKVStore(dataDir, nil)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
@@ -247,8 +237,6 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	// TODO: Do not use empty pubkeys here.
-	pubKeys := make([][48]byte, 0)
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -260,12 +248,12 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			}
 
 		}
-		if err := clearDB(dataDir, pubKeys, forceClearFlag); err != nil {
+		if err := clearDB(dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(dataDir, pubKeys)
+	valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
@@ -462,7 +450,7 @@ func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
 	return km, nil
 }
 
-func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
+func clearDB(dataDir string, force bool) error {
 	var err error
 	clearDBConfirmed := force
 
@@ -477,7 +465,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(dataDir, pubkeys)
+		valDB, err := kv.NewKVStore(dataDir, nil)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}

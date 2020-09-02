@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,24 +39,25 @@ var log = logrus.WithField("prefix", "validator")
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	db                   db.Database
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	validator            Validator
-	graffiti             []byte
-	conn                 *grpc.ClientConn
-	endpoint             string
-	withCert             string
-	dataDir              string
-	keyManager           keymanager.KeyManager
-	keyManagerV2         v2.IKeymanager
-	logValidatorBalances bool
-	emitAccountMetrics   bool
-	maxCallRecvMsgSize   int
-	grpcRetries          uint
-	grpcRetryDelay       time.Duration
-	grpcHeaders          []string
-	protector            slashingprotection.Protector
+	db                    db.Database
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	validator             Validator
+	graffiti              []byte
+	conn                  *grpc.ClientConn
+	endpoint              string
+	withCert              string
+	dataDir               string
+	keyManager            keymanager.KeyManager
+	keyManagerV2          v2.IKeymanager
+	logValidatorBalances  bool
+	emitAccountMetrics    bool
+	maxCallRecvMsgSize    int
+	grpcRetries           uint
+	grpcRetryDelay        time.Duration
+	grpcHeaders           []string
+	protector             slashingprotection.Protector
+	walletInitializedFeed *event.Feed
 }
 
 // Config for the validator service.
@@ -75,6 +77,7 @@ type Config struct {
 	Protector                  slashingprotection.Protector
 	ValDB                      db.Database
 	Validator                  Validator
+	WalletInitializedFeed      *event.Feed
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -82,23 +85,24 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ValidatorService{
-		ctx:                  ctx,
-		cancel:               cancel,
-		endpoint:             cfg.Endpoint,
-		withCert:             cfg.CertFlag,
-		dataDir:              cfg.DataDir,
-		graffiti:             []byte(cfg.GraffitiFlag),
-		keyManager:           cfg.KeyManager,
-		keyManagerV2:         cfg.KeyManagerV2,
-		logValidatorBalances: cfg.LogValidatorBalances,
-		emitAccountMetrics:   cfg.EmitAccountMetrics,
-		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:          cfg.GrpcRetriesFlag,
-		grpcRetryDelay:       cfg.GrpcRetryDelay,
-		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:            cfg.Protector,
-		validator:            cfg.Validator,
-		db:                   cfg.ValDB,
+		ctx:                   ctx,
+		cancel:                cancel,
+		endpoint:              cfg.Endpoint,
+		withCert:              cfg.CertFlag,
+		dataDir:               cfg.DataDir,
+		graffiti:              []byte(cfg.GraffitiFlag),
+		keyManager:            cfg.KeyManager,
+		keyManagerV2:          cfg.KeyManagerV2,
+		logValidatorBalances:  cfg.LogValidatorBalances,
+		emitAccountMetrics:    cfg.EmitAccountMetrics,
+		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:           cfg.GrpcRetriesFlag,
+		grpcRetryDelay:        cfg.GrpcRetryDelay,
+		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
+		protector:             cfg.Protector,
+		validator:             cfg.Validator,
+		db:                    cfg.ValDB,
+		walletInitializedFeed: cfg.WalletInitializedFeed,
 	}, nil
 }
 
@@ -167,26 +171,8 @@ func (v *ValidatorService) Start() {
 		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 	}
-	var validatingKeys [][48]byte
 	go run(v.ctx, v.validator)
-	if featureconfig.Get().EnableAccountsV2 {
-		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(v.ctx)
-		if err != nil {
-			log.WithError(err).Debug("Could not fetch validating keys")
-		}
-		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
-			log.WithError(err).Debug("Could not update public keys buckets")
-		}
-		go recheckValidatingKeysBucket(v.ctx, v.db, v.keyManagerV2)
-	} else {
-		validatingKeys, err = v.keyManager.FetchValidatingKeys()
-		if err != nil {
-			log.WithError(err).Debug("Could not fetch validating keys")
-		}
-		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
-			log.WithError(err).Debug("Could not update public keys buckets")
-		}
-	}
+	go v.recheckKeys(v.ctx)
 }
 
 // Stop the validator service.
@@ -207,6 +193,31 @@ func (v *ValidatorService) Status() error {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
+}
+
+func (v *ValidatorService) recheckKeys(ctx context.Context) {
+	if featureconfig.Get().EnableAccountsV2 {
+		initializedChan := make(chan bool)
+		sub := v.walletInitializedFeed.Subscribe(initializedChan)
+		defer sub.Unsubscribe()
+		<-initializedChan
+		validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+		go recheckValidatingKeysBucket(ctx, v.db, v.keyManagerV2)
+	} else {
+		validatingKeys, err := v.keyManager.FetchValidatingKeys()
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+	}
 }
 
 // signObject signs a generic object, with protection if available.
