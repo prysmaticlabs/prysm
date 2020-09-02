@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-func TestBlocksQueueInitStartStop(t *testing.T) {
+func TestBlocksQueue_InitStartStop(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 
@@ -125,7 +125,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 	})
 }
 
-func TestBlocksQueueLoop(t *testing.T) {
+func TestBlocksQueue_Loop(t *testing.T) {
 	tests := []struct {
 		name                string
 		highestExpectedSlot uint64
@@ -290,4 +290,77 @@ func TestBlocksQueueLoop(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
+	})
+
+	t.Run("expired context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		cancel()
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, nil)
+		assert.ErrorContains(t, context.Canceled.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("invalid input state", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		invalidStates := []stateID{stateNew, stateDataParsed, stateSkipped, stateSent}
+		for _, state := range invalidStates {
+			t.Run(state.String(), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				handlerFn := queue.onDataReceivedEvent(ctx)
+				updatedState, err := handlerFn(&stateMachine{
+					state: state,
+				}, nil)
+				assert.ErrorContains(t, errInvalidInitialState.Error(), err)
+				assert.Equal(t, state, updatedState)
+			})
+		}
+	})
+
+	t.Run("invalid input param", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, nil)
+		assert.ErrorContains(t, errInputNotFetchRequestParams.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+	})
 }
