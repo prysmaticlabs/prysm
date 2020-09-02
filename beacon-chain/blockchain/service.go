@@ -296,7 +296,7 @@ func (s *Service) Stop() error {
 	defer s.cancel()
 
 	if s.stateGen != nil && s.head != nil && s.head.state != nil {
-		return s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root)
+		return s.stateGen.ForceCheckpoint(s.ctx, s.finalizedCheckpt.Root)
 	}
 	return nil
 }
@@ -425,10 +425,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedState, err = s.stateGen.Resume(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
-	}
-	finalizedRoot = s.beaconDB.LastArchivedRoot(ctx)
-	if finalizedRoot == params.BeaconConfig().ZeroHash {
-		finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 	}
 
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
