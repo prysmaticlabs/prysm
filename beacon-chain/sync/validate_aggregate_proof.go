@@ -158,7 +158,11 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
 	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(bs.Slot()) {
-		bs, err = state.ProcessSlots(ctx, bs, helpers.StartSlot(helpers.SlotToEpoch(attSlot)))
+		startSlot, err := helpers.StartSlot(helpers.SlotToEpoch(attSlot))
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		bs, err = state.ProcessSlots(ctx, bs, startSlot)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
