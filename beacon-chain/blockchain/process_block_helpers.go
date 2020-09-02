@@ -46,11 +46,6 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 		return nil, err
 	}
 
-	// Verify block is a descendent of a finalized block.
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
-		return nil, err
-	}
-
 	// Verify block is later than the finalized epoch slot.
 	if err := s.verifyBlkFinalizedSlot(b); err != nil {
 		return nil, err
@@ -71,6 +66,11 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
 	}
+
+	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		return err
+	}
+
 	has, err := s.stateGen.HasState(ctx, parentRoot)
 	if err != nil {
 		return err
@@ -119,7 +119,10 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
-	finalizedSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	finalizedSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	if err != nil {
+		return err
+	}
 	if finalizedSlot >= b.Slot {
 		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot, finalizedSlot)
 	}
@@ -150,7 +153,11 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	}
 
 	newJustifiedBlock := newJustifiedBlockSigned.Block
-	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
+	jSlot, err := helpers.StartSlot(s.justifiedCheckpt.Epoch)
+	if err != nil {
+		return false, err
+	}
+	if newJustifiedBlock.Slot <= jSlot {
 		return false, nil
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
@@ -310,7 +317,10 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
-		finalizedSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		finalizedSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		if err != nil {
+			return err
+		}
 		justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 		anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedSlot)
 		if err != nil {
@@ -335,7 +345,11 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
 	slot := blk.Slot
 	// Fork choice only matters from last finalized slot.
-	higherThanFinalized := slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	fSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	if err != nil {
+		return err
+	}
+	higherThanFinalized := slot > fSlot
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	for !s.forkChoiceStore.HasNode(parentRoot) && s.beaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
 		b, err := s.beaconDB.Block(ctx, parentRoot)
@@ -346,7 +360,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		pendingNodes = append(pendingNodes, b.Block)
 		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
 		slot = b.Block.Slot
-		higherThanFinalized = slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		higherThanFinalized = slot > fSlot
 	}
 
 	// Insert parent nodes to fork choice store in reverse order.

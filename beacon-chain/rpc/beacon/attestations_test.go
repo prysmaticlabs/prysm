@@ -658,7 +658,8 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	epoch := uint64(50)
-	startSlot := helpers.StartSlot(epoch)
+	startSlot, err := helpers.StartSlot(epoch)
+	require.NoError(t, err)
 
 	for i := startSlot; i < count; i++ {
 		blockExample := &ethpb.SignedBeaconBlock{
@@ -714,9 +715,9 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		},
 		StateGen: stategen.New(db, sc),
 	}
-	err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
-		Slot: helpers.StartSlot(epoch),
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 	})
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))))
@@ -916,7 +917,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	epoch := uint64(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	committees, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, attesterSeed)
+	committees, err := computeCommittees(epoch*params.BeaconConfig().SlotsPerEpoch, activeIndices, attesterSeed)
 	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch
