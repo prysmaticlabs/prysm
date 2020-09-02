@@ -7,13 +7,11 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -130,6 +128,5 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *v2.WalletConfig) err
 	}
 	s.walletInitialized = true
 	s.walletInitializedFeed.Send(wallet)
-	log.Info("Sent event over feed")
 	return nil
 }

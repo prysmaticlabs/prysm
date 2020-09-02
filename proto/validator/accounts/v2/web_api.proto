@@ -94,9 +94,9 @@ message CreateWalletRequest {
     // Number of accounts.
     uint64 num_accounts = 5;
     // JSON-encoded keystore files to import during wallet creation.
-    repeated bytes keystores_imported = 6;
+    repeated string keystores_imported = 6;
     // Password to unlock imported keystore files.
-    repeated bytes keystores_password = 7;
+    string keystores_password = 7;
 
     // Remote address such as host.example.com:4000 for a gRPC remote signer server.
     string remote_addr = 8;

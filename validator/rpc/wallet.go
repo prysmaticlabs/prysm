@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
@@ -19,17 +21,26 @@ import (
 
 // CreateWallet --
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
-	if req.NumAccounts < 1 {
-		return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
-	}
 	defaultWalletPath := filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
 	switch req.Keymanager {
 	case pb.CreateWalletRequest_DIRECT:
-	case pb.CreateWalletRequest_DERIVED:
+		// Needs to unmarshal the keystores from the requests.
+		if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
+			return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
+		}
+		keystores := make([]*v2keymanager.Keystore, len(req.KeystoresImported))
+		for i := 0; i < len(req.KeystoresImported); i++ {
+			encoded := req.KeystoresImported[i]
+			keystore := &v2keymanager.Keystore{}
+			if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
+			}
+			keystores[i] = keystore
+		}
 		wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 			WalletCfg: &v2.WalletConfig{
 				WalletDir:      defaultWalletPath,
-				KeymanagerKind: v2keymanager.Derived,
+				KeymanagerKind: v2keymanager.Direct,
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
@@ -37,11 +48,31 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if err != nil {
 			return nil, err
 		}
-		// Create the required accounts.
-		if err := v2.CreateAccount(ctx, &v2.CreateAccountConfig{
-			Wallet:      wallet,
-			NumAccounts: int64(req.NumAccounts),
+		// Import the uploaded accounts.
+		if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
+			Wallet:          wallet,
+			Keystores:       keystores,
+			AccountPassword: req.KeystoresPassword,
 		}); err != nil {
+			return nil, err
+		}
+		return &pb.WalletResponse{
+			WalletPath: defaultWalletPath,
+		}, nil
+	case pb.CreateWalletRequest_DERIVED:
+		if req.NumAccounts < 1 {
+			return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+		}
+		if req.Mnemonic == "" {
+			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
+		}
+		_, err := v2.RecoverWallet(ctx, &v2.RecoverWalletConfig{
+			WalletDir:      defaultWalletPath,
+			WalletPassword: req.WalletPassword,
+			Mnemonic:       req.Mnemonic,
+			NumAccounts:    int64(req.NumAccounts),
+		})
+		if err != nil {
 			return nil, err
 		}
 		return &pb.WalletResponse{
@@ -52,7 +83,6 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T not yet supported", req.Keymanager)
 	}
-	return nil, status.Error(codes.Internal, "could not select any keymanager")
 }
 
 // EditConfig --
