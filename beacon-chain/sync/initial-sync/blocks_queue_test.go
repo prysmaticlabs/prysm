@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestBlocksQueue_InitStartStop(t *testing.T) {
@@ -362,5 +365,83 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		}, nil)
 		assert.ErrorContains(t, errInputNotFetchRequestParams.Error(), err)
 		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("slot is too high", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, &fetchRequestResponse{
+			pid: "abc",
+			err: errSlotIsTooHigh,
+		})
+		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("invalid data returned", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		hook := logTest.NewGlobal()
+		defer hook.Reset()
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, &fetchRequestResponse{
+			pid: "abc",
+			err: errInvalidFetchedData,
+		})
+		assert.ErrorContains(t, errInvalidFetchedData.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+		assert.LogsContain(t, hook, "msg=\"Peer is penalized for invalid blocks\" pid=ZiCa")
+	})
+
+	t.Run("transition ok", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		response := &fetchRequestResponse{
+			pid: "abc",
+			blocks: []*eth.SignedBeaconBlock{
+				testutil.NewBeaconBlock(),
+				testutil.NewBeaconBlock(),
+			},
+		}
+		fsm := &stateMachine{
+			state: stateScheduled,
+		}
+		assert.Equal(t, (peer.ID)(""), fsm.pid)
+		assert.DeepEqual(t, ([]*eth.SignedBeaconBlock)(nil), fsm.blocks)
+		updatedState, err := handlerFn(fsm, response)
+		assert.NoError(t, err)
+		assert.Equal(t, stateDataParsed, updatedState)
+		assert.Equal(t, response.pid, fsm.pid)
+		assert.DeepEqual(t, response.blocks, fsm.blocks)
 	})
 }
