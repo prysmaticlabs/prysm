@@ -359,6 +359,7 @@ func (f *blocksFetcher) requestBlocks(
 	}()
 
 	blocks := make([]*eth.SignedBeaconBlock, 0, req.Count)
+	var prevSlot uint64
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
 		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
@@ -377,6 +378,11 @@ func (f *blocksFetcher) requestBlocks(
 		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
 			return nil, errInvalidFetchedData
 		}
+		// Returned blocks, where they exist, MUST be sent in a consecutive order.
+		if !isFirstChunk && prevSlot >= blk.Block.Slot {
+			return nil, errInvalidFetchedData
+		}
+		prevSlot = blk.Block.Slot
 		blocks = append(blocks, blk)
 	}
 	return blocks, nil

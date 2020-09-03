@@ -1203,6 +1203,54 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			wantedErr: errInvalidFetchedData.Error(),
 		},
 		{
+			name: "not in a consecutive order",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      1,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 163
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 162
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+		},
+		{
+			name: "same slot number",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      1,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 160
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 160
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+		},
+		{
 			name: "slot is too low",
 			req: &p2ppb.BeaconBlocksByRangeRequest{
 				StartSlot: 100,
