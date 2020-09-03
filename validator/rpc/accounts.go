@@ -55,7 +55,7 @@ func (s *Server) CreateAccount(ctx context.Context, _ *ptypes.Empty) (*pb.Create
 
 // ListAccounts allows retrieval of validating keys and their petnames
 // for a user's wallet via RPC.
-func (s *Server) ListAccounts(ctx context.Context, _ *ptypes.Empty) (*pb.ListAccountsResponse, error) {
+func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) (*pb.ListAccountsResponse, error) {
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}

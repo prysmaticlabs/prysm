@@ -112,9 +112,8 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	numAccounts := 20
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		accountName, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
-		assert.Equal(t, fmt.Sprintf("%d", i), accountName)
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 		require.NoError(t, err)
@@ -152,9 +151,8 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	numAccounts := 2
 	ctx := context.Background()
 	for i := 0; i < numAccounts; i++ {
-		accountName, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
-		assert.Equal(t, fmt.Sprintf("%d", i), accountName)
 	}
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
