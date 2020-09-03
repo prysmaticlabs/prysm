@@ -40,7 +40,7 @@ func (s *Server) CreateAccount(ctx context.Context, _ *ptypes.Empty) (*pb.Create
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
 		}
-		pubKey, err = km.CreateAccount(ctx, true /*logAccountInfo*/)
+		pubKey, err = km.CreateAccount(ctx, false /*logAccountInfo*/)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}

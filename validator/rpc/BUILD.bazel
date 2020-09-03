@@ -51,6 +51,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "accounts_test.go",
         "auth_test.go",
         "health_test.go",
         "intercepter_test.go",
@@ -69,6 +70,7 @@ go_test(
         "//validator/client:go_default_library",
         "//validator/db/testing:go_default_library",
         "//validator/keymanager/v2:go_default_library",
+        "//validator/keymanager/v2/direct:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",

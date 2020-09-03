@@ -126,7 +126,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *v2.WalletConfig) err
 		return errors.Wrap(err, "could not open wallet")
 	}
 	s.walletInitialized = true
-	keymanager, err := wallet.InitializeKeymanager(ctx, false /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
