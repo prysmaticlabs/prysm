@@ -1,4 +1,4 @@
-package builtinshadow
+package shadowpredecl
 
 import (
 	"testing"
