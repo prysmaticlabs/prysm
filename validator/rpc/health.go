@@ -11,9 +11,6 @@ import (
 
 // GetBeaconNodeConnection --
 func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (*pb.NodeConnectionResponse, error) {
-	if !s.walletInitialized {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
-	}
 	syncStatus, err := s.syncChecker.Syncing(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not determine sync status of beacon node")
