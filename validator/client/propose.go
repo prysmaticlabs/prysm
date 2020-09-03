@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/types"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
@@ -124,6 +127,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 func ProposeExit(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
+	nodeClient ethpb.NodeClient,
 	keyManager v2.IKeymanager,
 	pubKey []byte,
 ) error {
@@ -136,10 +140,16 @@ func ProposeExit(
 
 	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
 	if err != nil {
-		return errors.Wrap(err, "failed to retrieve validator index from the client")
+		return errors.Wrap(err, "gRPC call to get the validator index failed")
 	}
-	// TODO: How to get the epoch?
-	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: indexResponse.Index}
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &types.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "gRPC call to get genesis time failed")
+	}
+	totalSecondsPassed := roughtime.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+
+	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
 	sig, err := signVoluntaryExit(ctx, validatorClient, keyManager, pubKey, exit)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign voluntary exit")
