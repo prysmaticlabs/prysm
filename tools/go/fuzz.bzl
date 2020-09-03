@@ -187,6 +187,7 @@ def go_fuzz_test(
             "@bazel_tools//tools/zip:zipper",
         ],
         testonly = 1,
+        tags = ["manual"] + tags,
     )
 
     native.cc_test(
@@ -220,6 +221,7 @@ def go_fuzz_test(
               "$(location @bazel_tools//tools/zip:zipper) cf $@ fuzzer fuzzer.options",
         tools = ["@bazel_tools//tools/zip:zipper"],
         testonly = 1,
+        tags = ["manual"] + tags,
     )
 
     upload_to_gcp(
@@ -227,4 +229,5 @@ def go_fuzz_test(
         gcp_bucket = gcp_bucket,
         afl_bundle = ":" + name + "_afl_bundle",
         libfuzzer_bundle = ":" + name + "_libfuzzer_bundle",
+        tags = ["manual"] + tags,
     )
