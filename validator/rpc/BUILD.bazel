@@ -57,6 +57,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/testutil:go_default_library",
@@ -67,7 +68,9 @@ go_test(
         "//validator/db/testing:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
+        "@com_github_google_uuid//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
     ],
