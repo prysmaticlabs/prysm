@@ -426,10 +426,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
-	finalizedRoot = s.beaconDB.LastArchivedRoot(ctx)
-	if finalizedRoot == params.BeaconConfig().ZeroHash {
-		finalizedRoot = bytesutil.ToBytes32(finalized.Root)
-	}
 
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
