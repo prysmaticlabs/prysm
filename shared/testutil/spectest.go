@@ -20,7 +20,7 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.BeaconBlockBody) (*beaconstate.BeaconState, error)
+type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error)
 type epochOperation func(*testing.T, *beaconstate.BeaconState) (*beaconstate.BeaconState, error)
 
 var json = jsoniter.Config{
@@ -105,7 +105,9 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	beaconState, err := operationFn(context.Background(), preState, body)
+	b := NewBeaconBlock()
+	b.Block.Body = body
+	beaconState, err := operationFn(context.Background(), preState, b)
 	if postSSZExists {
 		require.NoError(t, err)
 

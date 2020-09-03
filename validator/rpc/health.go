@@ -12,6 +12,9 @@ import (
 
 // ListBalances lists the validator balances.
 func (s *Server) ListBalances(ctx context.Context, req *pb.AccountRequest) (*pb.ListBalancesResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
 	filteredIndices := s.filteredIndices(ctx, req)
 	returnedKeys := make([][]byte, 0, len(filteredIndices))
 	returnedIndices := make([]uint64, 0, len(filteredIndices))
@@ -42,6 +45,9 @@ func (s *Server) ListBalances(ctx context.Context, req *pb.AccountRequest) (*pb.
 
 // ListStatuses lists the validator current statuses.
 func (s *Server) ListStatuses(ctx context.Context, req *pb.AccountRequest) (*pb.ListStatusesResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
 	filteredIndices := s.filteredIndices(ctx, req)
 	returnedKeys := make([][]byte, 0, len(filteredIndices))
 	returnedIndices := make([]uint64, 0, len(filteredIndices))
@@ -72,6 +78,9 @@ func (s *Server) ListStatuses(ctx context.Context, req *pb.AccountRequest) (*pb.
 
 // ListPerformance lists the validator current performances.
 func (s *Server) ListPerformance(ctx context.Context, req *pb.AccountRequest) (*pb.ListPerformanceResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 

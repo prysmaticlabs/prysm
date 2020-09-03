@@ -22,10 +22,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -49,40 +51,69 @@ const (
 )
 
 type validator struct {
-	genesisTime                        uint64
-	ticker                             *slotutil.SlotTicker
-	db                                 vdb.Database
-	duties                             *ethpb.DutiesResponse
-	validatorClient                    ethpb.BeaconNodeValidatorClient
-	beaconClient                       ethpb.BeaconChainClient
-	graffiti                           []byte
-	node                               ethpb.NodeClient
-	keyManager                         keymanager.KeyManager
-	keyManagerV2                       v2keymanager.IKeymanager
-	startBalances                      map[[48]byte]uint64
-	prevBalanceLock                    sync.RWMutex
-	prevBalance                        map[[48]byte]uint64
-	indicesLock                        sync.RWMutex
-	indexToPubkey                      map[uint64][48]byte
-	pubkeyToIndex                      map[[48]byte]uint64
-	pubkeyToStatus                     map[[48]byte]ethpb.ValidatorStatus
-	voteStats                          voteStats
 	logValidatorBalances               bool
+	useWeb                             bool
 	emitAccountMetrics                 bool
-	attLogs                            map[[32]byte]*attSubmitted
-	attLogsLock                        sync.Mutex
 	domainDataLock                     sync.Mutex
+	attLogsLock                        sync.Mutex
+	aggregatedSlotCommitteeIDCacheLock sync.Mutex
+	indicesLock                        sync.RWMutex
+	prevBalanceLock                    sync.RWMutex
+	attesterHistoryByPubKeyLock        sync.RWMutex
+	walletInitializedFeed              *event.Feed
+	genesisTime                        uint64
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
-	aggregatedSlotCommitteeIDCacheLock sync.Mutex
+	ticker                             *slotutil.SlotTicker
+	pubkeyToStatus                     map[[48]byte]ethpb.ValidatorStatus
+	pubkeyToIndex                      map[[48]byte]uint64
+	indexToPubkey                      map[uint64][48]byte
 	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
-	attesterHistoryByPubKeyLock        sync.RWMutex
+	prevBalance                        map[[48]byte]uint64
+	duties                             *ethpb.DutiesResponse
+	startBalances                      map[[48]byte]uint64
+	attLogs                            map[[32]byte]*attSubmitted
+	keyManager                         keymanager.KeyManager
+	node                               ethpb.NodeClient
+	keyManagerV2                       v2keymanager.IKeymanager
+	beaconClient                       ethpb.BeaconChainClient
+	validatorClient                    ethpb.BeaconNodeValidatorClient
 	protector                          slashingprotection.Protector
+	db                                 vdb.Database
+	graffiti                           []byte
+	voteStats                          voteStats
 }
 
 // Done cleans up the validator.
 func (v *validator) Done() {
 	v.ticker.Done()
+}
+
+// WaitForWalletInitialization checks if the validator needs to wait for
+func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
+	// This function should only run if we are using managing the
+	// validator client using the Prysm web UI.
+	if !v.useWeb {
+		return nil
+	}
+	walletChan := make(chan *accountsv2.Wallet)
+	sub := v.walletInitializedFeed.Subscribe(walletChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case wallet := <-walletChan:
+			keyManagerV2, err := wallet.InitializeKeymanager(
+				ctx, true, /* skipMnemonicConfirm */
+			)
+			if err != nil {
+				return errors.Wrap(err, "could not read keymanager for wallet")
+			}
+			v.keyManagerV2 = keyManagerV2
+			return nil
+		case <-ctx.Done():
+			return errors.New("context canceled")
+		}
+	}
 }
 
 // WaitForChainStart checks whether the beacon node has started its runtime. That is,
@@ -352,13 +383,16 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		return nil
 	}
 	// Set deadline to end of epoch.
-	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(helpers.StartSlot(helpers.SlotToEpoch(slot)+1)))
+	ss, err := helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(ss))
 	defer cancel()
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
 	var validatingKeys [][48]byte
-	var err error
 	if featureconfig.Get().EnableAccountsV2 {
 		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 	} else {
@@ -644,7 +678,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 		attesterKeys[i] = make([]string, 0)
 	}
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
-	slotOffset := helpers.StartSlot(helpers.SlotToEpoch(slot))
+	slotOffset := slot - (slot % params.BeaconConfig().SlotsPerEpoch)
 
 	for _, duty := range duties {
 		if v.emitAccountMetrics {

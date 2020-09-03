@@ -11,6 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -32,18 +33,19 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 		Validators: registry,
 	})
 	require.NoError(t, err)
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
 		},
 	}
 
 	want := "non-active validator cannot exit"
-	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
+	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
 	assert.ErrorContains(t, want, err)
 
 	// Check conformance of no verify method.
-	_, err = blocks.ProcessVoluntaryExitsNoVerifySignature(state, block.Body)
+	_, err = blocks.ProcessVoluntaryExitsNoVerifySignature(state, b.Block.Body)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -65,18 +67,19 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 		Slot:       0,
 	})
 	require.NoError(t, err)
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
 		},
 	}
 
 	want := "expected current epoch >= exit epoch"
-	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
+	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
 	assert.ErrorContains(t, want, err)
 
 	// Check conformance of no verify method.
-	_, err = blocks.ProcessVoluntaryExitsNoVerifySignature(state, block.Body)
+	_, err = blocks.ProcessVoluntaryExitsNoVerifySignature(state, b.Block.Body)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -99,14 +102,15 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 		Slot:       10,
 	})
 	require.NoError(t, err)
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
 		},
 	}
 
 	want := "validator has not been active long enough to exit"
-	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
+	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -145,14 +149,15 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	exits[0].Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
 		},
 	}
 
 	stateCopy := state.Copy()
-	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, block.Body)
+	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, b)
 	require.NoError(t, err, "Could not process exits")
 	newRegistry := newState.Validators()
 	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch) {
@@ -161,7 +166,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	// Check conformance with NoVerify Exit Method.
-	newState, err = blocks.ProcessVoluntaryExitsNoVerifySignature(stateCopy, block.Body)
+	newState, err = blocks.ProcessVoluntaryExitsNoVerifySignature(stateCopy, b.Block.Body)
 	require.NoError(t, err, "Could not process exits")
 	newRegistry = newState.Validators()
 	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(stateCopy.Slot()/params.BeaconConfig().SlotsPerEpoch) {

@@ -19,7 +19,12 @@ service Wallet {
     }
     rpc WalletConfig(google.protobuf.Empty) returns (WalletResponse) {
         option (google.api.http) = {
-            get: "/v2/validator/wallet/config"
+            get: "/v2/validator/wallet"
+        };
+    }
+    rpc GenerateMnemonic(google.protobuf.Empty) returns (GenerateMnemonicResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/mnemonic/generate"
         };
     }
 }
@@ -81,16 +86,26 @@ message CreateWalletRequest {
         REMOTE = 2;
     }
     KeymanagerKind keymanager = 2;
+
     // Password for the wallet.
     string wallet_password = 3;
+    // Mnemonic in case the user is creating a derived wallet.
+    string mnemonic = 4;
+    // Number of accounts.
+    uint64 num_accounts = 5;
+    // JSON-encoded keystore files to import during wallet creation.
+    repeated string keystores_imported = 6;
+    // Password to unlock imported keystore files.
+    string keystores_password = 7;
+
     // Remote address such as host.example.com:4000 for a gRPC remote signer server.
-    string remote_addr = 4;
+    string remote_addr = 8;
     // Path to client.crt for secure TLS connections to a remote signer server.
-    string remote_crt_path = 5;
+    string remote_crt_path = 9;
     // Path to client.key for secure TLS connections to a remote signer server.
-    string remote_key_path = 6;
+    string remote_key_path = 10;
     // Path to ca.crt for secure TLS connections to a remote signer server.
-    string remote_ca_crt_path = 7;
+    string remote_ca_crt_path = 11;
 }
 
 message EditWalletConfigRequest {
@@ -98,6 +113,10 @@ message EditWalletConfigRequest {
     string remote_crt_path = 2;
     string remote_key_path = 3;
     string remote_ca_crt_path = 4;
+}
+
+message GenerateMnemonicResponse {
+    string mnemonic = 1;
 }
 
 message WalletResponse {

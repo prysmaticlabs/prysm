@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
@@ -380,7 +379,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{OldSlot: helpers.StartSlot(1), NewSlot: 0},
+			Data: &statefeed.ReorgData{OldSlot: params.BeaconConfig().SlotsPerEpoch, NewSlot: 0},
 		})
 	}
 	<-exitRoutine

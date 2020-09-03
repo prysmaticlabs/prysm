@@ -200,7 +200,10 @@ func CommitteeAssignments(
 	// We determine the slots in which proposers are supposed to act.
 	// Some validators may need to propose multiple times per epoch, so
 	// we use a map of proposer idx -> []slot to keep track of this possibility.
-	startSlot := StartSlot(epoch)
+	startSlot, err := StartSlot(epoch)
+	if err != nil {
+		return nil, nil, err
+	}
 	proposerIndexToSlots := make(map[uint64][]uint64, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
@@ -381,7 +384,10 @@ func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uin
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate seed")
 	}
-	slot := StartSlot(e)
+	slot, err := StartSlot(e)
+	if err != nil {
+		return nil, err
+	}
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot+i)...)
 		seedWithSlotHash := hashFunc(seedWithSlot)

@@ -18,12 +18,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -37,45 +40,47 @@ var log = logrus.WithField("prefix", "validator")
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	db                   db.Database
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	validator            Validator
-	graffiti             []byte
-	conn                 *grpc.ClientConn
-	endpoint             string
-	withCert             string
-	dataDir              string
-	keyManager           keymanager.KeyManager
-	keyManagerV2         v2.IKeymanager
-	logValidatorBalances bool
-	emitAccountMetrics   bool
-	maxCallRecvMsgSize   int
-	validatingPubKeys    [][48]byte
-	grpcRetries          uint
-	grpcRetryDelay       time.Duration
-	grpcHeaders          []string
-	protector            slashingprotection.Protector
+	useWeb                bool
+	emitAccountMetrics    bool
+	logValidatorBalances  bool
+	conn                  *grpc.ClientConn
+	grpcRetryDelay        time.Duration
+	grpcRetries           uint
+	maxCallRecvMsgSize    int
+	walletInitializedFeed *event.Feed
+	cancel                context.CancelFunc
+	db                    db.Database
+	keyManager            keymanager.KeyManager
+	dataDir               string
+	withCert              string
+	endpoint              string
+	validator             Validator
+	protector             slashingprotection.Protector
+	ctx                   context.Context
+	keyManagerV2          v2.IKeymanager
+	grpcHeaders           []string
+	graffiti              []byte
 }
 
 // Config for the validator service.
 type Config struct {
-	Endpoint                   string
-	DataDir                    string
-	CertFlag                   string
-	GraffitiFlag               string
-	ValidatingPubKeys          [][48]byte
-	KeyManager                 keymanager.KeyManager
-	KeyManagerV2               v2.IKeymanager
+	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
-	GrpcMaxCallRecvMsgSizeFlag int
+	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
-	GrpcHeadersFlag            string
+	GrpcMaxCallRecvMsgSizeFlag int
 	Protector                  slashingprotection.Protector
-	ValDB                      db.Database
+	Endpoint                   string
 	Validator                  Validator
+	ValDB                      db.Database
+	KeyManagerV2               v2.IKeymanager
+	KeyManager                 keymanager.KeyManager
+	GraffitiFlag               string
+	CertFlag                   string
+	DataDir                    string
+	GrpcHeadersFlag            string
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -83,24 +88,25 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ValidatorService{
-		ctx:                  ctx,
-		cancel:               cancel,
-		endpoint:             cfg.Endpoint,
-		withCert:             cfg.CertFlag,
-		dataDir:              cfg.DataDir,
-		graffiti:             []byte(cfg.GraffitiFlag),
-		keyManager:           cfg.KeyManager,
-		keyManagerV2:         cfg.KeyManagerV2,
-		validatingPubKeys:    cfg.ValidatingPubKeys,
-		logValidatorBalances: cfg.LogValidatorBalances,
-		emitAccountMetrics:   cfg.EmitAccountMetrics,
-		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:          cfg.GrpcRetriesFlag,
-		grpcRetryDelay:       cfg.GrpcRetryDelay,
-		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:            cfg.Protector,
-		validator:            cfg.Validator,
-		db:                   cfg.ValDB,
+		ctx:                   ctx,
+		cancel:                cancel,
+		endpoint:              cfg.Endpoint,
+		withCert:              cfg.CertFlag,
+		dataDir:               cfg.DataDir,
+		graffiti:              []byte(cfg.GraffitiFlag),
+		keyManager:            cfg.KeyManager,
+		keyManagerV2:          cfg.KeyManagerV2,
+		logValidatorBalances:  cfg.LogValidatorBalances,
+		emitAccountMetrics:    cfg.EmitAccountMetrics,
+		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:           cfg.GrpcRetriesFlag,
+		grpcRetryDelay:        cfg.GrpcRetryDelay,
+		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
+		protector:             cfg.Protector,
+		validator:             cfg.Validator,
+		db:                    cfg.ValDB,
+		walletInitializedFeed: cfg.WalletInitializedFeed,
+		useWeb:                cfg.UseWeb,
 	}, nil
 }
 
@@ -168,8 +174,11 @@ func (v *ValidatorService) Start() {
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
+		useWeb:                         v.useWeb,
+		walletInitializedFeed:          v.walletInitializedFeed,
 	}
 	go run(v.ctx, v.validator)
+	go v.recheckKeys(v.ctx)
 }
 
 // Stop the validator service.
@@ -182,14 +191,46 @@ func (v *ValidatorService) Stop() error {
 	return nil
 }
 
-// Status ...
-//
-// WIP - not done.
+// Status of the validator service.
 func (v *ValidatorService) Status() error {
 	if v.conn == nil {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
+}
+
+func (v *ValidatorService) recheckKeys(ctx context.Context) {
+	if featureconfig.Get().EnableAccountsV2 {
+		if v.useWeb {
+			initializedChan := make(chan *accountsv2.Wallet)
+			sub := v.walletInitializedFeed.Subscribe(initializedChan)
+			defer sub.Unsubscribe()
+			wallet := <-initializedChan
+			keyManagerV2, err := wallet.InitializeKeymanager(
+				ctx, true, /* skipMnemonicConfirm */
+			)
+			if err != nil {
+				log.Fatalf("Could not read keymanager for wallet: %v", err)
+			}
+			v.keyManagerV2 = keyManagerV2
+		}
+		validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+		go recheckValidatingKeysBucket(ctx, v.db, v.keyManagerV2)
+	} else {
+		validatingKeys, err := v.keyManager.FetchValidatingKeys()
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+	}
 }
 
 // signObject signs a generic object, with protection if available.
@@ -291,6 +332,30 @@ func ConstructDialOptions(
 
 	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
+}
+
+// Reloads the validating keys upon receiving an event over a feed subscription
+// to accounts changes in the keymanager, then updates those keys'
+// buckets in bolt DB if a bucket for a key does not exist.
+func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
+	directKeymanager, ok := km.(*direct.Keymanager)
+	if !ok {
+		return
+	}
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	sub := directKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case keys := <-validatingPubKeysChan:
+			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
+				log.WithError(err).Debug("Could not update public keys buckets")
+				continue
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // ValidatorBalances returns the validator balances mapping keyed by public keys.

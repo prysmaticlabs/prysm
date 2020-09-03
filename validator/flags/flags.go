@@ -315,6 +315,12 @@ var (
 		Usage: "Sends a 32 ETH deposit for each of a user's validator accounts in their wallet",
 		Value: false,
 	}
+	// EnableWebFlag enables controlling the validator client via the Prysm web ui. This is a work in progress.
+	EnableWebFlag = &cli.BoolFlag{
+		Name:  "web",
+		Usage: "Enables the web portal for the validator client (work in progress)",
+		Value: false,
+	}
 )
 
 // Deprecated flags list.

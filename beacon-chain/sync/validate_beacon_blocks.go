@@ -91,17 +91,21 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	s.pendingQueueLock.RUnlock()
 
-	// Add metrics for block arrival time subtracts slot start time.
-	if captureArrivalTimeMetric(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot) != nil {
-		return pubsub.ValidationIgnore
-	}
-
 	if err := helpers.VerifySlotTime(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejecting incoming block.")
 		return pubsub.ValidationIgnore
 	}
 
-	if helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch) >= blk.Block.Slot {
+	// Add metrics for block arrival time subtracts slot start time.
+	if captureArrivalTimeMetric(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot) != nil {
+		return pubsub.ValidationIgnore
+	}
+
+	startSlot, err := helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch)
+	if err != nil {
+		return pubsub.ValidationIgnore
+	}
+	if startSlot >= blk.Block.Slot {
 		log.Debug("Block slot older/equal than last finalized epoch start slot, rejecting it")
 		return pubsub.ValidationIgnore
 	}

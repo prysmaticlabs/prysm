@@ -2,7 +2,6 @@ package v2
 
 import (
 	"archive/zip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,12 +30,11 @@ const (
 	backupPromptText = "Enter the directory where your backup.zip file will be written to"
 )
 
-// BackupAccounts allows users to select validator accounts from their wallet
+// BackupAccountsCli allows users to select validator accounts from their wallet
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other eth2 clients.
-func BackupAccounts(cliCtx *cli.Context) error {
-	ctx := context.Background()
-	wallet, err := openOrCreateWallet(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+func BackupAccountsCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",
 		)
@@ -49,11 +47,11 @@ func BackupAccounts(cliCtx *cli.Context) error {
 			"remote wallets cannot backup accounts",
 		)
 	}
-	keymanager, err := wallet.InitializeKeymanager(cliCtx, true /* skip mnemonic confirm */)
+	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -96,7 +94,7 @@ func BackupAccounts(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		keystoresToBackup, err = km.ExtractKeystores(ctx, filteredPubKeys, backupsPassword)
+		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
 		if err != nil {
 			return errors.Wrap(err, "could not backup accounts for direct keymanager")
 		}
@@ -105,7 +103,7 @@ func BackupAccounts(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		keystoresToBackup, err = km.ExtractKeystores(ctx, filteredPubKeys, backupsPassword)
+		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
 		if err != nil {
 			return errors.Wrap(err, "could not backup accounts for derived keymanager")
 		}

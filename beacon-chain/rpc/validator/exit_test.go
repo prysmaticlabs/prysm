@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestSub(t *testing.T) {
+func TestProposeExit_Notification(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	testutil.ResetCache()
@@ -30,6 +30,8 @@ func TestSub(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
+	epoch := uint64(2048)
+	require.NoError(t, beaconState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch))
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -55,7 +57,6 @@ func TestSub(t *testing.T) {
 	defer opSub.Unsubscribe()
 
 	// Send the request, expect a result on the state feed.
-	epoch := uint64(2048)
 	validatorIndex := uint64(0)
 	req := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
@@ -66,8 +67,11 @@ func TestSub(t *testing.T) {
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 
-	_, err = server.ProposeExit(context.Background(), req)
+	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
+	expectedRoot, err := req.Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedRoot[:], resp.ExitRoot)
 
 	// Ensure the state notification was broadcast.
 	notificationFound := false
@@ -96,6 +100,8 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
+	epoch := uint64(2048)
+	require.NoError(t, beaconState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch))
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -125,7 +131,6 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.ErrorContains(t, "voluntary exit does not exist", err, "Expected error for no exit existing")
 
 	// Send the request, expect a result on the state feed.
-	epoch := uint64(2048)
 	validatorIndex := uint64(0)
 	req = &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
@@ -142,6 +147,9 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
-	_, err = server.ProposeExit(context.Background(), req)
+	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)
+	expectedRoot, err := req.Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedRoot[:], resp.ExitRoot)
 }

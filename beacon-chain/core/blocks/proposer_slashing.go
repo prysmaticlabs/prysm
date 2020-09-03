@@ -38,8 +38,13 @@ import (
 func ProcessProposerSlashings(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
+
+	body := b.Block.Body
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
 		if slashing == nil {
