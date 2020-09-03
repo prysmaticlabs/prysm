@@ -357,23 +357,3 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.I
 		}
 	}
 }
-
-// ValidatorBalances returns the validator balances mapping keyed by public keys.
-func (v *ValidatorService) ValidatorBalances(ctx context.Context) map[[48]byte]uint64 {
-	return v.validator.BalancesByPubkeys(ctx)
-}
-
-// ValidatorIndicesToPubkeys returns the validator indices mapping keyed by public keys.
-func (v *ValidatorService) ValidatorIndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
-	return v.validator.IndicesToPubkeys(ctx)
-}
-
-// ValidatorPubkeysToIndices returns the validator public keys mapping keyed by indices.
-func (v *ValidatorService) ValidatorPubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
-	return v.validator.PubkeysToIndices(ctx)
-}
-
-// ValidatorPubkeysToStatuses returns the validator statuses mapping keyed by public keys.
-func (v *ValidatorService) ValidatorPubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
-	return v.validator.PubkeysToStatuses(ctx)
-}
