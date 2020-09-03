@@ -101,7 +101,7 @@ func (fakeChecker) Resync() error {
 	return nil
 }
 
-// BeaconFuzzBlock -- TODO.
+// BeaconFuzzBlock runs full processing of beacon block against a given state.
 func BeaconFuzzBlock(b []byte) {
 	params.UseMainnetConfig()
 	input := &InputBlockWithPrestate{}
@@ -145,25 +145,11 @@ func BeaconFuzzBlock(b []byte) {
 		panic(err)
 	}
 	chain.Start()
-	//defer func() {
-	//	if err := chain.Stop(); err != nil {
-	//		_ = err
-	//	}
-	//}()
 
 	s := sync.NewRegularSyncFuzz(&sync.Config{
 		DB:    db1,
 		P2P:   p2p,
 		Chain: chain,
-		//Chain: &testing.ChainService{
-		//	FinalizedCheckPoint:         st.FinalizedCheckpoint(),
-		//	CurrentJustifiedCheckPoint:  st.CurrentJustifiedCheckpoint(),
-		//	PreviousJustifiedCheckPoint: st.PreviousJustifiedCheckpoint(),
-		//	State:                       st,
-		//	Genesis:                     st.GenesisUnixTime(),
-		//	Fork:                        st.Fork(),
-		//	ETH1Data:                    st.Eth1Data(),
-		//},
 		InitialSync:         fakeChecker{},
 		StateNotifier:       sn,
 		BlockNotifier:       bn,

@@ -56,7 +56,7 @@ func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
 	return nil, nil
 }
 
-// HasEntry ... TODO.
+// HasEntry returns true if the committee cache has a value.
 func (c *CommitteeCache) HasEntry(string) bool {
 	return false
 }

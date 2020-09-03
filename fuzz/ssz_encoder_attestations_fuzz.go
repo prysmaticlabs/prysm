@@ -10,7 +10,7 @@ import (
 
 var buf = new(bytes.Buffer)
 
-// SszEncoderAttestationFuzz -- TODO.
+// SszEncoderAttestationFuzz runs network encode/decode for attestations.
 func SszEncoderAttestationFuzz(b []byte) {
 	params.UseMainnetConfig()
 	buf.Reset()
