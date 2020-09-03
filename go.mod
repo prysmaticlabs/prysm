@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.33.15 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
-	github.com/bloxapp/key-vault v0.0.24
+	github.com/bloxapp/key-vault v0.0.0-20200903062254-47191368bd9a
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/cloudflare/roughtime v0.0.0-20200205191924-a69ef1dab727

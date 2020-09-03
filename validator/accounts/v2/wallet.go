@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	remotehttp "github.com/bloxapp/key-vault/keymanager"
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -181,6 +182,15 @@ func (w *Wallet) InitializeKeymanager(
 		keymanager, err = remote.NewKeymanager(cliCtx, 100000000, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
+		}
+	case v2keymanager.RemoteHTTP:
+		cfg, err := remotehttp.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
+		}
+		keymanager, _, err = remotehttp.NewKeyManager(log, cfg)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize remote HTTP keymanager")
 		}
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)

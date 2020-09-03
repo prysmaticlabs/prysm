@@ -34,8 +34,10 @@ const (
 	Derived Kind = iota
 	// Direct keymanager defines an on-disk, encrypted keystore-capable store.
 	Direct
-	// Remote keymanager capable of remote-signing data.
+	// Remote keymanager capable of remote-signing data through RPC requests.
 	Remote
+	// Remote keymanager capable of remote-signing data through HTTP requests.
+	RemoteHTTP
 )
 
 // String marshals a keymanager kind to a string value.
@@ -47,6 +49,8 @@ func (k Kind) String() string {
 		return "direct"
 	case Remote:
 		return "remote"
+	case RemoteHTTP:
+		return "remote-http"
 	default:
 		return fmt.Sprintf("%d", int(k))
 	}
@@ -61,6 +65,8 @@ func ParseKind(k string) (Kind, error) {
 		return Direct, nil
 	case "remote":
 		return Remote, nil
+	case "remote-http":
+		return RemoteHTTP, nil
 	default:
 		return 0, fmt.Errorf("%s is not an allowed keymanager", k)
 	}

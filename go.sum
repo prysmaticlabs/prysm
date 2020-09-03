@@ -107,6 +107,10 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
 github.com/bloxapp/KeyVault v0.2.5 h1:6fEVGQGB/kJHH+QQ6jmorS8VbC9AZ4Osca45tnZZjdM=
 github.com/bloxapp/KeyVault v0.2.5/go.mod h1:Y7dx8BJ52KQsCX0DpJ1ystz7BIs/o5+4eCzvEOVCKwM=
 github.com/bloxapp/eth-key-manager v0.2.6/go.mod h1:mog6Peh4Qcm2tLikLJp+BSTKNi54dMPDWRlbwqqN5Mg=
+github.com/bloxapp/eth-key-manager v0.2.7/go.mod h1:mog6Peh4Qcm2tLikLJp+BSTKNi54dMPDWRlbwqqN5Mg=
+github.com/bloxapp/key-vault v0.0.0-20200902141039-1504cc3ad031/go.mod h1:Ryw2gXD+fHBNZd4JNzzX8BlvPEsOvLmaEtESMQCX/6o=
+github.com/bloxapp/key-vault v0.0.0-20200903061647-ed129001ea88/go.mod h1:Ryw2gXD+fHBNZd4JNzzX8BlvPEsOvLmaEtESMQCX/6o=
+github.com/bloxapp/key-vault v0.0.0-20200903062254-47191368bd9a/go.mod h1:Ryw2gXD+fHBNZd4JNzzX8BlvPEsOvLmaEtESMQCX/6o=
 github.com/bloxapp/key-vault v0.0.24/go.mod h1:n/88f4A3GRaRqnNgrHDRcwk5a8Ya12WqtdzYomuOY8M=
 github.com/bloxapp/vault-plugin-secrets-eth2.0 v0.0.21 h1:EvZjbkMgYHVwz78KnSDeNrT0G9HmemTqD/Z7EUiCY1k=
 github.com/bloxapp/vault-plugin-secrets-eth2.0 v0.0.21/go.mod h1:qeXqRy69nnoFPuHJeOAutUkEa5+yZtBRzA4xNeGsMAI=
