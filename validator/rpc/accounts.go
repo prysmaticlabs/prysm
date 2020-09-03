@@ -20,6 +20,8 @@ func (s *Server) CreateAccount(ctx context.Context, _ *ptypes.Empty) (*pb.Create
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
+	var pubKey []byte
+	var err error
 	switch s.wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
@@ -29,7 +31,8 @@ func (s *Server) CreateAccount(ctx context.Context, _ *ptypes.Empty) (*pb.Create
 			return nil, status.Error(codes.InvalidArgument, "Not a direct keymanager")
 		}
 		// Create a new validator account using the specified keymanager.
-		if _, err := km.CreateAccount(ctx); err != nil {
+		pubKey, err = km.CreateAccount(ctx)
+		if err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
 	case v2keymanager.Derived:
@@ -37,11 +40,17 @@ func (s *Server) CreateAccount(ctx context.Context, _ *ptypes.Empty) (*pb.Create
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
 		}
-		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
+		pubKey, err = km.CreateAccount(ctx, true /*logAccountInfo*/)
+		if err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
 	}
-	return nil, nil
+	return &pb.CreateAccountResponse{
+		Account: &pb.Account{
+			ValidatingPublicKey: pubKey,
+			AccountName:         petnames.DeterministicName(pubKey, "-"),
+		},
+	}, nil
 }
 
 // ListAccounts allows retrieval of validating keys and their petnames

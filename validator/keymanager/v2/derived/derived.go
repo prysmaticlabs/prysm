@@ -262,33 +262,33 @@ func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, err
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
-func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) ([]byte, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
+		return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
 	}
 	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
+		return nil, errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
 	}
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
 	blsValidatingKey, err := bls.SecretKeyFromBytes(validatingKey.Marshal())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	blsWithdrawalKey, err := bls.SecretKeyFromBytes(withdrawalKey.Marshal())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
 	tx, data, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
-		return "", errors.Wrap(err, "could not generate deposit transaction data")
+		return nil, errors.Wrap(err, "could not generate deposit transaction data")
 	}
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
@@ -296,7 +296,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 		nil, /*genesisValidatorsRoot*/
 	)
 	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return "", errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
+		return nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
 	}
 	// Log the deposit transaction data to the user.
 	fmt.Printf(`
@@ -325,12 +325,12 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) (s
 	dr.lock.Unlock()
 	encodedCfg, err := marshalEncryptedSeedFile(dr.seedCfg)
 	if err != nil {
-		return "", errors.Wrap(err, "could not marshal encrypted seed file")
+		return nil, errors.Wrap(err, "could not marshal encrypted seed file")
 	}
 	if err := dr.wallet.WriteEncryptedSeedToDisk(ctx, encodedCfg); err != nil {
-		return "", errors.Wrap(err, "could not write encrypted seed file to disk")
+		return nil, errors.Wrap(err, "could not write encrypted seed file to disk")
 	}
-	return fmt.Sprintf("%d", newAccountNumber), nil
+	return publicKey[:], nil
 }
 
 // Sign signs a message using a validator key.
