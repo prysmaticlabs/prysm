@@ -283,16 +283,21 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 		}
 		response, ok := in.(*fetchRequestResponse)
 		if !ok {
-			return 0, errInputNotFetchRequestParams
+			return m.state, errInputNotFetchRequestParams
 		}
 		if response.err != nil {
-			// Current window is already too big, re-request previous epochs.
-			if response.err == errSlotIsTooHigh {
+			switch response.err {
+			case errSlotIsTooHigh:
+				// Current window is already too big, re-request previous epochs.
 				for _, fsm := range q.smm.machines {
 					if fsm.start < response.start && fsm.state == stateSkipped {
 						fsm.setState(stateNew)
 					}
 				}
+			case errInvalidFetchedData:
+				// Peer returned invalid data, penalize.
+				q.blocksFetcher.p2p.Peers().Scorers().BadResponsesScorer().Increment(m.pid)
+				log.WithField("pid", response.pid).Debug("Peer is penalized for invalid blocks")
 			}
 			return m.state, response.err
 		}
