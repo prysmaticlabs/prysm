@@ -4,7 +4,6 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "accounts.go",
         "auth.go",
         "health.go",
         "intercepter.go",
@@ -15,7 +14,6 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/promptutil:go_default_library",
         "//shared/rand:go_default_library",
@@ -59,7 +57,6 @@ go_test(
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
@@ -70,7 +67,6 @@ go_test(
         "//validator/keymanager/v2:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_google_uuid//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",

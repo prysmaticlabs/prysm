@@ -136,7 +136,6 @@ func (s *Server) Start() {
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
 	pb.RegisterHealthServer(s.grpcServer, s)
-	pb.RegisterAccountsServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {

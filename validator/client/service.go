@@ -173,9 +173,6 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:             v.emitAccountMetrics,
 		startBalances:                  make(map[[48]byte]uint64),
 		prevBalance:                    make(map[[48]byte]uint64),
-		indexToPubkey:                  make(map[uint64][48]byte),
-		pubkeyToIndex:                  make(map[[48]byte]uint64),
-		pubkeyToStatus:                 make(map[[48]byte]ethpb.ValidatorStatus),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -356,27 +353,6 @@ func (v *ValidatorService) BeaconNodeEndpoint() string {
 	return v.endpoint
 }
 
-// ValidatorBalances returns the validator balances mapping keyed by public keys.
-func (v *ValidatorService) ValidatorBalances(ctx context.Context) map[[48]byte]uint64 {
-	return v.validator.BalancesByPubkeys(ctx)
-}
-
-// ValidatorIndicesToPubkeys returns the validator indices mapping keyed by public keys.
-func (v *ValidatorService) ValidatorIndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
-	return v.validator.IndicesToPubkeys(ctx)
-}
-
-// ValidatorPubkeysToIndices returns the validator public keys mapping keyed by indices.
-func (v *ValidatorService) ValidatorPubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
-	return v.validator.PubkeysToIndices(ctx)
-}
-
-// ValidatorPubkeysToStatuses returns the validator statuses mapping keyed by public keys.
-func (v *ValidatorService) ValidatorPubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
-	return v.validator.PubkeysToStatuses(ctx)
-}
-
-// Reloads the validating keys upon receiving an event over a feed subscription
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
