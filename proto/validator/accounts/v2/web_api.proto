@@ -43,6 +43,14 @@ service Accounts {
     }
 }
 
+service Health {
+    rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/health/node_connection"
+        };
+    }
+}
+
 service Auth {
     rpc Login(AuthRequest) returns (AuthResponse) {
         option (google.api.http) = {
@@ -151,4 +159,14 @@ message AuthResponse {
     string token = 1;
 
     uint64 token_expiration = 2;
+}
+
+message NodeConnectionResponse {
+    // The host address of the beacon node the validator
+    // client is connected to.
+    string beacon_node_endpoint = 1;
+    // Whether the connection is active.
+    bool connected = 2;
+    // Whether the beacon node is currently synchronizing to chain head.
+    bool syncing = 3;
 }

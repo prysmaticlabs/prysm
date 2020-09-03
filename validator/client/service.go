@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	fssz "github.com/ferranbt/fastssz"
+	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -36,6 +37,12 @@ import (
 )
 
 var log = logrus.WithField("prefix", "validator")
+
+// SyncChecker is able to determine if a beacon node is currently
+// going through chain synchronization.
+type SyncChecker interface {
+	Syncing(ctx context.Context) (bool, error)
+}
 
 // ValidatorService represents a service to manage the validator client
 // routine.
@@ -331,7 +338,21 @@ func ConstructDialOptions(
 	return dialOpts
 }
 
-// Reloads the validating keys upon receiving an event over a feed subscription
+// Syncing returns whether or not the beacon node is currently synchronizing the chain.
+func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
+	nc := ethpb.NewNodeClient(v.conn)
+	resp, err := nc.GetSyncStatus(ctx, &ptypes.Empty{})
+	if err != nil {
+		return false, err
+	}
+	return resp.Syncing, nil
+}
+
+// BeaconNodeEndpoint as a string.
+func (v *ValidatorService) BeaconNodeEndpoint() string {
+	return v.endpoint
+}
+
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {

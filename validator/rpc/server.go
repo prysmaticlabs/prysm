@@ -36,6 +36,7 @@ type Config struct {
 	KeyFlag               string
 	ValDB                 db.Database
 	ValidatorService      *client.ValidatorService
+	SyncChecker           client.SyncChecker
 	WalletInitializedFeed *event.Feed
 	WalletDir             string
 }
@@ -54,6 +55,7 @@ type Server struct {
 	grpcServer            *grpc.Server
 	jwtKey                []byte
 	validatorService      *client.ValidatorService
+	syncChecker           client.SyncChecker
 	walletDir             string
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
@@ -71,6 +73,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		withKey:               cfg.KeyFlag,
 		valDB:                 cfg.ValDB,
 		validatorService:      cfg.ValidatorService,
+		syncChecker:           cfg.SyncChecker,
 		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
@@ -132,6 +135,7 @@ func (s *Server) Start() {
 	reflection.Register(s.grpcServer)
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
+	pb.RegisterHealthServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {

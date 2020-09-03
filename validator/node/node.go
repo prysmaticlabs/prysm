@@ -366,6 +366,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		Port:                  fmt.Sprintf("%d", rpcPort),
 		WalletInitializedFeed: s.walletInitialized,
 		ValidatorService:      vs,
+		SyncChecker:           vs,
 	})
 	return s.services.RegisterService(server)
 }
