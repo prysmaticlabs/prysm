@@ -26,7 +26,6 @@ func (dr *Keymanager) ImportKeystores(
 	pubKeys := make([][]byte, len(keystores))
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	var err error
-	fmt.Println("Importing accounts, this may take a while...")
 	var privKeyBytes []byte
 	var pubKeyBytes []byte
 	for i := 0; i < len(keystores); i++ {
@@ -63,12 +62,7 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	var err error
 	privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-		// If the password fails for an individual account, we ask the user to input
-		// that individual account's password until it succeeds.
-		privKeyBytes, password, err = askUntilPasswordConfirms(enc, keystore)
-		if err != nil {
-			return nil, nil, "", errors.Wrap(err, "could not confirm password via prompt")
-		}
+		return nil, nil, "", fmt.Errorf("wrong password for keystore with pubkey %s", keystore.Pubkey)
 	} else if err != nil {
 		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 	}
