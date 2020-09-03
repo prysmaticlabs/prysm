@@ -138,8 +138,10 @@ message Account {
     bytes validating_public_key = 1;
     // The human readable account name.
     string account_name = 2;
+    // The deposit data transaction RLP bytes.
+    bytes deposit_tx_data = 3;
     // The derivation path (if using HD wallet).
-    string derivation_path = 3;
+    string derivation_path = 4;
 }
 
 message AccountRequest {

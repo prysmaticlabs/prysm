@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
