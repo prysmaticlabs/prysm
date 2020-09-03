@@ -57,7 +57,6 @@ type validator struct {
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
-	indicesLock                        sync.RWMutex
 	prevBalanceLock                    sync.RWMutex
 	attesterHistoryByPubKeyLock        sync.RWMutex
 	walletInitializedFeed              *event.Feed
@@ -65,9 +64,6 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
-	pubkeyToStatus                     map[[48]byte]ethpb.ValidatorStatus
-	pubkeyToIndex                      map[[48]byte]uint64
-	indexToPubkey                      map[uint64][48]byte
 	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
@@ -444,18 +440,6 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
-
-		v.indicesLock.Lock()
-		if _, ok := v.indexToPubkey[duty.ValidatorIndex]; !ok {
-			v.indexToPubkey[duty.ValidatorIndex] = pk
-		}
-		if _, ok := v.pubkeyToIndex[pk]; !ok {
-			v.pubkeyToIndex[pk] = duty.ValidatorIndex
-		}
-		if _, ok := v.pubkeyToStatus[pk]; !ok {
-			v.pubkeyToStatus[pk] = duty.Status
-		}
-		v.indicesLock.Unlock()
 	}
 
 	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
@@ -613,34 +597,6 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
-}
-
-// BalancesByPubkeys returns the validator balances keyed by validator public keys.
-func (v *validator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
-	v.prevBalanceLock.RLock()
-	defer v.prevBalanceLock.RUnlock()
-	return v.prevBalance
-}
-
-// IndicesToPubkeys returns the validator public keys keyed by validator indices.
-func (v *validator) IndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
-	v.indicesLock.RLock()
-	defer v.indicesLock.RUnlock()
-	return v.indexToPubkey
-}
-
-// PubkeysToIndices returns the validator indices keyed by validator public keys.
-func (v *validator) PubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
-	v.indicesLock.RLock()
-	defer v.indicesLock.RUnlock()
-	return v.pubkeyToIndex
-}
-
-// PubkeysToStatuses returns the validator statues keyed by validator public keys.
-func (v *validator) PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
-	v.indicesLock.RLock()
-	defer v.indicesLock.RUnlock()
-	return v.pubkeyToStatus
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

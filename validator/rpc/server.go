@@ -132,7 +132,6 @@ func (s *Server) Start() {
 	reflection.Register(s.grpcServer)
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
-	pb.RegisterHealthServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {
