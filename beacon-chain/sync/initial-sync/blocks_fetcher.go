@@ -365,16 +365,13 @@ func (f *blocksFetcher) requestBlocks(
 		if err == io.EOF {
 			break
 		}
-		// The response MUST contain no more than `count` blocks.
-		if i+1 > req.Count {
-			return nil, errInvalidFetchedData
-		}
-		// Exit if more than max request blocks are returned.
-		if i >= params.BeaconNetworkConfig().MaxRequestBlocks {
-			break
-		}
 		if err != nil {
 			return nil, err
+		}
+		// The response MUST contain no more than `count` blocks, and no more than
+		// MAX_REQUEST_BLOCKS blocks.
+		if i >= req.Count || i >= params.BeaconNetworkConfig().MaxRequestBlocks {
+			return nil, errInvalidFetchedData
 		}
 		// Returned blocks MUST be in the slot range [start_slot, start_slot + count * step).
 		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
