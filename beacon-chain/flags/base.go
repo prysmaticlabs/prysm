@@ -94,17 +94,6 @@ var (
 		Name:  "unsafe-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
-	// SlasherCertFlag defines a flag for the slasher TLS certificate.
-	SlasherCertFlag = &cli.StringFlag{
-		Name:  "slasher-tls-cert",
-		Usage: "Certificate for secure slasher gRPC connection. Pass this in order to use slasher gRPC securely.",
-	}
-	// SlasherProviderFlag defines a flag for a slasher RPC provider.
-	SlasherProviderFlag = &cli.StringFlag{
-		Name:  "slasher-provider",
-		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
-		Value: "127.0.0.1:4002",
-	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of DB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
