@@ -85,6 +85,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
+
 	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err)
 
