@@ -13,7 +13,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/bloxapp/key-vault/keymanager"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -394,18 +393,6 @@ func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
 		km, help, err = v1.NewWallet(opts)
 	case "remote":
 		km, help, err = v1.NewRemoteWallet(opts)
-	case "remote-http":
-		// This uses the custom implementation of the keymanager by Blox team.
-		// Basically, this is the keymanager that communicates with Key Vault service through HTTP requests.
-		// Key Vault uses Vault by Hashicorp with custom endpoints to sign data.
-		// The docs how to setup your own Key Vault could be found there https://github.com/bloxapp/key-vault/tree/stage
-		// To use this keymanager, the following points should be done:
-		// 	- Launch Key Vault server. Make sure that it's available.
-		// 	- Get access root token (described in repo specs).
-		// 	- Setup storage. This is basically an account with public key. There is key manager cli that helps to
-		//	  create a storage https://github.com/bloxapp/eth-key-manager/tree/master/cli.
-		// 	- Provide Key Vault server location, root access token, and the public key used when was setting up storage.
-		km, help, err = keymanager.NewVaultRemoteHTTPWalletFromOpts(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}

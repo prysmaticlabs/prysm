@@ -39,9 +39,10 @@ var (
 		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
 	)
 	keymanagerKindSelections = map[v2keymanager.Kind]string{
-		v2keymanager.Derived: "HD Wallet (Recommended)",
-		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
-		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
+		v2keymanager.Derived:    "HD Wallet (Recommended)",
+		v2keymanager.Direct:     "Non-HD Wallet (Most Basic)",
+		v2keymanager.Remote:     "Remote Signing Wallet (Advanced)",
+		v2keymanager.RemoteHTTP: "Remote HTTP Signing Wallet (Advanced)",
 	}
 )
 
@@ -184,11 +185,21 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
 	case v2keymanager.RemoteHTTP:
+		// This uses the custom implementation of the keymanager by Blox team.
+		// Basically, this is the keymanager that communicates with Key Vault service through HTTP requests.
+		// Key Vault uses Vault by Hashicorp with custom endpoints to sign data.
+		// The docs how to setup your own Key Vault could be found there https://github.com/bloxapp/key-vault/tree/stage
+		// To use this keymanager, the following points should be done:
+		// 	- Launch Key Vault server. Make sure that it's available.
+		// 	- Get access root token (described in repo specs).
+		// 	- Setup storage. This is basically an account with public key. There is key manager cli that helps to
+		//	  create a storage https://github.com/bloxapp/eth-key-manager/tree/master/cli.
+		// 	- Provide Key Vault server location, root access token, and the public key used when was setting up storage.
 		cfg, err := remotehttp.UnmarshalConfigFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, _, err = remotehttp.NewKeyManager(log, cfg)
+		keymanager, err = remotehttp.NewKeyManager(log, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote HTTP keymanager")
 		}
@@ -395,7 +406,7 @@ func openOrCreateWallet(cliCtx *cli.Context, creationFunc func(cliCtx *cli.Conte
 	return creationFunc(cliCtx)
 }
 
-// isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.
+// isEmptyWallet checks if a folder consists key directory such as `derived`, `remote`, `remote-http` or `direct`.
 // Returns true if exists, false otherwise.
 func isEmptyWallet(name string) (bool, error) {
 	expanded, err := fileutil.ExpandPath(name)
