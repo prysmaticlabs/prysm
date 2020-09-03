@@ -16,7 +16,7 @@ func TestServer_ListBalancesHappy(t *testing.T) {
 	fv := setupFakeClient()
 	vs, err := client.NewValidatorService(ctx, &client.Config{Validator: fv})
 	require.NoError(t, err)
-	s := &Server{validatorService: vs}
+	s := &Server{validatorService: vs, walletInitialized: true}
 	req := &pb.AccountRequest{
 		PublicKeys: [][]byte{{'a'}, {'b'}, {'c'}},
 		Indices:    []uint64{4, 5, 6},
@@ -43,7 +43,7 @@ func TestServer_ListBalancesOverlaps(t *testing.T) {
 	fv := setupFakeClient()
 	vs, err := client.NewValidatorService(ctx, &client.Config{Validator: fv})
 	require.NoError(t, err)
-	s := &Server{validatorService: vs}
+	s := &Server{validatorService: vs, walletInitialized: true}
 	req := &pb.AccountRequest{
 		PublicKeys: [][]byte{{'a'}, {'b'}, {'c'}},
 		Indices:    []uint64{1, 2, 4},
@@ -68,7 +68,7 @@ func TestServer_ListBalancesMissing(t *testing.T) {
 	fv := setupFakeClient()
 	vs, err := client.NewValidatorService(ctx, &client.Config{Validator: fv})
 	require.NoError(t, err)
-	s := &Server{validatorService: vs}
+	s := &Server{validatorService: vs, walletInitialized: true}
 	req := &pb.AccountRequest{
 		PublicKeys: [][]byte{{'a'}, {'x'}, {'y'}},
 		Indices:    []uint64{1, 200, 400},
@@ -90,7 +90,7 @@ func TestServer_ListStatusesHappy(t *testing.T) {
 	fv := setupFakeClient()
 	vs, err := client.NewValidatorService(ctx, &client.Config{Validator: fv})
 	require.NoError(t, err)
-	s := &Server{validatorService: vs}
+	s := &Server{validatorService: vs, walletInitialized: true}
 	req := &pb.AccountRequest{
 		PublicKeys: [][]byte{{'a'}, {'b'}, {'c'}},
 		Indices:    []uint64{4, 5, 6},
@@ -117,7 +117,7 @@ func TestServer_ListStatusesOverlaps(t *testing.T) {
 	fv := setupFakeClient()
 	vs, err := client.NewValidatorService(ctx, &client.Config{Validator: fv})
 	require.NoError(t, err)
-	s := &Server{validatorService: vs}
+	s := &Server{validatorService: vs, walletInitialized: true}
 	req := &pb.AccountRequest{
 		PublicKeys: [][]byte{{'a'}, {'b'}, {'c'}},
 		Indices:    []uint64{1, 2, 4},
@@ -142,7 +142,7 @@ func TestServer_ListStatusesMissing(t *testing.T) {
 	fv := setupFakeClient()
 	vs, err := client.NewValidatorService(ctx, &client.Config{Validator: fv})
 	require.NoError(t, err)
-	s := &Server{validatorService: vs}
+	s := &Server{validatorService: vs, walletInitialized: true}
 	req := &pb.AccountRequest{
 		PublicKeys: [][]byte{{'a'}, {'x'}, {'y'}},
 		Indices:    []uint64{1, 200, 400},

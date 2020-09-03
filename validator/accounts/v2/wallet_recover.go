@@ -24,9 +24,10 @@ const phraseWordCount = 24
 
 // RecoverWalletConfig to run the recover wallet function.
 type RecoverWalletConfig struct {
-	Wallet      *Wallet
-	Mnemonic    string
-	NumAccounts int64
+	WalletDir      string
+	WalletPassword string
+	Mnemonic       string
+	NumAccounts    int64
 }
 
 // RecoverWalletCli uses a menmonic seed phrase to recover a wallet into the path provided. This
@@ -55,31 +56,15 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not check if wallet exists")
 		}
 	}
-	accountsPath := filepath.Join(walletDir, v2keymanager.Derived.String())
-	wallet := &Wallet{
-		accountsPath:   accountsPath,
-		keymanagerKind: v2keymanager.Derived,
-		walletDir:      walletDir,
-		walletPassword: walletPassword,
-	}
-	keymanagerConfig, err := derived.MarshalOptionsFile(cliCtx.Context, derived.DefaultKeymanagerOpts())
-	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
-	}
-	if err := wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet to disk")
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
-	if err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
-		Wallet:      wallet,
-		Mnemonic:    mnemonic,
-		NumAccounts: numAccounts,
+	if _, err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
+		WalletDir:      walletDir,
+		WalletPassword: walletPassword,
+		Mnemonic:       mnemonic,
+		NumAccounts:    numAccounts,
 	}); err != nil {
 		return err
 	}
@@ -91,34 +76,51 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 }
 
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
-func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) error {
+func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*Wallet, error) {
+	accountsPath := filepath.Join(cfg.WalletDir, v2keymanager.Derived.String())
+	wallet := &Wallet{
+		accountsPath:   accountsPath,
+		keymanagerKind: v2keymanager.Derived,
+		walletDir:      cfg.WalletDir,
+		walletPassword: cfg.WalletPassword,
+	}
+	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal keymanager config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return nil, errors.Wrap(err, "could not save wallet to disk")
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return nil, errors.Wrap(err, "could not write keymanager config to disk")
+	}
 	km, err := derived.KeymanagerForPhrase(ctx, &derived.SetupConfig{
 		Opts:     derived.DefaultKeymanagerOpts(),
-		Wallet:   cfg.Wallet,
+		Wallet:   wallet,
 		Mnemonic: cfg.Mnemonic,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not make keymanager for given phrase")
+		return nil, errors.Wrap(err, "could not make keymanager for given phrase")
 	}
 	if err := km.WriteEncryptedSeedToWallet(ctx, cfg.Mnemonic); err != nil {
-		return err
+		return nil, err
 	}
 	if cfg.NumAccounts == 1 {
 		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
-			return errors.Wrap(err, "could not create account in wallet")
+			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
-		return nil
+		return nil, nil
 	}
 	for i := int64(0); i < cfg.NumAccounts; i++ {
 		if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
-			return errors.Wrap(err, "could not create account in wallet")
+			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
 	}
-	log.WithField("wallet-path", cfg.Wallet.AccountsDir()).Infof(
+	log.WithField("wallet-path", wallet.AccountsDir()).Infof(
 		"Successfully recovered HD wallet with %d accounts. Please use accounts-v2 list to view details for your accounts",
 		cfg.NumAccounts,
 	)
-	return nil
+	return wallet, nil
 }
 
 func inputMnemonic(cliCtx *cli.Context) (string, error) {

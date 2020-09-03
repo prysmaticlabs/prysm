@@ -5,12 +5,15 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 )
 
 var (
@@ -46,6 +49,12 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err := s.valDB.SaveHashedPasswordForAPI(ctx, hashedPassword); err != nil {
 		return nil, status.Error(codes.Internal, "Could not save hashed password to database")
 	}
+	if err := s.initializeWallet(ctx, &v2.WalletConfig{
+		WalletDir:      defaultWalletPath,
+		WalletPassword: req.Password,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "Could not initialize wallet")
+	}
 	return s.sendAuthResponse()
 }
 
@@ -59,6 +68,12 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 	// Compare the stored hashed password, with the hashed version of the password that was received.
 	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
 		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+	}
+	if err := s.initializeWallet(ctx, &v2.WalletConfig{
+		WalletDir:      defaultWalletPath,
+		WalletPassword: req.Password,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "Could not initialize wallet")
 	}
 	return s.sendAuthResponse()
 }
@@ -90,4 +105,27 @@ func (s *Server) createTokenString() (string, uint64, error) {
 		return "", 0, err
 	}
 	return tokenString, uint64(expirationTime.Unix()), nil
+}
+
+// Initialize a wallet and send it over a global feed.
+func (s *Server) initializeWallet(ctx context.Context, cfg *v2.WalletConfig) error {
+	// We first ensure the user has a wallet.
+	if err := v2.WalletExists(cfg.WalletDir); err != nil {
+		if errors.Is(err, v2.ErrNoWalletFound) {
+			return v2.ErrNoWalletFound
+		}
+		return errors.Wrap(err, "could not check if wallet exists")
+	}
+	// We fire an event with the opened wallet over
+	// a global feed signifying wallet initialization.
+	wallet, err := v2.OpenWallet(ctx, &v2.WalletConfig{
+		WalletDir:      cfg.WalletDir,
+		WalletPassword: cfg.WalletPassword,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not open wallet")
+	}
+	s.walletInitialized = true
+	s.walletInitializedFeed.Send(wallet)
+	return nil
 }
