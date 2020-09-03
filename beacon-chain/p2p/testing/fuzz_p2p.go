@@ -22,7 +22,7 @@ import (
 type FakeP2P struct {
 }
 
-// Create a new fake p2p stack.
+// NewFuzzTestP2P - Create a new fake p2p stack.
 func NewFuzzTestP2P() *FakeP2P {
 	return &FakeP2P{}
 }
