@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	fssz "github.com/ferranbt/fastssz"
+	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -36,6 +37,12 @@ import (
 )
 
 var log = logrus.WithField("prefix", "validator")
+
+// SyncChecker is able to determine if a beacon node is currently
+// going through chain synchronization.
+type SyncChecker interface {
+	Syncing(ctx context.Context) (bool, error)
+}
 
 // ValidatorService represents a service to manage the validator client
 // routine.
@@ -334,6 +341,41 @@ func ConstructDialOptions(
 	return dialOpts
 }
 
+// Syncing returns whether or not the beacon node is currently synchronizing the chain.
+func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
+	nc := ethpb.NewNodeClient(v.conn)
+	resp, err := nc.GetSyncStatus(ctx, &ptypes.Empty{})
+	if err != nil {
+		return false, err
+	}
+	return resp.Syncing, nil
+}
+
+// BeaconNodeEndpoint as a string.
+func (v *ValidatorService) BeaconNodeEndpoint() string {
+	return v.endpoint
+}
+
+// ValidatorBalances returns the validator balances mapping keyed by public keys.
+func (v *ValidatorService) ValidatorBalances(ctx context.Context) map[[48]byte]uint64 {
+	return v.validator.BalancesByPubkeys(ctx)
+}
+
+// ValidatorIndicesToPubkeys returns the validator indices mapping keyed by public keys.
+func (v *ValidatorService) ValidatorIndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
+	return v.validator.IndicesToPubkeys(ctx)
+}
+
+// ValidatorPubkeysToIndices returns the validator public keys mapping keyed by indices.
+func (v *ValidatorService) ValidatorPubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
+	return v.validator.PubkeysToIndices(ctx)
+}
+
+// ValidatorPubkeysToStatuses returns the validator statuses mapping keyed by public keys.
+func (v *ValidatorService) ValidatorPubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+	return v.validator.PubkeysToStatuses(ctx)
+}
+
 // Reloads the validating keys upon receiving an event over a feed subscription
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
@@ -356,24 +398,4 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.I
 			return
 		}
 	}
-}
-
-// ValidatorBalances returns the validator balances mapping keyed by public keys.
-func (v *ValidatorService) ValidatorBalances(ctx context.Context) map[[48]byte]uint64 {
-	return v.validator.BalancesByPubkeys(ctx)
-}
-
-// ValidatorIndicesToPubkeys returns the validator indices mapping keyed by public keys.
-func (v *ValidatorService) ValidatorIndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
-	return v.validator.IndicesToPubkeys(ctx)
-}
-
-// ValidatorPubkeysToIndices returns the validator public keys mapping keyed by indices.
-func (v *ValidatorService) ValidatorPubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
-	return v.validator.PubkeysToIndices(ctx)
-}
-
-// ValidatorPubkeysToStatuses returns the validator statuses mapping keyed by public keys.
-func (v *ValidatorService) ValidatorPubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
-	return v.validator.PubkeysToStatuses(ctx)
 }

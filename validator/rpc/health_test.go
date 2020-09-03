@@ -4,12 +4,33 @@ import (
 	"context"
 	"testing"
 
+	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/client"
 )
+
+func TestServer_GetBeaconNodeConnection(t *testing.T) {
+	ctx := context.Background()
+	fv := setupFakeClient()
+	endpoint := "localhost:90210"
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Validator: fv,
+		Endpoint:  endpoint,
+	})
+	require.NoError(t, err)
+	s := &Server{validatorService: vs, walletInitialized: true}
+	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+
+	want := &pb.NodeConnectionResponse{
+		BeaconNodeEndpoint: endpoint,
+		Connected:          false,
+	}
+	require.DeepEqual(t, want, got)
+}
 
 func TestServer_ListBalancesHappy(t *testing.T) {
 	ctx := context.Background()
