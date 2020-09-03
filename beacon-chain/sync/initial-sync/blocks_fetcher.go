@@ -365,6 +365,10 @@ func (f *blocksFetcher) requestBlocks(
 		if err == io.EOF {
 			break
 		}
+		// The response MUST contain no more than `count` blocks.
+		if i+1 > req.Count {
+			return nil, errInvalidFetchedData
+		}
 		// Exit if more than max request blocks are returned.
 		if i >= params.BeaconNetworkConfig().MaxRequestBlocks {
 			break
@@ -378,11 +382,5 @@ func (f *blocksFetcher) requestBlocks(
 		}
 		blocks = append(blocks, blk)
 	}
-
-	// The response MUST contain no more than `count` blocks.
-	if uint64(len(blocks)) > req.Count {
-		return nil, errInvalidFetchedData
-	}
-
 	return blocks, nil
 }
