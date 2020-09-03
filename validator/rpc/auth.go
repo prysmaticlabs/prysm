@@ -2,19 +2,18 @@ package rpc
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var (
@@ -51,7 +50,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 		return nil, status.Error(codes.Internal, "Could not save hashed password to database")
 	}
 	if err := s.initializeWallet(ctx, &v2.WalletConfig{
-		WalletDir:      filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName),
+		WalletDir:      defaultWalletPath,
 		WalletPassword: req.Password,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, "Could not initialize wallet")
@@ -71,7 +70,7 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
 	}
 	if err := s.initializeWallet(ctx, &v2.WalletConfig{
-		WalletDir:      filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName),
+		WalletDir:      defaultWalletPath,
 		WalletPassword: req.Password,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, "Could not initialize wallet")

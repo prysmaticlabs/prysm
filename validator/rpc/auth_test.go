@@ -54,12 +54,13 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	valDB := dbtest.SetupDB(t, [][48]byte{})
 	ctx := context.Background()
 
-	walletDir := setupWalletDir(t)
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	_, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &v2.WalletConfig{
-			WalletDir:      walletDir,
+			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,
 		},
