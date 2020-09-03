@@ -1163,7 +1163,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			name: "no error",
 			req: &p2ppb.BeaconBlocksByRangeRequest{
 				StartSlot: 100,
-				Step:      1,
+				Step:      4,
 				Count:     64,
 			},
 			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
@@ -1311,6 +1311,53 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
+		},
+		{
+			name: "valid step increment",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      5,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 100
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 105
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 2, len(blocks))
+			},
+		},
+		{
+			name: "invalid step increment",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      5,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 100
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 103
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+			wantedErr: errInvalidFetchedData.Error(),
 		},
 	}
 

@@ -379,7 +379,8 @@ func (f *blocksFetcher) requestBlocks(
 			return nil, errInvalidFetchedData
 		}
 		// Returned blocks, where they exist, MUST be sent in a consecutive order.
-		if !isFirstChunk && prevSlot >= blk.Block.Slot {
+		// Consecutive blocks MUST have values in `step` increments (slots may be skipped in between).
+		if !isFirstChunk && (prevSlot >= blk.Block.Slot || (blk.Block.Slot-prevSlot)%req.Step != 0) {
 			return nil, errInvalidFetchedData
 		}
 		prevSlot = blk.Block.Slot
