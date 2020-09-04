@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	remotehttp "github.com/bloxapp/key-vault/keymanager"
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -44,9 +45,10 @@ var (
 		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
 	)
 	keymanagerKindSelections = map[v2keymanager.Kind]string{
-		v2keymanager.Derived: "HD Wallet (Recommended)",
-		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
-		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
+		v2keymanager.Derived:    "HD Wallet (Recommended)",
+		v2keymanager.Direct:     "Non-HD Wallet (Most Basic)",
+		v2keymanager.Remote:     "Remote Signing Wallet (Advanced)",
+		v2keymanager.RemoteHTTP: "Remote HTTP Signing Wallet (Advanced)",
 	}
 	validateExistingPass = func(input string) error {
 		if input == "" {
@@ -218,6 +220,26 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
+	case v2keymanager.RemoteHTTP:
+		// This uses the custom implementation of the keymanager by Blox team.
+		// Basically, this is the keymanager that communicates with Key Vault service through HTTP requests.
+		// Key Vault uses Vault by Hashicorp with custom endpoints to sign data.
+		// The docs how to setup your own Key Vault could be found there https://github.com/bloxapp/key-vault/tree/stage
+		// To use this keymanager, the following points should be done:
+		// 	- Launch Key Vault server. Make sure that it's available.
+		// 	- Get access root token (described in repo specs).
+		// 	- Setup storage. This is basically an account with public key. There is key manager cli that helps to
+		//	  create a storage https://github.com/bloxapp/eth-key-manager/tree/master/cli.
+		// 	- Provide Key Vault server location, root access token, and the public key used when was setting up storage.
+		cfg, err := remotehttp.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
+		}
+		keymanagerv1, err := remotehttp.NewKeyManager(log, cfg)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize remote HTTP keymanager")
+		}
+		keymanager = remotehttp.NewKeyManagerV2(keymanagerv1)
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)
 	}
