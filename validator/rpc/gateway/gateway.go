@@ -60,6 +60,7 @@ func (g *Gateway) Start() {
 		pb.RegisterAuthHandlerFromEndpoint,
 		pb.RegisterWalletHandlerFromEndpoint,
 		pb.RegisterHealthHandlerFromEndpoint,
+		pb.RegisterAccountsHandlerFromEndpoint,
 	}
 	for _, h := range handlers {
 		if err := h(ctx, gwmux, g.remoteAddr, opts); err != nil {

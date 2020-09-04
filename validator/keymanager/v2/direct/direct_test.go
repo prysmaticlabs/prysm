@@ -10,6 +10,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
@@ -30,7 +31,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 		accountsStore: &AccountStore{},
 	}
 	ctx := context.Background()
-	accountName, err := dr.CreateAccount(ctx)
+	createdPubKey, err := dr.CreateAccount(ctx)
 	require.NoError(t, err)
 
 	// Ensure the keystore file was written to the wallet
@@ -58,7 +59,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 	pubKey := privKey.PublicKey().Marshal()
 	assert.DeepEqual(t, pubKey, store.PublicKeys[0])
-	require.LogsContain(t, hook, accountName)
+	require.LogsContain(t, hook, petnames.DeterministicName(createdPubKey, "-"))
 	require.LogsContain(t, hook, "Successfully created new validator account")
 }
 

@@ -13,8 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -38,7 +40,6 @@ type Config struct {
 	ValidatorService      *client.ValidatorService
 	SyncChecker           client.SyncChecker
 	WalletInitializedFeed *event.Feed
-	WalletDir             string
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -49,6 +50,7 @@ type Server struct {
 	host                  string
 	port                  string
 	listener              net.Listener
+	keymanager            v2keymanager.IKeymanager
 	withCert              string
 	withKey               string
 	credentialError       error
@@ -56,7 +58,7 @@ type Server struct {
 	jwtKey                []byte
 	validatorService      *client.ValidatorService
 	syncChecker           client.SyncChecker
-	walletDir             string
+	wallet                *accountsv2.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
 }
@@ -74,7 +76,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		valDB:                 cfg.ValDB,
 		validatorService:      cfg.ValidatorService,
 		syncChecker:           cfg.SyncChecker,
-		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
 	}
@@ -136,6 +137,7 @@ func (s *Server) Start() {
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
 	pb.RegisterHealthServer(s.grpcServer, s)
+	pb.RegisterAccountsServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {

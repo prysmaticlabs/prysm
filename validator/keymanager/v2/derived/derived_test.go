@@ -71,9 +71,8 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	ctx := context.Background()
-	accountName, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
+	_, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
 	require.NoError(t, err)
-	assert.Equal(t, "0", accountName)
 
 	// Assert the new value for next account increased and also
 	// check the config file was updated on disk with this new value.
@@ -112,9 +111,8 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	numAccounts := 20
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		accountName, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
-		assert.Equal(t, fmt.Sprintf("%d", i), accountName)
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 		require.NoError(t, err)
@@ -152,9 +150,8 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	numAccounts := 2
 	ctx := context.Background()
 	for i := 0; i < numAccounts; i++ {
-		accountName, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
 		require.NoError(t, err)
-		assert.Equal(t, fmt.Sprintf("%d", i), accountName)
 	}
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
