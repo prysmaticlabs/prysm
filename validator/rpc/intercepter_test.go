@@ -25,7 +25,7 @@ func TestServer_JWTInterceptor_Verify(t *testing.T) {
 	token, _, err := s.createTokenString()
 	require.NoError(t, err)
 	ctxMD := map[string][]string{
-		"authorization": {token},
+		"authorization": {"Bearer " + token},
 	}
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)
@@ -52,7 +52,7 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 	token, _, err := badServer.createTokenString()
 	require.NoError(t, err)
 	ctxMD := map[string][]string{
-		"authorization": {token},
+		"authorization": {"Bearer " + token},
 	}
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)

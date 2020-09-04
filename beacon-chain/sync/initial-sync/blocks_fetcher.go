@@ -50,6 +50,7 @@ var (
 	errFetcherCtxIsDone      = errors.New("fetcher's context is done, reinitialize")
 	errSlotIsTooHigh         = errors.New("slot is higher than the finalized slot")
 	errBlockAlreadyProcessed = errors.New("block is already processed")
+	errInvalidFetchedData    = errors.New("invalid data returned from peer")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
@@ -357,22 +358,33 @@ func (f *blocksFetcher) requestBlocks(
 		}
 	}()
 
-	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
+	blocks := make([]*eth.SignedBeaconBlock, 0, req.Count)
+	var prevSlot uint64
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
 		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
 		if err == io.EOF {
 			break
 		}
-		// exit if more than max request blocks are returned
-		if i >= params.BeaconNetworkConfig().MaxRequestBlocks {
-			break
-		}
 		if err != nil {
 			return nil, err
 		}
-		resp = append(resp, blk)
+		// The response MUST contain no more than `count` blocks, and no more than
+		// MAX_REQUEST_BLOCKS blocks.
+		if i >= req.Count || i >= params.BeaconNetworkConfig().MaxRequestBlocks {
+			return nil, errInvalidFetchedData
+		}
+		// Returned blocks MUST be in the slot range [start_slot, start_slot + count * step).
+		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
+			return nil, errInvalidFetchedData
+		}
+		// Returned blocks, where they exist, MUST be sent in a consecutive order.
+		// Consecutive blocks MUST have values in `step` increments (slots may be skipped in between).
+		if !isFirstChunk && (prevSlot >= blk.Block.Slot || (blk.Block.Slot-prevSlot)%req.Step != 0) {
+			return nil, errInvalidFetchedData
+		}
+		prevSlot = blk.Block.Slot
+		blocks = append(blocks, blk)
 	}
-
-	return resp, nil
+	return blocks, nil
 }

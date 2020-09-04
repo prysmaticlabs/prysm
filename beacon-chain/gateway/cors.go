@@ -11,7 +11,7 @@ func newCorsHandler(srv http.Handler, allowedOrigins []string) http.Handler {
 		return srv
 	}
 	c := cors.New(cors.Options{
-		AllowedOrigins: allowedOrigins,
+		AllowedOrigins: append(allowedOrigins, "http://localhost:4200"),
 		AllowedMethods: []string{http.MethodPost, http.MethodGet},
 		MaxAge:         600,
 		AllowedHeaders: []string{"*"},
