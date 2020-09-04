@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 const (
