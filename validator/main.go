@@ -49,6 +49,7 @@ func startNode(ctx *cli.Context) error {
 
 var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
+	flags.BeaconRPCGatewayProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,

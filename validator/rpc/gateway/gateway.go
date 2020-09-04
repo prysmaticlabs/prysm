@@ -109,7 +109,7 @@ func (g *Gateway) Stop() error {
 
 func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 	c := cors.New(cors.Options{
-		AllowedOrigins:   g.allowedOrigins,
+		AllowedOrigins:   append(g.allowedOrigins, "http://localhost:4200"),
 		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodOptions},
 		AllowCredentials: true,
 		MaxAge:           600,

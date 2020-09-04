@@ -33,6 +33,12 @@ var (
 		Usage: "Beacon node RPC provider endpoint",
 		Value: "127.0.0.1:4000",
 	}
+	// BeaconRPCGatewayProviderFlag defines a beacon node JSON-RPC endpoint.
+	BeaconRPCGatewayProviderFlag = &cli.StringFlag{
+		Name:  "beacon-rpc-gateway-provider",
+		Usage: "Beacon node RPC gateway provider endpoint",
+		Value: "127.0.0.1:3500",
+	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = &cli.StringFlag{
 		Name:  "tls-cert",
