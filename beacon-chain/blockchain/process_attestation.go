@@ -74,7 +74,8 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		if err != nil {
 			return nil, err
 		}
-		if err := s.verifyAttTargetEpoch(ctx, uint64(s.GenesisTime().Unix()), uint64(roughtime.Now().Unix()), tgt); err != nil {
+
+		if err := s.verifyAttTargetEpoch(ctx, uint64(s.genesisTime.Unix()), uint64(roughtime.Now().Unix()), tgt); err != nil {
 			return nil, err
 		}
 		if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
@@ -83,7 +84,8 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		if err := s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot); err != nil {
 			return nil, errors.Wrap(err, "could not verify attestation beacon block")
 		}
-		if err := helpers.VerifySlotTime(uint64(s.GenesisTime().Unix()), a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+
+		if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			return nil, err
 		}
 		committee, err := helpers.BeaconCommittee(c.ActiveIndices, bytesutil.ToBytes32(c.Seed), a.Data.Slot, a.Data.CommitteeIndex)
@@ -124,6 +126,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	genesisTime := baseState.GenesisTime()
+
 	// Verify attestation target is from current epoch or previous epoch.
 	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(roughtime.Now().Unix()), tgt); err != nil {
 		return nil, err

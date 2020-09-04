@@ -694,6 +694,7 @@ func (b *BeaconNode) registerInteropServices() error {
 			DepositCache:  b.depositCache,
 			GenesisPath:   genesisStatePath,
 		})
+
 		return b.services.RegisterService(svc)
 	}
 	return nil
