@@ -35,7 +35,7 @@ func CreateAccount(cliCtx *cli.Context) error {
 	}
 	log.Info("Creating a new account...")
 	switch wallet.KeymanagerKind() {
-	case v2keymanager.Remote:
+	case v2keymanager.Remote, v2keymanager.RemoteHTTP:
 		return errors.New("cannot create a new account for a remote keymanager")
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
@@ -81,6 +81,7 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 			keymanagerKindSelections[v2keymanager.Derived],
 			keymanagerKindSelections[v2keymanager.Direct],
 			keymanagerKindSelections[v2keymanager.Remote],
+			keymanagerKindSelections[v2keymanager.RemoteHTTP],
 		},
 	}
 	selection, _, err := promptSelect.Run()

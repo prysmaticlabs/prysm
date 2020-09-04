@@ -3,6 +3,7 @@
 package flags
 
 import (
+	"github.com/micro/cli"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -234,6 +235,12 @@ var (
 		Usage: "Host:port of a gRPC server for a remote keymanager",
 		Value: "",
 	}
+	// HttpRemoteAddressFlag defines the schema://host:port address for a remote HTTP keymanager to connect to.
+	HttpRemoteAddressFlag = &cli.StringFlag{
+		Name:  "http-remote-address",
+		Usage: "Schema://host:port of a HTTP server for a remote keymanager",
+		Value: "",
+	}
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
 	// a secure signer via TLS and gRPC.
 	RemoteSignerCertPathFlag = &cli.StringFlag{
@@ -253,6 +260,18 @@ var (
 	RemoteSignerCACertPathFlag = &cli.StringFlag{
 		Name:  "remote-signer-ca-crt-path",
 		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
+		Value: "",
+	}
+	// RemoteSignerAuthTokenFlag defines the auth token for a wallet to connect to a signer HTTP.
+	RemoteSignerAuthTokenFlag = &cli.StringFlag{
+		Name:  "remote-signer-auth-token",
+		Usage: "Auth token for authenticating to a remote signer server",
+		Value: "",
+	}
+	// RemoteSignerPubKeyFlag defines the public key of a wallet.
+	RemoteSignerPubKeyFlag = &cli.StringFlag{
+		Name:  "remote-signer-public-key",
+		Usage: "Public key defined in a remote signer server",
 		Value: "",
 	}
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.

@@ -2,7 +2,9 @@ package v2
 
 import (
 	"context"
+	"encoding/json"
 
+	remotehttp "github.com/bloxapp/key-vault/keymanager"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -50,6 +52,13 @@ func CreateWallet(cliCtx *cli.Context) (*Wallet, error) {
 		}
 		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
+		)
+	case v2keymanager.RemoteHTTP:
+		if err = createRemoteHTTPKeymanagerWallet(cliCtx, w); err != nil {
+			return nil, errors.Wrap(err, "could not initialize wallet with remote HTTP keymanager")
+		}
+		log.WithField("--wallet-dir", w.walletDir).Info(
+			"Successfully created wallet with remote HTTP keymanager configuration",
 		)
 	default:
 		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
@@ -109,6 +118,25 @@ func createRemoteKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return errors.Wrap(err, "could not write keymanager config to disk")
+	}
+	return nil
+}
+
+func createRemoteHTTPKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
+	conf, err := inputRemoteHTTPKeymanagerConfig(cliCtx)
+	if err != nil {
+		return errors.Wrap(err, "could not input remote HTTP keymanager config")
+	}
+
+	keymanagerConfig, err := json.Marshal(conf)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(context.Background(), keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
 	return nil
