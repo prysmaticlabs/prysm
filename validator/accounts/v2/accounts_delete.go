@@ -84,7 +84,7 @@ func DeleteAccount(cliCtx *cli.Context) error {
 		}
 	}
 	switch wallet.KeymanagerKind() {
-	case v2keymanager.Remote:
+	case v2keymanager.Remote, v2keymanager.RemoteHTTP:
 		return errors.New("cannot delete accounts for a remote keymanager")
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)

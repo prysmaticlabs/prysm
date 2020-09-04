@@ -44,7 +44,7 @@ func BackupAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
-	if wallet.KeymanagerKind() == v2keymanager.Remote {
+	if wallet.KeymanagerKind() == v2keymanager.Remote || wallet.KeymanagerKind() == v2keymanager.RemoteHTTP {
 		return errors.New(
 			"remote wallets cannot backup accounts",
 		)
@@ -110,7 +110,7 @@ func BackupAccounts(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not backup accounts for derived keymanager")
 		}
 		return nil
-	case v2keymanager.Remote:
+	case v2keymanager.Remote, v2keymanager.RemoteHTTP:
 		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
 		return errors.New("keymanager kind not supported")
