@@ -49,7 +49,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
 	s.lastProcessedSlot = s.chain.HeadSlot()
-	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
+	highestFinalizedSlot, err := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
+	if err != nil {
+		return err
+	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		headFetcher:         s.chain,

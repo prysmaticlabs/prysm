@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -51,27 +50,30 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		// Flags required for DeleteAccounts to work.
 		deletePublicKeys: deletePublicKeys,
 	})
-	wallet, err := NewWallet(cliCtx, v2keymanager.Direct)
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: password,
+		},
+	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveWallet())
-	ctx := context.Background()
-	encodedCfg, err := direct.MarshalConfigFile(ctx, direct.DefaultConfig())
-	require.NoError(t, err)
-	require.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
 
 	// We attempt to import accounts.
-	require.NoError(t, ImportAccounts(cliCtx))
+	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	// We attempt to delete the accounts specified.
-	require.NoError(t, DeleteAccount(cliCtx))
+	require.NoError(t, DeleteAccountCli(cliCtx))
 
 	keymanager, err := direct.NewKeymanager(
-		cliCtx,
-		wallet,
-		direct.DefaultConfig(),
+		cliCtx.Context,
+		&direct.SetupConfig{
+			Wallet: wallet,
+			Opts:   direct.DefaultKeymanagerOpts(),
+		},
 	)
 	require.NoError(t, err)
-	remainingAccounts, err := keymanager.FetchValidatingPublicKeys(ctx)
+	remainingAccounts, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, len(remainingAccounts), 1)
 	remainingPublicKey, err := hex.DecodeString(k3.Pubkey)

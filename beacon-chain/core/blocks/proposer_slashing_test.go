@@ -39,13 +39,14 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	}
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
 	}
 	want := "mismatched header slots"
-	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
+	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -71,13 +72,14 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	}
 
 	require.NoError(t, beaconState.SetSlot(currentSlot))
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
 	}
 	want := "expected slashing headers to differ"
-	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
+	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -115,7 +117,8 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		Slot:       currentSlot,
 	})
 	require.NoError(t, err)
-	block := &ethpb.BeaconBlock{
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
@@ -124,7 +127,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		"validator with key %#x is not slashable",
 		bytesutil.ToBytes48(beaconState.Validators()[0].PublicKey),
 	)
-	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
+	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -169,7 +172,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.Body.ProposerSlashings = slashings
 
-	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body)
+	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block)
 	require.NoError(t, err)
 
 	newStateVals := newState.Validators()

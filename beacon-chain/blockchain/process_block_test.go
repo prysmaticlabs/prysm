@@ -19,7 +19,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -76,12 +75,12 @@ func TestStore_OnBlock(t *testing.T) {
 			name: "block is from the future",
 			blk: func() *ethpb.SignedBeaconBlock {
 				b := testutil.NewBeaconBlock()
-				b.Block.ParentRoot = randomParentRoot[:]
+				b.Block.ParentRoot = randomParentRoot2
 				b.Block.Slot = params.BeaconConfig().FarFutureEpoch
 				return b
 			}(),
 			s:             st.Copy(),
-			wantErrString: "far distant future",
+			wantErrString: "is in the far distant future",
 		},
 		{
 			name: "could not get finalized block",
@@ -136,6 +135,13 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.finalizedCheckpt = &ethpb.Checkpoint{
+		Root: gRoot[:],
+	}
+	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{})
+	service.saveInitSyncBlock(gRoot, genesis)
 
 	st, keys := testutil.DeterministicGenesisState(t, 64)
 
@@ -154,9 +160,12 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
+		service.saveInitSyncBlock(root, b)
 		blks = append(blks, b)
 		blkRoots = append(blkRoots, root)
 	}
+
+	blks[0].Block.ParentRoot = gRoot[:]
 	require.NoError(t, db.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.stateGen.SaveState(ctx, blkRoots[0], firstState))
 	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
@@ -227,9 +236,6 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
-
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
 
@@ -242,19 +248,27 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 
 	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	require.NoError(t, err)
-	r := [32]byte{'A'}
+
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.finalizedCheckpt = &ethpb.Checkpoint{
+		Root: gRoot[:],
+	}
+	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{})
+	service.saveInitSyncBlock(gRoot, genesis)
+
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	b.Block.ParentRoot = r[:]
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r[:]}))
-	require.NoError(t, service.stateGen.SaveState(ctx, r, s))
+	b.Block.ParentRoot = gRoot[:]
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: gRoot[:]}))
+	require.NoError(t, service.stateGen.SaveState(ctx, gRoot, s))
 	require.NoError(t, service.verifyBlkPreState(ctx, b.Block))
 }
 
 func TestCachedPreState_CanGetFromDB(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
-
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
 
@@ -265,20 +279,29 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	r := [32]byte{'A'}
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.finalizedCheckpt = &ethpb.Checkpoint{
+		Root: gRoot[:],
+	}
+	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{})
+	service.saveInitSyncBlock(gRoot, genesis)
+
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	b.Block.ParentRoot = r[:]
-
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 	err = service.verifyBlkPreState(ctx, b.Block)
 	wanted := "could not reconstruct parent state"
 	assert.ErrorContains(t, wanted, err)
 
+	b.Block.ParentRoot = gRoot[:]
 	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r[:]}))
-	require.NoError(t, service.stateGen.SaveState(ctx, r, s))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: gRoot[:]}))
+	require.NoError(t, service.stateGen.SaveState(ctx, gRoot, s))
 	require.NoError(t, service.verifyBlkPreState(ctx, b.Block))
 }
 

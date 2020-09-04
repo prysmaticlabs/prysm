@@ -16,7 +16,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,8 +27,6 @@ import (
 func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	numValidators := 128
 	ctx := context.Background()
@@ -109,7 +106,8 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	startSlot := helpers.StartSlot(1)
+	startSlot, err := helpers.StartSlot(1)
+	require.NoError(t, err)
 	wanted, err := computeCommittees(startSlot, activeIndices, attesterSeed)
 	require.NoError(t, err)
 
@@ -140,8 +138,6 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 }
 
 func TestRetrieveCommitteesForRoot(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 
 	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()

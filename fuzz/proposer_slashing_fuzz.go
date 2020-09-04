@@ -27,7 +27,12 @@ func BeaconFuzzProposerSlashing(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessProposerSlashings(context.Background(), st, &ethpb.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{input.ProposerSlashing}})
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Body: &ethpb.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{input.ProposerSlashing}},
+		},
+	}
+	post, err := blocks.ProcessProposerSlashings(context.Background(), st, block)
 	if err != nil {
 		return fail(err)
 	}

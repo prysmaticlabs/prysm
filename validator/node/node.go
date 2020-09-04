@@ -15,9 +15,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -42,12 +42,13 @@ var log = logrus.WithField("prefix", "node")
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
-	cliCtx   *cli.Context
-	db       *kv.Store
-	services *shared.ServiceRegistry // Lifecycle and service store.
-	lock     sync.RWMutex
-	wallet   *accountsv2.Wallet
-	stop     chan struct{} // Channel to wait for termination notifications.
+	cliCtx            *cli.Context
+	db                *kv.Store
+	services          *shared.ServiceRegistry // Lifecycle and service store.
+	lock              sync.RWMutex
+	wallet            *accountsv2.Wallet
+	walletInitialized *event.Feed
+	stop              chan struct{} // Channel to wait for termination notifications.
 }
 
 // NewValidatorClient creates a new, Prysm validator client.
@@ -71,9 +72,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
-		cliCtx:   cliCtx,
-		services: registry,
-		stop:     make(chan struct{}),
+		cliCtx:            cliCtx,
+		services:          registry,
+		walletInitialized: new(event.Feed),
+		stop:              make(chan struct{}),
 	}
 
 	featureconfig.ConfigureValidator(cliCtx)
@@ -84,100 +86,18 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	var keyManagerV1 v1.KeyManager
-	var keyManagerV2 v2.IKeymanager
-	if featureconfig.Get().EnableAccountsV2 {
-		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
-			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
-			offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx, offset, numValidatorKeys)
-			if err != nil {
-				log.Fatalf("Could not generate interop keys: %v", err)
-			}
-		} else {
-			// Read the wallet from the specified path.
-			wallet, err := accountsv2.OpenWallet(cliCtx)
-			if err != nil {
-				log.Fatalf("Could not open wallet: %v", err)
-			}
-			ValidatorClient.wallet = wallet
-			ctx := context.Background()
-			keyManagerV2, err = wallet.InitializeKeymanager(
-				cliCtx, false, /* skipMnemonicConfirm */
-			)
-			if err != nil {
-				log.Fatalf("Could not read existing keymanager for wallet: %v", err)
-			}
-			if err := wallet.LockConfigFile(ctx); err != nil {
-				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
-			}
-		}
-	} else {
-		keyManagerV1, err = selectV1Keymanager(cliCtx)
-		if err != nil {
+	// If the --web flag is enabled to administer the validator
+	// client via a web portal, we start the validator client in a different way.
+	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
+		log.Info("Enabling web portal to manage the validator client")
+		if err := ValidatorClient.initializeForWeb(cliCtx); err != nil {
 			return nil, err
 		}
+		return ValidatorClient, nil
 	}
-
-	pubKeys, err := ExtractPublicKeysFromKeymanager(cliCtx, keyManagerV1, keyManagerV2)
-	if err != nil {
+	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
-	if len(pubKeys) == 0 {
-		log.Error("No keys found. Please verify `--keystore-path` is the correct path")
-	} else {
-		log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
-		for _, key := range pubKeys {
-			log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:]))).Info("Validating for public key")
-		}
-	}
-
-	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	if clearFlag || forceClearFlag {
-		if dataDir == "" {
-			dataDir = cmd.DefaultDataDir()
-			if dataDir == "" {
-				log.Fatal(
-					"Could not determine your system's HOME path, please specify a --datadir you wish " +
-						"to use for your validator data",
-				)
-			}
-
-		}
-		if err := clearDB(dataDir, pubKeys, forceClearFlag); err != nil {
-			return nil, err
-		}
-	}
-	log.WithField("databasePath", dataDir).Info("Checking DB")
-
-	valDB, err := kv.NewKVStore(dataDir, pubKeys)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize db")
-	}
-	ValidatorClient.db = valDB
-
-	if err := ValidatorClient.registerPrometheusService(); err != nil {
-		return nil, err
-	}
-	if featureconfig.Get().SlasherProtection {
-		if err := ValidatorClient.registerSlasherClientService(); err != nil {
-			return nil, err
-		}
-	}
-	if err := ValidatorClient.registerClientService(keyManagerV1, keyManagerV2, pubKeys); err != nil {
-		return nil, err
-	}
-
-	if err := ValidatorClient.registerRPCService(cliCtx); err != nil {
-		return nil, err
-	}
-
-	if err := ValidatorClient.registerRPCGatewayService(cliCtx); err != nil {
-		return nil, err
-	}
-
 	return ValidatorClient, nil
 }
 
@@ -230,6 +150,134 @@ func (s *ValidatorClient) Close() {
 	close(s.stop)
 }
 
+func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
+	var keyManagerV1 v1.KeyManager
+	var keyManagerV2 v2.IKeymanager
+	var err error
+	if featureconfig.Get().EnableAccountsV2 {
+		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
+			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
+			offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
+			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
+			if err != nil {
+				return errors.Wrap(err, "could not generate interop keys")
+			}
+		} else {
+			// Read the wallet from the specified path.
+			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
+				return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
+			})
+			if err != nil {
+				return errors.Wrap(err, "could not open wallet")
+			}
+			s.wallet = wallet
+			keyManagerV2, err = wallet.InitializeKeymanager(
+				cliCtx.Context, false, /* skipMnemonicConfirm */
+			)
+			if err != nil {
+				return errors.Wrap(err, "could not read keymanager for wallet")
+			}
+			if err := wallet.LockWalletConfigFile(cliCtx.Context); err != nil {
+				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
+			}
+		}
+	} else {
+		keyManagerV1, err = selectV1Keymanager(cliCtx)
+		if err != nil {
+			return err
+		}
+	}
+
+	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	if clearFlag || forceClearFlag {
+		if dataDir == "" {
+			dataDir = cmd.DefaultDataDir()
+			if dataDir == "" {
+				log.Fatal(
+					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+						"to use for your validator data",
+				)
+			}
+
+		}
+		if err := clearDB(dataDir, forceClearFlag); err != nil {
+			return err
+		}
+	}
+	log.WithField("databasePath", dataDir).Info("Checking DB")
+
+	valDB, err := kv.NewKVStore(dataDir, nil)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize db")
+	}
+	s.db = valDB
+	if err := s.registerPrometheusService(); err != nil {
+		return err
+	}
+	if featureconfig.Get().SlasherProtection {
+		if err := s.registerSlasherClientService(); err != nil {
+			return err
+		}
+	}
+	if err := s.registerClientService(keyManagerV1, keyManagerV2); err != nil {
+		return err
+	}
+	if err := s.registerRPCService(cliCtx); err != nil {
+		return err
+	}
+	if err := s.registerRPCGatewayService(cliCtx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
+	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	if clearFlag || forceClearFlag {
+		if dataDir == "" {
+			dataDir = cmd.DefaultDataDir()
+			if dataDir == "" {
+				log.Fatal(
+					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+						"to use for your validator data",
+				)
+			}
+
+		}
+		if err := clearDB(dataDir, forceClearFlag); err != nil {
+			return err
+		}
+	}
+	log.WithField("databasePath", dataDir).Info("Checking DB")
+	valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
+	if err != nil {
+		return errors.Wrap(err, "could not initialize db")
+	}
+	s.db = valDB
+	if err := s.registerPrometheusService(); err != nil {
+		return err
+	}
+	if featureconfig.Get().SlasherProtection {
+		if err := s.registerSlasherClientService(); err != nil {
+			return err
+		}
+	}
+	if err := s.registerClientService(nil, nil); err != nil {
+		return err
+	}
+	if err := s.registerRPCService(cliCtx); err != nil {
+		return err
+	}
+	if err := s.registerRPCGatewayService(cliCtx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *ValidatorClient) registerPrometheusService() error {
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
@@ -242,7 +290,6 @@ func (s *ValidatorClient) registerPrometheusService() error {
 func (s *ValidatorClient) registerClientService(
 	keyManager v1.KeyManager,
 	keyManagerV2 v2.IKeymanager,
-	validatingPubKeys [][48]byte,
 ) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
@@ -267,13 +314,14 @@ func (s *ValidatorClient) registerClientService(
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
 		GraffitiFlag:               graffiti,
-		ValidatingPubKeys:          validatingPubKeys,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
 		ValDB:                      s.db,
+		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
+		WalletInitializedFeed:      s.walletInitialized,
 	})
 
 	if err != nil {
@@ -313,10 +361,12 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	server := rpc.NewServer(context.Background(), &rpc.Config{
-		ValDB:            s.db,
-		Host:             rpcHost,
-		Port:             fmt.Sprintf("%d", rpcPort),
-		ValidatorService: vs,
+		ValDB:                 s.db,
+		Host:                  rpcHost,
+		Port:                  fmt.Sprintf("%d", rpcPort),
+		WalletInitializedFeed: s.walletInitialized,
+		ValidatorService:      vs,
+		SyncChecker:           vs,
 	})
 	return s.services.RegisterService(server)
 }
@@ -406,7 +456,7 @@ func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
 	return km, nil
 }
 
-func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
+func clearDB(dataDir string, force bool) error {
 	var err error
 	clearDBConfirmed := force
 
@@ -421,7 +471,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(dataDir, pubkeys)
+		valDB, err := kv.NewKVStore(dataDir, nil)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}
@@ -433,18 +483,4 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	return nil
-}
-
-// ExtractPublicKeysFromKeymanager extracts only the public keys from the specified key manager.
-func ExtractPublicKeysFromKeymanager(cliCtx *cli.Context, keyManagerV1 v1.KeyManager, keyManagerV2 v2.IKeymanager) ([][48]byte, error) {
-	var pubKeys [][48]byte
-	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		pubKeys, err = keyManagerV2.FetchValidatingPublicKeys(context.Background())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to obtain public keys for validation")
-		}
-		return pubKeys, nil
-	}
-	return keyManagerV1.FetchValidatingKeys()
 }

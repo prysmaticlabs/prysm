@@ -590,8 +590,6 @@ func (b *BeaconNode) registerRPCService() error {
 	port := b.cliCtx.String(flags.RPCPort.Name)
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
-	slasherCert := b.cliCtx.String(flags.SlasherCertFlag.Name)
-	slasherProvider := b.cliCtx.String(flags.SlasherProviderFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	p2pService := b.fetchP2P()
@@ -623,8 +621,6 @@ func (b *BeaconNode) registerRPCService() error {
 		BlockNotifier:           b,
 		StateNotifier:           b,
 		OperationNotifier:       b,
-		SlasherCert:             slasherCert,
-		SlasherProvider:         slasherProvider,
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 	})

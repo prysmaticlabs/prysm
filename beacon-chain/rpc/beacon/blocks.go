@@ -298,17 +298,29 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		}
 	}
 
+	fSlot, err := helpers.StartSlot(finalizedCheckpoint.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	jSlot, err := helpers.StartSlot(justifiedCheckpoint.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	pjSlot, err := helpers.StartSlot(prevJustifiedCheckpoint.Epoch)
+	if err != nil {
+		return nil, err
+	}
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block.Slot,
 		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block.Slot),
 		HeadBlockRoot:              headBlockRoot[:],
-		FinalizedSlot:              helpers.StartSlot(finalizedCheckpoint.Epoch),
+		FinalizedSlot:              fSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		JustifiedSlot:              helpers.StartSlot(justifiedCheckpoint.Epoch),
+		JustifiedSlot:              jSlot,
 		JustifiedEpoch:             justifiedCheckpoint.Epoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      helpers.StartSlot(prevJustifiedCheckpoint.Epoch),
+		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
 	}, nil
