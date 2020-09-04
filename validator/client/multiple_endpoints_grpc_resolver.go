@@ -8,6 +8,9 @@ import (
 // Modification of a default grpc passthrough resolver (google.golang.org/grpc/resolver/passthrough) allowing to use multiple addresses
 // in grpc endpoint. Example:
 // conn, err := grpc.DialContext(ctx, "127.0.0.1:4000,127.0.0.1:4001", grpc.WithInsecure(), grpc.WithResolvers(&multipleEndpointsGrpcResolverBuilder{}))
+// It can be used with any grpc load balancer (pick_first, round_robin). Default is pick_first.
+// Round robin can be used by adding the following option:
+// grpc.WithDefaultServiceConfig("{\"loadBalancingConfig\":[{\"round_robin\":{}}]}")
 type multipleEndpointsGrpcResolverBuilder struct{}
 
 func (*multipleEndpointsGrpcResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
