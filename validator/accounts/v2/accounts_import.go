@@ -169,7 +169,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			return fmt.Errorf("could not read account password: %v", err)
 		}
 	}
-
+	fmt.Println("Importing accounts, this may take a while...")
 	if err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
 		Wallet:          wallet,
 		Keystores:       keystoresImported,

@@ -12,39 +12,46 @@ var _ = Validator(&FakeValidator{})
 
 // FakeValidator for mocking.
 type FakeValidator struct {
-	DoneCalled                       bool
-	WaitForActivationCalled          bool
-	WaitForChainStartCalled          bool
-	WaitForSyncCalled                bool
-	WaitForSyncedCalled              bool
-	SlasherReadyCalled               bool
-	NextSlotCalled                   bool
-	CanonicalHeadSlotCalled          bool
-	UpdateDutiesCalled               bool
-	UpdateProtectionsCalled          bool
-	RoleAtCalled                     bool
-	AttestToBlockHeadCalled          bool
-	ProposeBlockCalled               bool
-	LogValidatorGainsAndLossesCalled bool
-	SaveProtectionsCalled            bool
-	SlotDeadlineCalled               bool
-	ProposeBlockArg1                 uint64
-	AttestToBlockHeadArg1            uint64
-	RoleAtArg1                       uint64
-	UpdateDutiesArg1                 uint64
-	NextSlotRet                      <-chan uint64
-	PublicKey                        string
-	UpdateDutiesRet                  error
-	RolesAtRet                       []ValidatorRole
-	Balances                         map[[48]byte]uint64
-	IndexToPubkeyMap                 map[uint64][48]byte
-	PubkeyToIndexMap                 map[[48]byte]uint64
-	PubkeysToStatusesMap             map[[48]byte]ethpb.ValidatorStatus
+	DoneCalled                        bool
+	WaitForWalletInitializationCalled bool
+	WaitForActivationCalled           bool
+	WaitForChainStartCalled           bool
+	WaitForSyncCalled                 bool
+	WaitForSyncedCalled               bool
+	SlasherReadyCalled                bool
+	NextSlotCalled                    bool
+	CanonicalHeadSlotCalled           bool
+	UpdateDutiesCalled                bool
+	UpdateProtectionsCalled           bool
+	RoleAtCalled                      bool
+	AttestToBlockHeadCalled           bool
+	ProposeBlockCalled                bool
+	LogValidatorGainsAndLossesCalled  bool
+	SaveProtectionsCalled             bool
+	SlotDeadlineCalled                bool
+	ProposeBlockArg1                  uint64
+	AttestToBlockHeadArg1             uint64
+	RoleAtArg1                        uint64
+	UpdateDutiesArg1                  uint64
+	NextSlotRet                       <-chan uint64
+	PublicKey                         string
+	UpdateDutiesRet                   error
+	RolesAtRet                        []ValidatorRole
+	Balances                          map[[48]byte]uint64
+	IndexToPubkeyMap                  map[uint64][48]byte
+	PubkeyToIndexMap                  map[[48]byte]uint64
+	PubkeysToStatusesMap              map[[48]byte]ethpb.ValidatorStatus
 }
 
 // Done for mocking.
 func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
+}
+
+// WaitForWalletInitialization for mocking.
+func (fv *FakeValidator) WaitForWalletInitialization(_ context.Context) error {
+	fv.WaitForWalletInitializationCalled = true
+	return nil
 }
 
 // WaitForChainStart for mocking.
