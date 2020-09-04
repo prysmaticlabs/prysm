@@ -123,7 +123,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, err
 	}
 
-	genesisTime := helpers.GenesisTime(baseState)
+	genesisTime := baseState.GenesisTime()
 
 	// Verify attestation target is from current epoch or previous epoch.
 	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(roughtime.Now().Unix()), tgt); err != nil {
