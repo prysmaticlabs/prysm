@@ -43,7 +43,7 @@ func ProcessRandao(
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
-	beaconState, err = ProcessRandaoNoVerify(beaconState, body)
+	beaconState, err = ProcessRandaoNoVerify(ctx, beaconState, b)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process randao")
 	}
@@ -60,9 +60,15 @@ func ProcessRandao(
 //             hash(body.randao_reveal))
 //     )
 func ProcessRandaoNoVerify(
+	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
+	body := b.Block.Body
+
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
