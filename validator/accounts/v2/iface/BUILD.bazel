@@ -8,4 +8,5 @@ go_library(
         "//validator:__pkg__",
         "//validator:__subpackages__",
     ],
+    deps = ["//validator/keymanager/v2:go_default_library"],
 )
