@@ -2,12 +2,10 @@ package v2
 
 import (
 	"fmt"
-	"github.com/micro/cli"
 	"io/ioutil"
 	"os"
 	"strings"
 
-	remotehttp "github.com/bloxapp/key-vault/keymanager"
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -138,49 +136,6 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 			CACertPath:     caPath,
 		},
 		RemoteAddr: addr,
-	}
-	fmt.Printf("%s\n", newCfg)
-	return newCfg, nil
-}
-
-func inputRemoteHTTPKeymanagerConfig(cliCtx *cli.Context) (*remotehttp.Config, error) {
-	addr := cliCtx.String(flags.HttpRemoteAddressFlag.Name)
-	authToken := cliCtx.String(flags.RemoteSignerAuthTokenFlag.Name)
-	pubKey := cliCtx.String(flags.RemoteSignerPubKeyFlag.Name)
-	log.Info("Input desired configuration")
-	var err error
-	if addr == "" {
-		addr, err = promptutil.ValidatePrompt(
-			os.Stdin,
-			"Remote HTTP address (such as http://host.example.com:4000)",
-			promptutil.NotEmpty)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if authToken == "" {
-		authToken, err = promptutil.ValidatePrompt(
-			os.Stdin,
-			"Authentication token",
-			validateCertPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if pubKey == "" {
-		pubKey, err = promptutil.ValidatePrompt(
-			os.Stdin,
-			"Public key",
-			validateCertPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	newCfg := &remotehttp.Config{
-		Location:    addr,
-		AccessToken: authToken,
-		PubKey:      pubKey,
 	}
 	fmt.Printf("%s\n", newCfg)
 	return newCfg, nil

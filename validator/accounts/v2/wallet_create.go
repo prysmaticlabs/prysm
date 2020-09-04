@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
@@ -76,13 +75,6 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		}
 		log.WithField("--wallet-dir", w.walletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
-		)
-	case v2keymanager.RemoteHTTP:
-		if err = createRemoteHTTPKeymanagerWallet(cliCtx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with remote HTTP keymanager")
-		}
-		log.WithField("--wallet-dir", w.walletDir).Info(
-			"Successfully created wallet with remote HTTP keymanager configuration",
 		)
 	default:
 		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
@@ -178,25 +170,6 @@ func createRemoteKeymanagerWallet(ctx context.Context, wallet *Wallet, opts *rem
 	return nil
 }
 
-func createRemoteHTTPKeymanagerWallet(cliCtx *cli.Context, wallet *Wallet) error {
-	conf, err := inputRemoteHTTPKeymanagerConfig(cliCtx)
-	if err != nil {
-		return errors.Wrap(err, "could not input remote HTTP keymanager config")
-	}
-
-	keymanagerConfig, err := json.Marshal(conf)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal config file")
-	}
-	if err := wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet to disk")
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(context.Background(), keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
-	return nil
-}
-
 func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	if cliCtx.IsSet(flags.KeymanagerKindFlag.Name) {
 		return v2keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))
@@ -207,7 +180,6 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 			keymanagerKindSelections[v2keymanager.Derived],
 			keymanagerKindSelections[v2keymanager.Direct],
 			keymanagerKindSelections[v2keymanager.Remote],
-			keymanagerKindSelections[v2keymanager.RemoteHTTP],
 		},
 	}
 	selection, _, err := promptSelect.Run()
