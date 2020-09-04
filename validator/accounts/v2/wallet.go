@@ -199,10 +199,11 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = remotehttp.NewKeyManager(log, cfg)
+		keymanagerv1, err = remotehttp.NewKeyManager(log, cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote HTTP keymanager")
 		}
+		keymanager = remotehttp.NewKeyManagerV2(keymanagerv1)
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)
 	}

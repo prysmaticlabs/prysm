@@ -106,6 +106,7 @@ github.com/bloxapp/key-vault v0.0.0-20200903091951-b33b455f39ed h1:Gnt7TERf8lUr4
 github.com/bloxapp/key-vault v0.0.0-20200903091951-b33b455f39ed/go.mod h1:NTrzJLmRPwHlQHLPsIT077me1eMTQy2i4ZOER+/KRtE=
 github.com/bloxapp/key-vault v0.0.0-20200903092217-09ad7323dee3 h1:2MPrCaN1ZeWLxXsenjoIU+JF9ob0hzds4ofso8kQx9I=
 github.com/bloxapp/key-vault v0.0.0-20200903092217-09ad7323dee3/go.mod h1:NTrzJLmRPwHlQHLPsIT077me1eMTQy2i4ZOER+/KRtE=
+github.com/bloxapp/key-vault v0.1.0/go.mod h1:NTrzJLmRPwHlQHLPsIT077me1eMTQy2i4ZOER+/KRtE=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40/go.mod h1:8rLXio+WjiTceGBHIoTvn60HIbs7Hm7bcHjyrSqYB9c=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
 github.com/bradfitz/go-smtpd v0.0.0-20170404230938-deb6d6237625/go.mod h1:HYsPBTaaSFSlLx/70C2HPIMNZpVV8+vt/A+FMnYP11g=
