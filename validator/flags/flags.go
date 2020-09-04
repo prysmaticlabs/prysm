@@ -107,6 +107,13 @@ var (
 		Usage: "Enable gRPC gateway for JSON requests",
 		Value: 7500,
 	}
+	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
+	GPRCGatewayCorsDomain = &cli.StringFlag{
+		Name: "grpc-gateway-corsdomain",
+		Usage: "Comma separated list of domains from which to accept cross origin requests " +
+			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
+		Value: "http://localhost:4200",
+	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
 		Name:  "keymanager",

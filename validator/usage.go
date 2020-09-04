@@ -94,6 +94,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayHost,
 			flags.GrpcRetriesFlag,
 			flags.GrpcRetryDelayFlag,
+			flags.GPRCGatewayCorsDomain,
 			flags.GrpcHeadersFlag,
 			flags.SlasherRPCProviderFlag,
 			flags.SlasherCertFlag,

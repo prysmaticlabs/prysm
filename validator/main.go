@@ -68,6 +68,7 @@ var appFlags = []cli.Flag{
 	flags.GrpcRetriesFlag,
 	flags.GrpcRetryDelayFlag,
 	flags.GrpcHeadersFlag,
+	flags.GPRCGatewayCorsDomain,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
