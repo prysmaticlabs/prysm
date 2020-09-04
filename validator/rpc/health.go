@@ -16,7 +16,7 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (
 		return nil, status.Error(codes.Internal, "Could not determine sync status of beacon node")
 	}
 	return &pb.NodeConnectionResponse{
-		BeaconNodeEndpoint: s.validatorService.BeaconNodeEndpoint(),
+		BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 		Connected:          s.validatorService.Status() == nil,
 		Syncing:            syncStatus,
 	}, nil
