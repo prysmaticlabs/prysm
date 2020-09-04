@@ -40,6 +40,7 @@ type Config struct {
 	ValidatorService      *client.ValidatorService
 	SyncChecker           client.SyncChecker
 	WalletInitializedFeed *event.Feed
+	NodeGatewayEndpoint   string
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -61,6 +62,7 @@ type Server struct {
 	wallet                *accountsv2.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
+	nodeGatewayEndpoint   string
 }
 
 // NewServer instantiates a new gRPC server.
@@ -78,6 +80,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		syncChecker:           cfg.SyncChecker,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
+		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
 	}
 }
 
