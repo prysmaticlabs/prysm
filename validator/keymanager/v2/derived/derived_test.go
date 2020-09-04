@@ -71,9 +71,8 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	ctx := context.Background()
-	accountName, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
+	_, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
 	require.NoError(t, err)
-	assert.Equal(t, "0", accountName)
 
 	// Assert the new value for next account increased and also
 	// check the config file was updated on disk with this new value.
