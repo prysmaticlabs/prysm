@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/types"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,10 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 
 const domainDataErr = "could not get domain data"
 const signingRootErr = "could not get signing root"
@@ -128,7 +128,7 @@ func ProposeExit(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
 	nodeClient ethpb.NodeClient,
-	keyManager v2.IKeymanager,
+	signer signingFunc,
 	pubKey []byte,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
@@ -150,7 +150,7 @@ func ProposeExit(
 	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
-	sig, err := signVoluntaryExit(ctx, validatorClient, keyManager, pubKey, exit)
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign voluntary exit")
 		return err
@@ -261,7 +261,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 func signVoluntaryExit(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
-	keyManager v2.IKeymanager,
+	signer signingFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
 ) ([]byte, error) {
@@ -283,7 +283,7 @@ func signVoluntaryExit(
 		return nil, errors.Wrap(err, signingRootErr)
 	}
 
-	sig, err := keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := signer(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     exitRoot[:],
 		SignatureDomain: domain.SignatureDomain,

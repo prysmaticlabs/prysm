@@ -125,7 +125,7 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 
 	var rawNotExitedKeys [][]byte
 	for _, key := range rawPublicKeys {
-		if err := client.ProposeExit(cliCtx.Context, validatorClient, nodeClient, keymanager, key); err != nil {
+		if err := client.ProposeExit(cliCtx.Context, validatorClient, nodeClient, keymanager.Sign, key); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
 			log.WithError(err).Errorf("voluntary exit failed for account %s", key)
 		}
