@@ -42,6 +42,8 @@ var processingPipeline = []processFunc{
 	b.ProcessVoluntaryExits,
 }
 
+// This defines the processing block routine with the exception of not verifying any attestation signatures.
+// This is used during initial syncing with the flag `--disable-initial-sync-verify-all-signatures`
 var processingPipelineNoVerifyAttSigs = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
@@ -54,6 +56,8 @@ var processingPipelineNoVerifyAttSigs = []processFunc{
 	b.ProcessVoluntaryExits,
 }
 
+// This defines the processing block routine for compute state root.
+// This is used to serve proposer for constructing a beacon block to fill in state root field.
 var processingPipelineStateRoot = []processFunc{
 	b.ProcessBlockHeaderNoVerify,
 	b.ProcessRandaoNoVerify,
