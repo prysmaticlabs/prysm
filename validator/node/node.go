@@ -156,6 +156,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager
 	var err error
+	var accountsDir string
 	if featureconfig.Get().EnableAccountsV2 {
 		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
@@ -164,6 +165,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not generate interop keys")
 			}
+			accountsDir = cliCtx.String(flags.KeystorePathFlag.Name)
 		} else {
 			// Read the wallet from the specified path.
 			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
@@ -182,19 +184,20 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if err := wallet.LockWalletConfigFile(cliCtx.Context); err != nil {
 				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 			}
+			accountsDir = s.wallet.AccountsDir()
 		}
 	} else {
 		keyManagerV1, err = selectV1Keymanager(cliCtx)
 		if err != nil {
 			return err
 		}
+		accountsDir = cliCtx.String(flags.KeystorePathFlag.Name)
 	}
 
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-	accountsDir := s.wallet.AccountsDir()
 	newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
 	if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
 		log.WithFields(logrus.Fields{
