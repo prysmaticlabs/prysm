@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 )
 
@@ -60,10 +62,13 @@ func FileExists(filename string) bool {
 		return false
 	}
 	info, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.WithError(err).Info("Checking for file existence returned an error")
+		}
 		return false
 	}
-	return !info.IsDir()
+	return info != nil && !info.IsDir()
 }
 
 // ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.

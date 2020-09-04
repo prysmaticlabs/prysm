@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -191,6 +193,19 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	accountsDir := s.wallet.AccountsDir()
+	newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
+	if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
+		log.WithFields(logrus.Fields{
+			"oldDbPath": dataDir,
+			"walletDir": accountsDir,
+		}).Info("Moving validator protection db to wallet dir")
+		if err := os.Rename(dataFile, newDataFile); err != nil {
+			log.Fatal(err)
+		}
+	}
+	dataDir = accountsDir
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
