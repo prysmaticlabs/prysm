@@ -378,6 +378,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	}
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
+	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	server := rpc.NewServer(context.Background(), &rpc.Config{
 		ValDB:                 s.db,
 		Host:                  rpcHost,
@@ -385,6 +386,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		WalletInitializedFeed: s.walletInitialized,
 		ValidatorService:      vs,
 		SyncChecker:           vs,
+		NodeGatewayEndpoint:   nodeGatewayEndpoint,
 	})
 	return s.services.RegisterService(server)
 }
@@ -396,7 +398,7 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	allowedOrigins := []string{"localhost"}
+	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	gatewaySrv := gateway.New(
 		context.Background(),
 		rpcAddr,

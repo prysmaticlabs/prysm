@@ -348,11 +348,6 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 	return resp.Syncing, nil
 }
 
-// BeaconNodeEndpoint as a string.
-func (v *ValidatorService) BeaconNodeEndpoint() string {
-	return v.endpoint
-}
-
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
