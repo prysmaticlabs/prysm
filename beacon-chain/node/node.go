@@ -695,10 +695,6 @@ func (b *BeaconNode) registerInteropServices() error {
 			GenesisPath:   genesisStatePath,
 		})
 
-		cfg := params.BeaconConfig()
-		cfg.GenesisTime = svc.PreGenesisState().GenesisTime()
-		params.OverrideBeaconConfig(cfg)
-
 		return b.services.RegisterService(svc)
 	}
 	return nil
