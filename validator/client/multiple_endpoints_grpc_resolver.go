@@ -1,8 +1,9 @@
 package client
 
 import (
-	"google.golang.org/grpc/resolver"
 	"strings"
+	
+	"google.golang.org/grpc/resolver"
 )
 
 // Modification of a default grpc passthrough resolver (google.golang.org/grpc/resolver/passthrough) allowing to use multiple addresses
