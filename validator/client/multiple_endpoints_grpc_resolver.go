@@ -2,7 +2,7 @@ package client
 
 import (
 	"strings"
-	
+
 	"google.golang.org/grpc/resolver"
 )
 
