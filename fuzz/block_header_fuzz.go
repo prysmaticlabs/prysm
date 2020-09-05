@@ -1,6 +1,9 @@
 package fuzz
 
 import (
+	"context"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prylabs_testing "github.com/prysmaticlabs/prysm/fuzz/testing"
@@ -22,7 +25,7 @@ func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessBlockHeaderNoVerify(st, input.Block)
+	post, err := blocks.ProcessBlockHeaderNoVerify(context.Background(), st, &ethpb.SignedBeaconBlock{Block: input.Block})
 	if err != nil {
 		return fail(err)
 	}
