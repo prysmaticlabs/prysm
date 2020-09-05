@@ -114,10 +114,29 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	}
 	r = newBufferedReader(r)
 	defer bufReaderPool.Put(r)
-	b := make([]byte, e.MaxLength(int(msgLen)))
-	numOfBytes, err := r.Read(b)
+
+	maxLen, err := e.MaxLength(int(msgLen))
 	if err != nil {
 		return err
+	}
+
+	b := make([]byte, maxLen)
+	numOfBytes := 0
+	// Read all bytes from stream to handle multiple
+	// framed chunks. Required if reading objects which
+	// are larger than 65 kb.
+	for numOfBytes < int(msgLen) {
+		readBytes, err := r.Read(b[numOfBytes:])
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		numOfBytes += readBytes
+	}
+	if numOfBytes != int(msgLen) {
+		return errors.Errorf("decompressed data has an unexpected length, wanted %d but got %d", msgLen, numOfBytes)
 	}
 	return e.doDecode(b[:numOfBytes], to)
 }
@@ -129,8 +148,12 @@ func (e SszNetworkEncoder) ProtocolSuffix() string {
 
 // MaxLength specifies the maximum possible length of an encoded
 // chunk of data.
-func (e SszNetworkEncoder) MaxLength(length int) int {
-	return snappy.MaxEncodedLen(length)
+func (e SszNetworkEncoder) MaxLength(length int) (int, error) {
+	maxLen := snappy.MaxEncodedLen(length)
+	if maxLen < 0 {
+		return 0, errors.Errorf("max encoded length is negative: %d", maxLen)
+	}
+	return maxLen, nil
 }
 
 // Writes a bytes value through a snappy buffered writer.

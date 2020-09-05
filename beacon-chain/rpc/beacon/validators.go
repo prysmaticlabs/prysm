@@ -56,7 +56,11 @@ func (bs *Server) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	startSlot, err := helpers.StartSlot(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state")
 	}
@@ -189,7 +193,11 @@ func (bs *Server) ListValidators(
 	var reqState *statetrie.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
-		reqState, err = bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+		s, err := helpers.StartSlot(requestedEpoch)
+		if err != nil {
+			return nil, err
+		}
+		reqState, err = bs.StateGen.StateBySlot(ctx, s)
 	} else {
 		reqState, err = bs.HeadFetcher.HeadState(ctx)
 	}
@@ -198,14 +206,18 @@ func (bs *Server) ListValidators(
 		return nil, status.Error(codes.Internal, "Could not get requested state")
 	}
 
-	if helpers.StartSlot(requestedEpoch) > reqState.Slot() {
+	s, err := helpers.StartSlot(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	if s > reqState.Slot() {
 		reqState = reqState.Copy()
-		reqState, err = state.ProcessSlots(ctx, reqState, helpers.StartSlot(requestedEpoch))
+		reqState, err = state.ProcessSlots(ctx, reqState, s)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"Could not process slots up to %d: %v",
-				helpers.StartSlot(requestedEpoch),
+				"Could not process slots up to epoch %d: %v",
+				requestedEpoch,
 				err,
 			)
 		}
@@ -389,7 +401,11 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	slashedIndices := make([]uint64, 0)
 	ejectedIndices := make([]uint64, 0)
 
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	s, err := helpers.StartSlot(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -475,7 +491,11 @@ func (bs *Server) GetValidatorParticipation(
 	}
 	// Calculate the end slot of the next epoch.
 	// Ex: requested epoch 1, this gets slot 95.
-	nextEpochEndSlot := helpers.StartSlot(requestedEpoch+2) - 1
+	nextEpochEndSlot, err := helpers.StartSlot(requestedEpoch + 2)
+	if err != nil {
+		return nil, err
+	}
+	nextEpochEndSlot--
 	requestedState, err := bs.StateGen.StateBySlot(ctx, nextEpochEndSlot)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get state")
@@ -748,7 +768,11 @@ func (bs *Server) GetIndividualVotes(
 		)
 	}
 
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(req.Epoch))
+	s, err := helpers.StartSlot(req.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", req.Epoch, err)
 	}

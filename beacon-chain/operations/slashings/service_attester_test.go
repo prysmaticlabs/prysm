@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -88,7 +87,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		}
 		slashings[i] = sl
 	}
-	require.NoError(t, beaconState.SetSlot(helpers.StartSlot(1)))
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	// We mark the following validators with some preconditions.
 	exitedVal, err := beaconState.ValidatorAtIndex(uint64(2))

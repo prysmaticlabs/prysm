@@ -21,6 +21,7 @@ import (
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -1145,6 +1146,242 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 				return peersOut2[i].String() < peersOut2[j].String()
 			})
 			assert.DeepEqual(t, peersOut1, peersOut2, "Unexpected peers map")
+		})
+	}
+}
+
+func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T) {
+	p1 := p2pt.NewTestP2P(t)
+	tests := []struct {
+		name         string
+		req          *p2ppb.BeaconBlocksByRangeRequest
+		handlerGenFn func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream)
+		wantedErr    string
+		validate     func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock)
+	}{
+		{
+			name: "no error",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      4,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+						blk := testutil.NewBeaconBlock()
+						blk.Block.Slot = i
+						assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					}
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, req.Count, uint64(len(blocks)))
+			},
+		},
+		{
+			name: "too many blocks",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      1,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step+1; i += req.Step {
+						blk := testutil.NewBeaconBlock()
+						blk.Block.Slot = i
+						assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					}
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+		},
+		{
+			name: "not in a consecutive order",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      1,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 163
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 162
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+		},
+		{
+			name: "same slot number",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      1,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 160
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 160
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+		},
+		{
+			name: "slot is too low",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      1,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					defer func() {
+						assert.NoError(t, stream.Close())
+					}()
+					for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+						blk := testutil.NewBeaconBlock()
+						// Patch mid block, with invalid slot number.
+						if i == (req.StartSlot + req.Count*req.Step/2) {
+							blk.Block.Slot = req.StartSlot - 1
+							assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+							break
+						} else {
+							blk.Block.Slot = i
+							assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+						}
+					}
+				}
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+		},
+		{
+			name: "slot is too high",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      1,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					defer func() {
+						assert.NoError(t, stream.Close())
+					}()
+					for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+						blk := testutil.NewBeaconBlock()
+						// Patch mid block, with invalid slot number.
+						if i == (req.StartSlot + req.Count*req.Step/2) {
+							blk.Block.Slot = req.StartSlot + req.Count*req.Step
+							assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+							break
+						} else {
+							blk.Block.Slot = i
+							assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+						}
+					}
+				}
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+		},
+		{
+			name: "valid step increment",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      5,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 100
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 105
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 2, len(blocks))
+			},
+		},
+		{
+			name: "invalid step increment",
+			req: &p2ppb.BeaconBlocksByRangeRequest{
+				StartSlot: 100,
+				Step:      5,
+				Count:     64,
+			},
+			handlerGenFn: func(req *p2ppb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+				return func(stream network.Stream) {
+					blk := testutil.NewBeaconBlock()
+					blk.Block.Slot = 100
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+
+					blk = testutil.NewBeaconBlock()
+					blk.Block.Slot = 103
+					assert.NoError(t, beaconsync.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, stream.Close())
+				}
+			},
+			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
+				assert.Equal(t, 0, len(blocks))
+			},
+			wantedErr: errInvalidFetchedData.Error(),
+		},
+	}
+
+	topic := p2pm.RPCBlocksByRangeTopic
+	protocol := core.ProtocolID(topic + p1.Encoding().ProtocolSuffix())
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
+	fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 640, false)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p2 := p2pt.NewTestP2P(t)
+			p1.Connect(p2)
+
+			p2.BHost.SetStreamHandler(protocol, tt.handlerGenFn(tt.req))
+			blocks, err := fetcher.requestBlocks(ctx, tt.req, p2.PeerID())
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+				tt.validate(tt.req, blocks)
+			}
 		})
 	}
 }
