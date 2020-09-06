@@ -81,9 +81,11 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 //
 // ETH2 spec defines the message ID as:
 //    message-id: base64(SHA256(message.data))
+// where base64 is the URL-safe base64 alphabet with
+// padding characters omitted.
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
-	h := hashutil.FastSum256(pmsg.Data)
-	return base64.URLEncoding.EncodeToString(h[:])
+	h := hashutil.Hash(pmsg.Data)
+	return base64.RawURLEncoding.EncodeToString(h[:])
 }
 
 func setPubSubParameters() {
