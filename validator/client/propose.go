@@ -165,6 +165,10 @@ func ProposeExit(
 		return err
 	}
 
+	span.AddAttributes(
+		trace.StringAttribute("exitRoot", fmt.Sprintf("%#x", exitResp.ExitRoot)),
+	)
+
 	return nil
 }
 
