@@ -171,12 +171,16 @@ func performExit(cliCtx *cli.Context, keymanager v2.IKeymanager, rawPubKeys [][]
 		}
 	}
 	var formattedExitedKeys []string
-	for _, notExited := range rawNotExitedKeys {
-		for i, key := range rawPubKeys {
+	for i, key := range rawPubKeys {
+		found := false
+		for _, notExited := range rawNotExitedKeys {
 			if bytes.Equal(notExited, key) {
-				formattedExitedKeys = append(formattedExitedKeys, formattedPubKeys[i])
+				found = true
 				break
 			}
+		}
+		if !found {
+			formattedExitedKeys = append(formattedExitedKeys, formattedPubKeys[i])
 		}
 	}
 
