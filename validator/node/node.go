@@ -193,24 +193,9 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	}
 
+	dataDir := moveDb(cliCtx, accountsDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	if accountsDir != "" {
-		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
-		if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
-			log.WithFields(logrus.Fields{
-				"oldDbPath": dataDir,
-				"walletDir": accountsDir,
-			}).Info("Moving validator protection db to wallet dir")
-			if err := os.Rename(dataFile, newDataFile); err != nil {
-				log.Fatal(err)
-			}
-		}
-		dataDir = accountsDir
-	}
-
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -251,6 +236,25 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return err
 	}
 	return nil
+}
+
+func moveDb(cliCtx *cli.Context, accountsDir string) string {
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	if accountsDir != "" {
+		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
+		if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
+			log.WithFields(logrus.Fields{
+				"oldDbPath": dataDir,
+				"walletDir": accountsDir,
+			}).Info("Moving validator protection db to wallet dir")
+			if err := os.Rename(dataFile, newDataFile); err != nil {
+				log.Fatal(err)
+			}
+		}
+		dataDir = accountsDir
+	}
+	return dataDir
 }
 
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
