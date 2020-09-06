@@ -172,7 +172,23 @@ func performExit(cliCtx *cli.Context, keymanager v2.IKeymanager, rawPubKeys [][]
 	for i, key := range rawPubKeys {
 		if err := client.ProposeExit(cliCtx.Context, validatorClient, nodeClient, keymanager.Sign, key); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
-			log.WithError(err).Errorf("voluntary exit failed for account %s", formattedPubKeys[i])
+
+			nonCriticalErrors := []string{
+				"non-active validator cannot exit",
+				"validator has already exited at epoch",
+				"expected current epoch >= exit epoch",
+				"validator has not been active long enough to exit",
+			}
+			found := false
+			for _, e := range nonCriticalErrors {
+				if strings.Contains(err.Error(), e) {
+					log.Errorf("voluntary exit failed for account %s; reason: %s", formattedPubKeys[i], err.Error())
+					found = true
+				}
+			}
+			if !found {
+				log.WithError(err).Errorf("voluntary exit failed for account %s", formattedPubKeys[i])
+			}
 		}
 	}
 	var formattedExitedKeys []string
