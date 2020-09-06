@@ -164,10 +164,10 @@ func performExit(cliCtx *cli.Context, keymanager v2.IKeymanager, rawPubKeys [][]
 	nodeClient := ethpb.NewNodeClient(conn)
 
 	var rawNotExitedKeys [][]byte
-	for _, key := range rawPubKeys {
+	for i, key := range rawPubKeys {
 		if err := client.ProposeExit(cliCtx.Context, validatorClient, nodeClient, keymanager.Sign, key); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
-			log.WithError(err).Errorf("voluntary exit failed for account %s", key)
+			log.WithError(err).Errorf("voluntary exit failed for account %s", formattedPubKeys[i])
 		}
 	}
 	var formattedExitedKeys []string
