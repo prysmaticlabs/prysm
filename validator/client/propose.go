@@ -140,11 +140,13 @@ func ProposeExit(
 
 	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
 	if err != nil {
-		return errors.Wrap(err, "gRPC call to get the validator index failed")
+		log.WithError(err).Error("gRPC call to get validator index failed")
+		return err
 	}
 	genesisResponse, err := nodeClient.GetGenesis(ctx, &types.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "gRPC call to get genesis time failed")
+		log.WithError(err).Error("gRPC call to get genesis time failed")
+		return err
 	}
 	totalSecondsPassed := roughtime.Now().Unix() - genesisResponse.GenesisTime.Seconds
 	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
