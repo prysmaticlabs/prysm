@@ -402,7 +402,6 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 }
 
 func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
 	_, m, finish := setup(t)
 	defer finish()
 
@@ -414,11 +413,10 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
-	assert.LogsContain(t, hook, "gRPC call to get validator index failed")
+	assert.ErrorContains(t, "gRPC call to get validator index failed", err)
 }
 
 func TestProposeExit_GetGenesisFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
 	_, m, finish := setup(t)
 	defer finish()
 
@@ -433,11 +431,10 @@ func TestProposeExit_GetGenesisFailed(t *testing.T) {
 	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
-	assert.LogsContain(t, hook, "gRPC call to get genesis time failed")
+	assert.ErrorContains(t, "gRPC call to get genesis time failed", err)
 }
 
 func TestProposeExit_DomainDataFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
 	_, m, finish := setup(t)
 	defer finish()
 
@@ -462,11 +459,10 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
 	assert.ErrorContains(t, "uh oh", err)
-	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
+	assert.ErrorContains(t, "failed to sign voluntary exit", err)
 }
 
 func TestProposeExit_DomainDataIsNil(t *testing.T) {
-	hook := logTest.NewGlobal()
 	_, m, finish := setup(t)
 	defer finish()
 
@@ -490,11 +486,10 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
-	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
+	assert.ErrorContains(t, "failed to sign voluntary exit", err)
 }
 
 func TestProposeBlock_ProposeExitFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
 	_, m, finish := setup(t)
 	defer finish()
 
@@ -522,7 +517,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
-	assert.LogsContain(t, hook, "Failed to propose voluntary exit")
+	assert.ErrorContains(t, "failed to propose voluntary exit", err)
 }
 
 func TestProposeExit_BroadcastsBlock(t *testing.T) {

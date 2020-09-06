@@ -134,19 +134,13 @@ func ProposeExit(
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
 
-	// TODO: Is this needed?
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
-
 	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
 	if err != nil {
-		log.WithError(err).Error("gRPC call to get validator index failed")
-		return err
+		return errors.Wrap(err, "gRPC call to get validator index failed")
 	}
 	genesisResponse, err := nodeClient.GetGenesis(ctx, &types.Empty{})
 	if err != nil {
-		log.WithError(err).Error("gRPC call to get genesis time failed")
-		return err
+		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
 	totalSecondsPassed := roughtime.Now().Unix() - genesisResponse.GenesisTime.Seconds
 	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
@@ -154,15 +148,13 @@ func ProposeExit(
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
 	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
 	if err != nil {
-		log.WithError(err).Error("Failed to sign voluntary exit")
-		return err
+		return errors.Wrap(err, "failed to sign voluntary exit")
 	}
 
 	signedExit := &ethpb.SignedVoluntaryExit{Exit: exit, Signature: sig}
-	_, err = validatorClient.ProposeExit(ctx, signedExit)
+	exitResp, err := validatorClient.ProposeExit(ctx, signedExit)
 	if err != nil {
-		log.WithError(err).Error("Failed to propose voluntary exit")
-		return err
+		return errors.Wrap(err, "failed to propose voluntary exit")
 	}
 
 	span.AddAttributes(
