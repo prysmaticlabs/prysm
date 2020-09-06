@@ -2296,8 +2296,9 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_pubsub",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-pubsub",
-        sum = "h1:/AzOAmjDc+IJWybEzhYj1UaV1HErqmo4v3pQVepbgi8=",
-        version = "v0.3.3",
+        replace = "github.com/nisdas/go-libp2p-pubsub",
+        sum = "h1:zbn1mzIMiBa44rM/HNoBU6gs2Z99FsE2tdnjN3XXFOs=",
+        version = "v0.3.3-0.20200906105057-0a9a3f646d54",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_record",
@@ -3619,4 +3620,16 @@ def prysm_deps():
         importpath = "github.com/go-fsnotify/fsnotify",
         sum = "h1:PeVNzgTRtWGm6fVic5i21t+n5ptPGCZuMcSPVMyTWjs=",
         version = "v0.0.0-20180321022601-755488143dae",
+    )
+    go_repository(
+        name = "com_github_decred_dcrd_lru",
+        importpath = "github.com/decred/dcrd/lru",
+        sum = "h1:Kbsb1SFDsIlaupWPwsPp+dkxiBY1frcS07PCPgotKz8=",
+        version = "v1.0.0",
+    )
+    go_repository(
+        name = "com_github_nisdas_go_libp2p_pubsub",
+        importpath = "github.com/nisdas/go-libp2p-pubsub",
+        sum = "h1:zbn1mzIMiBa44rM/HNoBU6gs2Z99FsE2tdnjN3XXFOs=",
+        version = "v0.3.3-0.20200906105057-0a9a3f646d54",
     )

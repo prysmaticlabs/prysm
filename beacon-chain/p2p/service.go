@@ -151,6 +151,8 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithMessageSignaturePolicy(pubsub.LaxNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
+		pubsub.WithPeerScore(peerScoringParams()),
+		pubsub.WithPeerScoreInspect(peerInspector, time.Minute),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()

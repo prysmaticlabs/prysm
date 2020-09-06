@@ -3,12 +3,15 @@ package p2p
 import (
 	"context"
 	"encoding/base64"
+	"strings"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // JoinTopic will join PubSub topic, if not already joined.
@@ -74,7 +77,58 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	if err != nil {
 		return nil, err
 	}
+	scoringParams := topicScoreParams(topic)
+	if scoringParams != nil {
+		if err = topicHandle.SetScoreParams(scoringParams); err != nil {
+			return nil, err
+		}
+	}
 	return topicHandle.Subscribe(opts...)
+}
+
+func peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
+	for id, snap := range peerMap {
+		log.Debugf("Peer id %s with score %f", id.String(), snap.Score)
+	}
+}
+
+func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
+	thresholds := &pubsub.PeerScoreThresholds{
+		GossipThreshold:             -4000,
+		PublishThreshold:            -8000,
+		GraylistThreshold:           -16000,
+		AcceptPXThreshold:           100,
+		OpportunisticGraftThreshold: 5,
+	}
+	scoreParams := &pubsub.PeerScoreParams{
+		Topics:        make(map[string]*pubsub.TopicScoreParams),
+		TopicScoreCap: 32.72,
+		AppSpecificScore: func(p peer.ID) float64 {
+			return 1
+		},
+		AppSpecificWeight:           1,
+		IPColocationFactorWeight:    -1,
+		IPColocationFactorThreshold: 10,
+		IPColocationFactorWhitelist: nil,
+		BehaviourPenaltyWeight:      -99,
+		BehaviourPenaltyThreshold:   0,
+		BehaviourPenaltyDecay:       0.994,
+		DecayInterval:               1 * time.Second,
+		DecayToZero:                 0.1,
+		RetainScore:                 100,
+	}
+	return scoreParams, thresholds
+}
+
+func topicScoreParams(topic string) *pubsub.TopicScoreParams {
+	switch true {
+	case strings.Contains(topic, "beacon_block"):
+		return defaultBlockTopicParams()
+	case strings.Contains(topic, "beacon_aggregate_and_proof"):
+		return defaultAggregateTopicParams()
+	default:
+		return nil
+	}
 }
 
 // Content addressable ID function.
@@ -91,4 +145,48 @@ func setPubSubParameters() {
 	pubsub.GossipSubHeartbeatInterval = 700 * time.Millisecond
 	pubsub.GossipSubHistoryLength = 6
 	pubsub.GossipSubHistoryGossip = 3
+}
+
+func defaultBlockTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     0.5,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1,
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    1,
+		FirstMessageDeliveriesDecay:     0.9928,
+		FirstMessageDeliveriesCap:       23,
+		MeshMessageDeliveriesWeight:     -0.020408,
+		MeshMessageDeliveriesDecay:      0.9928,
+		MeshMessageDeliveriesCap:        35,
+		MeshMessageDeliveriesThreshold:  139,
+		MeshMessageDeliveriesWindow:     200 * time.Millisecond,
+		MeshMessageDeliveriesActivation: time.Duration(8*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot) * time.Second,
+		MeshFailurePenaltyWeight:        -0.02048,
+		MeshFailurePenaltyDecay:         0.9928,
+		InvalidMessageDeliveriesWeight:  -99,
+		InvalidMessageDeliveriesDecay:   0.9994,
+	}
+}
+
+func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     0.5,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1,
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    0.05,
+		FirstMessageDeliveriesDecay:     0.631,
+		FirstMessageDeliveriesCap:       463,
+		MeshMessageDeliveriesWeight:     -0.0026,
+		MeshMessageDeliveriesDecay:      0.631,
+		MeshMessageDeliveriesCap:        98,
+		MeshMessageDeliveriesThreshold:  390,
+		MeshMessageDeliveriesWindow:     200 * time.Millisecond,
+		MeshMessageDeliveriesActivation: time.Duration(4*params.BeaconConfig().SecondsPerSlot) * time.Second,
+		MeshFailurePenaltyWeight:        -0.0026,
+		MeshFailurePenaltyDecay:         0.631,
+		InvalidMessageDeliveriesWeight:  -99,
+		InvalidMessageDeliveriesDecay:   0.994,
+	}
 }
