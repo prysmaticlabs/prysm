@@ -41,8 +41,13 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 		return err
 	}
 
-	log.WithField("publicKeys", strings.Join(formattedExitedKeys, ", ")).
-		Info("Voluntary exit was successful for the accounts listed")
+	if len(formattedExitedKeys) > 0 {
+		log.WithField("publicKeys", strings.Join(formattedExitedKeys, ", ")).
+			Info("Voluntary exit was successful for the accounts listed")
+	} else {
+		log.Info("No successful voluntary exits")
+	}
+
 	return nil
 }
 
