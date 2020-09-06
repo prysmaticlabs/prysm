@@ -18,13 +18,34 @@ func TestCountdownToGenesis(t *testing.T) {
 	config.GenesisCountdownInterval = time.Millisecond * 500
 	params.OverrideBeaconConfig(config)
 
-	firstStringResult := "1s until chain genesis"
-	genesisReached := "Chain genesis time reached"
-	CountdownToGenesis(
-		context.Background(),
-		roughtime.Now().Add(2*time.Second),
-		params.BeaconConfig().MinGenesisActiveValidatorCount,
-	)
-	require.LogsContain(t, hook, firstStringResult)
-	require.LogsContain(t, hook, genesisReached)
+	t.Run("normal countdown", func(t *testing.T) {
+		defer hook.Reset()
+		firstStringResult := "1s until chain genesis"
+		genesisReached := "Chain genesis time reached"
+		CountdownToGenesis(
+			context.Background(),
+			roughtime.Now().Add(2*time.Second),
+			params.BeaconConfig().MinGenesisActiveValidatorCount,
+		)
+		require.LogsContain(t, hook, firstStringResult)
+		require.LogsContain(t, hook, genesisReached)
+	})
+
+	t.Run("close context", func(t *testing.T) {
+		defer hook.Reset()
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			time.AfterFunc(1500*time.Millisecond, func() {
+				cancel()
+			})
+		}()
+		CountdownToGenesis(
+			ctx,
+			roughtime.Now().Add(5*time.Second),
+			params.BeaconConfig().MinGenesisActiveValidatorCount,
+		)
+		require.LogsContain(t, hook, "4s until chain genesis")
+		require.LogsContain(t, hook, "Context closed, exiting routine")
+		require.LogsDoNotContain(t, hook, "Chain genesis time reached")
+	})
 }

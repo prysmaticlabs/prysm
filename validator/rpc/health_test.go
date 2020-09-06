@@ -21,14 +21,13 @@ func (m *mockSyncChecker) Syncing(ctx context.Context) (bool, error) {
 func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	ctx := context.Background()
 	endpoint := "localhost:90210"
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Endpoint: endpoint,
-	})
+	vs, err := client.NewValidatorService(ctx, &client.Config{})
 	require.NoError(t, err)
 	s := &Server{
-		walletInitialized: true,
-		validatorService:  vs,
-		syncChecker:       &mockSyncChecker{syncing: true},
+		walletInitialized:   true,
+		validatorService:    vs,
+		syncChecker:         &mockSyncChecker{syncing: true},
+		nodeGatewayEndpoint: endpoint,
 	}
 	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
