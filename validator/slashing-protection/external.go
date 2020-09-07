@@ -23,17 +23,17 @@ func (s *Service) CheckBlockSafety(ctx context.Context, blockHeader *ethpb.Beaco
 
 // CommitBlock this function is part of slashing protection for block proposals it performs
 // validation and db update. To be used after the block is proposed.
-func (s *Service) CommitBlock(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) bool {
+func (s *Service) CommitBlock(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) (bool, error) {
 	ps, err := s.slasherClient.IsSlashableBlock(ctx, blockHeader)
 	if err != nil {
 		log.Errorf("External slashing block protection returned an error: %v", err)
-		return false
+		return false, err
 	}
 	if ps != nil && ps.ProposerSlashing != nil {
 		log.Warn("External slashing proposal protection found the block to be slashable")
-		return false
+		return false, nil
 	}
-	return true
+	return true, nil
 }
 
 // CheckAttestationSafety implements the slashing protection for attestations without db update.

@@ -61,7 +61,11 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
-		if !v.protector.CommitBlock(ctx, sbh) {
+		valid, err := v.protector.CommitBlock(ctx, sbh)
+		if err != nil {
+			return err
+		}
+		if !valid {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
