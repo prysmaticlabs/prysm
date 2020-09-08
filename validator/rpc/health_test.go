@@ -25,11 +25,11 @@ type mockGenesisFetcher struct{}
 func (m *mockGenesisFetcher) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	genesis, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
+		log.Info(err)
 		return nil, err
 	}
 	return &ethpb.Genesis{
-		GenesisTime:            genesis,
-		DepositContractAddress: []byte("hello"),
+		GenesisTime: genesis,
 	}, nil
 }
 
@@ -48,11 +48,10 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
-		BeaconNodeEndpoint:     endpoint,
-		Connected:              false,
-		Syncing:                false,
-		GenesisTime:            uint64(time.Unix(0, 0).Unix()),
-		DepositContractAddress: []byte("hello"),
+		BeaconNodeEndpoint: endpoint,
+		Connected:          false,
+		Syncing:            false,
+		GenesisTime:        uint64(time.Unix(0, 0).Unix()),
 	}
 	require.DeepEqual(t, want, got)
 }
