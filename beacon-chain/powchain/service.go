@@ -442,6 +442,7 @@ func (s *Service) waitForConnection() {
 		logCounter++
 	}
 	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
@@ -460,12 +461,10 @@ func (s *Service) waitForConnection() {
 				log.WithFields(logrus.Fields{
 					"endpoint": s.httpEndpoint,
 				}).Info("Connected to eth1 proof-of-work chain")
-				ticker.Stop()
 				return
 			}
 			log.Debug("Eth1 node is currently syncing")
 		case <-s.ctx.Done():
-			ticker.Stop()
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
 		}
