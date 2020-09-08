@@ -5,7 +5,6 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 )
 
