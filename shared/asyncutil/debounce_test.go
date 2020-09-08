@@ -40,6 +40,8 @@ func TestDebounce_CtxClosing(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	interval := time.Second
 	timesHandled := 0
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
 		ticker := time.NewTicker(time.Millisecond * 100)
 		defer ticker.Stop()
@@ -53,18 +55,19 @@ func TestDebounce_CtxClosing(t *testing.T) {
 		}
 	}()
 	go func() {
-		time.AfterFunc(interval*2, func() {
-			t.Fatalf("Test should have exited by now, timed out")
-		})
-	}()
-	go func() {
 		time.AfterFunc(interval, func() {
 			cancel()
 		})
 	}()
-	Debounce(ctx, interval, eventsChan, func(event interface{}) {
-		timesHandled++
-	})
+	go func() {
+		Debounce(ctx, interval, eventsChan, func(event interface{}) {
+			timesHandled++
+		})
+		wg.Done()
+	}()
+	if testutil.WaitTimeout(wg, interval*2) {
+		t.Fatalf("Test should have exited by now, timed out")
+	}
 	assert.Equal(t, 0, timesHandled, "Wrong number of handled calls")
 }
 
