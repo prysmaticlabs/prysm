@@ -44,6 +44,12 @@ type SyncChecker interface {
 	Syncing(ctx context.Context) (bool, error)
 }
 
+// GenesisFetcher can retrieve genesis information such as
+// the genesis time and the validator deposit contract address.
+type GenesisFetcher interface {
+	GenesisInfo(ctx context.Context) (*ethpb.Genesis, error)
+}
+
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
@@ -346,6 +352,13 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	return resp.Syncing, nil
+}
+
+// GenesisInfo queries the beacon node for the chain genesis info containing
+// the genesis time along with the validator deposit contract address.
+func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
+	nc := ethpb.NewNodeClient(v.conn)
+	return nc.GetGenesis(ctx, &ptypes.Empty{})
 }
 
 // to accounts changes in the keymanager, then updates those keys'
