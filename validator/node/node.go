@@ -392,6 +392,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		WalletInitializedFeed: s.walletInitialized,
 		ValidatorService:      vs,
 		SyncChecker:           vs,
+		GenesisFetcher:        vs,
 		NodeGatewayEndpoint:   nodeGatewayEndpoint,
 	})
 	return s.services.RegisterService(server)
