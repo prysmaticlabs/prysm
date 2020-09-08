@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -153,6 +155,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager
 	var err error
+	var accountsDir string
 	if featureconfig.Get().EnableAccountsV2 {
 		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
@@ -161,6 +164,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not generate interop keys")
 			}
+			accountsDir = cliCtx.String(flags.KeystorePathFlag.Name)
 		} else {
 			// Read the wallet from the specified path.
 			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
@@ -179,6 +183,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if err := wallet.LockWalletConfigFile(cliCtx.Context); err != nil {
 				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 			}
+			accountsDir = s.wallet.AccountsDir()
 		}
 	} else {
 		keyManagerV1, err = selectV1Keymanager(cliCtx)
@@ -187,9 +192,9 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	}
 
+	dataDir := moveDb(cliCtx, accountsDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -230,6 +235,25 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return err
 	}
 	return nil
+}
+
+func moveDb(cliCtx *cli.Context, accountsDir string) string {
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	if accountsDir != "" {
+		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
+		if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
+			log.WithFields(logrus.Fields{
+				"oldDbPath": dataDir,
+				"walletDir": accountsDir,
+			}).Info("Moving validator protection db to wallet dir")
+			if err := os.Rename(dataFile, newDataFile); err != nil {
+				log.Fatal(err)
+			}
+		}
+		dataDir = accountsDir
+	}
+	return dataDir
 }
 
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
