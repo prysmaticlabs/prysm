@@ -114,13 +114,13 @@ func TestFuzzEth1DataHasEnoughSupport_10000(t *testing.T) {
 func TestFuzzProcessBlockHeaderNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	block := &eth.SignedBeaconBlock{}
+	block := &eth.BeaconBlock{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(block)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		_, err = ProcessBlockHeaderNoVerify(context.Background(), s, block)
+		_, err = ProcessBlockHeaderNoVerify(s, block)
 		_ = err
 	}
 }
@@ -144,15 +144,15 @@ func TestFuzzProcessRandao_10000(t *testing.T) {
 func TestFuzzProcessRandaoNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	sb := &eth.SignedBeaconBlock{}
+	blockBody := &eth.BeaconBlockBody{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(sb)
+		fuzzer.Fuzz(blockBody)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		r, err := ProcessRandaoNoVerify(context.Background(), s, sb)
+		r, err := ProcessRandaoNoVerify(s, blockBody)
 		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, sb)
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, blockBody)
 		}
 	}
 }
