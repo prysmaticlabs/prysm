@@ -59,7 +59,8 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 	stdin.Write([]byte("Y\n"))
 
 	require.NoError(t, ExitAccountsCli(cliCtx, &stdin))
-	assert.LogsContain(t, logHook, "Voluntary exit was successful")
+	assert.LogsContain(t, logHook, "Voluntary exit was successful for the accounts listed")
+	assert.LogsContain(t, logHook, keystore.Pubkey)
 }
 
 func TestExitAccountsCli_EmptyWalletReturnsError(t *testing.T) {
