@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
 )
 
