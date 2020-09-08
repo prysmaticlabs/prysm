@@ -106,7 +106,8 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	startSlot := helpers.StartSlot(1)
+	startSlot, err := helpers.StartSlot(1)
+	require.NoError(t, err)
 	wanted, err := computeCommittees(startSlot, activeIndices, attesterSeed)
 	require.NoError(t, err)
 

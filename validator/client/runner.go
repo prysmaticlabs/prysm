@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -37,10 +36,7 @@ type Validator interface {
 	LogAttestationsSubmitted()
 	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
-	BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64
-	IndicesToPubkeys(ctx context.Context) map[uint64][48]byte
-	PubkeysToIndices(ctx context.Context) map[[48]byte]uint64
-	PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus
+	WaitForWalletInitialization(ctx context.Context) error
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -55,6 +51,9 @@ type Validator interface {
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
 	defer v.Done()
+	if err := v.WaitForWalletInitialization(ctx); err != nil {
+		log.Fatalf("Wallet is not ready: %v", err)
+	}
 	if featureconfig.Get().SlasherProtection {
 		if err := v.SlasherReady(ctx); err != nil {
 			log.Fatalf("Slasher is not ready: %v", err)

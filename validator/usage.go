@@ -78,7 +78,9 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "validator",
 		Flags: []cli.Flag{
 			flags.BeaconRPCProviderFlag,
+			flags.BeaconRPCGatewayProviderFlag,
 			flags.CertFlag,
+			flags.EnableWebFlag,
 			flags.KeyManager,
 			flags.KeyManagerOpts,
 			flags.KeystorePathFlag,
@@ -92,6 +94,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayHost,
 			flags.GrpcRetriesFlag,
 			flags.GrpcRetryDelayFlag,
+			flags.GPRCGatewayCorsDomain,
 			flags.GrpcHeadersFlag,
 			flags.SlasherRPCProviderFlag,
 			flags.SlasherCertFlag,

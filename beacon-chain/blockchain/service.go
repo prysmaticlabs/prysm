@@ -151,8 +151,8 @@ func (s *Service) Start() {
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
-		s.genesisTime = time.Unix(int64(helpers.GenesisTime(beaconState)), 0)
-		s.opsService.SetGenesisTime(helpers.GenesisTime(beaconState))
+		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
+		s.opsService.SetGenesisTime(beaconState.GenesisTime())
 		if err := s.initializeChainInfo(s.ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -286,7 +286,7 @@ func (s *Service) initializeBeaconChain(
 		return nil, err
 	}
 
-	s.opsService.SetGenesisTime(helpers.GenesisTime(genesisState))
+	s.opsService.SetGenesisTime(genesisState.GenesisTime())
 
 	return genesisState, nil
 }
@@ -425,10 +425,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedState, err = s.stateGen.Resume(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
-	}
-	finalizedRoot = s.beaconDB.LastArchivedRoot(ctx)
-	if finalizedRoot == params.BeaconConfig().ZeroHash {
-		finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 	}
 
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)

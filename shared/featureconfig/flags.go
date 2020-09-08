@@ -61,11 +61,6 @@ var (
 			"and attestation's aggregated signatures. With this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
-	enableSlasherFlag = &cli.BoolFlag{
-		Name: "enable-slasher",
-		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
-			"the slasher-provider flag can be used to pass its address.",
-	}
 	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
@@ -541,6 +536,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedSlasherProviderFlag = &cli.StringFlag{
+		Name:   "slasher-provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableSlasherFlag = &cli.BoolFlag{
+		Name:   "enable-slasher",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -614,6 +619,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedNewBeaconStateLocks,
 	deprectedForceMaxCoverAttestationAggregation,
 	deprecatedNewStateMgmtFlag,
+	deprecatedSlasherProviderFlag,
+	deprecatedEnableSlasherFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -648,7 +655,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,

@@ -83,8 +83,10 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	}
 
 	// Initialize the required public keys into the DB to ensure they're not empty.
-	if err := kv.UpdatePublicKeysBuckets(pubKeys); err != nil {
-		return nil, err
+	if pubKeys != nil {
+		if err := kv.UpdatePublicKeysBuckets(pubKeys); err != nil {
+			return nil, err
+		}
 	}
 
 	return kv, err

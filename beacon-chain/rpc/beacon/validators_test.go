@@ -883,7 +883,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 
 	st := testutil.NewBeaconState()
-	require.NoError(t, st.SetSlot(helpers.StartSlot(30)))
+	require.NoError(t, st.SetSlot(30*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, st.SetValidators(validators))
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
@@ -1249,7 +1249,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 
 	// Now, we move the state.slot past the exit epoch of the validator, and now
 	// the validator should no longer exist in the queue.
-	require.NoError(t, headState.SetSlot(helpers.StartSlot(validators[1].ExitEpoch+1)))
+	require.NoError(t, headState.SetSlot((validators[1].ExitEpoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	res, err = bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.ExitPublicKeys))
@@ -1450,7 +1450,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	ctx := context.Background()
 	epoch := uint64(1)
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(helpers.StartSlot(epoch+1)))
+	require.NoError(t, headState.SetSlot((epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	atts := make([]*pb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
@@ -1527,7 +1527,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	defaultBal := params.BeaconConfig().MaxEffectiveBalance
 	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(helpers.StartSlot(epoch+1)))
+	require.NoError(t, headState.SetSlot((epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
 	publicKey1 := bytesutil.ToBytes48([]byte{1})
@@ -1597,7 +1597,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	defaultBal := params.BeaconConfig().MaxEffectiveBalance
 	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(helpers.StartSlot(epoch+1)))
+	require.NoError(t, headState.SetSlot((epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
 	publicKey1 := bytesutil.ToBytes48([]byte{1})

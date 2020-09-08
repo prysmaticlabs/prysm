@@ -215,6 +215,14 @@ func Test_ValidateAttestationTime(t *testing.T) {
 				).Add(200 * time.Millisecond),
 			},
 		},
+		{
+			name: "attestation.slot is well beyond current slot",
+			args: args{
+				attSlot:     1 << 32,
+				genesisTime: roughtime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+			wantedErr: "which exceeds max allowed value relative to the local clock",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

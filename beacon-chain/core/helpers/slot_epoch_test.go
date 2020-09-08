@@ -86,14 +86,24 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	tests := []struct {
 		epoch     uint64
 		startSlot uint64
+		error     bool
 	}{
-		{epoch: 0, startSlot: 0 * params.BeaconConfig().SlotsPerEpoch},
-		{epoch: 1, startSlot: 1 * params.BeaconConfig().SlotsPerEpoch},
-		{epoch: 10, startSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
+		{epoch: 0, startSlot: 0 * params.BeaconConfig().SlotsPerEpoch, error: false},
+		{epoch: 1, startSlot: 1 * params.BeaconConfig().SlotsPerEpoch, error: false},
+		{epoch: 10, startSlot: 10 * params.BeaconConfig().SlotsPerEpoch, error: false},
+		{epoch: 1 << 58, startSlot: 1 << 63, error: false},
+		{epoch: 1 << 59, startSlot: 1 << 63, error: true},
+		{epoch: 1 << 60, startSlot: 1 << 63, error: true},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.epoch}
-		assert.Equal(t, tt.startSlot, StartSlot(tt.epoch), "StartSlot(%d)", state.Slot)
+		ss, err := StartSlot(tt.epoch)
+		if !tt.error {
+			require.NoError(t, err)
+			assert.Equal(t, tt.startSlot, ss, "StartSlot(%d)", state.Slot)
+		} else {
+			require.ErrorContains(t, "start slot calculation overflow", err)
+		}
 	}
 }
 
@@ -304,38 +314,11 @@ func TestVerifySlotTime(t *testing.T) {
 	}
 }
 
-func TestGenesisTime(t *testing.T) {
-	type args struct {
-		configTime uint64
-		stateTime  uint64
-	}
-	tests := []struct {
-		name string
-		args args
-		want uint64
-	}{
-		{
-			name: "Use config genesis time",
-			args: args{configTime: 1, stateTime: 2},
-			want: 1,
-		},
-		{
-			name: "Use state genesis time",
-			args: args{configTime: 0, stateTime: 2},
-			want: 2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := params.BeaconConfig()
-			c.GenesisTime = tt.args.configTime
-			params.OverrideBeaconConfig(c)
-			s := &pb.BeaconState{GenesisTime: tt.args.stateTime}
-			state, err := beaconstate.InitializeFromProto(s)
-			require.NoError(t, err)
-			if got := GenesisTime(state); got != tt.want {
-				t.Errorf("GenesisTime() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
+	genTime := roughtime.Now().Add(-1 * time.Duration(MaxSlotBuffer) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix()
+
+	assert.NoError(t, ValidateSlotClock(MaxSlotBuffer, uint64(genTime)), "unexpected error validating slot")
+	assert.NoError(t, ValidateSlotClock(2*MaxSlotBuffer, uint64(genTime)), "unexpected error validating slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(2*MaxSlotBuffer+1, uint64(genTime)), "no error from bad slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(1<<63, uint64(genTime)), "no error from bad slot")
 }

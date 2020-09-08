@@ -19,7 +19,12 @@ service Wallet {
     }
     rpc WalletConfig(google.protobuf.Empty) returns (WalletResponse) {
         option (google.api.http) = {
-            get: "/v2/validator/wallet/config"
+            get: "/v2/validator/wallet"
+        };
+    }
+    rpc GenerateMnemonic(google.protobuf.Empty) returns (GenerateMnemonicResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/mnemonic/generate"
         };
     }
 }
@@ -39,19 +44,9 @@ service Accounts {
 }
 
 service Health {
-    rpc ListBalances(AccountRequest) returns (ListBalancesResponse) {
+    rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
         option (google.api.http) = {
-            get: "/v2/validator/balances"
-        };
-    }
-    rpc ListStatuses(AccountRequest) returns (ListStatusesResponse) {
-        option (google.api.http) = {
-            get: "/v2/validator/statuses"
-        };
-    }
-    rpc ListPerformance(AccountRequest) returns (ListPerformanceResponse) {
-        option (google.api.http) = {
-            get: "/v2/validator/performances"
+            get: "/v2/validator/health/node_connection"
         };
     }
 }
@@ -81,16 +76,26 @@ message CreateWalletRequest {
         REMOTE = 2;
     }
     KeymanagerKind keymanager = 2;
+
     // Password for the wallet.
     string wallet_password = 3;
+    // Mnemonic in case the user is creating a derived wallet.
+    string mnemonic = 4;
+    // Number of accounts.
+    uint64 num_accounts = 5;
+    // JSON-encoded keystore files to import during wallet creation.
+    repeated string keystores_imported = 6;
+    // Password to unlock imported keystore files.
+    string keystores_password = 7;
+
     // Remote address such as host.example.com:4000 for a gRPC remote signer server.
-    string remote_addr = 4;
+    string remote_addr = 8;
     // Path to client.crt for secure TLS connections to a remote signer server.
-    string remote_crt_path = 5;
+    string remote_crt_path = 9;
     // Path to client.key for secure TLS connections to a remote signer server.
-    string remote_key_path = 6;
+    string remote_key_path = 10;
     // Path to ca.crt for secure TLS connections to a remote signer server.
-    string remote_ca_crt_path = 7;
+    string remote_ca_crt_path = 11;
 }
 
 message EditWalletConfigRequest {
@@ -98,6 +103,10 @@ message EditWalletConfigRequest {
     string remote_crt_path = 2;
     string remote_key_path = 3;
     string remote_ca_crt_path = 4;
+}
+
+message GenerateMnemonicResponse {
+    string mnemonic = 1;
 }
 
 message WalletResponse {
@@ -142,47 +151,6 @@ message AccountRequest {
     repeated uint64 indices = 2;
 }
 
-message ListBalancesResponse {
-    // A list of validator public keys.
-    repeated bytes public_keys = 1;
-    // A list of validator indices.
-    repeated uint64 indices = 2;
-    // A list of validator balances that maps to public keys and indices.
-    repeated uint64 balances = 3;
-}
-
-message ListStatusesResponse {
-    // A list of validator public keys.
-    repeated bytes public_keys = 1;
-    // A list of validator indices.
-    repeated uint64 indices = 2;
-    // A list of validator statuses that maps to public keys and indices.
-    enum ValidatorStatus {
-        UNKNOWN_STATUS = 0;
-        DEPOSITED = 1;
-        PENDING = 2;
-        ACTIVE = 3;
-        EXITING = 4;
-        SLASHING = 5;
-        EXITED = 6;
-        INVALID = 7;
-    }
-    repeated ValidatorStatus statuses = 3;
-}
-
-message ListPerformanceResponse {
-    // A list of validator public keys.
-    repeated bytes public_keys = 1;
-    // A list of validator indices.
-    repeated uint64 indices = 2;
-    // A list of block / attestation submission count since last launch.
-    message Submission {
-        uint64 block_count = 1;
-        uint64 attestation_count = 2;
-    }
-    repeated Submission submissions = 3;
-}
-
 message AuthRequest {
     string password = 1;
 }
@@ -191,4 +159,14 @@ message AuthResponse {
     string token = 1;
 
     uint64 token_expiration = 2;
+}
+
+message NodeConnectionResponse {
+    // The host address of the beacon node the validator
+    // client is connected to.
+    string beacon_node_endpoint = 1;
+    // Whether the connection is active.
+    bool connected = 2;
+    // Whether the beacon node is currently synchronizing to chain head.
+    bool syncing = 3;
 }
