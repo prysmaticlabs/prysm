@@ -22,6 +22,7 @@ var prepareForkChoiceAttsPeriod = slotutil.DivideSlotBy(3 /* times-per-slot */)
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
 	ticker := time.NewTicker(prepareForkChoiceAttsPeriod)
+	defer ticker.Stop()
 	for {
 		ctx := context.Background()
 		select {
