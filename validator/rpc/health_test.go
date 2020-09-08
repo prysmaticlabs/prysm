@@ -26,7 +26,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	s := &Server{
 		walletInitialized:   true,
 		validatorService:    vs,
-		syncChecker:         &mockSyncChecker{syncing: true},
+		syncChecker:         &mockSyncChecker{syncing: false},
 		nodeGatewayEndpoint: endpoint,
 	}
 	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
@@ -35,7 +35,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,
 		Connected:          false,
-		Syncing:            true,
+		Syncing:            false,
 	}
 	require.DeepEqual(t, want, got)
 }

@@ -5,19 +5,22 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-// GetBeaconNodeConnection --
+// GetBeaconNodeConnection retrieves the current beacon node connection
+// information, as well as its sync status.
 func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (*pb.NodeConnectionResponse, error) {
 	syncStatus, err := s.syncChecker.Syncing(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not determine sync status of beacon node")
+	if err != nil || s.validatorService.Status() != nil {
+		return &pb.NodeConnectionResponse{
+			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
+			Connected:          false,
+			Syncing:            false,
+		}, nil
 	}
 	return &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: s.nodeGatewayEndpoint,
-		Connected:          s.validatorService.Status() == nil,
+		Connected:          true,
 		Syncing:            syncStatus,
 	}, nil
 }
