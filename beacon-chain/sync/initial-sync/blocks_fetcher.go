@@ -179,12 +179,12 @@ func (f *blocksFetcher) loop() {
 	// Periodically remove stale peer locks.
 	go func() {
 		ticker := time.NewTicker(peerLocksPollingInterval)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
 				f.removeStalePeerLocks(peerLockMaxAge)
 			case <-f.ctx.Done():
-				ticker.Stop()
 				return
 			}
 		}
