@@ -169,6 +169,7 @@ func (q *blocksQueue) loop() {
 	}
 
 	ticker := time.NewTicker(pollingInterval)
+	defer ticker.Stop()
 	for {
 		// Check highest expected slot when we approach chain's head slot.
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
@@ -248,7 +249,6 @@ func (q *blocksQueue) loop() {
 			}
 		case <-q.ctx.Done():
 			log.Debug("Context closed, exiting goroutine (blocks queue)")
-			ticker.Stop()
 			return
 		}
 	}

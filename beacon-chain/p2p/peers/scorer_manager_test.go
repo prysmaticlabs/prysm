@@ -245,6 +245,7 @@ func TestPeerScorer_PeerScorerManager_loop(t *testing.T) {
 			done <- struct{}{}
 		}()
 		ticker := time.NewTicker(50 * time.Millisecond)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
