@@ -31,6 +31,7 @@ type POWChain struct {
 	GenesisEth1Block  *big.Int
 }
 
+// GenesisTime represents a static past date - JAN 01 2000.
 var GenesisTime = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 
 // Eth2GenesisPowchainInfo --
