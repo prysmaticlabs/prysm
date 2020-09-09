@@ -36,7 +36,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 	return signingRoot, err
 }
 
-// SaveProposalHistoryForEpoch saves the proposal history for the requested validator public key.
+// SaveProposalHistoryForSlot saves the proposal history for the requested validator public key.
 func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
