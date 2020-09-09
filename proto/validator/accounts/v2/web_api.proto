@@ -169,4 +169,8 @@ message NodeConnectionResponse {
     bool connected = 2;
     // Whether the beacon node is currently synchronizing to chain head.
     bool syncing = 3;
+    // The chain genesis time.
+    uint64 genesis_time = 4;
+    // Address of the validator deposit contract in the eth1 chain.
+    bytes deposit_contract_address = 5;
 }

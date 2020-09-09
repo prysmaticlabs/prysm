@@ -1,7 +1,6 @@
 package spectest
 
 import (
-	"context"
 	"io/ioutil"
 	"path"
 	"strings"
@@ -47,7 +46,7 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			}
 
 			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.
-			beaconState, err := blocks.ProcessBlockHeaderNoVerify(context.Background(), preBeaconState, &ethpb.SignedBeaconBlock{Block: block})
+			beaconState, err := blocks.ProcessBlockHeaderNoVerify(preBeaconState, block)
 			if postSSZExists {
 				require.NoError(t, err)
 
