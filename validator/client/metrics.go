@@ -65,26 +65,6 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorProposeExitSuccessVec used to count successful voluntary exit proposals.
-	ValidatorProposeExitSuccessVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "successful_exit_proposals_total",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
-	// ValidatorProposeExitFailVec used to count failed voluntary exit proposals.
-	ValidatorProposeExitFailVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "failed_exit_proposals_total",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
 	// ValidatorProposeFailVecSlasher used to count failed proposals by slashing protection.
 	ValidatorProposeFailVecSlasher = promauto.NewCounterVec(
 		prometheus.CounterOpts{

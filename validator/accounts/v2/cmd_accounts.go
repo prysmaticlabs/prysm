@@ -3,6 +3,7 @@ package v2
 import (
 	"os"
 
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
@@ -127,6 +128,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
 				flags.VoluntaryExitPublicKeysFlag,
+				flags.BeaconRPCProviderFlag,
+				cmd.GrpcMaxCallRecvMsgSizeFlag,
+				flags.CertFlag,
+				flags.GrpcHeadersFlag,
+				flags.GrpcRetriesFlag,
+				flags.GrpcRetryDelayFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 			},

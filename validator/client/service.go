@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -212,7 +212,7 @@ func (v *ValidatorService) Status() error {
 func (v *ValidatorService) recheckKeys(ctx context.Context) {
 	if featureconfig.Get().EnableAccountsV2 {
 		if v.useWeb {
-			initializedChan := make(chan *accountsv2.Wallet)
+			initializedChan := make(chan iface.Wallet)
 			sub := v.walletInitializedFeed.Subscribe(initializedChan)
 			defer sub.Unsubscribe()
 			wallet := <-initializedChan
