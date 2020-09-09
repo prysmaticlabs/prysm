@@ -147,9 +147,9 @@ func BeaconFuzzBlock(b []byte) {
 	chain.Start()
 
 	s := sync.NewRegularSyncFuzz(&sync.Config{
-		DB:    db1,
-		P2P:   p2p,
-		Chain: chain,
+		DB:                  db1,
+		P2P:                 p2p,
+		Chain:               chain,
 		InitialSync:         fakeChecker{},
 		StateNotifier:       sn,
 		BlockNotifier:       bn,
