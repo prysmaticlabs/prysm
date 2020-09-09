@@ -221,22 +221,25 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	return eth1Data, nil
 }
 
-// eth1DataMajorityVote determines the appropriate eth1data for a block proposal using an extended
-// simple voting algorithm - voting with the majority. The algorithm for this method is as follows:
-//  - Determine the timestamp for the start slot for the current eth1 voting period.
-//  - Determine the timestamp for the start slot for the previous eth1 voting period.
-//  - Determine the most recent eth1 block before each timestamp.
-//  - Subtract the current period's eth1block.number by ETH1_FOLLOW_DISTANCE to determine the voting upper bound.
-//  - Subtract the previous period's eth1block.number by ETH1_FOLLOW_DISTANCE to determine the voting lower bound.
+// eth1DataMajorityVote determines the appropriate eth1data for a block proposal using
+// an algorithm called Voting with the Majority. The algorithm works as follows:
+//  - Determine the timestamp for the start slot for the eth1 voting period.
+//  - Determine the earliest and latest timestamps that a valid block can have.
+//  - Determine the first block not before the earliest timestamp. This block is the lower bound.
+//  - Determine the last block not after the latest timestamp. This block is the upper bound.
 //  - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
-//  - If no blocks are left after filtering, use the current period's most recent eth1 block for proposal.
-//  - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
-//  - This vote's block is the eth1block to use for the block proposal.
+//  - If no blocks are left after filtering votes:
+//    - Use eth1data from the latest valid block.
+//    - If there are no valid blocks, use the current eth1data from the beacon state.
+//  - Otherwise:
+//    - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
+//    - This vote's block is the eth1 block to use for the block proposal.
 func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTrie.BeaconState) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
 
 	slot := beaconState.Slot()
+	votingPeriodStartTime := vs.slotStartTime(slot)
 
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
@@ -246,51 +249,68 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 	}
 	eth1DataNotification = false
 
-	slotsPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
-	currentPeriodVotingStartTime := vs.slotStartTime(slot)
-	// Can't use slotStartTime function because slot would be negative in the initial voting period.
-	previousPeriodVotingStartTime := currentPeriodVotingStartTime -
-		slotsPerVotingPeriod*params.BeaconConfig().SecondsPerSlot
-
-	currentPeriodBlockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, currentPeriodVotingStartTime)
-	if err != nil {
-		log.WithError(err).Error("Failed to get block number for current voting period")
-		return vs.randomETH1DataVote(ctx)
-	}
-	previousPeriodBlockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, previousPeriodVotingStartTime)
-	if err != nil {
-		log.WithError(err).Error("Failed to get block number for previous voting period")
-		return vs.randomETH1DataVote(ctx)
-	}
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	currentPeriodInitialBlock := big.NewInt(0).Sub(currentPeriodBlockNumber, big.NewInt(eth1FollowDistance))
-	previousPeriodInitialBlock := big.NewInt(0).Sub(previousPeriodBlockNumber, big.NewInt(eth1FollowDistance))
+	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
+	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
 
-	currentDepositCount, _ := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, currentPeriodInitialBlock)
-	if currentDepositCount == 0 {
+	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, earliestValidTime)
+	if err != nil {
+		log.WithError(err).Error("Failed to get last block by earliest valid time")
+		return vs.randomETH1DataVote(ctx)
+	}
+	timeOfLastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockTimeByHeight(ctx, lastBlockByEarliestValidTime)
+	if err != nil {
+		log.WithError(err).Error("Failed to get time of last block by earliest valid time")
+		return vs.randomETH1DataVote(ctx)
+	}
+	// Increment the earliest block if the original block's time is before valid time.
+	// This is very likely to happen because BlockTimeByHeight returns the last block AT OR BEFORE the specified time.
+	if timeOfLastBlockByEarliestValidTime < earliestValidTime {
+		lastBlockByEarliestValidTime = big.NewInt(0).Add(lastBlockByEarliestValidTime, big.NewInt(1))
+	}
+
+	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, latestValidTime)
+	if err != nil {
+		log.WithError(err).Error("Failed to get last block by latest valid time")
+		return vs.randomETH1DataVote(ctx)
+	}
+	timeOfLastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockTimeByHeight(ctx, lastBlockByLatestValidTime)
+	if err != nil {
+		log.WithError(err).Error("Failed to get time of last block by latest valid time")
+		return vs.randomETH1DataVote(ctx)
+	}
+
+	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime)
+	if lastBlockDepositCount == 0 {
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
-	if len(beaconState.Eth1DataVotes()) == 0 {
-		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
-		if err != nil {
-			log.WithError(err).Error("Failed to get eth1 data from current period block number")
-			return vs.randomETH1DataVote(ctx)
-		}
-		return eth1Data, nil
-	}
-
-	inRangeVotes, err := vs.inRangeVotes(ctx, beaconState, currentPeriodInitialBlock, previousPeriodInitialBlock)
+	inRangeVotes, err := vs.inRangeVotes(ctx, beaconState, lastBlockByEarliestValidTime, lastBlockByLatestValidTime)
 	if err != nil {
 		return nil, err
 	}
 	if len(inRangeVotes) == 0 {
-		eth1Data, err := vs.defaultEth1DataResponse(ctx, currentPeriodBlockNumber)
-		if err != nil {
-			log.WithError(err).Error("Failed to get eth1 data from current period block number")
-			return vs.randomETH1DataVote(ctx)
+		// If latest block is in range and it doesn't undo deposits, then choose that block.
+		// Otherwise take the current eth1data.
+		currentETH1Data := vs.HeadFetcher.HeadETH1Data()
+		if timeOfLastBlockByLatestValidTime >= earliestValidTime {
+			if lastBlockDepositCount >= currentETH1Data.DepositCount {
+				hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime)
+				if err != nil {
+					log.WithError(err).Error("Failed to get hash of last block by latest valid time")
+					return vs.randomETH1DataVote(ctx)
+				}
+				return &ethpb.Eth1Data{
+					BlockHash:    hash.Bytes(),
+					DepositCount: lastBlockDepositCount,
+					DepositRoot:  lastBlockDepositRoot[:],
+				}, nil
+			} else {
+				return vs.HeadFetcher.HeadETH1Data(), nil
+			}
+		} else {
+			return vs.HeadFetcher.HeadETH1Data(), nil
 		}
-		return eth1Data, nil
 	}
 
 	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
@@ -308,8 +328,8 @@ func (vs *Server) slotStartTime(slot uint64) uint64 {
 
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	currentPeriodInitialBlock *big.Int,
-	previousPeriodInitialBlock *big.Int) ([]eth1DataSingleVote, error) {
+	firstValidBlockNumber *big.Int,
+	lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
 
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
 
@@ -323,10 +343,10 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {
 			continue
 		}
-		// previousPeriodInitialBlock.Cmp(height) < 1 filters out all blocks before previousPeriodInitialBlock
-		// currentPeriodInitialBlock.Cmp(height) > -1 filters out all blocks after currentPeriodInitialBlock
-		// These filters result in the range [previousPeriodInitialBlock, currentPeriodInitialBlock]
-		if ok && previousPeriodInitialBlock.Cmp(height) < 1 && currentPeriodInitialBlock.Cmp(height) > -1 {
+		// firstValidBlockNumber.Cmp(height) < 1 filters out all blocks before firstValidBlockNumber
+		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
+		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
+		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
 	}

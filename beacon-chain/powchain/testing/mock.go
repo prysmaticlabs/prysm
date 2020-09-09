@@ -31,13 +31,15 @@ type POWChain struct {
 	GenesisEth1Block  *big.Int
 }
 
+var GenesisTime = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
+
 // Eth2GenesisPowchainInfo --
 func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	blk := m.GenesisEth1Block
 	if blk == nil {
-		blk = big.NewInt(0)
+		blk = big.NewInt(GenesisTime)
 	}
-	return uint64(time.Unix(0, 0).Unix()), blk
+	return uint64(GenesisTime), blk
 }
 
 // DepositTrie --
@@ -78,7 +80,14 @@ func (m *POWChain) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64
 
 // BlockNumberByTimestamp --
 func (m *POWChain) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.Int, error) {
-	return m.BlockNumberByTime[time], nil
+	var chosenTime uint64
+	var chosenNumber *big.Int
+	for t, num := range m.BlockNumberByTime {
+		if chosenNumber == nil || (t > chosenTime && t <= time) {
+			chosenNumber = num
+		}
+	}
+	return chosenNumber, nil
 }
 
 // DepositRoot --
