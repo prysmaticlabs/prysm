@@ -155,12 +155,12 @@ func (km *Remote) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign without protection is not supported by remote keymanagers.
-func (km *Remote) Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error) {
+func (km *Remote) Sign(ctx context.Context, pubKey [48]byte, root [32]byte) (bls.Signature, error) {
 	return nil, errors.New("remote keymanager does not support unprotected signing")
 }
 
 // SignGeneric signs a generic message for the validator to broadcast.
-func (km *Remote) SignGeneric(pubKey [48]byte, root [32]byte, domain [32]byte) (bls.Signature, error) {
+func (km *Remote) SignGeneric(ctx context.Context, pubKey [48]byte, root [32]byte, domain [32]byte) (bls.Signature, error) {
 	accountInfo, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey
@@ -172,7 +172,7 @@ func (km *Remote) SignGeneric(pubKey [48]byte, root [32]byte, domain [32]byte) (
 		Data:   root[:],
 		Domain: domain[:],
 	}
-	resp, err := client.Sign(context.Background(), req)
+	resp, err := client.Sign(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (km *Remote) SignGeneric(pubKey [48]byte, root [32]byte, domain [32]byte) (
 }
 
 // SignProposal signs a block proposal for the validator to broadcast.
-func (km *Remote) SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.BeaconBlockHeader) (bls.Signature, error) {
+func (km *Remote) SignProposal(ctx context.Context, pubKey [48]byte, domain [32]byte, data *ethpb.BeaconBlockHeader) (bls.Signature, error) {
 	accountInfo, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey
@@ -204,7 +204,7 @@ func (km *Remote) SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.Bea
 			BodyRoot:      data.BodyRoot,
 		},
 	}
-	resp, err := client.SignBeaconProposal(context.Background(), req)
+	resp, err := client.SignBeaconProposal(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (km *Remote) SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.Bea
 }
 
 // SignAttestation signs an attestation for the validator to broadcast.
-func (km *Remote) SignAttestation(pubKey [48]byte, domain [32]byte, data *ethpb.AttestationData) (bls.Signature, error) {
+func (km *Remote) SignAttestation(ctx context.Context, pubKey [48]byte, domain [32]byte, data *ethpb.AttestationData) (bls.Signature, error) {
 	accountInfo, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey
@@ -242,7 +242,7 @@ func (km *Remote) SignAttestation(pubKey [48]byte, domain [32]byte, data *ethpb.
 			},
 		},
 	}
-	resp, err := client.SignBeaconAttestation(context.Background(), req)
+	resp, err := client.SignBeaconAttestation(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (km *Remote) RefreshValidatingKeys() error {
 	listAccountsReq := &pb.ListAccountsRequest{
 		Paths: km.paths,
 	}
-	resp, err := listerClient.ListAccounts(context.Background(), listAccountsReq)
+	resp, err := listerClient.ListAccounts(context.TODO(), listAccountsReq)
 	if err != nil {
 		return err
 	}

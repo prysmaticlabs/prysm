@@ -76,7 +76,6 @@ type ImportAccountsConfig struct {
 // new accounts into the Prysm validator wallet. This uses the CLI to extract
 // values necessary to run the function.
 func ImportAccountsCli(cliCtx *cli.Context) error {
-	ctx := context.Background()
 	au := aurora.NewAurora(true)
 	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
@@ -137,7 +136,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		// specify this value in their filename.
 		sort.Sort(byDerivationPath(filesInDir))
 		for _, name := range filesInDir {
-			keystore, err := readKeystoreFile(ctx, filepath.Join(keysDir, name))
+			keystore, err := readKeystoreFile(cliCtx.Context, filepath.Join(keysDir, name))
 			if err != nil && strings.Contains(err.Error(), "could not decode keystore json") {
 				continue
 			} else if err != nil {
@@ -146,7 +145,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			keystoresImported = append(keystoresImported, keystore)
 		}
 	} else {
-		keystore, err := readKeystoreFile(ctx, keysDir)
+		keystore, err := readKeystoreFile(cliCtx.Context, keysDir)
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}

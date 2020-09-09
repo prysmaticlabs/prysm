@@ -33,6 +33,12 @@ var (
 		Usage: "Beacon node RPC provider endpoint",
 		Value: "127.0.0.1:4000",
 	}
+	// BeaconRPCGatewayProviderFlag defines a beacon node JSON-RPC endpoint.
+	BeaconRPCGatewayProviderFlag = &cli.StringFlag{
+		Name:  "beacon-rpc-gateway-provider",
+		Usage: "Beacon node RPC gateway provider endpoint",
+		Value: "127.0.0.1:3500",
+	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = &cli.StringFlag{
 		Name:  "tls-cert",
@@ -100,6 +106,13 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 		Value: 7500,
+	}
+	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
+	GPRCGatewayCorsDomain = &cli.StringFlag{
+		Name: "grpc-gateway-corsdomain",
+		Usage: "Comma separated list of domains from which to accept cross origin requests " +
+			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
+		Value: "http://localhost:4200",
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{

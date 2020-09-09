@@ -110,7 +110,7 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipeline := func(msg *pubsub.Message) {
-		ctx, cancel := context.WithTimeout(context.Background(), pubsubMessageTimeout)
+		ctx, cancel := context.WithTimeout(s.ctx, pubsubMessageTimeout)
 		defer cancel()
 		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
 		defer span.End()

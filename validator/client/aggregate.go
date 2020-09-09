@@ -78,6 +78,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	sig, err := v.aggregateAndProofSig(ctx, pubKey, res.AggregateAndProof)
 	if err != nil {
 		log.Errorf("Could not sign aggregate and proof: %v", err)
+		return
 	}
 	_, err = v.validatorClient.SubmitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{

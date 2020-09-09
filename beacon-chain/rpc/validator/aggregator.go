@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -111,6 +112,11 @@ func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *
 	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
+	}
+	emptySig := make([]byte, params.BeaconConfig().BLSSignatureLength)
+	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
+		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
+		return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
 	}
 
 	if err := as.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {

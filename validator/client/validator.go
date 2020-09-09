@@ -216,6 +216,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 			return nil
 		}
 		ticker := time.NewTicker(reconnectPeriod)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
