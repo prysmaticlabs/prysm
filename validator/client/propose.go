@@ -237,7 +237,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		if err != nil {
 			return nil, errors.Wrap(err, signingRootErr)
 		}
-		sig, err = v.keyManager.Sign(pubKey, blockRoot)
+		sig, err = v.keyManager.Sign(ctx, pubKey, blockRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
@@ -279,7 +279,7 @@ func (v *validator) signVoluntaryExit(ctx context.Context, pubKey [48]byte, exit
 			return nil, errors.Wrap(err, signExitErr)
 		}
 	} else {
-		sig, err = v.keyManager.Sign(pubKey, exitRoot)
+		sig, err = v.keyManager.Sign(ctx, pubKey, exitRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, signExitErr)
 		}
