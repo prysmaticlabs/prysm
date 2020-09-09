@@ -20,6 +20,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type performExitCfg struct {
+	validatorClient  ethpb.BeaconNodeValidatorClient
+	nodeClient       ethpb.NodeClient
+	keymanager       v2.IKeymanager
+	rawPubKeys       [][]byte
+	formattedPubKeys []string
+}
+
 // ExitAccountsCli performs a voluntary exit on one or more accounts.
 func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	validatingPublicKeys, keymanager, err := prepareWallet(cliCtx)
@@ -36,7 +44,19 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 		return nil
 	}
 
-	formattedExitedKeys, err := performExit(cliCtx, keymanager, rawPubKeys, formattedPubKeys)
+	validatorClient, nodeClient, err := prepareClients(cliCtx)
+	if err != nil {
+		return err
+	}
+	cfg := performExitCfg{
+		*validatorClient,
+		*nodeClient,
+		keymanager,
+		rawPubKeys,
+		formattedPubKeys,
+	}
+
+	formattedExitedKeys, err := performExit(cliCtx, cfg)
 	if err != nil {
 		return err
 	}
@@ -150,7 +170,7 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 	return rawPubKeys, formattedPubKeys, nil
 }
 
-func performExit(cliCtx *cli.Context, keymanager v2.IKeymanager, rawPubKeys [][]byte, formattedPubKeys []string) ([]string, error) {
+func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {
 	dialOpts := client.ConstructDialOptions(
 		cmd.GrpcMaxCallRecvMsgSizeFlag.Value,
 		flags.CertFlag.Value,
@@ -159,24 +179,28 @@ func performExit(cliCtx *cli.Context, keymanager v2.IKeymanager, rawPubKeys [][]
 		flags.GrpcRetryDelayFlag.Value,
 	)
 	if dialOpts == nil {
-		return nil, errors.New("failed to construct dial options")
+		return nil, nil, errors.New("failed to construct dial options")
 	}
 	conn, err := grpc.DialContext(cliCtx.Context, cliCtx.String(flags.BeaconRPCProviderFlag.Name), dialOpts...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not dial endpoint %s", flags.BeaconRPCProviderFlag.Name)
+		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", flags.BeaconRPCProviderFlag.Name)
 	}
 	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
 	nodeClient := ethpb.NewNodeClient(conn)
 
+	return &validatorClient, &nodeClient, nil
+}
+
+func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
 	var rawNotExitedKeys [][]byte
-	for i, key := range rawPubKeys {
-		if err := client.ProposeExit(cliCtx.Context, validatorClient, nodeClient, keymanager.Sign, key); err != nil {
+	for i, key := range cfg.rawPubKeys {
+		if err := client.ProposeExit(cliCtx.Context, cfg.validatorClient, cfg.nodeClient, cfg.keymanager.Sign, key); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
-			log.WithError(err).Errorf("voluntary exit failed for account %s", formattedPubKeys[i])
+			log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.formattedPubKeys[i])
 		}
 	}
 	var formattedExitedKeys []string
-	for i, key := range rawPubKeys {
+	for i, key := range cfg.rawPubKeys {
 		found := false
 		for _, notExited := range rawNotExitedKeys {
 			if bytes.Equal(notExited, key) {
@@ -185,7 +209,7 @@ func performExit(cliCtx *cli.Context, keymanager v2.IKeymanager, rawPubKeys [][]
 			}
 		}
 		if !found {
-			formattedExitedKeys = append(formattedExitedKeys, formattedPubKeys[i])
+			formattedExitedKeys = append(formattedExitedKeys, cfg.formattedPubKeys[i])
 		}
 	}
 
