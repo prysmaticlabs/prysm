@@ -141,7 +141,7 @@ func (km *Wallet) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign signs a message for the validator to broadcast.
-func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error) {
+func (km *Wallet) Sign(ctx context.Context, pubKey [48]byte, root [32]byte) (bls.Signature, error) {
 	account, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey
@@ -151,7 +151,7 @@ func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error) {
 	if !ok {
 		return nil, errors.New("account does not implement the AccountSigner interface")
 	}
-	sig, err := signer.Sign(context.Background(), root[:])
+	sig, err := signer.Sign(ctx, root[:])
 	if err != nil {
 		return nil, err
 	}

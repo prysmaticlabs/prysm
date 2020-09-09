@@ -151,7 +151,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	registry := shared.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
 		cliCtx:            cliCtx,
 		ctx:               ctx,
@@ -384,7 +384,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		}
 	}
 
-	svc, err := p2p.NewService(&p2p.Config{
+	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeAddrs,
@@ -520,7 +520,7 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	rs := prysmsync.NewRegularSync(&prysmsync.Config{
+	rs := prysmsync.NewRegularSync(b.ctx, &prysmsync.Config{
 		DB:                  b.db,
 		P2P:                 b.fetchP2P(),
 		Chain:               chainService,
@@ -544,7 +544,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
-	is := initialsync.NewInitialSync(&initialsync.Config{
+	is := initialsync.NewInitialSync(b.ctx, &initialsync.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(),

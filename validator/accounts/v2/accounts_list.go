@@ -41,7 +41,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDirectKeymanagerAccounts(showDepositData, km); err != nil {
+		if err := listDirectKeymanagerAccounts(cliCtx.Context, showDepositData, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with direct keymanager")
 		}
 	case v2keymanager.Derived:
@@ -49,7 +49,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDerivedKeymanagerAccounts(showDepositData, km); err != nil {
+		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showDepositData, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
 	case v2keymanager.Remote:
@@ -57,7 +57,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listRemoteKeymanagerAccounts(wallet, km, km.KeymanagerOpts()); err != nil {
+		if err := listRemoteKeymanagerAccounts(cliCtx.Context, wallet, km, km.KeymanagerOpts()); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
 	default:
@@ -67,6 +67,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 }
 
 func listDirectKeymanagerAccounts(
+	ctx context.Context,
 	showDepositData bool,
 	keymanager *direct.Keymanager,
 ) error {
@@ -89,7 +90,6 @@ func listDirectKeymanagerAccounts(
 			"by running `validator accounts-v2 list --show-deposit-data"),
 	)
 
-	ctx := context.Background()
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
@@ -113,13 +113,13 @@ func listDirectKeymanagerAccounts(
 }
 
 func listDerivedKeymanagerAccounts(
+	ctx context.Context,
 	showDepositData bool,
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.KeymanagerOpts().DerivedPathStructure).Bold())
-	ctx := context.Background()
 	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
@@ -178,6 +178,7 @@ func listDerivedKeymanagerAccounts(
 }
 
 func listRemoteKeymanagerAccounts(
+	ctx context.Context,
 	wallet *Wallet,
 	keymanager v2keymanager.IKeymanager,
 	opts *remote.KeymanagerOpts,
@@ -188,7 +189,6 @@ func listRemoteKeymanagerAccounts(
 		"(configuration file path) %s\n",
 		au.BrightGreen(filepath.Join(wallet.AccountsDir(), KeymanagerConfigFileName)).Bold(),
 	)
-	ctx := context.Background()
 	fmt.Println(" ")
 	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
 	fmt.Println(opts)

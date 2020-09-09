@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // ExpandPath given a string which may be a relative path.
@@ -60,10 +61,13 @@ func FileExists(filename string) bool {
 		return false
 	}
 	info, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.WithError(err).Info("Checking for file existence returned an error")
+		}
 		return false
 	}
-	return !info.IsDir()
+	return info != nil && !info.IsDir()
 }
 
 // ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.

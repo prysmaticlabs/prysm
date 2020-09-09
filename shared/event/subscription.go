@@ -152,7 +152,7 @@ func (s *resubscribeSub) subscribe() Subscription {
 retry:
 	for {
 		s.lastTry = mclockutil.Now()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.TODO())
 		go func() {
 			rsub, err := s.fn(ctx)
 			sub = rsub

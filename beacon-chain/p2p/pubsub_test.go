@@ -2,16 +2,19 @@ package p2p
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"sync"
 	"testing"
 
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
-	s, err := NewService(&Config{})
+	s, err := NewService(context.Background(), &Config{})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -25,4 +28,12 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func TestMessageIDFunction_HashesCorrectly(t *testing.T) {
+	msg := [32]byte{'J', 'U', 'N', 'K'}
+	pMsg := &pubsubpb.Message{Data: msg[:]}
+	hashedData := hashutil.Hash(pMsg.Data)
+	msgID := base64.RawURLEncoding.EncodeToString(hashedData[:])
+	assert.Equal(t, msgID, msgIDFunction(pMsg), "Got incorrect msg id")
 }
