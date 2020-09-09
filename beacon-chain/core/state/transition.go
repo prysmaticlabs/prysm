@@ -42,34 +42,6 @@ var processingPipeline = []processFunc{
 	b.ProcessVoluntaryExits,
 }
 
-// This defines the processing block routine with the exception of not verifying any attestation signatures.
-// This is used during initial syncing with the flag `--disable-initial-sync-verify-all-signatures`
-var processingPipelineNoVerifyAttSigs = []processFunc{
-	b.ProcessBlockHeader,
-	b.ProcessRandao,
-	b.ProcessEth1DataInBlock,
-	VerifyOperationLengths,
-	b.ProcessProposerSlashings,
-	b.ProcessAttesterSlashings,
-	b.ProcessAttestationsNoVerifySignature,
-	b.ProcessDeposits,
-	b.ProcessVoluntaryExits,
-}
-
-// This defines the processing block routine for compute state root.
-// This is used to serve proposer for constructing a beacon block to fill in state root field.
-var processingPipelineStateRoot = []processFunc{
-	b.ProcessBlockHeaderNoVerify,
-	b.ProcessRandaoNoVerify,
-	b.ProcessEth1DataInBlock,
-	VerifyOperationLengths,
-	b.ProcessProposerSlashings,
-	b.ProcessAttesterSlashings,
-	b.ProcessAttestationsNoVerifySignature,
-	b.ProcessDeposits,
-	b.ProcessVoluntaryExits,
-}
-
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
@@ -472,36 +444,31 @@ func ProcessBlockNoVerifyAttSigs(
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockNoVerifyAttSigs")
 	defer span.End()
 
-	var err error
-	for _, p := range processingPipelineNoVerifyAttSigs {
-		state, err = p(ctx, state, signed)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not process block")
-		}
+	state, err := b.ProcessBlockHeader(ctx, state, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	return state, nil
-}
+	state, err = b.ProcessRandao(ctx, state, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not verify and process randao")
+	}
 
-// ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
-// and randao signature verifications.
-func ProcessBlockForStateRoot(
-	ctx context.Context,
-	state *stateTrie.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
-	defer span.End()
+	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process eth1 data")
+	}
 
-	var err error
-	for _, p := range processingPipelineStateRoot {
-		state, err = p(ctx, state, signed)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not process block")
-		}
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
 	return state, nil
@@ -524,10 +491,10 @@ func ProcessBlockNoVerifyAnySig(
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(ctx, state, signed)
+	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block header")
@@ -542,7 +509,7 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
 	}
-	state, err = b.ProcessRandaoNoVerify(ctx, state, signed)
+	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not verify and process randao")
@@ -600,7 +567,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signedBeaconBlock *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 
 	if _, err := VerifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
@@ -698,7 +665,7 @@ func CanProcessEpoch(state *stateTrie.BeaconState) bool {
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
 func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpochPrecompute")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
@@ -738,5 +705,42 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process final updates")
 	}
+	return state, nil
+}
+
+// ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
+// and randao signature verifications.
+func ProcessBlockForStateRoot(
+	ctx context.Context,
+	state *stateTrie.BeaconState,
+	signed *ethpb.SignedBeaconBlock,
+) (*stateTrie.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockForStateRoot")
+	defer span.End()
+
+	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process block header")
+	}
+
+	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not verify and process randao")
+	}
+
+	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process eth1 data")
+	}
+
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process block operation")
+	}
+
 	return state, nil
 }
