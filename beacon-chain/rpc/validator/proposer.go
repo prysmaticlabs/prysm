@@ -305,12 +305,10 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 					DepositCount: lastBlockDepositCount,
 					DepositRoot:  lastBlockDepositRoot[:],
 				}, nil
-			} else {
-				return vs.HeadFetcher.HeadETH1Data(), nil
 			}
-		} else {
 			return vs.HeadFetcher.HeadETH1Data(), nil
 		}
+		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
 
 	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
