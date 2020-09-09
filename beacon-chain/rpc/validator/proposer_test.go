@@ -160,7 +160,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	// we don't care for the purpose of this test.
 	var atts []*ethpb.Attestation
 	for i := uint64(0); len(atts) < int(params.BeaconConfig().MaxAttestations); i++ {
-		a, err := testutil.GenerateAttestations(beaconState, privKeys, 2, 1, true)
+		a, err := testutil.GenerateAttestations(beaconState, privKeys, 4, 1, true)
 		require.NoError(t, err)
 		atts = append(atts, a...)
 	}

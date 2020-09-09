@@ -24,8 +24,8 @@ type ValidatorStatusMetadata struct {
 }
 
 // RunStatusCommand is the entry point to the `validator status` command.
-func RunStatusCommand(pubKeys [][]byte, beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient) error {
-	statuses, err := FetchAccountStatuses(context.Background(), beaconNodeRPCProvider, pubKeys)
+func RunStatusCommand(ctx context.Context, pubKeys [][]byte, beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient) error {
+	statuses, err := FetchAccountStatuses(ctx, beaconNodeRPCProvider, pubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch account statuses from the beacon node")
 	}

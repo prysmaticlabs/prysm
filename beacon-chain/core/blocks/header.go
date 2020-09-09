@@ -41,7 +41,7 @@ func ProcessBlockHeader(
 	beaconState *stateTrie.BeaconState,
 	block *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	beaconState, err := ProcessBlockHeaderNoVerify(ctx, beaconState, block)
+	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block.Block)
 	if err != nil {
 		return nil, err
 	}
@@ -80,15 +80,12 @@ func ProcessBlockHeader(
 //    proposer = state.validators[get_beacon_proposer_index(state)]
 //    assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
-	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	signedBlock *ethpb.SignedBeaconBlock,
+	block *ethpb.BeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	if signedBlock == nil || signedBlock.Block == nil {
+	if block == nil {
 		return nil, errors.New("nil block")
 	}
-	block := signedBlock.Block
-
 	if beaconState.Slot() != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), block.Slot)
 	}
