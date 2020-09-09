@@ -208,7 +208,7 @@ func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
 // stores the generated keystore.json file in the wallet and additionally
 // generates withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, error) {
 	// Create a petname for an account from its public key and write its password to disk.
 	validatingKey := bls.RandKey()
 	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
@@ -216,7 +216,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, validatingKey.PublicKey().Marshal())
 	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
 	if err != nil {
-		return "", errors.Wrap(err, "could not create accounts keystore")
+		return nil, errors.Wrap(err, "could not create accounts keystore")
 	}
 
 	// Generate a withdrawal key and confirm user
@@ -239,7 +239,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	// and write associated deposit data to disk.
 	tx, data, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
-		return "", errors.Wrap(err, "could not generate deposit transaction data")
+		return nil, errors.Wrap(err, "could not generate deposit transaction data")
 	}
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
@@ -247,7 +247,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 		nil, /*genesisValidatorsRoot*/
 	)
 	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return "", errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
+		return nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
 	}
 
 	// Log the deposit transaction data to the user.
@@ -260,10 +260,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
-		return "", errors.Wrap(err, "could not write keystore file for accounts")
+		return nil, errors.Wrap(err, "could not write keystore file for accounts")
 	}
 
 	log.WithFields(logrus.Fields{
@@ -272,9 +272,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) (string, error) {
 
 	err = dr.initializeKeysCachesFromKeystore()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to initialize keys caches")
+		return nil, errors.Wrap(err, "failed to initialize keys caches")
 	}
-	return accountName, nil
+	return validatingKey.PublicKey().Marshal(), nil
 }
 
 // DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
@@ -349,7 +349,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 }
 
 func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), AccountsPath, accountsKeystoreFileName)
+	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.
 		return nil

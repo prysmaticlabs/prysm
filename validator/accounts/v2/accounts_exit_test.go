@@ -10,15 +10,42 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/types"
+	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestExitAccountsCli_Ok(t *testing.T) {
-	logHook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockValidatorClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	mockNodeClient := mock.NewMockNodeClient(ctrl)
+
+	mockValidatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
+
+	// Any time in the past will suffice
+	genesisTime := &types.Timestamp{
+		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+	}
+
+	mockNodeClient.EXPECT().
+		GetGenesis(gomock.Any(), gomock.Any()).
+		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
+
+	mockValidatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+
+	mockValidatorClient.EXPECT().
+		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
+		Return(&ethpb.ProposeExitResponse{}, nil)
 
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
@@ -51,18 +78,36 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-
 	require.NoError(t, ImportAccountsCli(cliCtx))
+
+	validatingPublicKeys, keymanager, err := prepareWallet(cliCtx)
+	require.NoError(t, err)
+	require.NotNil(t, validatingPublicKeys)
+	require.NotNil(t, keymanager)
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
 	stdin.Write([]byte("Y\n"))
+	rawPubKeys, formattedPubKeys, err := interact(cliCtx, &stdin, validatingPublicKeys)
+	require.NoError(t, err)
+	require.NotNil(t, rawPubKeys)
+	require.NotNil(t, formattedPubKeys)
 
-	require.NoError(t, ExitAccountsCli(cliCtx, &stdin))
-	assert.LogsContain(t, logHook, "Voluntary exit was successful")
+	cfg := performExitCfg{
+		mockValidatorClient,
+		mockNodeClient,
+		keymanager,
+		rawPubKeys,
+		formattedPubKeys,
+	}
+	formattedExitedKeys, err := performExit(cliCtx, cfg)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(formattedExitedKeys))
+	expectedKey := "0x" + keystore.Pubkey[:12]
+	assert.Equal(t, expectedKey, formattedExitedKeys[0])
 }
 
-func TestExitAccountsCli_EmptyWalletReturnsError(t *testing.T) {
+func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
@@ -78,6 +123,6 @@ func TestExitAccountsCli_EmptyWalletReturnsError(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	err = ExitAccountsCli(cliCtx, os.Stdin)
+	_, _, err = prepareWallet(cliCtx)
 	assert.ErrorContains(t, "wallet is empty, no accounts to perform voluntary exit", err)
 }

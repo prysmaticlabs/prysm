@@ -13,8 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -36,8 +38,10 @@ type Config struct {
 	KeyFlag               string
 	ValDB                 db.Database
 	ValidatorService      *client.ValidatorService
+	SyncChecker           client.SyncChecker
+	GenesisFetcher        client.GenesisFetcher
 	WalletInitializedFeed *event.Feed
-	WalletDir             string
+	NodeGatewayEndpoint   string
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -48,15 +52,19 @@ type Server struct {
 	host                  string
 	port                  string
 	listener              net.Listener
+	keymanager            v2keymanager.IKeymanager
 	withCert              string
 	withKey               string
 	credentialError       error
 	grpcServer            *grpc.Server
 	jwtKey                []byte
 	validatorService      *client.ValidatorService
-	walletDir             string
+	syncChecker           client.SyncChecker
+	genesisFetcher        client.GenesisFetcher
+	wallet                *accountsv2.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
+	nodeGatewayEndpoint   string
 }
 
 // NewServer instantiates a new gRPC server.
@@ -71,9 +79,11 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		withKey:               cfg.KeyFlag,
 		valDB:                 cfg.ValDB,
 		validatorService:      cfg.ValidatorService,
-		walletDir:             cfg.WalletDir,
+		syncChecker:           cfg.SyncChecker,
+		genesisFetcher:        cfg.GenesisFetcher,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
+		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
 	}
 }
 
@@ -133,6 +143,7 @@ func (s *Server) Start() {
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
 	pb.RegisterHealthServer(s.grpcServer, s)
+	pb.RegisterAccountsServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {

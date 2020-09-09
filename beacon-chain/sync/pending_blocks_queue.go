@@ -28,12 +28,11 @@ const numOfTries = 5
 
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (s *Service) processPendingBlocksQueue() {
-	ctx := context.Background()
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	locker := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
-		if err := s.processPendingBlocks(ctx); err != nil {
+		if err := s.processPendingBlocks(s.ctx); err != nil {
 			log.WithError(err).Debug("Failed to process pending blocks")
 		}
 		locker.Unlock()

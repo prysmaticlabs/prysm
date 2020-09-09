@@ -131,7 +131,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				}
 
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
-				if err := reqFunc(context.Background(), conn.RemotePeer()); err != nil && err != io.EOF {
+				if err := reqFunc(context.TODO(), conn.RemotePeer()); err != nil && err != io.EOF {
 					log.WithError(err).Trace("Handshake failed")
 					disconnectFromPeer()
 					return
@@ -160,8 +160,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 					priorState = peers.PeerDisconnected
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
-				ctx := context.Background()
-				if err := handler(ctx, conn.RemotePeer()); err != nil {
+				if err := handler(context.TODO(), conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Disconnect handler failed")
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)

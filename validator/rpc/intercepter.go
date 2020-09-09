@@ -2,9 +2,11 @@ package rpc
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -53,21 +55,23 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 func (s *Server) authorize(ctx context.Context) error {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return status.Errorf(codes.InvalidArgument, "retrieving metadata failed")
+		return status.Errorf(codes.InvalidArgument, "Retrieving metadata failed")
 	}
 
 	authHeader, ok := md["authorization"]
 	if !ok {
-		return status.Errorf(codes.Unauthenticated, "authorization token could not be found")
+		return status.Errorf(codes.Unauthenticated, "Authorization token could not be found")
 	}
-
 	checkParsedKey := func(*jwt.Token) (interface{}, error) {
 		return s.jwtKey, nil
 	}
-	token := authHeader[0]
+	if len(authHeader) < 1 || !strings.Contains(authHeader[0], "Bearer ") {
+		return status.Error(codes.Unauthenticated, "Invalid auth header, needs Bearer {token}")
+	}
+	token := strings.Split(authHeader[0], "Bearer ")[1]
 	_, err := jwt.Parse(token, checkParsedKey)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Could not parse JWT token")
 	}
 	return nil
 }
