@@ -322,3 +322,22 @@ func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(2*MaxSlotBuffer+1, uint64(genTime)), "no error from bad slot")
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(1<<63, uint64(genTime)), "no error from bad slot")
 }
+
+func TestWeakSubjectivityCheckptEpoch(t *testing.T) {
+	tests := []struct {
+		valCount uint64
+		fEpoch   uint64
+		want     uint64
+	}{
+		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount, fEpoch: 100000, want: 390},
+		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 4, fEpoch: 200000, want: 781},
+		{valCount: 300000, fEpoch: 100000, want: 390},
+		{valCount: 300000, fEpoch: 200000, want: 781},
+		{valCount: 300000, fEpoch: 300000, want: 1171},
+	}
+	for _, tt := range tests {
+		if got := WeakSubjectivityCheckptEpoch(tt.valCount, tt.fEpoch); got != tt.want {
+			t.Errorf("WeakSubjectivityCheckptEpoch() = %v, want %v", got, tt.want)
+		}
+	}
+}

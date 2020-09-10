@@ -131,6 +131,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	WeakSubjectivityPeriod:    54000,
 	PruneSlasherStoragePeriod: 10,
 
+	// Weak subjectivity values.
+	SafetyDecay: 1 / 10,
+
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},
 	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
