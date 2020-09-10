@@ -247,7 +247,8 @@ func moveDb(cliCtx *cli.Context, accountsDir string) string {
 				"oldDbPath": dataDir,
 				"walletDir": accountsDir,
 			}).Info("Moving validator protection db to wallet dir")
-			if err := os.Rename(dataFile, newDataFile); err != nil {
+			err := fileutil.CopyFile(dataFile, newDataFile)
+			if err != nil {
 				log.Fatal(err)
 			}
 		}
