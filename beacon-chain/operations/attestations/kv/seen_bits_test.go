@@ -38,3 +38,27 @@ func TestAttCaches_hasSeenBit(t *testing.T) {
 		}
 	}
 }
+
+func TestAttCaches_insertSeenBitDuplicates(t *testing.T) {
+	c := NewAttCaches()
+	d := &ethpb.AttestationData{
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		BeaconBlockRoot: make([]byte, 32),
+	}
+	att1 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b10000011}, Signature: make([]byte, 96)}
+	r, err := hashFn(att1.Data)
+	require.NoError(t, err)
+	require.NoError(t, c.insertSeenBit(att1))
+	require.Equal(t, 1, c.seenAtt.ItemCount())
+
+	_, expirationTime1, ok := c.seenAtt.GetWithExpiration(string(r[:]))
+	require.Equal(t, true, ok)
+
+	// Make sure that duplicates are not inserted, but expiration time gets updated.
+	require.NoError(t, c.insertSeenBit(att1))
+	require.Equal(t, 1, c.seenAtt.ItemCount())
+	_, expirationTime2, ok := c.seenAtt.GetWithExpiration(string(r[:]))
+	require.Equal(t, true, ok)
+	require.Equal(t, true, expirationTime2.After(expirationTime1), "Expiration time is not updated")
+}
