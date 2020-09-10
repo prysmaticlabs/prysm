@@ -111,7 +111,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 		case <-s.ctx.Done():
 			return
 		case <-st.C():
-			ctx := context.Background()
+			ctx := s.ctx
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
 				// Based on the spec, don't process the attestation until the subsequent slot.

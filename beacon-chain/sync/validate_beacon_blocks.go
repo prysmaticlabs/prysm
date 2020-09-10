@@ -142,7 +142,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject
 	}
 
-	parentState, err = state.ProcessSlots(context.Background(), parentState, blk.Block.Slot)
+	parentState, err = state.ProcessSlots(ctx, parentState, blk.Block.Slot)
 	if err != nil {
 		log.Errorf("Could not advance slot to calculate proposer index: %v", err)
 		return pubsub.ValidationIgnore
