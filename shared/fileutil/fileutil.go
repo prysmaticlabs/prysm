@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -86,7 +88,7 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(dst, input, 0644)
+	err = ioutil.WriteFile(dst, input, params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
 		err := errors.Wrapf(err, "Error creating file: %s", dst)
 		return err
