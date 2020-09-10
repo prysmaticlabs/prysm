@@ -78,3 +78,18 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 	}
 	return ioutil.ReadFile(filePath)
 }
+
+// CopyFile copy a file from source to destination path.
+func CopyFile(src, dst string) error {
+	input, err := ioutil.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(dst, input, 0644)
+	if err != nil {
+		err := errors.Wrapf(err, "Error creating file: %s", dst)
+		return err
+	}
+	return nil
+}
