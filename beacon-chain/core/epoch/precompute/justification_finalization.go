@@ -49,7 +49,11 @@ import (
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
 func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState, pBal *Balance) (*stateTrie.BeaconState, error) {
-	if state.Slot() <= helpers.StartSlot(2) {
+	canProcessSlot, err := helpers.StartSlot(2 /*epoch*/)
+	if err != nil {
+		return nil, err
+	}
+	if state.Slot() <= canProcessSlot {
 		return state, nil
 	}
 

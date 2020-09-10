@@ -58,8 +58,8 @@ type Service struct {
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewInitialSync(cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewInitialSync(ctx context.Context, cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:           ctx,
 		cancel:        cancel,
@@ -192,7 +192,7 @@ func (s *Service) Resync() error {
 	// set it to false since we are syncing again
 	s.synced = false
 	defer func() { s.synced = true }() // Reset it at the end of the method.
-	headState, err := s.chain.HeadState(context.Background())
+	headState, err := s.chain.HeadState(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state")
 	}
@@ -214,7 +214,7 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
+		_, peers := s.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.chain.FinalizedCheckpt().Epoch)
 		if len(peers) >= required {
 			break
 		}

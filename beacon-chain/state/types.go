@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -90,9 +91,59 @@ type BeaconState struct {
 	dirtyIndices          map[fieldIndex][]uint64
 	stateFieldLeaves      map[fieldIndex]*FieldTrie
 	rebuildTrie           map[fieldIndex]bool
-	valIdxMap             map[[48]byte]uint64
+	valMapHandler         *validatorMapHandler
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[fieldIndex]*reference
+}
+
+// String returns the name of the field index.
+func (f fieldIndex) String() string {
+	switch f {
+	case genesisTime:
+		return "genesisTime"
+	case genesisValidatorRoot:
+		return "genesisValidatorRoot"
+	case slot:
+		return "slot"
+	case fork:
+		return "fork"
+	case latestBlockHeader:
+		return "latestBlockHeader"
+	case blockRoots:
+		return "blockRoots"
+	case stateRoots:
+		return "stateRoots"
+	case historicalRoots:
+		return "historicalRoots"
+	case eth1Data:
+		return "eth1Data"
+	case eth1DataVotes:
+		return "eth1DataVotes"
+	case eth1DepositIndex:
+		return "eth1DepositIndex"
+	case validators:
+		return "validators"
+	case balances:
+		return "balances"
+	case randaoMixes:
+		return "randaoMixes"
+	case slashings:
+		return "slashings"
+	case previousEpochAttestations:
+		return "previousEpochAttestations"
+	case currentEpochAttestations:
+		return "currentEpochAttestations"
+	case justificationBits:
+		return "justificationBits"
+	case previousJustifiedCheckpoint:
+		return "previousJustifiedCheckpoint"
+	case currentJustifiedCheckpoint:
+		return "currentJustifiedCheckpoint"
+	case finalizedCheckpoint:
+		return "finalizedCheckpoint"
+	default:
+		return ""
+	}
 }
 
 // ReadOnlyValidator returns a wrapper that only allows fields from a validator
@@ -121,4 +172,34 @@ func (r *reference) MinusRef() {
 		r.refs--
 	}
 	r.lock.Unlock()
+}
+
+// a container to hold the map and a reference tracker for how many
+// states shared this.
+type validatorMapHandler struct {
+	valIdxMap map[[48]byte]uint64
+	mapRef    *reference
+}
+
+// A constructor for the map handler.
+func newValHandler(vals []*ethpb.Validator) *validatorMapHandler {
+	return &validatorMapHandler{
+		valIdxMap: coreutils.ValidatorIndexMap(vals),
+		mapRef:    &reference{refs: 1},
+	}
+}
+
+// copies the whole map and returns a map handler with the copied map.
+func (v *validatorMapHandler) copy() *validatorMapHandler {
+	if v == nil || v.valIdxMap == nil {
+		return &validatorMapHandler{valIdxMap: map[[48]byte]uint64{}, mapRef: new(reference)}
+	}
+	m := make(map[[48]byte]uint64, len(v.valIdxMap))
+	for k, v := range v.valIdxMap {
+		m[k] = v
+	}
+	return &validatorMapHandler{
+		valIdxMap: m,
+		mapRef:    &reference{refs: 1},
+	}
 }

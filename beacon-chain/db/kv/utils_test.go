@@ -3,39 +3,37 @@ package kv
 import (
 	"context"
 	"crypto/rand"
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
 )
 
 func Test_deleteValueForIndices(t *testing.T) {
 	db := setupDB(t)
 	blocks := make([]byte, 128)
-	if _, err := rand.Read(blocks); err != nil {
-		t.Fatal(err)
-	}
+	_, err := rand.Read(blocks)
+	require.NoError(t, err)
 	tests := []struct {
 		name          string
 		inputIndices  map[string][]byte
 		root          []byte
 		outputIndices map[string][]byte
-		wantErr       bool
+		wantedErr     string
 	}{
 		{
 			name:          "empty input, no root",
 			inputIndices:  map[string][]byte{},
 			root:          []byte{},
 			outputIndices: map[string][]byte{},
-			wantErr:       false,
 		},
 		{
 			name:          "empty input, root does not exist",
 			inputIndices:  map[string][]byte{},
 			root:          bytesutil.PadTo([]byte("not found"), 32),
 			outputIndices: map[string][]byte{},
-			wantErr:       false,
 		},
 		{
 			name: "non empty input, root does not exist",
@@ -46,7 +44,6 @@ func Test_deleteValueForIndices(t *testing.T) {
 			outputIndices: map[string][]byte{
 				"blocks": bytesutil.PadTo([]byte{0xde, 0xad, 0xbe, 0xef}, 64),
 			},
-			wantErr: false,
 		},
 		{
 			name: "removes value for a single bucket",
@@ -57,7 +54,6 @@ func Test_deleteValueForIndices(t *testing.T) {
 			outputIndices: map[string][]byte{
 				"blocks": {0xad, 0xbe, 0xef},
 			},
-			wantErr: false,
 		},
 		{
 			name: "removes multi-byte value for a single bucket (non-aligned)",
@@ -68,7 +64,6 @@ func Test_deleteValueForIndices(t *testing.T) {
 			outputIndices: map[string][]byte{
 				"blocks": {0xde, 0xad, 0xbe, 0xef},
 			},
-			wantErr: false,
 		},
 		{
 			name: "removes multi-byte value for a single bucket (non-aligned)",
@@ -79,7 +74,6 @@ func Test_deleteValueForIndices(t *testing.T) {
 			outputIndices: map[string][]byte{
 				"blocks": {0xde, 0xad, 0xff, 0x01},
 			},
-			wantErr: false,
 		},
 		{
 			name: "removes value from multiple buckets",
@@ -93,10 +87,9 @@ func Test_deleteValueForIndices(t *testing.T) {
 			outputIndices: map[string][]byte{
 				"blocks":      {0xff, 0x32, 0x45, 0x25, 0x24},
 				"state":       {0x01, 0x02, 0x03, 0x04},
-				"check-point": {},
+				"check-point": nil,
 				"powchain":    {0xba, 0xad, 0xb0, 0x00, 0xff},
 			},
-			wantErr: false,
 		},
 		{
 			name: "root as subsequence of two values (preserve)",
@@ -125,26 +118,23 @@ func Test_deleteValueForIndices(t *testing.T) {
 			err := db.db.Update(func(tx *bolt.Tx) error {
 				for k, idx := range tt.inputIndices {
 					bkt := tx.Bucket([]byte(k))
-					if err := bkt.Put(idx, tt.inputIndices[k]); err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, bkt.Put(idx, tt.inputIndices[k]))
 				}
-				if err := deleteValueForIndices(context.Background(), tt.inputIndices, tt.root, tx); (err != nil) != tt.wantErr {
-					t.Errorf("deleteValueForIndices() error = %v, wantErr %v", err, tt.wantErr)
+				err := deleteValueForIndices(context.Background(), tt.inputIndices, tt.root, tx)
+				if tt.wantedErr != "" {
+					assert.ErrorContains(t, tt.wantedErr, err)
+					return nil
 				}
+				assert.NoError(t, err)
 				// Check updated indices.
 				for k, idx := range tt.inputIndices {
 					bkt := tx.Bucket([]byte(k))
 					valuesAtIndex := bkt.Get(idx)
-					if !reflect.DeepEqual(valuesAtIndex, tt.outputIndices[k]) {
-						t.Errorf("unexpected output at %q, want: %#v, got: %#v", k, tt.outputIndices[k], valuesAtIndex)
-					}
+					assert.DeepEqual(t, tt.outputIndices[k], valuesAtIndex)
 				}
 				return nil
 			})
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		})
 	}
 }

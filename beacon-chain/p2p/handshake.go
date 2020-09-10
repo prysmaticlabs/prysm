@@ -131,15 +131,8 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				}
 
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
-				if err := reqFunc(context.Background(), conn.RemotePeer()); err != nil && err != io.EOF {
+				if err := reqFunc(context.TODO(), conn.RemotePeer()); err != nil && err != io.EOF {
 					log.WithError(err).Trace("Handshake failed")
-					if err.Error() == "protocol not supported" {
-						// This is only to ensure the smooth running of our testnets. This will not be
-						// used in production.
-						log.Debug("Not disconnecting peer with unsupported protocol. This maybe the relay node.")
-						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
-						return
-					}
 					disconnectFromPeer()
 					return
 				}
@@ -167,8 +160,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 					priorState = peers.PeerDisconnected
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
-				ctx := context.Background()
-				if err := handler(ctx, conn.RemotePeer()); err != nil {
+				if err := handler(context.TODO(), conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Disconnect handler failed")
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)

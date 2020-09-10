@@ -20,4 +20,5 @@ go_test(
     name = "go_default_test",
     srcs = ["pregen_test.go"],
     embed = [":go_default_library"],
+    deps = ["//shared/testutil/require:go_default_library"],
 )

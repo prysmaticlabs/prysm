@@ -10,7 +10,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var databaseFileName = "validator.db"
+// ProtectionDbFileName Validator slashing protection db file name.
+var ProtectionDbFileName = "validator.db"
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
@@ -27,9 +28,6 @@ func (store *Store) Close() error {
 func (store *Store) update(fn func(*bolt.Tx) error) error {
 	return store.db.Update(fn)
 }
-func (store *Store) batch(fn func(*bolt.Tx) error) error {
-	return store.db.Batch(fn)
-}
 func (store *Store) view(fn func(*bolt.Tx) error) error {
 	return store.db.View(fn)
 }
@@ -39,7 +37,7 @@ func (store *Store) ClearDB() error {
 	if _, err := os.Stat(store.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.Remove(filepath.Join(store.databasePath, databaseFileName))
+	return os.Remove(filepath.Join(store.databasePath, ProtectionDbFileName))
 }
 
 // DatabasePath at which this database writes files.
@@ -63,7 +61,7 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return nil, err
 	}
-	datafile := filepath.Join(dirPath, databaseFileName)
+	datafile := filepath.Join(dirPath, ProtectionDbFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		if err == bolt.ErrTimeout {
@@ -79,14 +77,17 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 			tx,
 			historicProposalsBucket,
 			historicAttestationsBucket,
+			validatorAPIBucket,
 		)
 	}); err != nil {
 		return nil, err
 	}
 
 	// Initialize the required public keys into the DB to ensure they're not empty.
-	if err := kv.initializeSubBuckets(pubKeys); err != nil {
-		return nil, err
+	if pubKeys != nil {
+		if err := kv.UpdatePublicKeysBuckets(pubKeys); err != nil {
+			return nil, err
+		}
 	}
 
 	return kv, err
@@ -94,7 +95,7 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 
 // GetKVStore returns the validator boltDB key-value store from directory. Returns nil if no such store exists.
 func GetKVStore(directory string) (*Store, error) {
-	fileName := filepath.Join(directory, databaseFileName)
+	fileName := filepath.Join(directory, ProtectionDbFileName)
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		return nil, nil
 	}

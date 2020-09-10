@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 
+	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -55,7 +56,13 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 		return err
 	}
 
-	key, err := ssz.HashTreeRoot(msg)
+	var key [32]byte
+	var err error
+	if v, ok := msg.(fssz.HashRoot); ok {
+		key, err = v.HashTreeRoot()
+	} else {
+		key, err = ssz.HashTreeRoot(msg)
+	}
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
@@ -78,29 +85,6 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 func (e Exporter) Close() error {
 	e.p.Close()
 	return e.db.Close()
-}
-
-// SaveAttestation publishes to the kafka topic for attestations.
-func (e Exporter) SaveAttestation(ctx context.Context, att *eth.Attestation) error {
-	go func() {
-		if err := e.publish(ctx, "beacon_attestation", att); err != nil {
-			log.WithError(err).Error("Failed to publish attestation")
-		}
-	}()
-
-	return e.db.SaveAttestation(ctx, att)
-}
-
-// SaveAttestations publishes to the kafka topic for beacon attestations.
-func (e Exporter) SaveAttestations(ctx context.Context, atts []*eth.Attestation) error {
-	go func() {
-		for _, att := range atts {
-			if err := e.publish(ctx, "beacon_attestation", att); err != nil {
-				log.WithError(err).Error("Failed to publish attestation")
-			}
-		}
-	}()
-	return e.db.SaveAttestations(ctx, atts)
 }
 
 // SaveBlock publishes to the kafka topic for beacon blocks.

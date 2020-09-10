@@ -17,7 +17,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -65,18 +64,14 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr = net.ParseIP("127.0.0.1")
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
-	if err != nil {
-		t.Fatalf("Failed to p2p listen: %v", err)
-	}
+	require.NoError(t, err, "Failed to p2p listen")
 	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen)}...)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return h, pkey, ipAddr
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, err := NewService(&Config{})
+	s, err := NewService(context.Background(), &Config{})
 	require.NoError(t, err)
 	s.started = true
 	s.dv5Listener = &mockListener{}
@@ -85,7 +80,7 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, err := NewService(&Config{})
+	s, err := NewService(context.Background(), &Config{})
 	require.NoError(t, err)
 	assert.NoError(t, s.Stop())
 }
@@ -97,7 +92,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		TCPPort: 2000,
 		UDPPort: 2000,
 	}
-	s, err := NewService(cfg)
+	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	s.stateNotifier = &mock.MockStateNotifier{}
 	s.dv5Listener = &mockListener{}
@@ -119,7 +114,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	assert.Equal(t, true, s.started, "Expected service to be started")
 	s.Start()
-	testutil.AssertLogsContain(t, hook, "Attempted to start p2p service when it was already started")
+	require.LogsContain(t, hook, "Attempted to start p2p service when it was already started")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
@@ -198,7 +193,7 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 
-	s, err = NewService(cfg)
+	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	s.stateNotifier = &mock.MockStateNotifier{}
 	exitRoutine := make(chan bool)
@@ -254,7 +249,7 @@ func TestPeer_Disconnect(t *testing.T) {
 }
 
 func TestService_JoinLeaveTopic(t *testing.T) {
-	s, err := NewService(&Config{})
+	s, err := NewService(context.Background(), &Config{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(s.joinedTopics))
 

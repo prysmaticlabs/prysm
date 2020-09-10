@@ -4,12 +4,12 @@ import (
 	"errors"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"k8s.io/client-go/tools/cache"
 )
 
 var (
@@ -20,11 +20,11 @@ var (
 	// maxCheckpointStateSize defines the max number of entries check point to state cache can contain.
 	// Choosing 10 to account for multiple forks, this allows 5 forks per epoch boundary with 2 epochs
 	// window to accept attestation based on latest spec.
-	maxCheckpointStateSize = uint64(10)
+	maxCheckpointStateSize = 10
 
 	// Metrics.
 	checkpointStateMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "check_point_statecache_miss",
+		Name: "check_point_state_cache_miss",
 		Help: "The number of check point state requests that aren't present in the cache.",
 	})
 	checkpointStateHit = promauto.NewCounter(prometheus.CounterOpts{
@@ -33,36 +33,20 @@ var (
 	})
 )
 
-// CheckpointState defines the active validator indices per epoch.
-type CheckpointState struct {
-	Checkpoint *ethpb.Checkpoint
-	State      *stateTrie.BeaconState
-}
-
 // CheckpointStateCache is a struct with 1 queue for looking up state by checkpoint.
 type CheckpointStateCache struct {
-	cache *cache.FIFO
+	cache *lru.Cache
 	lock  sync.RWMutex
-}
-
-// checkpointState takes the checkpoint as the key of the resulting state.
-func checkpointState(obj interface{}) (string, error) {
-	info, ok := obj.(*CheckpointState)
-	if !ok {
-		return "", ErrNotCheckpointState
-	}
-
-	h, err := hashutil.HashProto(info.Checkpoint)
-	if err != nil {
-		return "", err
-	}
-	return string(h[:]), nil
 }
 
 // NewCheckpointStateCache creates a new checkpoint state cache for storing/accessing processed state.
 func NewCheckpointStateCache() *CheckpointStateCache {
+	cache, err := lru.New(maxCheckpointStateSize)
+	if err != nil {
+		panic(err)
+	}
 	return &CheckpointStateCache{
-		cache: cache.NewFIFO(checkpointState),
+		cache: cache,
 	}
 }
 
@@ -76,44 +60,27 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 		return nil, err
 	}
 
-	obj, exists, err := c.cache.GetByKey(string(h[:]))
-	if err != nil {
-		return nil, err
-	}
+	item, exists := c.cache.Get(h)
 
-	if exists {
+	if exists && item != nil {
 		checkpointStateHit.Inc()
-	} else {
-		checkpointStateMiss.Inc()
-		return nil, nil
+		// Copy here is unnecessary since the return will only be used to verify attestation signature.
+		return item.(*stateTrie.BeaconState), nil
 	}
 
-	info, ok := obj.(*CheckpointState)
-	if !ok {
-		return nil, ErrNotCheckpointState
-	}
-
-	// Copy here is unnecessary since the return will only be used to verify attestation signature.
-	return info.State, nil
+	checkpointStateMiss.Inc()
+	return nil, nil
 }
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
 // recently added CheckpointState object if the cache size has ready the max cache size limit.
-func (c *CheckpointStateCache) AddCheckpointState(cp *CheckpointState) error {
+func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s *stateTrie.BeaconState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if err := c.cache.AddIfNotPresent(&CheckpointState{
-		Checkpoint: stateTrie.CopyCheckpoint(cp.Checkpoint),
-		State:      cp.State.Copy(),
-	}); err != nil {
+	h, err := hashutil.HashProto(cp)
+	if err != nil {
 		return err
 	}
-
-	trim(c.cache, maxCheckpointStateSize)
+	c.cache.Add(h, s)
 	return nil
-}
-
-// CheckpointStateKeys returns the keys of the state in cache.
-func (c *CheckpointStateCache) CheckpointStateKeys() []string {
-	return c.cache.ListKeys()
 }

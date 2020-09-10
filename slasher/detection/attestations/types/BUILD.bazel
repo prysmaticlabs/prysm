@@ -17,9 +17,14 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["epoch_store_test.go"],
+    srcs = [
+        "epoch_store_test.go",
+        "types_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "//slasher/db/testing:go_default_library",
         "//slasher/db/types:go_default_library",
     ],

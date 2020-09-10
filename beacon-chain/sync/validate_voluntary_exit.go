@@ -7,7 +7,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -31,7 +30,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode message")
+		log.WithError(err).Debug("Failed to decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -53,7 +52,6 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationIgnore
 	}
 
-	exitedEpochSlot := exit.Exit.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if exit.Exit.ValidatorIndex >= uint64(headState.NumValidators()) {
 		return pubsub.ValidationReject
 	}
@@ -61,7 +59,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	if err != nil {
 		return pubsub.ValidationIgnore
 	}
-	if err := blocks.VerifyExit(val, exitedEpochSlot, headState.Fork(), exit, headState.GenesisValidatorRoot()); err != nil {
+	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorRoot()); err != nil {
 		return pubsub.ValidationReject
 	}
 

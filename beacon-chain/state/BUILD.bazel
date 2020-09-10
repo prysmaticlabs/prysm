@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cloners.go",
-        "docs.go",
+        "doc.go",
         "field_trie.go",
         "getters.go",
         "setters.go",
@@ -22,6 +22,9 @@ go_library(
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/pcli:__pkg__",
         "//shared/aggregation:__subpackages__",
+        "//shared/depositutil:__subpackages__",
+        "//proto/testing:__subpackages__",
+        "//slasher/rpc:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",
@@ -50,6 +53,7 @@ go_test(
         "references_test.go",
         "state_trie_test.go",
         "types_test.go",
+        "validator_map_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -59,6 +63,8 @@ go_test(
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",

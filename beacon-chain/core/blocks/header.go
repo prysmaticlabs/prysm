@@ -2,13 +2,13 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -37,6 +37,7 @@ import (
 //    # Verify proposer signature
 //    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
 func ProcessBlockHeader(
+	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
 	block *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
@@ -99,7 +100,7 @@ func ProcessBlockHeaderNoVerify(
 	if parentHeader.Slot >= block.Slot {
 		return nil, fmt.Errorf("block.Slot %d must be greater than state.LatestBlockHeader.Slot %d", block.Slot, parentHeader.Slot)
 	}
-	parentRoot, err := stateutil.BlockHeaderRoot(parentHeader)
+	parentRoot, err := parentHeader.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +119,7 @@ func ProcessBlockHeaderNoVerify(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Body)
+	bodyRoot, err := block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}

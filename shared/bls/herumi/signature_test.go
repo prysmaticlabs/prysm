@@ -1,13 +1,14 @@
 package herumi_test
 
 import (
-	"bytes"
 	"errors"
 	"testing"
 
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSignVerify(t *testing.T) {
@@ -15,9 +16,7 @@ func TestSignVerify(t *testing.T) {
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
-	if !sig.Verify(pub, msg) {
-		t.Error("Signature did not verify")
-	}
+	assert.DeepEqual(t, true, sig.Verify(pub, msg))
 }
 
 func TestAggregateVerify(t *testing.T) {
@@ -34,9 +33,7 @@ func TestAggregateVerify(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 	aggSig := herumi.Aggregate(sigs)
-	if !aggSig.AggregateVerify(pubkeys, msgs) {
-		t.Error("Signature did not verify")
-	}
+	assert.DeepEqual(t, true, aggSig.AggregateVerify(pubkeys, msgs))
 }
 
 func TestFastAggregateVerify(t *testing.T) {
@@ -51,9 +48,7 @@ func TestFastAggregateVerify(t *testing.T) {
 		sigs = append(sigs, sig)
 	}
 	aggSig := herumi.AggregateSignatures(sigs)
-	if !aggSig.FastAggregateVerify(pubkeys, msg) {
-		t.Error("Signature did not verify")
-	}
+	assert.DeepEqual(t, true, aggSig.FastAggregateVerify(pubkeys, msg))
 }
 
 func TestMultipleSignatureVerification(t *testing.T) {
@@ -69,9 +64,9 @@ func TestMultipleSignatureVerification(t *testing.T) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); !verify || err != nil {
-		t.Errorf("Signature did not verify: %v and err %v", verify, err)
-	}
+	verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verify, "Signature did not verify")
 }
 
 func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
@@ -93,15 +88,9 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 	secondLastSig := sigs[len(sigs)-2]
 	// Convert to bls object
 	rawSig := new(bls12.Sign)
-	if err := rawSig.Deserialize(secondLastSig.Marshal()); err != nil {
-		t.Fatal(err)
-	}
-
+	require.NoError(t, rawSig.Deserialize(secondLastSig.Marshal()))
 	rawSig2 := new(bls12.Sign)
-	if err := rawSig2.Deserialize(lastSig.Marshal()); err != nil {
-		t.Fatal(err)
-	}
-
+	require.NoError(t, rawSig2.Deserialize(lastSig.Marshal()))
 	// set random field prime value
 	fprime := new(bls12.Fp)
 	fprime.SetInt64(100)
@@ -115,10 +104,7 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 	fp2.D = [2]bls12.Fp{*fprime, *fprime2}
 
 	g2Point := new(bls12.G2)
-	if err := bls12.MapToG2(g2Point, fp2); err != nil {
-		t.Fatal(err)
-	}
-
+	require.NoError(t, bls12.MapToG2(g2Point, fp2))
 	// We now add/subtract the respective g2 points by a fixed
 	// value. This would cause singluar verification to fail but
 	// not aggregate verification.
@@ -128,13 +114,9 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 	bls12.G2Sub(secondG2, secondG2, g2Point)
 
 	lastSig, err := herumi.SignatureFromBytes(rawSig.Serialize())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	secondLastSig, err = herumi.SignatureFromBytes(rawSig2.Serialize())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	sigs[len(sigs)-1] = lastSig
 	sigs[len(sigs)-2] = secondLastSig
 
@@ -145,9 +127,9 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 		t.Error("Signature did not verify")
 	}
 	// This method would be expected to fail.
-	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); verify || err != nil {
-		t.Errorf("Signature verified when it was not supposed to: %v and err %v", verify, err)
-	}
+	verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys)
+	assert.NoError(t, err)
+	assert.Equal(t, false, verify, "Signature verified when it was not supposed to")
 }
 
 func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
@@ -201,21 +183,11 @@ func TestSignatureFromBytes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := herumi.SignatureFromBytes(test.input)
 			if test.err != nil {
-				if err == nil {
-					t.Errorf("No error returned: expected %v", test.err)
-				} else if test.err.Error() != err.Error() {
-					t.Errorf("Unexpected error returned: expected %v, received %v", test.err, err)
-				}
+				assert.ErrorContains(t, test.err.Error(), err)
 			} else {
-				if err != nil {
-					t.Errorf("Unexpected error returned: %v", err)
-				} else {
-					if bytes.Compare(res.Marshal(), test.input) != 0 {
-						t.Errorf("Unexpected result: expected %x, received %x", test.input, res.Marshal())
-					}
-				}
+				assert.NoError(t, err)
+				assert.DeepEqual(t, test.input, res.Marshal())
 			}
-
 		})
 	}
 }

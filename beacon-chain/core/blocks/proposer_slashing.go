@@ -38,8 +38,13 @@ import (
 func ProcessProposerSlashings(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
+
+	body := b.Block.Body
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
 		if slashing == nil {
@@ -66,10 +71,12 @@ func VerifyProposerSlashing(
 	if slashing.Header_1 == nil || slashing.Header_1.Header == nil || slashing.Header_2 == nil || slashing.Header_2.Header == nil {
 		return errors.New("nil header cannot be verified")
 	}
-	if slashing.Header_1.Header.Slot != slashing.Header_2.Header.Slot {
+	hSlot := slashing.Header_1.Header.Slot
+	if hSlot != slashing.Header_2.Header.Slot {
 		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Header.Slot, slashing.Header_2.Header.Slot)
 	}
-	if slashing.Header_1.Header.ProposerIndex != slashing.Header_2.Header.ProposerIndex {
+	pIdx := slashing.Header_1.Header.ProposerIndex
+	if pIdx != slashing.Header_2.Header.ProposerIndex {
 		return fmt.Errorf("mismatched indices, received %d == %d", slashing.Header_1.Header.ProposerIndex, slashing.Header_2.Header.ProposerIndex)
 	}
 	if proto.Equal(slashing.Header_1, slashing.Header_2) {
@@ -82,17 +89,13 @@ func VerifyProposerSlashing(
 	if !helpers.IsSlashableValidatorUsingTrie(proposer, helpers.SlotToEpoch(beaconState.Slot())) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey())
 	}
-	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.SlotToEpoch(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		return err
-	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
-		proposerPubKey := proposer.PublicKey()
-		if err := helpers.VerifySigningRoot(header.Header, proposerPubKey[:], header.Signature, domain); err != nil {
+		if err := helpers.ComputeDomainVerifySigningRoot(beaconState, pIdx, helpers.SlotToEpoch(hSlot),
+			header.Header, params.BeaconConfig().DomainBeaconProposer, header.Signature); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}
 	}
+
 	return nil
 }

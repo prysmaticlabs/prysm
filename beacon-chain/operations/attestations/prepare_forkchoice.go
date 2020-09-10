@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -23,11 +22,11 @@ var prepareForkChoiceAttsPeriod = slotutil.DivideSlotBy(3 /* times-per-slot */)
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
 	ticker := time.NewTicker(prepareForkChoiceAttsPeriod)
+	defer ticker.Stop()
 	for {
-		ctx := context.Background()
 		select {
 		case <-ticker.C:
-			if err := s.batchForkChoiceAtts(ctx); err != nil {
+			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
 		case <-s.ctx.Done():
@@ -41,7 +40,7 @@ func (s *Service) prepareForkChoiceAtts() {
 // pool. Then finds the common data, aggregate and batch them for fork choice.
 // The resulting attestations are saved in the fork choice pool.
 func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
-	_, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
+	ctx, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
 	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
@@ -62,7 +61,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			continue
 		}
 
-		attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
+		attDataRoot, err := att.Data.HashTreeRoot()
 		if err != nil {
 			return err
 		}

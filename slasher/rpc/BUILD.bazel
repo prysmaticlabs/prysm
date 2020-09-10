@@ -40,19 +40,22 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "rpc_test.go",
         "server_test.go",
         "service_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db/testing:go_default_library",
         "//slasher/detection:go_default_library",

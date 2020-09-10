@@ -1,7 +1,7 @@
 package testing
 
 import (
-	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"path"
@@ -10,10 +10,11 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // SSZRoots --
@@ -23,9 +24,7 @@ type SSZRoots struct {
 }
 
 func runSSZStaticTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(t, config); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, _ := testutil.TestFolders(t, config, "ssz_static")
 	for _, folder := range testFolders {
@@ -35,67 +34,48 @@ func runSSZStaticTests(t *testing.T, config string) {
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
 				serializedBytes, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz")
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				object, err := UnmarshalledSSZ(t, serializedBytes, folder.Name())
-				if err != nil {
-					t.Fatalf("Could not unmarshall serialized SSZ: %v", err)
-				}
+				require.NoError(t, err, "Could not unmarshall serialized SSZ")
 
 				rootsYamlFile, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				rootsYaml := &SSZRoots{}
-				if err := testutil.UnmarshalYaml(rootsYamlFile, rootsYaml); err != nil {
-					t.Fatalf("Failed to Unmarshal: %v", err)
-				}
+				require.NoError(t, testutil.UnmarshalYaml(rootsYamlFile, rootsYaml), "Failed to Unmarshal")
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
 				if _, ok := object.(*pb.BeaconState); ok {
 					htr = func(s interface{}) ([32]byte, error) {
-						return stateutil.HashTreeRootState(s.(*pb.BeaconState))
+						beaconState, err := state.InitializeFromProto(s.(*pb.BeaconState))
+						require.NoError(t, err)
+						return beaconState.HashTreeRoot(context.Background())
 					}
 				} else {
 					htr = ssz.HashTreeRoot
 				}
 
 				root, err := htr(object)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				rootBytes, err := hex.DecodeString(rootsYaml.Root[2:])
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(root[:], rootBytes) {
-					t.Fatalf(
-						"Did not receive expected hash tree root, received: %#x, expected: %#x",
-						root[:],
-						rootBytes,
-					)
-				}
+				require.NoError(t, err)
+				require.DeepEqual(t, rootBytes, root[:], "Did not receive expected hash tree root")
 
 				if rootsYaml.SigningRoot == "" {
 					return
 				}
-				signingRoot, err := ssz.HashTreeRoot(object)
-				if err != nil {
-					t.Fatal(err)
+
+				var signingRoot [32]byte
+				if v, ok := object.(fssz.HashRoot); ok {
+					signingRoot, err = v.HashTreeRoot()
+				} else {
+					t.Fatal("object does not meet fssz.HashRoot")
 				}
+
+				require.NoError(t, err)
 				signingRootBytes, err := hex.DecodeString(rootsYaml.SigningRoot[2:])
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !bytes.Equal(signingRoot[:], signingRootBytes) {
-					t.Fatalf(
-						"Did not receive expected signing root, received: %#x, expected: %#x",
-						signingRoot[:],
-						signingRootBytes,
-					)
-				}
+				require.NoError(t, err)
+				require.DeepEqual(t, signingRootBytes, signingRoot[:], "Did not receive expected signing root")
 			})
 		}
 	}
@@ -147,7 +127,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
 	case "SignedAggregateAndProof":
-		obj = &pb.SignedAggregateAndProof{}
+		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
 		obj = &ethpb.SignedBeaconBlock{}
 	case "SignedBeaconBlockHeader":

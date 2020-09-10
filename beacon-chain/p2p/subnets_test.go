@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -78,7 +79,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 	cfg.StateNotifier = &mock.MockStateNotifier{}
-	s, err = NewService(cfg)
+	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -100,11 +101,12 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	time.Sleep(6 * discoveryWaitTime)
 
 	// look up 3 different subnets
-	exists, err := s.FindPeersWithSubnet(1)
+	ctx := context.Background()
+	exists, err := s.FindPeersWithSubnet(ctx, 1)
 	require.NoError(t, err)
-	exists2, err := s.FindPeersWithSubnet(2)
+	exists2, err := s.FindPeersWithSubnet(ctx, 2)
 	require.NoError(t, err)
-	exists3, err := s.FindPeersWithSubnet(3)
+	exists3, err := s.FindPeersWithSubnet(ctx, 3)
 	require.NoError(t, err)
 	if !exists || !exists2 || !exists3 {
 		t.Fatal("Peer with subnet doesn't exist")
@@ -113,13 +115,15 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	// Update ENR of a peer.
 	testService := &Service{
 		dv5Listener: listeners[0],
-		metaData:    &pb.MetaData{},
+		metaData: &pb.MetaData{
+			Attnets: bitfield.NewBitvector64(),
+		},
 	}
 	cache.SubnetIDs.AddAttesterSubnetID(0, 10)
 	testService.RefreshENR()
 	time.Sleep(2 * time.Second)
 
-	exists, err = s.FindPeersWithSubnet(2)
+	exists, err = s.FindPeersWithSubnet(ctx, 2)
 	require.NoError(t, err)
 
 	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")

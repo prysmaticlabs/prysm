@@ -2,65 +2,36 @@ package kv
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
-// SaveArchivedPointRoot saves an archived point root to the DB. This is used for cold state management.
-func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedPointRoot")
-	defer span.End()
-
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(bytesutil.Uint64ToBytes(index), blockRoot[:])
-	})
-}
-
-// SaveLastArchivedIndex to the db.
-func (kv *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastArchivedIndex")
-	defer span.End()
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(lastArchivedIndexKey, bytesutil.Uint64ToBytes(index))
-	})
-}
-
-// LastArchivedIndex from the db.
-func (kv *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndex")
+// LastArchivedSlot from the db.
+func (kv *Store) LastArchivedSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedSlot")
 	defer span.End()
 	var index uint64
 	err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
-		b := bucket.Get(lastArchivedIndexKey)
-		if b == nil {
-			return nil
-		}
-		index = binary.LittleEndian.Uint64(b)
+		bkt := tx.Bucket(stateSlotIndicesBucket)
+		b, _ := bkt.Cursor().Last()
+		index = bytesutil.BytesToUint64BigEndian(b)
 		return nil
 	})
 
 	return index, err
 }
 
-// LastArchivedIndexRoot from the db.
-func (kv *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndexRoot")
+// LastArchivedRoot from the db.
+func (kv *Store) LastArchivedRoot(ctx context.Context) [32]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedRoot")
 	defer span.End()
 
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
-		lastArchivedIndex := bucket.Get(lastArchivedIndexKey)
-		if lastArchivedIndex == nil {
-			return nil
-		}
-		blockRoot = bucket.Get(lastArchivedIndex)
+		bkt := tx.Bucket(stateSlotIndicesBucket)
+		_, blockRoot = bkt.Cursor().Last()
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
@@ -71,14 +42,14 @@ func (kv *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 
 // ArchivedPointRoot returns the block root of an archived point from the DB.
 // This is essential for cold state management and to restore a cold state.
-func (kv *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
+func (kv *Store) ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointRoot")
 	defer span.End()
 
 	var blockRoot []byte
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
-		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(index))
+		bucket := tx.Bucket(stateSlotIndicesBucket)
+		blockRoot = bucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
@@ -88,13 +59,13 @@ func (kv *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 }
 
 // HasArchivedPoint returns true if an archived point exists in DB.
-func (kv *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
+func (kv *Store) HasArchivedPoint(ctx context.Context, slot uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
 	defer span.End()
 	var exists bool
 	if err := kv.db.View(func(tx *bolt.Tx) error {
-		iBucket := tx.Bucket(archivedIndexRootBucket)
-		exists = iBucket.Get(bytesutil.Uint64ToBytes(index)) != nil
+		iBucket := tx.Bucket(stateSlotIndicesBucket)
+		exists = iBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot)) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)

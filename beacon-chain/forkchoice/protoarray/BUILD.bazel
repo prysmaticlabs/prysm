@@ -8,6 +8,7 @@ go_library(
         "errors.go",
         "helpers.go",
         "metrics.go",
+        "node.go",
         "nodes.go",
         "store.go",
         "types.go",
@@ -34,7 +35,10 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
     ],
 )

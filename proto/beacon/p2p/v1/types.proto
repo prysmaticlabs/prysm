@@ -63,13 +63,6 @@ message PendingAttestation {
   uint64 proposer_index = 4;
 }
 
-message ValidatorLatestVote {
-  // The epoch of when the latest message was voted.
-  uint64 epoch = 1;
-  // The root of the latest message votes.
-  bytes root = 2;
-}
-
 message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
@@ -100,9 +93,16 @@ message ForkData {
   bytes genesis_validators_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
-message SignedAggregateAndProof {
-  // The aggregated and proof from the aggregator.
-  ethereum.eth.v1alpha1.AggregateAttestationAndProof message = 1;
-  // The signature of the aggregator signing the aggregated and proof object.
-  bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+message CheckPtInfo {
+  // The randao seed which the check point refers to, this will be used to retrieve shuffled indices.
+  bytes seed = 1;
+  // The genesis root which the check point refers to. This ensures same seed can't happen on different chain.
+  bytes genesis_root = 2;
+  // Validators that were active at that check point.
+  repeated uint64 active_indices = 3;
+  // Validators public keys at that check point.
+  repeated bytes pub_keys = 4;
+  // The fork data at that check point. This will be used to verify signatures.
+  Fork fork = 5;
 }
+

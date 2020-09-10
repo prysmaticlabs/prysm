@@ -1,11 +1,13 @@
 package params
 
 import (
+	"io/ioutil"
 	"path"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestLoadConfigFile(t *testing.T) {
@@ -32,6 +34,26 @@ func TestLoadConfigFile(t *testing.T) {
 		t.Errorf("Expected SecondsPerSlot to be set to minimal value: %d found: %d",
 			MinimalSpecConfig().SecondsPerSlot,
 			BeaconConfig().SecondsPerSlot)
+	}
+}
+
+func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
+	file, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	// Set current config to minimal config
+	OverrideBeaconConfig(MinimalSpecConfig())
+
+	// load empty config file, so that it defaults to mainnet values
+	LoadChainConfigFile(file.Name())
+	if BeaconConfig().MinGenesisTime != MainnetConfig().MinGenesisTime {
+		t.Errorf("Expected MinGenesisTime to be set to mainnet value: %d found: %d",
+			MainnetConfig().MinGenesisTime,
+			BeaconConfig().MinGenesisTime)
+	}
+	if BeaconConfig().SlotsPerEpoch != MainnetConfig().SlotsPerEpoch {
+		t.Errorf("Expected SlotsPerEpoch to be set to mainnet value: %d found: %d",
+			MainnetConfig().SlotsPerEpoch,
+			BeaconConfig().SlotsPerEpoch)
 	}
 }
 
@@ -109,9 +131,7 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 func ConfigFilePath(t *testing.T, config string) string {
 	configFolderPath := path.Join("tests", config)
 	filepath, err := bazel.Runfile(configFolderPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	configFilePath := path.Join(filepath, "config.yaml")
+	require.NoError(t, err)
+	configFilePath := path.Join(filepath, "config", "phase0.yaml")
 	return configFilePath
 }

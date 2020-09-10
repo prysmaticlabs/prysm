@@ -11,13 +11,13 @@ var (
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
 		Usage: "A mainchain web3 provider string http endpoint",
-		Value: "https://goerli.prylabs.net",
+		Value: "",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
-		Value: "0x0F0F0fc0530007361933EaB5DB97d09aCDD6C1c8",
+		Value: "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", // Medalla deposit contract address.
 	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{
@@ -69,6 +69,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
+		Value: "http://localhost:4200",
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
@@ -93,17 +94,6 @@ var (
 	UnsafeSync = &cli.BoolFlag{
 		Name:  "unsafe-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
-	}
-	// SlasherCertFlag defines a flag for the slasher TLS certificate.
-	SlasherCertFlag = &cli.StringFlag{
-		Name:  "slasher-tls-cert",
-		Usage: "Certificate for secure slasher gRPC connection. Pass this in order to use slasher gRPC securely.",
-	}
-	// SlasherProviderFlag defines a flag for a slasher RPC provider.
-	SlasherProviderFlag = &cli.StringFlag{
-		Name:  "slasher-provider",
-		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
-		Value: "127.0.0.1:4002",
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of DB.
@@ -132,6 +122,21 @@ var (
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
 		Name:  "enable-debug-rpc-endpoints",
-		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state. Requires --new-state-mgmt",
+		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
+	}
+	// HistoricalSlasherNode is a set of beacon node flags required for performing historical detection with a slasher.
+	HistoricalSlasherNode = &cli.BoolFlag{
+		Name:  "historical-slasher-node",
+		Usage: "Enables required flags for serving historical data to a slasher client. Results in additional storage usage",
+	}
+	// ChainID defines a flag to set the chain id. If none is set, it derives this value from NetworkConfig
+	ChainID = &cli.Uint64Flag{
+		Name:  "chain-id",
+		Usage: "Sets the chain id of the beacon chain",
+	}
+	// NetworkID defines a flag to set the network id. If none is set, it derives this value from NetworkConfig
+	NetworkID = &cli.Uint64Flag{
+		Name:  "network-id",
+		Usage: "Sets the network id of the beacon chain.",
 	}
 )

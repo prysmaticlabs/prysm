@@ -5,7 +5,6 @@ package kv
 import (
 	"os"
 	"path"
-	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -40,8 +39,6 @@ type Store struct {
 	databasePath        string
 	blockCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
-	stateSlotBitLock    sync.Mutex
-	blockSlotBitLock    sync.Mutex
 	stateSummaryCache   *cache.StateSummaryCache
 }
 
@@ -98,14 +95,8 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			voluntaryExitsBucket,
 			chainMetadataBucket,
 			checkpointBucket,
-			archivedValidatorSetChangesBucket,
-			archivedCommitteeInfoBucket,
-			archivedBalancesBucket,
-			archivedValidatorParticipationBucket,
 			powchainBucket,
 			stateSummaryBucket,
-			archivedIndexRootBucket,
-			slotsHasObjectBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
@@ -113,10 +104,13 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			attestationTargetRootIndicesBucket,
 			attestationTargetEpochIndicesBucket,
 			blockSlotIndicesBucket,
+			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
 			// New State Management service bucket.
 			newStateServiceCompatibleBucket,
+			// Migrations
+			migrationsBucket,
 		)
 	}); err != nil {
 		return nil, err

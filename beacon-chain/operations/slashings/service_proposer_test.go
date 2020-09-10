@@ -2,13 +2,9 @@ package slashings
 
 import (
 	"context"
-	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -28,10 +24,9 @@ func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
 
 func TestPool_InsertProposerSlashing(t *testing.T) {
 	type fields struct {
-		wantErr  bool
-		err      string
-		pending  []*ethpb.ProposerSlashing
-		included map[uint64]bool
+		wantedErr string
+		pending   []*ethpb.ProposerSlashing
+		included  map[uint64]bool
 	}
 	type args struct {
 		slashings []*ethpb.ProposerSlashing
@@ -45,9 +40,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 		slashings[i] = sl
 	}
 
-	if err := beaconState.SetSlot(helpers.StartSlot(1)); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	// We mark the following validators with some preconditions.
 	exitedVal, err := beaconState.ValidatorAtIndex(uint64(2))
@@ -59,15 +52,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
 	require.NoError(t, err)
 	slashedVal.Slashed = true
-	if err := beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.UpdateValidatorAtIndex(uint64(4), futureExitedVal); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.UpdateValidatorAtIndex(uint64(5), slashedVal); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(uint64(4), futureExitedVal))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(uint64(5), slashedVal))
 
 	tests := []struct {
 		name   string
@@ -89,10 +76,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 		{
 			name: "Duplicate identical slashing",
 			fields: fields{
-				pending:  slashings[0:1],
-				included: make(map[uint64]bool),
-				wantErr:  true,
-				err:      "slashing object already exists in pending proposer slashings",
+				pending:   slashings[0:1],
+				included:  make(map[uint64]bool),
+				wantedErr: "slashing object already exists in pending proposer slashings",
 			},
 			args: args{
 				slashings: slashings[0:1],
@@ -102,10 +88,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 		{
 			name: "Slashing for exited validator",
 			fields: fields{
-				pending:  []*ethpb.ProposerSlashing{},
-				included: make(map[uint64]bool),
-				wantErr:  true,
-				err:      "is not slashable",
+				pending:   []*ethpb.ProposerSlashing{},
+				included:  make(map[uint64]bool),
+				wantedErr: "is not slashable",
 			},
 			args: args{
 				slashings: slashings[2:3],
@@ -126,10 +111,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 		{
 			name: "Slashing for slashed validator",
 			fields: fields{
-				pending:  []*ethpb.ProposerSlashing{},
-				included: make(map[uint64]bool),
-				wantErr:  true,
-				err:      "not slashable",
+				pending:   []*ethpb.ProposerSlashing{},
+				included:  make(map[uint64]bool),
+				wantedErr: "not slashable",
 			},
 			args: args{
 				slashings: slashings[5:6],
@@ -143,8 +127,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				included: map[uint64]bool{
 					1: true,
 				},
-				wantErr: true,
-				err:     "cannot be slashed",
+				wantedErr: "cannot be slashed",
 			},
 			args: args{
 				slashings: slashings[1:2],
@@ -180,18 +163,15 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			for i := 0; i < len(tt.args.slashings); i++ {
 				err = p.InsertProposerSlashing(context.Background(), beaconState, tt.args.slashings[i])
 			}
-			if err != nil && tt.fields.wantErr && !strings.Contains(err.Error(), tt.fields.err) {
-				t.Fatalf("Wanted err: %v, received %v", tt.fields.err, err)
-			}
-			if !tt.fields.wantErr && err != nil {
-				t.Fatalf("Did not expect error: %v", err)
+			if tt.fields.wantedErr != "" {
+				require.ErrorContains(t, tt.fields.wantedErr, err)
+			} else {
+				require.NoError(t, err)
 			}
 			assert.Equal(t, len(tt.want), len(p.pendingProposerSlashing))
 			for i := range p.pendingAttesterSlashing {
 				assert.Equal(t, p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex, tt.want[i].Header_1.Header.ProposerIndex)
-				if !proto.Equal(p.pendingProposerSlashing[i], tt.want[i]) {
-					t.Errorf("Proposer slashing at index %d does not match expected. Got=%v wanted=%v", i, p.pendingProposerSlashing[i], tt.want[i])
-				}
+				assert.DeepEqual(t, tt.want[i], p.pendingProposerSlashing[i], "Proposer slashing at index %d does not match expected", i)
 			}
 		})
 	}
@@ -217,20 +197,9 @@ func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 		pendingProposerSlashing: make([]*ethpb.ProposerSlashing, 0),
 	}
 	// We only want a single slashing to remain.
-	if err := p.InsertProposerSlashing(
-		context.Background(),
-		beaconState,
-		slashings[0],
-	); err != nil {
-		t.Fatal(err)
-	}
-	if err := p.InsertProposerSlashing(
-		context.Background(),
-		beaconState,
-		slashings[1],
-	); err == nil {
-		t.Error("Expected slashing with bad signature to fail, received nil")
-	}
+	require.NoError(t, p.InsertProposerSlashing(context.Background(), beaconState, slashings[0]))
+	err := p.InsertProposerSlashing(context.Background(), beaconState, slashings[1])
+	require.ErrorContains(t, "could not verify proposer slashing", err, "Expected slashing with bad signature to fail")
 	assert.Equal(t, 1, len(p.pendingProposerSlashing))
 }
 
@@ -344,14 +313,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 			p.MarkIncludedProposerSlashing(tt.args.slashing)
 			assert.Equal(t, len(tt.want.pending), len(p.pendingProposerSlashing))
 			for i := range p.pendingProposerSlashing {
-				if !proto.Equal(p.pendingProposerSlashing[i], tt.want.pending[i]) {
-					t.Errorf(
-						"Pending proposer slashing at index %d does not match expected. Got=%v wanted=%v",
-						i,
-						p.pendingProposerSlashing[i],
-						tt.want.pending[i],
-					)
-				}
+				assert.DeepEqual(t, tt.want.pending[i], p.pendingProposerSlashing[i], "Unexpected pending proposer slashing at index %d", i)
 			}
 			assert.DeepEqual(t, tt.want.included, p.included)
 		})
@@ -401,11 +363,7 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 			p := &Pool{
 				pendingProposerSlashing: tt.fields.pending,
 			}
-			if got := p.PendingProposerSlashings(
-				context.Background(), beaconState,
-			); !reflect.DeepEqual(tt.want, got) {
-				t.Errorf("Unexpected return from PendingProposerSlashings, wanted %v, received %v", tt.want, got)
-			}
+			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState))
 		})
 	}
 }
@@ -418,15 +376,11 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	val, err := beaconState.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	val.Slashed = true
-	if err := beaconState.UpdateValidatorAtIndex(0, val); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(0, val))
 	val, err = beaconState.ValidatorAtIndex(5)
 	require.NoError(t, err)
 	val.Slashed = true
-	if err := beaconState.UpdateValidatorAtIndex(5, val); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(5, val))
 	slashings := make([]*ethpb.ProposerSlashing, 32)
 	for i := 0; i < len(slashings); i++ {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
@@ -453,12 +407,7 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 			p := &Pool{
 				pendingProposerSlashing: tt.fields.pending,
 			}
-
-			if got := p.PendingProposerSlashings(
-				context.Background(), beaconState,
-			); !reflect.DeepEqual(tt.want, got) {
-				t.Errorf("Unexpected return from PendingProposerSlashings, \nwanted %v, \nreceived %v", tt.want, got)
-			}
+			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState))
 		})
 	}
 }

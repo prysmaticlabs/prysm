@@ -2,6 +2,8 @@ package v1
 
 import (
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPathsToVerificationRegexes(t *testing.T) {
@@ -45,13 +47,9 @@ func TestPathsToVerificationRegexes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			regexes := pathsToVerificationRegexes(test.paths)
-			if len(regexes) != len(test.regexes) {
-				t.Fatalf("Unexpected number of regexes: expected %v, received %v", len(test.regexes), len(regexes))
-			}
+			require.Equal(t, len(test.regexes), len(regexes), "Unexpected number of regexes")
 			for i := range regexes {
-				if regexes[i].String() != test.regexes[i] {
-					t.Fatalf("Unexpected regex %d: expected %v, received %v", i, test.regexes[i], regexes[i].String())
-				}
+				require.Equal(t, test.regexes[i], regexes[i].String(), "Unexpected regex %d", i)
 			}
 		})
 	}

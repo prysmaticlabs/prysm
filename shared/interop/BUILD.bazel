@@ -38,6 +38,8 @@ go_test(
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_go_yaml_yaml//:go_default_library",

@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -36,17 +35,18 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	var blkRoots [][32]byte
 	// Populate the database with blocks that would match the request.
 	for i := 1; i < 11; i++ {
-		blk := &ethpb.BeaconBlock{
-			Slot: uint64(i),
-		}
-		root, err := ssz.HashTreeRoot(blk)
+		blk := testutil.NewBeaconBlock()
+		blk.Block.Slot = uint64(i)
+		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: blk}))
+		require.NoError(t, d.SaveBlock(context.Background(), blk))
 		blkRoots = append(blkRoots, root)
 	}
 
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
+	r := &Service{p2p: p1, db: d, rateLimiter: newRateLimiter(p1)}
 	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -54,7 +54,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		for i := range blkRoots {
 			expectSuccess(t, r, stream)
-			res := &ethpb.SignedBeaconBlock{}
+			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, &res))
 			if res.Block.Slot != uint64(i+1) {
 				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)
@@ -77,12 +77,14 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.DelaySend = true
 
-	blockA := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 111}}
-	blockB := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 40}}
+	blockA := testutil.NewBeaconBlock()
+	blockA.Block.Slot = 111
+	blockB := testutil.NewBeaconBlock()
+	blockB.Block.Slot = 40
 	// Set up a head state with data we expect.
-	blockARoot, err := stateutil.BlockRoot(blockA.Block)
+	blockARoot, err := blockA.Block.HashTreeRoot()
 	require.NoError(t, err)
-	blockBRoot, err := stateutil.BlockRoot(blockB.Block)
+	blockBRoot, err := blockB.Block.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -102,14 +104,17 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
-		blocksRateLimiter:   leakybucket.NewCollector(10000, 10000, false),
+		rateLimiter:         newRateLimiter(p1),
 	}
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -124,6 +129,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
 			assert.NoError(t, err, "Could not send response back")
 		}
+		assert.NoError(t, stream.Close())
 	})
 
 	p1.Connect(p2)
@@ -132,6 +138,38 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
+}
+
+func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	d, _ := db.SetupDB(t)
+
+	r := &Service{p2p: p1, db: d, rateLimiter: newRateLimiter(p1)}
+	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		expectFailure(t, 1, "no block roots provided in request", stream)
+	})
+
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
+	require.NoError(t, err)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), [][32]byte{}, stream1)
+	assert.ErrorContains(t, "no block roots provided", err)
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	lter, err := r.rateLimiter.retrieveCollector(topic)
+	require.NoError(t, err)
+	assert.Equal(t, 1, int(lter.Count(stream1.Conn().RemotePeer().String())))
 }
 
 type testList [][32]byte

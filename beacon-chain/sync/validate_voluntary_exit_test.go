@@ -48,14 +48,10 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 	require.NoError(t, err)
 	err = state.SetSlot(state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, err)
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
-	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(exit.Exit, domain)
-	require.NoError(t, err)
-	priv := bls.RandKey()
 
-	sig := priv.Sign(signingRoot[:])
-	exit.Signature = sig.Marshal()
+	priv := bls.RandKey()
+	exit.Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	require.NoError(t, err)
 
 	val, err := state.ValidatorAtIndex(0)
 	require.NoError(t, err)
@@ -100,6 +96,39 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
 	assert.Equal(t, true, valid, "Failed validation")
 	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
+}
+
+func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	exit, s := setupValidExit(t)
+	// Set state slot to 1 to cause exit object fail to verify.
+	require.NoError(t, s.SetSlot(1))
+	c, err := lru.New(10)
+	require.NoError(t, err)
+	r := &Service{
+		p2p: p,
+		chain: &mock.ChainService{
+			State: s,
+		},
+		initialSync:   &mockSync.Sync{IsSyncing: false},
+		seenExitCache: c,
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, exit)
+	require.NoError(t, err)
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(exit)],
+			},
+		},
+	}
+	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
+	assert.Equal(t, false, valid, "passed validation")
 }
 
 func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {

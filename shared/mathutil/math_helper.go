@@ -2,7 +2,9 @@
 package mathutil
 
 import (
+	"errors"
 	"math"
+	"math/bits"
 )
 
 // Common square root values.
@@ -89,4 +91,26 @@ func Min(a uint64, b uint64) uint64 {
 		return a
 	}
 	return b
+}
+
+// Mul64 multiples 2 64-bit unsigned integers and checks if they
+// lead to an overflow. If they do not, it returns the result
+// without an error.
+func Mul64(a, b uint64) (uint64, error) {
+	overflows, val := bits.Mul64(a, b)
+	if overflows > 0 {
+		return 0, errors.New("multiplication overflows")
+	}
+	return val, nil
+}
+
+// Add64 adds 2 64-bit unsigned integers and checks if they
+// lead to an overflow. If they do not, it returns the result
+// without an error.
+func Add64(a, b uint64) (uint64, error) {
+	res, carry := bits.Add64(a, b, 0 /* carry */)
+	if carry > 0 {
+		return 0, errors.New("addition overflows")
+	}
+	return res, nil
 }

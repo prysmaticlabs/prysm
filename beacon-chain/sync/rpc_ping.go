@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
@@ -20,26 +21,35 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	m, ok := msg.(*uint64)
 	if !ok {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
+	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
+		return err
+	}
+	s.rateLimiter.add(stream, 1)
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
+		// Descore peer for giving us a bad sequence number.
+		if err == errInvalidSequenceNum {
+			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, seqError, stream)
+		}
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return err
 	}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return err
 	}
 	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.MetadataSeq()); err != nil {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return err
 	}
@@ -47,7 +57,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	if valid {
 		// If the sequence number was valid we're done.
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 		return nil
 	}
@@ -56,7 +66,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	go func() {
 		defer func() {
 			if err := stream.Close(); err != nil {
-				log.WithError(err).Error("Failed to close stream")
+				log.WithError(err).Debug("Failed to close stream")
 			}
 		}()
 		// New context so the calling function doesn't cancel on us.
@@ -64,7 +74,9 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		defer cancel()
 		md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
 		if err != nil {
-			log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
+			if !strings.Contains(err.Error(), deadlineError) {
+				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
+			}
 			return
 		}
 		// update metadata if there is no error
@@ -98,7 +110,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	s.p2p.Host().Peerstore().RecordLatency(id, roughtime.Now().Sub(currentTime))
 
 	if code != 0 {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 	msg := new(uint64)
@@ -107,7 +119,10 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		// Descore peer for giving us a bad sequence number.
+		if err == errInvalidSequenceNum {
+			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		}
 		return err
 	}
 	if valid {
@@ -132,8 +147,9 @@ func (s *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
 	if md == nil {
 		return false, nil
 	}
-	if md.SeqNumber != seq {
-		return false, nil
+	// Return error on invalid sequence number.
+	if md.SeqNumber > seq {
+		return false, errInvalidSequenceNum
 	}
-	return true, nil
+	return md.SeqNumber == seq, nil
 }

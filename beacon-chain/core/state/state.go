@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -70,7 +69,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		if deposit == nil || deposit.Data == nil {
 			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
 		}
-		hash, err := ssz.HashTreeRoot(deposit.Data)
+		hash, err := deposit.Data.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +95,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		return nil, err
 	}
 
-	state, err = b.ProcessPreGenesisDeposits(context.Background(), state, deposits)
+	state, err = b.ProcessPreGenesisDeposits(context.TODO(), state, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
@@ -189,7 +188,14 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
-	bodyRoot, err := stateutil.BlockBodyRoot(&ethpb.BeaconBlockBody{})
+	bodyRoot, err := (&ethpb.BeaconBlockBody{
+		RandaoReveal: make([]byte, 96),
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		},
+		Graffiti: make([]byte, 32),
+	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}

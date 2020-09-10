@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,16 +22,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -42,9 +41,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &chainMock.ChainService{
@@ -59,9 +56,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	res, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
@@ -74,9 +69,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &chainMock.ChainService{
@@ -93,7 +86,8 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		t.Fatal(err)
 	}
 	att := &ethpb.Attestation{
-		Signature: make([]byte, 96),
+		AggregationBits: bitfield.NewBitlist(0),
+		Signature:       make([]byte, 96),
 		Data: &ethpb.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  1,
@@ -104,24 +98,13 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}
 
 	parentRoot := [32]byte{1, 2, 3}
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
-		Slot:       0,
-		ParentRoot: parentRoot[:],
-		Body: &ethpb.BeaconBlockBody{
-			Attestations: []*ethpb.Attestation{att},
-		},
-	},
-	}
-	root, err := stateutil.BlockRoot(blk.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
-		t.Fatal(err)
-	}
+	signedBlock := testutil.NewBeaconBlock()
+	signedBlock.Block.ParentRoot = bytesutil.PadTo(parentRoot[:], 32)
+	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
+	root, err := signedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, signedBlock))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
 		NextPageToken: "",
@@ -133,18 +116,12 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			GenesisEpoch: true,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, wanted, res)
 
 	// Should throw an error if there is more than 1 block
 	// for the genesis slot.
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, signedBlock))
 	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -161,28 +138,20 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	count := uint64(8)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		blockExample := &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot: i,
-				Body: &ethpb.BeaconBlockBody{
-					Attestations: []*ethpb.Attestation{
-						{
-							Signature: make([]byte, 96),
-							Data: &ethpb.AttestationData{
-								Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-								Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
-								Slot:            i,
-							},
-							AggregationBits: bitfield.Bitlist{0b11},
-						},
-					},
+		blockExample := testutil.NewBeaconBlock()
+		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
+			{
+				Signature: make([]byte, 96),
+				Data: &ethpb.AttestationData{
+					Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+					Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
+					Slot:            i,
 				},
+				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -195,13 +164,8 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 			GenesisEpoch: true,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(atts, received.Attestations) {
-		t.Fatalf("incorrect attestations response: wanted \n%v, received \n%v", atts, received.Attestations)
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, atts, received.Attestations, "Incorrect attestations response")
 }
 
 func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
@@ -238,8 +202,14 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 								Slot: 3,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
+							Signature:       bytesutil.PadTo([]byte("sig"), 96),
 						},
 					},
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
 				},
 			},
 		},
@@ -266,8 +236,14 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 								Slot: 4 + params.BeaconConfig().SlotsPerEpoch,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
+							Signature:       bytesutil.PadTo([]byte("sig"), 96),
 						},
 					},
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
 				},
 			},
 		},
@@ -294,16 +270,20 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 								Slot: 4,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
+							Signature:       bytesutil.PadTo([]byte("sig"), 96),
 						},
 					},
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
 				},
 			},
 		},
 	}
 
-	if err := db.SaveBlocks(ctx, blocks); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveBlocks(ctx, blocks))
 
 	bs := &Server{
 		BeaconDB: db,
@@ -312,21 +292,13 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_Epoch{Epoch: 1},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 1 {
-		t.Errorf("Wanted 1 matching attestations for epoch %d, received %d", 1, len(received.Attestations))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(received.Attestations))
 	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 2 {
-		t.Errorf("Wanted 2 matching attestations for epoch %d, received %d", 0, len(received.Attestations))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(received.Attestations))
 }
 
 func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
@@ -337,29 +309,22 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		for s := uint64(0); s < 4; s++ {
-			blockExample := &ethpb.SignedBeaconBlock{
-				Block: &ethpb.BeaconBlock{
-					Slot: i,
-					Body: &ethpb.BeaconBlockBody{
-						Attestations: []*ethpb.Attestation{
-							{
-								Data: &ethpb.AttestationData{
-									CommitteeIndex:  s,
-									Slot:            i,
-									BeaconBlockRoot: make([]byte, 32),
-									Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-									Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-								},
-								AggregationBits: bitfield.Bitlist{0b11},
-								Signature:       make([]byte, 96),
-							},
-						},
+			blockExample := testutil.NewBeaconBlock()
+			blockExample.Block.Slot = i
+			blockExample.Block.Body.Attestations = []*ethpb.Attestation{
+				{
+					Data: &ethpb.AttestationData{
+						CommitteeIndex:  s,
+						Slot:            i,
+						BeaconBlockRoot: make([]byte, 32),
+						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 					},
+					AggregationBits: bitfield.Bitlist{0b11},
+					Signature:       make([]byte, 96),
 				},
 			}
-			if err := db.SaveBlock(ctx, blockExample); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, db.SaveBlock(ctx, blockExample))
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		}
 	}
@@ -437,9 +402,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := bs.ListAttestations(ctx, test.req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			if !proto.Equal(res, test.res) {
 				t.Errorf("Incorrect attestations response, wanted \n%v, received \n%v", test.res, res)
 			}
@@ -460,23 +423,28 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 				ParentRoot: make([]byte, 32),
 				StateRoot:  make([]byte, 32),
 				Body: &ethpb.BeaconBlockBody{
-					Graffiti:     make([]byte, 32),
 					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
 								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
 								Slot:            i,
+								Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+								Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
+							Signature:       make([]byte, 96),
 						},
 					},
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
 				},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -492,9 +460,8 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 		PageSize:  100,
 	}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
-	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.ListAttestations(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
@@ -504,9 +471,8 @@ func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.ListAttestations(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
@@ -516,31 +482,20 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	count := uint64(params.BeaconConfig().DefaultPageSize)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		blockExample := &ethpb.SignedBeaconBlock{
-			Signature: make([]byte, 96),
-			Block: &ethpb.BeaconBlock{
-				ParentRoot: make([]byte, 32),
-				StateRoot:  make([]byte, 32),
-				Body: &ethpb.BeaconBlockBody{
-					RandaoReveal: make([]byte, 96),
-					Attestations: []*ethpb.Attestation{
-						{
-							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
-								Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-								Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-								Slot:            i,
-							},
-							Signature:       bytesutil.PadTo([]byte("root"), 96),
-							AggregationBits: bitfield.Bitlist{0b11},
-						},
-					},
+		blockExample := testutil.NewBeaconBlock()
+		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
+			{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
+					Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+					Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+					Slot:            i,
 				},
+				Signature:       bytesutil.PadTo([]byte("root"), 96),
+				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -554,21 +509,16 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 		},
 	}
 	res, err := bs.ListAttestations(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	i := 0
 	j := params.BeaconConfig().DefaultPageSize
-	if !reflect.DeepEqual(res.Attestations, atts[i:j]) {
-		t.Log(res.Attestations, atts[i:j])
-		t.Error("Incorrect attestations response")
-	}
+	assert.DeepEqual(t, atts[i:j], res.Attestations, "Incorrect attestations response")
 }
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	count := uint64(100)
-	atts := make([]*ethpb.Attestation, count, count)
+	atts := make([]*ethpb.Attestation, count)
 	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
@@ -592,15 +542,9 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	mappedAtts := mapAttestationsByTargetRoot(atts)
 	wantedMapLen := 2
 	wantedMapNumberOfElements := 50
-	if len(mappedAtts) != wantedMapLen {
-		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapLen, len(mappedAtts))
-	}
-	if len(mappedAtts[targetRoot1]) != wantedMapNumberOfElements {
-		t.Errorf("Expected number of attestations per block root to be: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[targetRoot1]))
-	}
-	if len(mappedAtts[targetRoot2]) != wantedMapNumberOfElements {
-		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[targetRoot2]))
-	}
+	assert.Equal(t, wantedMapLen, len(mappedAtts), "Unexpected mapped attestations length")
+	assert.Equal(t, wantedMapNumberOfElements, len(mappedAtts[targetRoot1]), "Unexpected number of attestations per block root")
+	assert.Equal(t, wantedMapNumberOfElements, len(mappedAtts[targetRoot2]), "Unexpected number of attestations per block root")
 }
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
@@ -622,32 +566,25 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		} else {
 			targetRoot = targetRoot2
 		}
-		blockExample := &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Body: &ethpb.BeaconBlockBody{
-					Attestations: []*ethpb.Attestation{
-						{
-							Signature: make([]byte, 96),
-							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: make([]byte, 32),
-								Target: &ethpb.Checkpoint{
-									Root: targetRoot[:],
-								},
-								Source: &ethpb.Checkpoint{
-									Root: make([]byte, 32),
-								},
-								Slot:           i,
-								CommitteeIndex: 0,
-							},
-							AggregationBits: bitfield.Bitlist{0b11},
-						},
+		blockExample := testutil.NewBeaconBlock()
+		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
+			{
+				Signature: make([]byte, 96),
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, 32),
+					Target: &ethpb.Checkpoint{
+						Root: targetRoot[:],
 					},
+					Source: &ethpb.Checkpoint{
+						Root: make([]byte, 32),
+					},
+					Slot:           i,
+					CommitteeIndex: 0,
 				},
+				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		if i%2 == 0 {
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		} else {
@@ -661,29 +598,21 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	state, _ := testutil.DeterministicGenesisState(t, numValidators)
 
 	// Next up we convert the test attestations to indexed form:
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2), len(atts)+len(atts2))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
+		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
 	for i := 0; i < len(atts2); i++ {
 		att := atts2[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts2[i], committee)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
+		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i+len(atts)] = idxAtt
 	}
 
@@ -693,51 +622,32 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		HeadFetcher:        &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db, sc),
 	}
-	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: targetRoot1[:],
 		Slot: 1,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	})
+	require.NoError(t, err)
+
+	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: targetRoot2[:],
 		Slot: 2,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot1[:])); err != nil {
-		t.Fatal(err)
-	}
-	if err := state.SetSlot(state.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot2[:])); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot1[:])))
+	require.NoError(t, state.SetSlot(state.Slot()+1))
+	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot2[:])))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.IndexedAttestations) != len(indexedAtts) {
-		t.Errorf("Incorrect indexted attestations length. expected: %d got: %d", len(indexedAtts), len(res.IndexedAttestations))
-	}
-	if !reflect.DeepEqual(indexedAtts, res.IndexedAttestations) {
-		t.Fatalf(
-			"Incorrect list indexed attestations response: wanted %v, received %v",
-			indexedAtts,
-			res.IndexedAttestations,
-		)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, len(indexedAtts), len(res.IndexedAttestations), "Incorrect indexted attestations length")
+	assert.DeepEqual(t, indexedAtts, res.IndexedAttestations, "Incorrect list indexed attestations response")
 }
 
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	db, sc := dbTest.SetupDB(t)
@@ -748,7 +658,8 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	epoch := uint64(50)
-	startSlot := helpers.StartSlot(epoch)
+	startSlot, err := helpers.StartSlot(epoch)
+	require.NoError(t, err)
 
 	for i := startSlot; i < count; i++ {
 		blockExample := &ethpb.SignedBeaconBlock{
@@ -771,9 +682,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 				},
 			},
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -785,25 +694,17 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
 	}
-	if err := state.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
-	if err := state.SetSlot(startSlot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, state.SetRandaoMixes(randaoMixes))
+	require.NoError(t, state.SetSlot(startSlot))
 
 	// Next up we convert the test attestations to indexed form:
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
+		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
 
@@ -814,31 +715,19 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		},
 		StateGen: stategen.New(db, sc),
 	}
-	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
-		Slot: helpers.StartSlot(epoch),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
-		t.Fatal(err)
-	}
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+	})
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(indexedAtts, res.IndexedAttestations) {
-		t.Fatalf(
-			"Incorrect list indexed attestations response: wanted %v, received %v",
-			indexedAtts,
-			res.IndexedAttestations,
-		)
-	}
+	require.NoError(t, err)
+	require.DeepEqual(t, indexedAtts, res.IndexedAttestations, "Incorrect list indexed attestations response")
 }
 
 func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
@@ -848,9 +737,8 @@ func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.AttestationPoolRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.AttestationPool(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
@@ -860,22 +748,46 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 	}
 
 	atts := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{
+			Data: &ethpb.AttestationData{
+				Slot:            1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte{1}, 32),
+				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{1}, 32)},
+				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{1}, 32)},
+			},
+			AggregationBits: bitfield.Bitlist{0b1101},
+			Signature:       bytesutil.PadTo([]byte{1}, 96),
+		},
+		{
+			Data: &ethpb.AttestationData{
+				Slot:            2,
+				BeaconBlockRoot: bytesutil.PadTo([]byte{2}, 32),
+				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{2}, 32)},
+				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{2}, 32)},
+			},
+			AggregationBits: bitfield.Bitlist{0b1101},
+			Signature:       bytesutil.PadTo([]byte{2}, 96),
+		},
+		{
+			Data: &ethpb.AttestationData{
+				Slot:            3,
+				BeaconBlockRoot: bytesutil.PadTo([]byte{3}, 32),
+				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{3}, 32)},
+				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{3}, 32)},
+			},
+			AggregationBits: bitfield.Bitlist{0b1101},
+			Signature:       bytesutil.PadTo([]byte{3}, 96),
+		},
 	}
-	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
 
 	req := &ethpb.AttestationPoolRequest{
 		PageToken: strconv.Itoa(1),
 		PageSize:  100,
 	}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
-	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	_, err := bs.AttestationPool(ctx, req)
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
@@ -886,30 +798,17 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 
 	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{
-			Data:            &ethpb.AttestationData{Slot: uint64(i)},
-			AggregationBits: bitfield.Bitlist{0b1101},
-		}
+		att := testutil.NewAttestation()
+		att.Data.Slot = uint64(i)
+		atts[i] = att
 	}
-	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
 
 	req := &ethpb.AttestationPoolRequest{}
 	res, err := bs.AttestationPool(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.Attestations) != params.BeaconConfig().DefaultPageSize {
-		t.Errorf(
-			"Wanted %d attestations in response, received %d",
-			params.BeaconConfig().DefaultPageSize,
-			len(res.Attestations),
-		)
-	}
-	if int(res.TotalSize) != params.BeaconConfig().DefaultPageSize+1 {
-		t.Errorf("Wanted total size %d, received %d", params.BeaconConfig().DefaultPageSize+1, res.TotalSize)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().DefaultPageSize, len(res.Attestations), "Unexpected number of attestations")
+	assert.Equal(t, params.BeaconConfig().DefaultPageSize+1, int(res.TotalSize), "Unexpected total size")
 }
 
 func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
@@ -921,14 +820,11 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	numAtts := 100
 	atts := make([]*ethpb.Attestation, numAtts)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{
-			Data:            &ethpb.AttestationData{Slot: uint64(i)},
-			AggregationBits: bitfield.Bitlist{0b1101},
-		}
+		att := testutil.NewAttestation()
+		att.Data.Slot = uint64(i)
+		atts[i] = att
 	}
-	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
 	tests := []struct {
 		req *ethpb.AttestationPoolRequest
 		res *ethpb.AttestationPoolResponse
@@ -966,15 +862,9 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		res, err := bs.AttestationPool(ctx, tt.req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if res.TotalSize != tt.res.TotalSize {
-			t.Errorf("Wanted total size %d, received %d", tt.res.TotalSize, res.TotalSize)
-		}
-		if res.NextPageToken != tt.res.NextPageToken {
-			t.Errorf("Wanted next page token %s, received %s", tt.res.NextPageToken, res.NextPageToken)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.res.TotalSize, res.TotalSize, "Unexpected total size")
+		assert.Equal(t, tt.res.NextPageToken, res.NextPageToken, "Unexpected next page token")
 	}
 }
 
@@ -996,12 +886,8 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		if err := server.StreamIndexedAttestations(
-			&ptypes.Empty{},
-			mockStream,
-		); err != nil && !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Expected context canceled error got: %v", err)
-		}
+		err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream)
+		assert.ErrorContains(t, "Context canceled", err)
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -1019,34 +905,20 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	numValidators := 64
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
-	}
-	gRoot, err := stateutil.BlockRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, gRoot); err != nil {
-		t.Fatal(err)
-	}
+	b := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, b))
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	epoch := uint64(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committees, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, attesterSeed)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	committees, err := computeCommittees(epoch*params.BeaconConfig().SlotsPerEpoch, activeIndices, attesterSeed)
+	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	// We generate attestations for each validator per slot per epoch.
@@ -1076,6 +948,10 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
 					Slot:            i,
+					Source: &ethpb.Checkpoint{
+						Epoch: 0,
+						Root:  gRoot[:],
+					},
 					Target: &ethpb.Checkpoint{
 						Epoch: 0,
 						Root:  gRoot[:],
@@ -1083,13 +959,9 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 				},
 			}
 			domain, err := helpers.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, headState.GenesisValidatorRoot())
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			encoded, err := helpers.ComputeSigningRoot(attExample.Data, domain)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			sig := privKeys[j].Sign(encoded[:])
 			attExample.Signature = sig.Marshal()
 			attExample.Data.CommitteeIndex = committeeIndex
@@ -1117,9 +989,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	for dataRoot, sameDataAtts := range atts {
 		aggAtts, err := attaggregation.Aggregate(sameDataAtts)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		atts[dataRoot] = aggAtts
 	}
 
@@ -1159,9 +1029,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		if err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.NoError(tt, server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	server.CollectedAttestationsBuffer <- allAtts
@@ -1184,12 +1052,11 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		if err := server.StreamAttestations(
+		err := server.StreamAttestations(
 			&ptypes.Empty{},
 			mockStream,
-		); !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Expected context canceled error got: %v", err)
-		}
+		)
+		assert.ErrorContains(tt, "Context canceled", err)
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -1208,9 +1075,9 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	}
 
 	atts := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
 	}
 
 	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
@@ -1222,9 +1089,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		if err := server.StreamAttestations(&ptypes.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
+		assert.NoError(tt, server.StreamAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 	for i := 0; i < len(atts); i++ {
 		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).

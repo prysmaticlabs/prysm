@@ -1,14 +1,14 @@
 package blockutil
 
 import (
-	"reflect"
 	"testing"
 
-	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconBlockHeaderFromBlock(t *testing.T) {
@@ -34,9 +34,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 		},
 	}
 	bodyRoot, err := stateutil.BlockBodyRoot(blk.Body)
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to get body root of block"))
-	}
+	require.NoError(t, err)
 	want := &eth.BeaconBlockHeader{
 		Slot:          blk.Slot,
 		ProposerIndex: blk.ProposerIndex,
@@ -46,13 +44,8 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 	}
 
 	bh, err := BeaconBlockHeaderFromBlock(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(want, bh) {
-		t.Errorf("BeaconBlockHeaderFromBlock() got = %v, want %v", bh, want)
-	}
-
+	require.NoError(t, err)
+	assert.DeepEqual(t, want, bh)
 }
 
 func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
@@ -80,9 +73,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
 	}
 	bodyRoot, err := stateutil.BlockBodyRoot(blk.Block.Body)
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to get body root of block"))
-	}
+	require.NoError(t, err)
 	want := &eth.SignedBeaconBlockHeader{Header: &eth.BeaconBlockHeader{
 		Slot:          blk.Block.Slot,
 		ProposerIndex: blk.Block.ProposerIndex,
@@ -94,11 +85,6 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 	}
 
 	bh, err := SignedBeaconBlockHeaderFromBlock(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(want, bh) {
-		t.Errorf("SignedBeaconBlockHeaderFromBlock() got = %v, want %v", bh, want)
-	}
-
+	require.NoError(t, err)
+	assert.DeepEqual(t, want, bh)
 }

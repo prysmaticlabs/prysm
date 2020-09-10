@@ -5,41 +5,30 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/prysmaticlabs/go-ssz"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestDepositTrieRoot_OK(t *testing.T) {
 	testAcc, err := depositcontract.Setup()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	localTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if depRoot != localTrie.HashTreeRoot() {
-		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
-	}
+	assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal")
 
 	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	testAcc.TxOpts.Value = depositcontract.Amount32Eth()
 
@@ -48,55 +37,36 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		dataRoot := [32]byte{}
 		copy(dataRoot[:], depositDataRoots[i])
 
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot); err != nil {
-			t.Fatalf("Could not deposit to deposit contract %v", err)
-		}
+		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
+		require.NoError(t, err, "Could not deposit to deposit contract")
 
 		testAcc.Backend.Commit()
-		item, err := ssz.HashTreeRoot(data)
-		if err != nil {
-			t.Fatal(err)
-		}
+		item, err := data.HashTreeRoot()
+		require.NoError(t, err)
 
 		localTrie.Insert(item[:], i)
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if depRoot != localTrie.HashTreeRoot() {
-			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
-		}
+		require.NoError(t, err)
+		assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal for index %d", i)
 	}
 }
 
 func TestDepositTrieRoot_Fail(t *testing.T) {
 	testAcc, err := depositcontract.Setup()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	localTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if depRoot != localTrie.HashTreeRoot() {
-		t.Errorf("Local deposit trie root and contract deposit trie root are not equal. Expected %#x , Got %#x", depRoot, localTrie.Root())
-	}
+	assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal")
 
 	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testAcc.TxOpts.Value = depositcontract.Amount32Eth()
 
 	for i := 0; i < 100; i++ {
@@ -104,28 +74,21 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		dataRoot := [32]byte{}
 		copy(dataRoot[:], depositDataRoots[i])
 
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot); err != nil {
-			t.Fatalf("Could not deposit to deposit contract %v", err)
-		}
+		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
+		require.NoError(t, err, "Could not deposit to deposit contract")
 
 		// Change an element in the data when storing locally
 		copy(data.PublicKey, strconv.Itoa(i+10))
 
 		testAcc.Backend.Commit()
-		item, err := ssz.HashTreeRoot(data)
-		if err != nil {
-			t.Fatal(err)
-		}
+		item, err := data.HashTreeRoot()
+		require.NoError(t, err)
 
 		localTrie.Insert(item[:], i)
 
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if depRoot == localTrie.HashTreeRoot() {
-			t.Errorf("Local deposit trie root and contract deposit trie root are equal for index %d when they were expected to be not equal", i)
-		}
+		assert.NotEqual(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are equal for index %d", i)
 	}
 }

@@ -7,6 +7,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestComputeDelta_ZeroHash(t *testing.T) {
@@ -24,21 +26,14 @@ func TestComputeDelta_ZeroHash(t *testing.T) {
 	}
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(delta) != int(validatorCount) {
-		t.Error("Incorrect length")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int(validatorCount), len(delta))
+
 	for _, d := range delta {
-		if d != 0 {
-			t.Error("Delta should be zero")
-		}
+		assert.Equal(t, 0, d)
 	}
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 
@@ -58,29 +53,19 @@ func TestComputeDelta_AllVoteTheSame(t *testing.T) {
 	}
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(delta) != int(validatorCount) {
-		t.Error("Incorrect length")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int(validatorCount), len(delta))
 
 	for i, d := range delta {
 		if i == 0 {
-			if uint64(d) != balance*validatorCount {
-				t.Error("Did not get correct balance")
-			}
+			assert.Equal(t, balance*validatorCount, uint64(d))
 		} else {
-			if d != 0 {
-				t.Error("Delta should be zero")
-			}
+			assert.Equal(t, 0, d)
 		}
 	}
 
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 
@@ -100,23 +85,15 @@ func TestComputeDelta_DifferentVotes(t *testing.T) {
 	}
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(delta) != int(validatorCount) {
-		t.Error("Incorrect length")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int(validatorCount), len(delta))
 
 	for _, d := range delta {
-		if uint64(d) != balance {
-			t.Error("Did not get correct delta")
-		}
+		assert.Equal(t, balance, uint64(d))
 	}
 
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 
@@ -137,33 +114,21 @@ func TestComputeDelta_MovingVotes(t *testing.T) {
 	}
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(delta) != int(validatorCount) {
-		t.Error("Incorrect length")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int(validatorCount), len(delta))
 
 	for i, d := range delta {
 		if i == 0 {
-			if d != -int(balance*validatorCount) {
-				t.Error("First root should have negative delta")
-			}
+			assert.Equal(t, -int(balance*validatorCount), d, "First root should have negative delta")
 		} else if i == int(lastIndex) {
-			if d != int(balance*validatorCount) {
-				t.Error("Last root should have positive delta")
-			}
+			assert.Equal(t, int(balance*validatorCount), d, "Last root should have positive delta")
 		} else {
-			if d != 0 {
-				t.Error("Delta should be zero")
-			}
+			assert.Equal(t, 0, d)
 		}
 	}
 
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 
@@ -180,21 +145,12 @@ func TestComputeDelta_MoveOutOfTree(t *testing.T) {
 	votes = append(votes, Vote{indexToHash(1), [32]byte{'A'}, 0})
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(delta) != 1 {
-		t.Error("Incorrect length")
-	}
-
-	if delta[0] != 0-2*int(balance) {
-		t.Error("Incorrect delta")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(delta))
+	assert.Equal(t, 0-2*int(balance), delta[0])
 
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 
@@ -217,32 +173,21 @@ func TestComputeDelta_ChangingBalances(t *testing.T) {
 	}
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(delta) != 16 {
-		t.Error("Incorrect length")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 16, len(delta))
+
 	for i, d := range delta {
 		if i == 0 {
-			if d != -int(oldBalance*validatorCount) {
-				t.Error("First root should have negative delta")
-			}
+			assert.Equal(t, -int(oldBalance*validatorCount), d, "First root should have negative delta")
 		} else if i == 1 {
-			if d != int(newBalance*validatorCount) {
-				t.Error("Last root should have positive delta")
-			}
+			assert.Equal(t, int(newBalance*validatorCount), d, "Last root should have positive delta")
 		} else {
-			if d != 0 {
-				t.Error("Delta should be zero")
-			}
+			assert.Equal(t, 0, d)
 		}
 	}
 
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 
@@ -260,25 +205,13 @@ func TestComputeDelta_ValidatorAppear(t *testing.T) {
 	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(delta) != 2 {
-		t.Error("Incorrect length")
-	}
-
-	if delta[0] != 0-int(balance) {
-		t.Error("Incorrect delta")
-	}
-	if delta[1] != 2*int(balance) {
-		t.Error("Incorrect delta")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(delta))
+	assert.Equal(t, 0-int(balance), delta[0])
+	assert.Equal(t, 2*int(balance), delta[1])
 
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 
@@ -296,25 +229,13 @@ func TestComputeDelta_ValidatorDisappears(t *testing.T) {
 	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(delta) != 2 {
-		t.Error("Incorrect length")
-	}
-
-	if delta[0] != 0-2*int(balance) {
-		t.Error("Incorrect delta")
-	}
-	if delta[1] != int(balance) {
-		t.Error("Incorrect delta")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(delta))
+	assert.Equal(t, 0-2*int(balance), delta[0])
+	assert.Equal(t, int(balance), delta[1])
 
 	for _, vote := range votes {
-		if vote.currentRoot != vote.nextRoot {
-			t.Errorf("The vote should have changed")
-		}
+		assert.Equal(t, vote.currentRoot, vote.nextRoot, "The vote should not have changed")
 	}
 }
 

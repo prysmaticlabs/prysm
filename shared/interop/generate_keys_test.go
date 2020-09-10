@@ -1,7 +1,6 @@
 package interop_test
 
 import (
-	"bytes"
 	"io/ioutil"
 	"testing"
 
@@ -9,6 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 type TestCase struct {
@@ -21,21 +22,13 @@ type KeyTest struct {
 
 func TestKeyGenerator(t *testing.T) {
 	path, err := bazel.Runfile("keygen_test_vector.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	file, err := ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testCases := &KeyTest{}
-	if err := yaml.Unmarshal(file, testCases); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, yaml.Unmarshal(file, testCases))
 	priv, _, err := interop.DeterministicallyGenerateKeys(0, 1000)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	// cross-check with the first 1000 keys generated from the python spec
 	for i, key := range priv {
 		hexKey := testCases.TestCases[i].Privkey
@@ -44,8 +37,6 @@ func TestKeyGenerator(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		if !bytes.Equal(key.Marshal(), nKey) {
-			t.Errorf("key for index %d failed, wanted %v but got %v", i, nKey, key.Marshal())
-		}
+		assert.DeepEqual(t, key.Marshal(), nKey)
 	}
 }

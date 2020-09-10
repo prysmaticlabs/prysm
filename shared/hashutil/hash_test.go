@@ -10,24 +10,19 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestHash(t *testing.T) {
 	hashOf0 := [32]byte{110, 52, 11, 156, 255, 179, 122, 152, 156, 165, 68, 230, 187, 120, 10, 44, 120, 144, 29, 63, 179, 55, 56, 118, 133, 17, 163, 6, 23, 175, 160, 29}
 	hash := hashutil.Hash([]byte{0})
-	if hash != hashOf0 {
-		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, hashOf0)
-	}
+	assert.Equal(t, hashOf0, hash)
 
 	hashOf1 := [32]byte{75, 245, 18, 47, 52, 69, 84, 197, 59, 222, 46, 187, 140, 210, 183, 227, 209, 96, 10, 214, 49, 195, 133, 165, 215, 204, 226, 60, 119, 133, 69, 154}
 	hash = hashutil.Hash([]byte{1})
-	if hash != hashOf1 {
-		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, hashOf1)
-	}
-
-	if hashOf0 == hashOf1 {
-		t.Fatalf("expected hash and computed hash are equal %d, %d", hash, hashOf1)
-	}
+	assert.Equal(t, hashOf1, hash)
+	assert.Equal(t, false, hashOf0 == hashOf1)
 }
 
 func BenchmarkHash(b *testing.B) {
@@ -39,32 +34,19 @@ func BenchmarkHash(b *testing.B) {
 func TestHashKeccak256(t *testing.T) {
 	hashOf0 := [32]byte{188, 54, 120, 158, 122, 30, 40, 20, 54, 70, 66, 41, 130, 143, 129, 125, 102, 18, 247, 180, 119, 214, 101, 145, 255, 150, 169, 224, 100, 188, 201, 138}
 	hash := hashutil.HashKeccak256([]byte{0})
-	if hash != hashOf0 {
-		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, hashOf0)
-	}
+	assert.Equal(t, hashOf0, hash)
 
 	hashOf1 := [32]byte{95, 231, 249, 119, 231, 29, 186, 46, 161, 166, 142, 33, 5, 123, 238, 187, 155, 226, 172, 48, 198, 65, 10, 163, 141, 79, 63, 190, 65, 220, 255, 210}
 	hash = hashutil.HashKeccak256([]byte{1})
-	if hash != hashOf1 {
-		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, hashOf1)
-	}
-
-	if hashOf0 == hashOf1 {
-		t.Fatalf("expected hash and computed hash are equal %d, %d", hash, hashOf1)
-	}
+	assert.Equal(t, hashOf1, hash)
+	assert.Equal(t, false, hashOf0 == hashOf1)
 
 	// Same hashing test from go-ethereum for keccak256
 	hashOfabc, err := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	hash = hashutil.HashKeccak256([]byte("abc"))
-
 	h := bytesutil.ToBytes32(hashOfabc)
-
-	if hash != h {
-		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, h)
-	}
+	assert.Equal(t, hash, h)
 }
 
 func BenchmarkHashKeccak256(b *testing.B) {
@@ -81,16 +63,10 @@ func TestHashProto(t *testing.T) {
 		Challenge: "hello",
 	}
 	h1, err := hashutil.HashProto(msg1)
-	if err != nil {
-		t.Fatalf("Could not hash proto message: %v", err)
-	}
+	require.NoError(t, err)
 	h2, err := hashutil.HashProto(msg2)
-	if err != nil {
-		t.Fatalf("Could not hash proto message: %v", err)
-	}
-	if h1 != h2 {
-		t.Errorf("Expected hashes to equal, received %#x == %#x", h1, h2)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, h1, h2)
 }
 
 func TestHashProtoFuzz(t *testing.T) {

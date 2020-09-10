@@ -3,13 +3,21 @@
 package depositutil
 
 import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 // DepositInput for a given key. This input data can be used to when making a
@@ -50,13 +58,13 @@ func DepositInput(
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
+	root, err := (&p2ppb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
 	di.Signature = depositKey.Sign(root[:]).Marshal()
 
-	dr, err := ssz.HashTreeRoot(di)
+	dr, err := di.HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -74,4 +82,81 @@ func DepositInput(
 func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
+}
+
+// VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
+func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
+	if featureconfig.Get().SkipBLSVerify {
+		return nil
+	}
+	ddCopy := state.CopyDepositData(dd)
+	publicKey, err := bls.PublicKeyFromBytes(dd.PublicKey)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to public key")
+	}
+	sig, err := bls.SignatureFromBytes(dd.Signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
+	ddCopy.Signature = nil
+	root, err := ssz.SigningRoot(ddCopy)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root")
+	}
+	signingData := &p2ppb.SigningData{
+		ObjectRoot: root[:],
+		Domain:     domain,
+	}
+	ctrRoot, err := signingData.HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "could not get container root")
+	}
+	if !sig.Verify(publicKey, ctrRoot[:]) {
+		return helpers.ErrSigFailedToVerify
+	}
+	return nil
+}
+
+// GenerateDepositTransaction uses the provided validating key and withdrawal key to
+// create a transaction object for the deposit contract.
+func GenerateDepositTransaction(
+	validatingKey bls.SecretKey,
+	withdrawalKey bls.SecretKey,
+) (*types.Transaction, *ethpb.Deposit_Data, error) {
+	depositData, depositRoot, err := DepositInput(
+		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not generate deposit input")
+	}
+	testAcc, err := contract.Setup()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not load deposit contract")
+	}
+	testAcc.TxOpts.GasLimit = 1000000
+
+	tx, err := testAcc.Contract.Deposit(
+		testAcc.TxOpts,
+		depositData.PublicKey,
+		depositData.WithdrawalCredentials,
+		depositData.Signature,
+		depositRoot,
+	)
+	return tx, depositData, nil
+}
+
+// LogDepositTransaction outputs a formatted transaction data to the terminal.
+func LogDepositTransaction(log *logrus.Entry, tx *types.Transaction) {
+	log.Info(
+		"Copy + paste the deposit data below when using the " +
+			"eth1 deposit contract")
+	fmt.Printf(`
+========================Deposit Data===============================
+
+%#x
+
+===================================================================`, tx.Data())
+	fmt.Printf(`
+***Enter the above deposit data into step 3 on https://prylabs.net/participate***
+`)
 }

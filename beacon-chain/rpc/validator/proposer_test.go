@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"context"
 	"math/big"
-	"reflect"
+	"sort"
 	"testing"
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -24,7 +23,6 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -36,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -50,25 +49,15 @@ func TestGetBlock_OK(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	if err != nil {
-		t.Fatalf("Could not hash genesis state: %v", err)
-	}
+	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	if err := db.SaveBlock(ctx, genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, genesis), "Could not save genesis block")
 
-	parentRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
 		BeaconDB:          db,
@@ -86,9 +75,7 @@ func TestGetBlock_OK(t *testing.T) {
 	}
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
 	req := &ethpb.BlockRequest{
@@ -104,13 +91,10 @@ func TestGetBlock_OK(t *testing.T) {
 			privKeys[i],
 			i, /* validator index */
 		)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		proposerSlashings[i] = proposerSlashing
-		if err := proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing); err != nil {
-			t.Fatal(err)
-		}
+		err = proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+		require.NoError(t, err)
 	}
 
 	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
@@ -120,43 +104,22 @@ func TestGetBlock_OK(t *testing.T) {
 			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 			i+params.BeaconConfig().MaxProposerSlashings, /* validator index */
 		)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		attSlashings[i] = attesterSlashing
-		if err := proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing); err != nil {
-			t.Fatal(err)
-		}
+		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+		require.NoError(t, err)
 	}
 	block, err := proposerServer.GetBlock(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if block.Slot != req.Slot {
-		t.Fatal("Expected block to have slot of 1")
-	}
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
-		t.Fatal("Expected block to have correct parent root")
-	}
-	if !bytes.Equal(block.Body.RandaoReveal, randaoReveal) {
-		t.Fatal("Expected block to have correct randao reveal")
-	}
-	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
-		t.Fatal("Expected block to have correct graffiti")
-	}
-	if uint64(len(block.Body.ProposerSlashings)) != params.BeaconConfig().MaxProposerSlashings {
-		t.Fatalf("Wanted %d proposer slashings, got %d", params.BeaconConfig().MaxProposerSlashings, len(block.Body.ProposerSlashings))
-	}
-	if !reflect.DeepEqual(block.Body.ProposerSlashings, proposerSlashings) {
-		t.Errorf("Wanted proposer slashing %v, got %v", proposerSlashings, block.Body.ProposerSlashings)
-	}
-	if uint64(len(block.Body.AttesterSlashings)) != params.BeaconConfig().MaxAttesterSlashings {
-		t.Fatalf("Wanted %d attester slashings, got %d", params.BeaconConfig().MaxAttesterSlashings, len(block.Body.AttesterSlashings))
-	}
-	if !reflect.DeepEqual(block.Body.AttesterSlashings, attSlashings) {
-		t.Errorf("Wanted attester slashing %v, got %v", attSlashings, block.Body.AttesterSlashings)
-	}
+	assert.Equal(t, req.Slot, block.Slot, "Expected block to have slot of 1")
+	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
+	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
+	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct graffiti")
+	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(block.Body.ProposerSlashings)))
+	assert.DeepEqual(t, proposerSlashings, block.Body.ProposerSlashings)
+	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(block.Body.AttesterSlashings)))
+	assert.DeepEqual(t, attSlashings, block.Body.AttesterSlashings)
 }
 
 func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
@@ -168,25 +131,15 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	if err != nil {
-		t.Fatalf("Could not hash genesis state: %v", err)
-	}
+	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	if err := db.SaveBlock(ctx, genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, genesis), "Could not save genesis block")
 
-	parentRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
 		BeaconDB:          db,
@@ -207,42 +160,30 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	// we don't care for the purpose of this test.
 	var atts []*ethpb.Attestation
 	for i := uint64(0); len(atts) < int(params.BeaconConfig().MaxAttestations); i++ {
-		a, err := testutil.GenerateAttestations(beaconState, privKeys, 2, 1, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		a, err := testutil.GenerateAttestations(beaconState, privKeys, 4, 1, true)
+		require.NoError(t, err)
 		atts = append(atts, a...)
 	}
 	// Max attestations minus one so we can almost fill the block and then include 1 unaggregated
 	// att to maximize inclusion.
 	atts = atts[:params.BeaconConfig().MaxAttestations-1]
-	if err := proposerServer.AttPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, proposerServer.AttPool.SaveAggregatedAttestations(atts))
 
 	// Generate some more random attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
-	if atts, err := testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true); err != nil {
-		t.Fatal(err)
-	} else {
-		found := false
-		for _, a := range atts {
-			if !helpers.IsAggregated(a) {
-				found = true
-				if err := proposerServer.AttPool.SaveUnaggregatedAttestation(a); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
-		if !found {
-			t.Fatal("No unaggregated attestations were generated")
+	atts, err = testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true)
+	require.NoError(t, err)
+	found := false
+	for _, a := range atts {
+		if !helpers.IsAggregated(a) {
+			found = true
+			require.NoError(t, proposerServer.AttPool.SaveUnaggregatedAttestation(a))
 		}
 	}
+	require.Equal(t, true, found, "No unaggregated attestations were generated")
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
 	req := &ethpb.BlockRequest{
@@ -251,25 +192,13 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		Graffiti:     graffiti[:],
 	}
 	block, err := proposerServer.GetBlock(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if block.Slot != req.Slot {
-		t.Fatal("Expected block to have slot of 1")
-	}
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
-		t.Fatal("Expected block to have correct parent root")
-	}
-	if !bytes.Equal(block.Body.RandaoReveal, randaoReveal) {
-		t.Fatal("Expected block to have correct randao reveal")
-	}
-	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
-		t.Fatal("Expected block to have correct graffiti")
-	}
-	if uint64(len(block.Body.Attestations)) != params.BeaconConfig().MaxAttestations {
-		t.Fatalf("Expected a full block of attestations, only received %d", len(block.Body.Attestations))
-	}
+	assert.Equal(t, req.Slot, block.Slot, "Expected block to have slot of 1")
+	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
+	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
+	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct graffiti")
+	assert.Equal(t, params.BeaconConfig().MaxAttestations, uint64(len(block.Body.Attestations)), "Expected block atts to be aggregated down to 1")
 	hasUnaggregatedAtt := false
 	for _, a := range block.Body.Attestations {
 		if !helpers.IsAggregated(a) {
@@ -277,9 +206,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 			break
 		}
 	}
-	if !hasUnaggregatedAtt {
-		t.Fatal("Expected block to contain at least one unaggregated attestation")
-	}
+	assert.Equal(t, false, hasUnaggregatedAtt, "Expected block to not have unaggregated attestation")
 }
 
 func TestProposeBlock_OK(t *testing.T) {
@@ -289,23 +216,15 @@ func TestProposeBlock_OK(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	genesis := testutil.NewBeaconBlock()
-	if err := db.SaveBlock(context.Background(), genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), genesis), "Could not save genesis block")
 
 	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 	bsRoot, err := beaconState.HashTreeRoot(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+	require.NoError(t, err)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	proposerServer := &Server{
@@ -321,12 +240,9 @@ func TestProposeBlock_OK(t *testing.T) {
 	req := testutil.NewBeaconBlock()
 	req.Block.Slot = 5
 	req.Block.ParentRoot = bsRoot[:]
-	if err := db.SaveBlock(ctx, req); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
-		t.Errorf("Could not propose block correctly: %v", err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, req))
+	_, err = proposerServer.ProposeBlock(context.Background(), req)
+	assert.NoError(t, err, "Could not propose block correctly")
 }
 
 func TestComputeStateRoot_OK(t *testing.T) {
@@ -338,25 +254,15 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	if err != nil {
-		t.Fatalf("Could not hash genesis state: %v", err)
-	}
+	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	if err := db.SaveBlock(ctx, genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
+	require.NoError(t, db.SaveBlock(ctx, genesis), "Could not save genesis block")
 
-	parentRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
 		BeaconDB:          db,
@@ -365,50 +271,23 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
 		StateGen:          stategen.New(db, sc),
 	}
-	req := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 21,
-			ParentRoot:    parentRoot[:],
-			Slot:          1,
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal:      nil,
-				ProposerSlashings: nil,
-				AttesterSlashings: nil,
-				Eth1Data:          &ethpb.Eth1Data{},
-			},
-		},
-	}
-	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
-		t.Fatal(err)
-	}
+	req := testutil.NewBeaconBlock()
+	req.Block.ProposerIndex = 21
+	req.Block.ParentRoot = parentRoot[:]
+	req.Block.Slot = 1
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		t.Error(err)
-	}
-	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal[:]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-	signingRoot, err := helpers.ComputeSigningRoot(req.Block, domain)
-	if err != nil {
-		t.Error(err)
-	}
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
-	req.Signature = blockSig[:]
+	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	_, err = proposerServer.computeStateRoot(context.Background(), req)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
@@ -440,27 +319,18 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	blockHash = make([]byte, 32)
 	copy(blockHash, "0x0")
-	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
-		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot:  make([]byte, 32),
-			BlockHash:    blockHash,
-			DepositCount: 2,
-		},
-		Eth1DepositIndex: 2,
-		Eth1DataVotes:    votes,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState := testutil.NewBeaconState()
+	require.NoError(t, beaconState.SetEth1DepositIndex(2))
+	require.NoError(t, beaconState.SetEth1Data(&ethpb.Eth1Data{
+		DepositRoot:  make([]byte, 32),
+		BlockHash:    blockHash,
+		DepositCount: 2,
+	}))
+	require.NoError(t, beaconState.SetEth1DataVotes(votes))
 
-	blk := &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{Eth1Data: &ethpb.Eth1Data{}},
-	}
-
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	blk := testutil.NewBeaconBlock()
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	bs := &Server{
 		ChainStartFetcher: p,
@@ -473,41 +343,26 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	// It should also return the recent deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	_, eth1Height, err := bs.canonicalEth1Data(ctx, beaconState, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if eth1Height.Cmp(height) != 0 {
-		t.Errorf("Wanted Eth1 height of %d but got %d", height.Uint64(), eth1Height.Uint64())
-	}
+	assert.Equal(t, 0, eth1Height.Cmp(height))
 
-	newState, err := b.ProcessEth1DataInBlock(beaconState, blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	newState, err := b.ProcessEth1DataInBlock(ctx, beaconState, blk)
+	require.NoError(t, err)
 
 	if proto.Equal(newState.Eth1Data(), vote) {
 		t.Errorf("eth1data in the state equal to vote, when not expected to"+
 			"have majority: Got %v", vote)
 	}
 
-	blk = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{Eth1Data: vote},
-	}
+	blk.Block.Body.Eth1Data = vote
 
 	_, eth1Height, err = bs.canonicalEth1Data(ctx, beaconState, vote)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 0, eth1Height.Cmp(newHeight))
 
-	if eth1Height.Cmp(newHeight) != 0 {
-		t.Errorf("Wanted Eth1 height of %d but got %d", newHeight.Uint64(), eth1Height.Uint64())
-	}
-
-	newState, err = b.ProcessEth1DataInBlock(beaconState, blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	newState, err = b.ProcessEth1DataInBlock(ctx, beaconState, blk)
+	require.NoError(t, err)
 
 	if !proto.Equal(newState.Eth1Data(), vote) {
 		t.Errorf("eth1data in the state not of the expected kind: Got %v but wanted %v", newState.Eth1Data(), vote)
@@ -527,13 +382,12 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash: []byte("0x0"),
+			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
+			DepositRoot: make([]byte, 32),
 		},
 		Eth1DepositIndex: 2,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -545,7 +399,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 2,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -555,7 +409,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -568,7 +422,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 400,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("c"),
+					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -578,7 +432,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 600,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("d"),
+					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -589,14 +443,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	require.NoError(t, err)
 
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
@@ -605,14 +455,11 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
 	}
 
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
 
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	blkRoot, err := blk.HashTreeRoot()
+	require.NoError(t, err)
 
 	bs := &Server{
 		ChainStartFetcher:      p,
@@ -624,28 +471,16 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(deposits) != 0 {
-		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(deposits))
-	}
+	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(deposits), "Received unexpected list of deposits")
 
 	// It should not return the recent deposits after their follow window.
 	// as latest block number makes no difference in retrieval of deposits
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
-	deposits, err = bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(deposits) != 0 {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(deposits),
-			len(recentDeposits),
-		)
-	}
+	deposits, err = bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending deposits")
 }
 
 func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
@@ -664,7 +499,8 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	var votes []*ethpb.Eth1Data
 
 	vote := &ethpb.Eth1Data{
-		BlockHash:    []byte("0x1"),
+		BlockHash:    bytesutil.PadTo([]byte("0x1"), 32),
+		DepositRoot:  make([]byte, 32),
 		DepositCount: 7,
 	}
 	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
@@ -675,22 +511,18 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
+			DepositRoot:  make([]byte, 32),
 			DepositCount: 5,
 		},
 		Eth1DepositIndex: 1,
 		Eth1DataVotes:    votes,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
+	require.NoError(t, err)
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
 
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	blkRoot, err := blk.HashTreeRoot()
+	require.NoError(t, err)
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -702,7 +534,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -712,7 +544,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -725,7 +557,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 5000,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("c"),
+					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -735,7 +567,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 6000,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("d"),
+					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -746,14 +578,10 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	require.NoError(t, err)
 
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
@@ -772,29 +600,17 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(deposits) != 0 {
-		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(deposits))
-	}
+	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(deposits), "Received unexpected list of deposits")
 
 	// It should also return the recent deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	// we should get our pending deposits once this vote pushes the vote tally to include
 	// the updated eth1 data.
-	deposits, err = bs.deposits(ctx, vote)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(deposits) != len(recentDeposits) {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(deposits),
-			len(recentDeposits),
-		)
-	}
+	deposits, err = bs.deposits(ctx, beaconState, vote)
+	require.NoError(t, err)
+	assert.Equal(t, len(recentDeposits), len(deposits), "Received unexpected number of pending deposits")
 }
 
 func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
@@ -807,23 +623,17 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		},
 	}
 
-	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
-		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    []byte("0x0"),
-			DepositCount: 100,
-		},
-		Eth1DepositIndex: 10,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState := testutil.NewBeaconState()
+	require.NoError(t, beaconState.SetEth1Data(&ethpb.Eth1Data{
+		BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+		DepositRoot:  make([]byte, 32),
+		DepositCount: 100,
+	}))
+	require.NoError(t, beaconState.SetEth1DepositIndex(10))
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
+	blkRoot, err := blk.HashTreeRoot()
+	require.NoError(t, err)
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -833,7 +643,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -842,7 +652,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -855,25 +665,21 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte{byte(i)},
+					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		})
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
@@ -894,19 +700,11 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
+	require.NoError(t, err)
 
 	expectedDeposits := 6
-	if len(deposits) != expectedDeposits {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(deposits),
-			expectedDeposits,
-		)
-	}
+	assert.Equal(t, expectedDeposits, len(deposits), "Received unexpected number of pending deposits")
 }
 
 func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
@@ -922,21 +720,17 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    []byte("0x0"),
+			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			DepositRoot:  make([]byte, 32),
 			DepositCount: 100,
 		},
 		Eth1DepositIndex: 2,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
+	blkRoot, err := blk.HashTreeRoot()
+	require.NoError(t, err)
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
@@ -945,7 +739,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -954,7 +748,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -967,25 +761,21 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte{byte(i)},
+					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		})
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		depositCache.InsertDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.Root())
@@ -1006,17 +796,9 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if uint64(len(deposits)) != params.BeaconConfig().MaxDeposits {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(deposits),
-			int(params.BeaconConfig().MaxDeposits),
-		)
-	}
+	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().MaxDeposits, uint64(len(deposits)), "Received unexpected number of pending deposits")
 }
 
 func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
@@ -1032,21 +814,17 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    []byte("0x0"),
+			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			DepositRoot:  make([]byte, 32),
 			DepositCount: 5,
 		},
 		Eth1DepositIndex: 2,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
+	blkRoot, err := blk.HashTreeRoot()
+	require.NoError(t, err)
 	var mockSig [96]byte
 	var mockCreds [32]byte
 
@@ -1055,7 +833,7 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1064,7 +842,7 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1077,25 +855,21 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte{byte(i)},
+					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		})
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
@@ -1116,17 +890,9 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 
 	// It should also return the recent deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(deposits) != 3 {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(deposits),
-			3,
-		)
-	}
+	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(deposits), "Received unexpected number of pending deposits")
 }
 
 func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
@@ -1144,22 +910,18 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    []byte("0x0"),
+			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			DepositRoot:  make([]byte, 32),
 			DepositCount: 4,
 		},
 		Eth1DepositIndex: 1,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
+	require.NoError(t, err)
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
 
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -1171,7 +933,7 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1181,7 +943,7 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1194,7 +956,7 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("c"),
+					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1204,7 +966,7 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("d"),
+					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1215,14 +977,10 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	require.NoError(t, err)
 
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(finalizedDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
@@ -1243,15 +1001,11 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	}
 
 	trie, err := bs.depositTrie(ctx, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	actualRoot := trie.HashTreeRoot()
 	expectedRoot := depositTrie.HashTreeRoot()
-	if actualRoot != expectedRoot {
-		t.Errorf("Incorrect deposit trie root (%x) vs expected %x", actualRoot, expectedRoot)
-	}
+	assert.Equal(t, expectedRoot, actualRoot, "Incorrect deposit trie root")
 }
 
 func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
@@ -1261,9 +1015,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		},
 		Eth1DataVotes: []*ethpb.Eth1Data{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	p := &mockPOW.FaultyMockPOWChain{
 		HashesByHeight: make(map[int][]byte),
 	}
@@ -1274,9 +1026,8 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		BlockReceiver:     &mock.ChainService{State: beaconState},
 		HeadFetcher:       &mock.ChainService{State: beaconState},
 	}
-	if _, err := proposerServer.eth1Data(context.Background(), beaconState.Slot()+1); err != nil {
-		t.Errorf("A failed request should not have returned an error, got %v", err)
-	}
+	_, err = proposerServer.eth1Data(context.Background(), beaconState.Slot()+1)
+	assert.NoError(t, err, "A failed request should not have returned an error, got %v")
 }
 
 func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
@@ -1289,7 +1040,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
 				}},
@@ -1299,16 +1050,14 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
 				}},
 		},
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
@@ -1341,12 +1090,10 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	p.Eth1Data = defEth1Data
 
 	result, err := proposerServer.defaultEth1DataResponse(ctx, big.NewInt(16))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if !proto.Equal(result, defEth1Data) {
-		t.Errorf("Did not receive default eth1data. Wanted %v but Got %v", defEth1Data, result)
+		t.Errorf("Did not receive default eth1data. Wanted %v but got %v", defEth1Data, result)
 	}
 }
 
@@ -1354,7 +1101,7 @@ func TestEth1Data(t *testing.T) {
 	slot := uint64(20000)
 
 	p := &mockPOW.POWChain{
-		BlockNumberByHeight: map[uint64]*big.Int{
+		BlockNumberByTime: map[uint64]*big.Int{
 			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
 		},
 		HashesByHeight: map[int][]byte{
@@ -1366,9 +1113,7 @@ func TestEth1Data(t *testing.T) {
 	}
 
 	headState := testutil.NewBeaconState()
-	if err := headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}))
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
 
@@ -1382,13 +1127,8 @@ func TestEth1Data(t *testing.T) {
 
 	ctx := context.Background()
 	eth1Data, err := ps.eth1Data(ctx, slot)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if eth1Data.DepositCount != 55 {
-		t.Error("Expected deposit count to be 55")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(55), eth1Data.DepositCount)
 }
 
 func TestEth1Data_SmallerDepositCount(t *testing.T) {
@@ -1399,7 +1139,7 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
 				}},
@@ -1409,16 +1149,14 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
 				}},
 		},
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
@@ -1428,7 +1166,7 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 	}
 
 	p := &mockPOW.POWChain{
-		BlockNumberByHeight: map[uint64]*big.Int{
+		BlockNumberByTime: map[uint64]*big.Int{
 			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
@@ -1448,15 +1186,11 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 
 	ctx := context.Background()
 	eth1Data, err := ps.eth1Data(ctx, slot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Will default to 10 as the current deposit count in the
 	// cache is only 2.
-	if eth1Data.DepositCount != 10 {
-		t.Errorf("Expected deposit count to be 10 but got %d", eth1Data.DepositCount)
-	}
+	assert.Equal(t, uint64(10), eth1Data.DepositCount)
 }
 
 func TestEth1Data_MockEnabled(t *testing.T) {
@@ -1472,26 +1206,18 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	// )
 	ctx := context.Background()
 	headState := testutil.NewBeaconState()
-	if err := headState.SetEth1DepositIndex(64); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, headState.SetEth1DepositIndex(64))
 	ps := &Server{
 		HeadFetcher:   &mock.ChainService{State: headState},
 		BeaconDB:      db,
 		MockEth1Votes: true,
 	}
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, db.SaveState(ctx, headState, headBlockRoot))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
 
 	eth1Data, err := ps.eth1Data(ctx, 100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
 	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
@@ -1509,6 +1235,523 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	}
 }
 
+func TestEth1DataMajorityVote_ChooseHighestCount(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(100 - params.BeaconConfig().Eth1FollowDistance - 1): []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("second"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("second"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := []byte("first")
+	if !bytes.Equal(hash, expectedHash) {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_HighestCountBeforeRange_ChooseHighestCountWithinRange(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(50 - params.BeaconConfig().Eth1FollowDistance - 1):  []byte("before_range"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance - 1): []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("second"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("before_range"), DepositCount: 1},
+			{BlockHash: []byte("before_range"), DepositCount: 1},
+			{BlockHash: []byte("first"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := []byte("first")
+	if !bytes.Equal(hash, expectedHash) {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_HighestCountAfterRange_ChooseHighestCountWithinRange(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance + 1): []byte("after_range"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("after_range"), DepositCount: 1},
+			{BlockHash: []byte("after_range"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := []byte("first")
+	if !bytes.Equal(hash, expectedHash) {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_HighestCountOnUnknownBlock_ChooseKnownBlockWithHighestCount(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(100 - params.BeaconConfig().Eth1FollowDistance - 1): []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("second"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("unknown"), DepositCount: 1},
+			{BlockHash: []byte("unknown"), DepositCount: 1},
+			{BlockHash: []byte("first"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := []byte("first")
+	if !bytes.Equal(hash, expectedHash) {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_NoVotesInRange_ChooseDefault(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(50 - params.BeaconConfig().Eth1FollowDistance - 1):  []byte("before_range"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance - 1): []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("second"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance + 1): []byte("after_range"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("before_range"), DepositCount: 1},
+			{BlockHash: []byte("after_range"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := make([]byte, 32)
+	copy(expectedHash, "second")
+	if !bytes.Equal(hash, expectedHash) {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_NoVotes_ChooseDefault(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(100 - params.BeaconConfig().Eth1FollowDistance - 1): []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("second"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot:          64,
+		Eth1DataVotes: []*ethpb.Eth1Data{}})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := make([]byte, 32)
+	copy(expectedHash, "second")
+	if !bytes.Equal(hash, expectedHash) {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_SameCount_ChooseMoreRecentBlock(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(100 - params.BeaconConfig().Eth1FollowDistance - 1): []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("second"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("first"), DepositCount: 1},
+			{BlockHash: []byte("second"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := []byte("second")
+	if !bytes.Equal(hash, expectedHash) {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_HighestCountOnBlockWithLessDeposits_ChooseAnotherBlock(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(50 - params.BeaconConfig().Eth1FollowDistance):  []byte("no_new_deposits"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance): []byte("second"),
+		},
+	}
+
+	dc := dbpb.DepositContainer{
+		Index:           0,
+		Eth1BlockHeight: 0,
+		Deposit: &ethpb.Deposit{
+			Data: &ethpb.Deposit_Data{
+				PublicKey:             []byte("a"),
+				Signature:             make([]byte, 96),
+				WithdrawalCredentials: make([]byte, 32),
+			}},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	require.NoError(t, err)
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("no_new_deposits"), DepositCount: 0},
+			{BlockHash: []byte("no_new_deposits"), DepositCount: 0},
+			{BlockHash: []byte("second"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := []byte("second")
+	if bytes.Compare(hash, expectedHash) != 0 {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
+func TestEth1DataMajorityVote_NoDeposits_ChooseChainStartEth1Data(t *testing.T) {
+	p := &mockPOW.POWChain{
+		BlockNumberByTime: map[uint64]*big.Int{
+			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
+			64 * params.BeaconConfig().SecondsPerSlot: big.NewInt(100),
+		},
+		HashesByHeight: map[int][]byte{
+			int(100 - params.BeaconConfig().Eth1FollowDistance - 1): []byte("first"),
+			int(100 - params.BeaconConfig().Eth1FollowDistance):     []byte("second"),
+		},
+		Eth1Data: &ethpb.Eth1Data{
+			BlockHash: []byte("eth1data"),
+		},
+	}
+
+	depositCache, err := depositcache.NewDepositCache()
+	require.NoError(t, err)
+
+	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 64,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("first"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 0}},
+	}
+
+	ctx := context.Background()
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+
+	hash := majorityVoteEth1Data.BlockHash
+
+	expectedHash := []byte("eth1data")
+	if bytes.Compare(hash, expectedHash) != 0 {
+		t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+	}
+}
+
 func TestFilterAttestation_OK(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
@@ -1516,29 +1759,17 @@ func TestFilterAttestation_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	genesis := testutil.NewBeaconBlock()
-	if err := db.SaveBlock(context.Background(), genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
+	require.NoError(t, db.SaveBlock(context.Background(), genesis), "Could not save genesis block")
 
 	numDeposits := uint64(64)
 	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
-	if err := state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]); err != nil {
-		t.Fatal(err)
-	}
-	if err := state.SetSlot(1); err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	assert.NoError(t, state.SetSlot(1))
 
-	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, state, genesisRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, genesisRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
 		BeaconDB:    db,
@@ -1548,15 +1779,18 @@ func TestFilterAttestation_OK(t *testing.T) {
 
 	atts := make([]*ethpb.Attestation, 10)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
-			CommitteeIndex: uint64(i),
-			Target:         &ethpb.Checkpoint{}},
+		atts[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				CommitteeIndex:  uint64(i),
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				BeaconBlockRoot: make([]byte, 32),
+			},
+			Signature: make([]byte, 96),
 		}
 	}
 	received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if len(received) > 0 {
 		t.Error("Invalid attestations were filtered")
 	}
@@ -1564,33 +1798,29 @@ func TestFilterAttestation_OK(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		aggBits := bitfield.NewBitlist(2)
 		aggBits.SetBitAt(0, true)
-		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
-			CommitteeIndex: uint64(i),
-			Target:         &ethpb.Checkpoint{},
-			Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}},
+		atts[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				CommitteeIndex:  uint64(i),
+				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				BeaconBlockRoot: make([]byte, 32),
+			},
 			AggregationBits: aggBits,
+			Signature:       make([]byte, 96),
 		}
 		committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		sigs := make([]bls.Signature, len(attestingIndices))
 		zeroSig := [96]byte{}
 		atts[i].Signature = zeroSig[:]
 
 		for i, indice := range attestingIndices {
 			hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			sig := privKeys[indice].Sign(hashTreeRoot[:])
 			sigs[i] = sig
 		}
@@ -1598,12 +1828,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 	}
 
 	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received) != 1 {
-		t.Errorf("Did not filter correctly, wanted: 1, received: %d", len(received))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(received), "Did not filter correctly")
 }
 
 func Benchmark_Eth1Data(b *testing.B) {
@@ -1617,9 +1843,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 			BlockHash: []byte("stub"),
 		},
 	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	var mockSig [96]byte
 	var mockCreds [32]byte
 	deposits := []*dbpb.DepositContainer{
@@ -1627,7 +1851,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1636,7 +1860,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1659,20 +1883,15 @@ func Benchmark_Eth1Data(b *testing.B) {
 			BlockHash:   blockhash,
 			DepositRoot: deposit,
 		}))
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 		hashesByHeight[i] = blockhash
 	}
 	hashesByHeight[numOfVotes+1] = []byte("stub")
 
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		b.Fatal(err)
-	}
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
+	blkRoot, err := blk.HashTreeRoot()
+	require.NoError(b, err)
 
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
 	p := &mockPOW.POWChain{
@@ -1691,9 +1910,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := proposerServer.eth1Data(context.Background(), beaconState.Slot()+1)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
 }
 
@@ -1711,20 +1928,16 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash: []byte("0x0"),
+			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
+			DepositRoot: make([]byte, 32),
 		},
 		Eth1DepositIndex: 2,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot(),
-	}
-	blkRoot, err := ssz.HashTreeRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -1734,7 +1947,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("a"),
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1743,7 +1956,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte("b"),
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1756,25 +1969,21 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte{byte(i)},
+					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
 		})
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("could not setup deposit trie: %v", err)
-	}
+	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.NewDepositCache()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
-		depositHash, err := ssz.HashTreeRoot(dp.Deposit.Data)
-		if err != nil {
-			t.Fatalf("Unable to determine hashed value of deposit %v", err)
-		}
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
@@ -1795,16 +2004,9 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 
 	// It should also return the recent deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
-	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(deposits) != 0 {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: 0",
-			len(deposits),
-		)
-	}
+	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending deposits")
 }
 
 func TestDeleteAttsInPool_Aggregated(t *testing.T) {
@@ -1813,27 +2015,38 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	}
 
 	sig := bls.RandKey().Sign([]byte("foo")).Marshal()
-	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
-	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
+	aggregatedAtts := []*ethpb.Attestation{{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
+	unaggregatedAtts := []*ethpb.Attestation{{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
 
-	if err := s.AttPool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, s.AttPool.SaveAggregatedAttestations(aggregatedAtts))
+	require.NoError(t, s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts))
 
 	aa, err := attaggregation.Aggregate(aggregatedAtts)
-	if err != nil {
-		t.Error(err)
+	require.NoError(t, err)
+	require.NoError(t, s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)))
+	assert.Equal(t, 0, len(s.AttPool.AggregatedAttestations()), "Did not delete aggregated attestation")
+	atts, err := s.AttPool.UnaggregatedAttestations()
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(atts), "Did not delete unaggregated attestation")
+}
+
+func TestSortProfitableAtts(t *testing.T) {
+	atts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
+		{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11110000}},
+		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
 	}
-	if err := s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)); err != nil {
-		t.Fatal(err)
+	sort.Sort(profitableAtts{atts: atts})
+	want := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11110000}},
+		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
+		{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
+		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
 	}
-	if len(s.AttPool.AggregatedAttestations()) != 0 {
-		t.Error("Did not delete aggregated attestation")
-	}
-	if len(s.AttPool.UnaggregatedAttestations()) != 0 {
-		t.Error("Did not delete unaggregated attestation")
-	}
+	require.DeepEqual(t, want, atts)
 }

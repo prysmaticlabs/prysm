@@ -25,7 +25,26 @@ func LogGRPCRequests(ctx context.Context, method string, req, reply interface{},
 	start := time.Now()
 	err := invoker(ctx, method, req, reply, cc, opts...)
 	logrus.WithField("backend", header["x-backend"]).
-		WithField("method", method).WithField("duration", time.Now().Sub(start)).
+		WithField("method", method).WithField("duration", time.Since(start)).
 		Debug("gRPC request finished.")
 	return err
+}
+
+// LogGRPCStream to print the method at DEBUG level at the start of the stream.
+func LogGRPCStream(ctx context.Context, sd *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	// Shortcut when debug logging is not enabled.
+	if logrus.GetLevel() < logrus.DebugLevel {
+		return streamer(ctx, sd, conn, method, opts...)
+	}
+
+	var header metadata.MD
+	opts = append(
+		opts,
+		grpc.Header(&header),
+	)
+	strm, err := streamer(ctx, sd, conn, method, opts...)
+	logrus.WithField("backend", header["x-backend"]).
+		WithField("method", method).
+		Debug("gRPC stream started.")
+	return strm, err
 }

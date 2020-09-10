@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
@@ -54,24 +55,18 @@ func TestEpochStore_GetValidatorSpan_Format(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			decodedHex, err := hex.DecodeString(tt.hexToDecode)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			es, err := types.NewEpochStore(decodedHex)
-			if err != tt.expectedErr {
-				t.Fatalf("expected error %v, received %v", tt.expectedErr, err)
-			}
 			if tt.expectedErr != nil {
+				require.ErrorContains(t, tt.expectedErr.Error(), err)
 				return
+			} else {
+				require.NoError(t, err)
 			}
 			span0, err := es.GetValidatorSpan(0)
-			if !reflect.DeepEqual(span0, tt.expectedSpan[0]) {
-				t.Errorf("Expected span to be: %v, received: %v", tt.expectedSpan[0], span0)
-			}
+			assert.DeepEqual(t, tt.expectedSpan[0], span0, "Unexpected span")
 			span1, err := es.GetValidatorSpan(1)
-			if !reflect.DeepEqual(span1, tt.expectedSpan[1]) {
-				t.Errorf("Expected span to be: %v, received: %v", tt.expectedSpan[1], span1)
-			}
+			assert.DeepEqual(t, tt.expectedSpan[1], span1, "Unexpected span")
 		})
 	}
 }
@@ -121,20 +116,12 @@ func TestEpochStore_GetValidatorSpan_Matches(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			es, err := types.EpochStoreFromMap(tt.spanMap)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if es.HighestObservedIdx() != tt.highestIdx {
-				t.Fatalf("Expected highest index %d, received %d", tt.highestIdx, es.HighestObservedIdx())
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.highestIdx, es.HighestObservedIdx(), "Unexpected highest index")
 			for k, v := range tt.spanMap {
 				span, err := es.GetValidatorSpan(k)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !reflect.DeepEqual(span, v) {
-					t.Fatalf("Expected span %v, received %v", v, span)
-				}
+				require.NoError(t, err)
+				require.DeepEqual(t, v, span, "Unexpected span")
 			}
 		})
 	}
@@ -201,36 +188,24 @@ func TestEpochStore_SetValidatorSpan(t *testing.T) {
 		},
 	}
 	es, err := types.NewEpochStore([]byte{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if es.HighestObservedIdx() != 0 {
-		t.Fatalf("Expected highest index to be 0, received %d", es.HighestObservedIdx())
-	}
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), es.HighestObservedIdx(), "Expected highest index to be 0")
 	lastIdx := uint64(0)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for k, v := range tt.spanMapToAdd {
 				es, err = es.SetValidatorSpan(k, v)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				if k > lastIdx {
 					lastIdx = k
 				}
 			}
 			for k, v := range tt.resultMap {
 				span, err := es.GetValidatorSpan(k)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !reflect.DeepEqual(v, span) {
-					t.Errorf("Expected %v, received %v", v, span)
-				}
+				require.NoError(t, err)
+				assert.DeepEqual(t, v, span, "Unexpected span")
 			}
-			if es.HighestObservedIdx() != lastIdx {
-				t.Fatalf("Expected highest index to be %d, received %d", lastIdx, es.HighestObservedIdx())
-			}
+			require.Equal(t, lastIdx, es.HighestObservedIdx(), "Unexpected highest index")
 		})
 	}
 }
@@ -246,9 +221,7 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 		b.ReportAllocs()
 		b.N = 5
 		for i := 0; i < b.N; i++ {
-			if err := db.SaveEpochSpansMap(context.Background(), 0, spansMap); err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, db.SaveEpochSpansMap(context.Background(), 0, spansMap))
 		}
 	})
 
@@ -257,18 +230,14 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			if err := db.SaveEpochSpans(context.Background(), 1, store, dbTypes.UseDB); err != nil {
-				b.Fatal(err)
-			}
+			require.NoError(b, db.SaveEpochSpans(context.Background(), 1, store, dbTypes.UseDB))
 		}
 	})
 }
 
 func generateEpochStore(t testing.TB, n uint64) (*types.EpochStore, map[uint64]types.Span) {
 	epochStore, err := types.NewEpochStore([]byte{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	spanMap := make(map[uint64]types.Span)
 	for i := uint64(0); i < n; i++ {
 		span := types.Span{
@@ -279,9 +248,7 @@ func generateEpochStore(t testing.TB, n uint64) (*types.EpochStore, map[uint64]t
 		}
 		spanMap[i] = span
 		epochStore, err = epochStore.SetValidatorSpan(i, span)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 	return epochStore, spanMap
 }

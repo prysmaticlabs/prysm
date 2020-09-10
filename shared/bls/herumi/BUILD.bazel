@@ -6,7 +6,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "docs.go",
+        "doc.go",
         "init.go",
         "public_key.go",
         "secret_key.go",
@@ -39,6 +39,8 @@ go_test(
     deps = [
         "//shared/bls/iface:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@herumi_bls_eth_go_binary//:go_default_library",
     ],
 )

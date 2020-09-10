@@ -34,6 +34,7 @@ type Flags struct {
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
 	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
+	OnyxTestnet   bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -51,13 +52,16 @@ type Flags struct {
 	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
 	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
 	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
 	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
+	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
+	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
+	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnableRoughtime                            bool // EnableRoughtime is an opt-in flag for enabling hourly syncing with roughtime. Default is to not sync.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -77,6 +81,7 @@ type Flags struct {
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
+	UseCheckPointInfoCache  bool // UseCheckPointInfoCache uses check point info cache to efficiently verify attestation signatures.
 
 	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
@@ -109,16 +114,25 @@ func InitWithReset(c *Flags) func() {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Node on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
+	}
+	if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running Node on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -154,10 +168,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.Bool(enableSlasherFlag.Name) {
-		log.Warn("Enable slasher connection.")
-		cfg.EnableSlasherConnection = true
-	}
 	if ctx.Bool(cacheFilteredBlockTreeFlag.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
@@ -187,11 +197,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	cfg.NewStateMgmt = true
-	if ctx.Bool(disableNewStateMgmt.Name) {
-		log.Warn("Disabling new state management service")
-		cfg.NewStateMgmt = false
-	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
@@ -217,13 +222,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
-	if ctx.Bool(newBeaconStateLocks.Name) {
-		log.Warn("Using new beacon state locks")
-		cfg.NewBeaconStateLocks = true
-	}
-	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
-		log.Warn("Forcing max_cover strategy on attestation aggregation")
-		cfg.AttestationAggregationStrategy = "max_cover"
+	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
+
+	cfg.NewBeaconStateLocks = true
+	if ctx.Bool(disableNewBeaconStateLocks.Name) {
+		log.Warn("Disabling new beacon state locks")
+		cfg.NewBeaconStateLocks = false
 	}
 	if ctx.Bool(batchBlockVerify.Name) {
 		log.Warn("Performing batch block verification when syncing.")
@@ -237,18 +241,36 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling finalized deposits cache")
 		cfg.EnableFinalizedDepositsCache = true
 	}
+	if ctx.Bool(enableEth1DataMajorityVote.Name) {
+		log.Warn("Enabling eth1data majority vote")
+		cfg.EnableEth1DataMajorityVote = true
+	}
+	if ctx.Bool(enableAttBroadcastDiscoveryAttempts.Name) {
+		cfg.EnableAttBroadcastDiscoveryAttempts = true
+	}
+	if ctx.Bool(enablePeerScorer.Name) {
+		log.Warn("Enabling peer scoring in P2P")
+		cfg.EnablePeerScorer = true
+	}
+	if ctx.Bool(enableRoughtime.Name) {
+		log.Warn("Enabling roughtime sync")
+		cfg.EnableRoughtime = true
+	}
+	if ctx.Bool(checkPtInfoCache.Name) {
+		log.Warn("Using advance check point info cache")
+		cfg.UseCheckPointInfoCache = true
+	}
 	Init(cfg)
 }
 
 // ConfigureSlasher sets the global config based
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(enableHistoricalDetectionFlag.Name) {
-		log.Warn("Enabling historical attestation detection")
-		cfg.EnableHistoricalDetection = true
-	}
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
 		cfg.DisableLookback = true
@@ -259,21 +281,32 @@ func ConfigureSlasher(ctx *cli.Context) {
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
+	// Using Medalla as the default configuration for now.
+	params.UseMedallaConfig()
+
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(altonaTestnet.Name) {
+	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Validator on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	}
-	if ctx.Bool(enableLocalProtectionFlag.Name) {
-		log.Warn("Enabled validator slashing protection.")
-		cfg.LocalProtection = true
+	if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running Node on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
 	}
-	if ctx.Bool(enableAccountsV2.Name) {
-		log.Warn("Enabling v2 of Prysm validator accounts")
-		cfg.EnableAccountsV2 = true
+	if ctx.Bool(enableLocalProtectionFlag.Name) {
+		cfg.LocalProtection = true
+	} else {
+		log.Warn("Validator slashing protection not enabled!")
+	}
+	cfg.EnableAccountsV2 = true
+	if ctx.Bool(disableAccountsV2.Name) {
+		log.Warn("Disabling v2 of Prysm validator accounts")
+		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")

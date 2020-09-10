@@ -7,12 +7,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func BenchmarkPairing(b *testing.B) {
-	if err := bls.Init(bls.BLS12_381); err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, bls.Init(bls.BLS12_381))
 	if err := bls.SetETHmode(bls.EthModeDraft07); err != nil {
 		panic(err)
 	}
@@ -22,15 +21,8 @@ func BenchmarkPairing(b *testing.B) {
 
 	newGt.SetInt64(10)
 	hash := hashutil.Hash([]byte{})
-	err := newG1.HashAndMapTo(hash[:])
-	if err != nil {
-		b.Fatal(err)
-	}
-	err = newG2.HashAndMapTo(hash[:])
-	if err != nil {
-		b.Fatal(err)
-	}
-
+	require.NoError(b, newG1.HashAndMapTo(hash[:]))
+	require.NoError(b, newG2.HashAndMapTo(hash[:]))
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
@@ -46,9 +38,7 @@ func BenchmarkSignature_Verify(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if !sig.Verify(sk.PublicKey(), msg) {
-			b.Fatal("could not verify sig")
-		}
+		require.Equal(b, true, sig.Verify(sk.PublicKey(), msg))
 	}
 }
 
@@ -71,9 +61,7 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		if !aggregated.AggregateVerify(pks, msgs) {
-			b.Fatal("could not verify aggregate sig")
-		}
+		require.Equal(b, true, aggregated.AggregateVerify(pks, msgs))
 	}
 }
 

@@ -5,23 +5,26 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestBlocksQueueInitStartStop(t *testing.T) {
+func TestBlocksQueue_InitStartStop(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher: mc,
-		p2p:         p2p,
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
 	})
 
 	t.Run("stop without start", func(t *testing.T) {
@@ -29,6 +32,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
@@ -39,6 +43,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -49,6 +54,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -61,6 +67,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -68,9 +75,9 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		// Blocks up until all resources are reclaimed (or timeout is called)
 		assert.NoError(t, queue.stop())
 		select {
-		case <-queue.fetchedBlocks:
+		case <-queue.fetchedData:
 		default:
-			t.Error("queue.fetchedBlocks channel is leaked")
+			t.Error("queue.fetchedData channel is leaked")
 		}
 		select {
 		case <-fetcher.fetchResponses:
@@ -85,6 +92,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -98,6 +106,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -110,6 +119,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
+			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -118,7 +128,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 	})
 }
 
-func TestBlocksQueueLoop(t *testing.T) {
+func TestBlocksQueue_Loop(t *testing.T) {
 	tests := []struct {
 		name                string
 		highestExpectedSlot uint64
@@ -230,12 +240,14 @@ func TestBlocksQueueLoop(t *testing.T) {
 			defer cancel()
 
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-				headFetcher: mc,
-				p2p:         p2p,
+				headFetcher:         mc,
+				finalizationFetcher: mc,
+				p2p:                 p2p,
 			})
 			queue := newBlocksQueue(ctx, &blocksQueueConfig{
 				blocksFetcher:       fetcher,
 				headFetcher:         mc,
+				finalizationFetcher: mc,
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
@@ -243,7 +255,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block.ParentRoot)) {
 					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
 				}
-				root, err := stateutil.BlockRoot(block.Block)
+				root, err := block.Block.HashTreeRoot()
 				if err != nil {
 					return err
 				}
@@ -255,8 +267,8 @@ func TestBlocksQueueLoop(t *testing.T) {
 			}
 
 			var blocks []*eth.SignedBeaconBlock
-			for fetchedBlocks := range queue.fetchedBlocks {
-				for _, block := range fetchedBlocks {
+			for data := range queue.fetchedData {
+				for _, block := range data.blocks {
 					if err := processBlock(block); err != nil {
 						continue
 					}
@@ -281,4 +293,155 @@ func TestBlocksQueueLoop(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
+	})
+
+	t.Run("expired context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		cancel()
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, nil)
+		assert.ErrorContains(t, context.Canceled.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("invalid input state", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		invalidStates := []stateID{stateNew, stateDataParsed, stateSkipped, stateSent}
+		for _, state := range invalidStates {
+			t.Run(state.String(), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				handlerFn := queue.onDataReceivedEvent(ctx)
+				updatedState, err := handlerFn(&stateMachine{
+					state: state,
+				}, nil)
+				assert.ErrorContains(t, errInvalidInitialState.Error(), err)
+				assert.Equal(t, state, updatedState)
+			})
+		}
+	})
+
+	t.Run("invalid input param", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, nil)
+		assert.ErrorContains(t, errInputNotFetchRequestParams.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("slot is too high", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, &fetchRequestResponse{
+			pid: "abc",
+			err: errSlotIsTooHigh,
+		})
+		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("invalid data returned", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		hook := logTest.NewGlobal()
+		defer hook.Reset()
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, &fetchRequestResponse{
+			pid: "abc",
+			err: errInvalidFetchedData,
+		})
+		assert.ErrorContains(t, errInvalidFetchedData.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+		assert.LogsContain(t, hook, "msg=\"Peer is penalized for invalid blocks\" pid=ZiCa")
+	})
+
+	t.Run("transition ok", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		response := &fetchRequestResponse{
+			pid: "abc",
+			blocks: []*eth.SignedBeaconBlock{
+				testutil.NewBeaconBlock(),
+				testutil.NewBeaconBlock(),
+			},
+		}
+		fsm := &stateMachine{
+			state: stateScheduled,
+		}
+		assert.Equal(t, (peer.ID)(""), fsm.pid)
+		assert.DeepEqual(t, ([]*eth.SignedBeaconBlock)(nil), fsm.blocks)
+		updatedState, err := handlerFn(fsm, response)
+		assert.NoError(t, err)
+		assert.Equal(t, stateDataParsed, updatedState)
+		assert.Equal(t, response.pid, fsm.pid)
+		assert.DeepEqual(t, response.blocks, fsm.blocks)
+	})
 }

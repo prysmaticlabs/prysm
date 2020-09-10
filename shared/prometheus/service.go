@@ -61,19 +61,29 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 		Status bool   `json:"status"`
 		Err    string `json:"error"`
 	}
+	var hasError bool
 	var statuses []serviceStatus
 	for k, v := range s.svcRegistry.Statuses() {
 		s := serviceStatus{
-			Name:   fmt.Sprintf("%s", k),
+			Name:   k.String(),
 			Status: true,
 		}
 		if v != nil {
 			s.Status = false
 			s.Err = v.Error()
+			if s.Err != "" {
+				hasError = true
+			}
 		}
 		statuses = append(statuses, s)
 	}
 	response.Data = statuses
+
+	if hasError {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 
 	// Handle plain text content.
 	if contentType := negotiateContentType(r); contentType == contentTypePlainText {

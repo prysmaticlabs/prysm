@@ -4,11 +4,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "go_default_test",
-    size = "enormous",
+    size = "large",
     testonly = True,
     srcs = [
         "endtoend_test.go",
-        "long_minimal_e2e_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],
@@ -20,7 +19,7 @@ go_test(
         "//validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
-    shard_count = 3,
+    shard_count = 2,
     tags = [
         "block-network",
         "e2e",
@@ -40,5 +39,7 @@ go_test(
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
     ],
 )

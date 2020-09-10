@@ -5,21 +5,20 @@ import (
 	"sync"
 	"testing"
 
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
 	headState, err := InitializeFromProto(&pb.BeaconState{Slot: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		if err := headState.SetSlot(uint64(0)); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, headState.SetSlot(uint64(0)))
 		wg.Done()
 	}()
 	go func() {
@@ -78,17 +77,11 @@ func TestNilState_NoPanic(t *testing.T) {
 
 func TestReadOnlyValidator_NoPanic(t *testing.T) {
 	v := &ReadOnlyValidator{}
-	if v.Slashed() == true {
-		t.Error("Expected not slashed")
-	}
-	if v.CopyValidator() != nil {
-		t.Error("Expected nil result")
-	}
+	assert.Equal(t, false, v.Slashed(), "Expected not slashed")
+	assert.Equal(t, (*eth.Validator)(nil), v.CopyValidator(), "Expected nil result")
 }
 
 func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
 	v := &ReadOnlyValidator{}
-	if v.ActivationEligibilityEpoch() != 0 {
-		t.Error("Expected 0 and not panic")
-	}
+	assert.Equal(t, uint64(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
 }

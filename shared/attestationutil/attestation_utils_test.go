@@ -2,15 +2,13 @@ package attestationutil_test
 
 import (
 	"context"
-	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestAttestingIndices(t *testing.T) {
@@ -43,18 +41,16 @@ func TestAttestingIndices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AttestingIndices() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, tt.want, got)
 		})
 	}
 }
 
 func TestIsValidAttestationIndices(t *testing.T) {
 	tests := []struct {
-		name string
-		att  *eth.IndexedAttestation
-		want string
+		name      string
+		att       *eth.IndexedAttestation
+		wantedErr string
 	}{
 		{
 			name: "Indices should be non-empty",
@@ -63,9 +59,9 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: nil,
+				Signature: make([]byte, 96),
 			},
-			want: "expected non-empty",
+			wantedErr: "expected non-empty",
 		},
 		{
 			name: "Greater than max validators per committee",
@@ -74,9 +70,9 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: nil,
+				Signature: make([]byte, 96),
 			},
-			want: "indices count exceeds",
+			wantedErr: "indices count exceeds",
 		},
 		{
 			name: "Needs to be sorted",
@@ -85,9 +81,9 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: nil,
+				Signature: make([]byte, 96),
 			},
-			want: "not uniquely sorted",
+			wantedErr: "not uniquely sorted",
 		},
 		{
 			name: "Valid indices",
@@ -96,18 +92,17 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Data: &eth.AttestationData{
 					Target: &eth.Checkpoint{},
 				},
-				Signature: nil,
+				Signature: make([]byte, 96),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := attestationutil.IsValidAttestationIndices(context.Background(), tt.att)
-			if tt.want == "" && err != nil {
-				t.Fatal(err)
-			}
-			if tt.want != "" && !strings.Contains(err.Error(), tt.want) {
-				t.Errorf("IsValidAttestationIndices() got = %v, want %v", err, tt.want)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -251,10 +246,7 @@ func TestAttDataIsEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			areEqual := attestationutil.AttDataIsEqual(tt.attData1, tt.attData2)
-			if areEqual != tt.equal {
-				t.Errorf("Expected %t, received %t", tt.equal, areEqual)
-			}
+			assert.Equal(t, tt.equal, attestationutil.AttDataIsEqual(tt.attData1, tt.attData2))
 		})
 	}
 }
@@ -306,10 +298,7 @@ func TestCheckPtIsEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			areEqual := attestationutil.CheckPointIsEqual(tt.checkPt1, tt.checkPt2)
-			if areEqual != tt.equal {
-				t.Errorf("Expected %t, received %t", tt.equal, areEqual)
-			}
+			assert.Equal(t, tt.equal, attestationutil.CheckPointIsEqual(tt.checkPt1, tt.checkPt2))
 		})
 	}
 }
@@ -345,20 +334,14 @@ func BenchmarkAttDataIsEqual(b *testing.B) {
 	b.Run("fast", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			areEqual := attestationutil.AttDataIsEqual(attData1, attData2)
-			if !areEqual {
-				b.Error(areEqual)
-			}
+			assert.Equal(b, true, attestationutil.AttDataIsEqual(attData1, attData2))
 		}
 	})
 
 	b.Run("proto.Equal", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			areEqual := proto.Equal(attData1, attData2)
-			if !areEqual {
-				b.Error(areEqual)
-			}
+			assert.Equal(b, true, attestationutil.AttDataIsEqual(attData1, attData2))
 		}
 	})
 }

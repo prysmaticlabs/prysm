@@ -8,26 +8,22 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestServer_GetBeaconConfig(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
 	res, err := bs.GetBeaconConfig(ctx, &ptypes.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	conf := params.BeaconConfig()
 	numFields := reflect.TypeOf(conf).Elem().NumField()
 
 	// Check if the result has the same number of items as our config struct.
-	if len(res.Config) != numFields {
-		t.Errorf("Expected %d items in config result, got %d", numFields, len(res.Config))
-	}
+	assert.Equal(t, numFields, len(res.Config), "Unexpected number of items in config")
 	want := fmt.Sprintf("%d", conf.Eth1FollowDistance)
 
 	// Check that an element is properly populated from the config.
-	if res.Config["Eth1FollowDistance"] != want {
-		t.Errorf("Wanted %s for eth1 follow distance, received %s", want, res.Config["Eth1FollowDistance"])
-	}
+	assert.Equal(t, want, res.Config["Eth1FollowDistance"], "Unexpected follow distance")
 }

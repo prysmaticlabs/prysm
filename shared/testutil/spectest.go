@@ -16,10 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.BeaconBlockBody) (*beaconstate.BeaconState, error)
+type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error)
 type epochOperation func(*testing.T, *beaconstate.BeaconState) (*beaconstate.BeaconState, error)
 
 var json = jsoniter.Config{
@@ -44,13 +45,9 @@ func UnmarshalYaml(y []byte, dest interface{}) error {
 func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo, string) {
 	testsFolderPath := path.Join("tests", config, "phase0", folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testFolders, err := ioutil.ReadDir(filepath)
-	if err != nil {
-		t.Fatalf("Failed to read file: %v", err)
-	}
+	require.NoError(t, err)
 
 	return testFolders, testsFolderPath
 }
@@ -90,17 +87,13 @@ func RunBlockOperationTest(
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := BazelFileBytes(path.Join(folderPath, "pre.ssz"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	preStateBase := &pb.BeaconState{}
 	if err := preStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 	preState, err := beaconstate.InitializeFromProto(preStateBase)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
 	postSSZFilepath, err := bazel.Runfile(path.Join(folderPath, "post.ssz"))
@@ -112,16 +105,14 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	beaconState, err := operationFn(context.Background(), preState, body)
+	b := NewBeaconBlock()
+	b.Block.Body = body
+	beaconState, err := operationFn(context.Background(), preState, b)
 	if postSSZExists {
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 
 		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		postBeaconState := &pb.BeaconState{}
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
@@ -152,17 +143,13 @@ func RunEpochOperationTest(
 	operationFn epochOperation,
 ) {
 	preBeaconStateFile, err := BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	preBeaconStateBase := &pb.BeaconState{}
 	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 	preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
 	postSSZFilepath, err := bazel.Runfile(path.Join(testFolderPath, "post.ssz"))
@@ -175,15 +162,10 @@ func RunEpochOperationTest(
 
 	beaconState, err := operationFn(t, preBeaconState)
 	if postSSZExists {
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 
 		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		require.NoError(t, err)
 		postBeaconState := &pb.BeaconState{}
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)

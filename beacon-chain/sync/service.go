@@ -10,7 +10,6 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -22,7 +21,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -35,12 +33,13 @@ import (
 
 var _ = shared.Service(&Service{})
 
-const rangeLimit = 1000
+const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenAttSize = 10000
 const seenExitSize = 100
 const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
+const badBlockSize = 1000
 
 const syncMetricsInterval = 10 * time.Second
 
@@ -83,7 +82,7 @@ type Service struct {
 	exitPool                  *voluntaryexits.Pool
 	slashingPool              *slashings.Pool
 	chain                     blockchainService
-	slotToPendingBlocks       map[uint64]*ethpb.SignedBeaconBlock
+	slotToPendingBlocks       map[uint64][]*ethpb.SignedBeaconBlock
 	seenPendingBlocks         map[[32]byte]bool
 	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	pendingAttsLock           sync.RWMutex
@@ -93,7 +92,7 @@ type Service struct {
 	validateBlockLock         sync.RWMutex
 	stateNotifier             statefeed.Notifier
 	blockNotifier             blockfeed.Notifier
-	blocksRateLimiter         *leakybucket.Collector
+	rateLimiter               *limiter
 	attestationNotifier       operation.Notifier
 	seenBlockLock             sync.RWMutex
 	seenBlockCache            *lru.Cache
@@ -105,17 +104,16 @@ type Service struct {
 	seenProposerSlashingCache *lru.Cache
 	seenAttesterSlashingLock  sync.RWMutex
 	seenAttesterSlashingCache *lru.Cache
+	badBlockCache             *lru.Cache
+	badBlockLock              sync.RWMutex
 	stateSummaryCache         *cache.StateSummaryCache
 	stateGen                  *stategen.State
 }
 
 // NewRegularSync service.
-func NewRegularSync(cfg *Config) *Service {
-	// Initialize block limits.
-	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
-	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
-
-	ctx, cancel := context.WithCancel(context.Background())
+func NewRegularSync(ctx context.Context, cfg *Config) *Service {
+	rLimiter := newRateLimiter(cfg.P2P)
+	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
@@ -127,14 +125,14 @@ func NewRegularSync(cfg *Config) *Service {
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
 		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks:  make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
 		stateSummaryCache:    cfg.StateSummaryCache,
 		stateGen:             cfg.StateGen,
-		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
+		rateLimiter:          rLimiter,
 	}
 
 	go r.registerHandlers()
@@ -166,9 +164,8 @@ func (s *Service) Start() {
 // Stop the regular sync service.
 func (s *Service) Stop() error {
 	defer func() {
-		if s.blocksRateLimiter != nil {
-			s.blocksRateLimiter.Free()
-			s.blocksRateLimiter = nil
+		if s.rateLimiter != nil {
+			s.rateLimiter.free()
 		}
 	}()
 	defer s.cancel()
@@ -177,16 +174,17 @@ func (s *Service) Stop() error {
 
 // Status of the currently running regular sync service.
 func (s *Service) Status() error {
-	if s.chainStarted {
-		if s.initialSync.Syncing() {
-			return errors.New("waiting for initial sync")
-		}
-		// If our head slot is on a previous epoch and our peers are reporting their head block are
-		// in the most recent epoch, then we might be out of sync.
-		if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
-			headEpoch+1 < s.p2p.Peers().HighestEpoch() {
-			return errors.New("out of sync")
-		}
+	if !s.chainStarted {
+		return errors.New("chain not yet started")
+	}
+	if s.initialSync.Syncing() {
+		return errors.New("waiting for initial sync")
+	}
+	// If our head slot is on a previous epoch and our peers are reporting their head block are
+	// in the most recent epoch, then we might be out of sync.
+	if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
+		headEpoch+1 < s.p2p.Peers().HighestEpoch() {
+		return errors.New("out of sync")
 	}
 	return nil
 }
@@ -214,11 +212,16 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
+	badBlockCache, err := lru.New(badBlockSize)
+	if err != nil {
+		return err
+	}
 	s.seenBlockCache = blkCache
 	s.seenAttestationCache = attCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = attesterSlashingCache
 	s.seenProposerSlashingCache = proposerSlashingCache
+	s.badBlockCache = badBlockCache
 
 	return nil
 }
@@ -228,7 +231,7 @@ func (s *Service) registerHandlers() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	for s.chainStarted == false {
+	for !s.chainStarted {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {

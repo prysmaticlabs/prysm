@@ -5,6 +5,16 @@ import (
 )
 
 var (
+	// AltonaTestnet flag for the multiclient eth2 testnet configuration.
+	AltonaTestnet = &cli.BoolFlag{
+		Name:  "altona",
+		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
+	}
+	// OnyxTestnet flag for the Prysmatic Labs single-client testnet configuration.
+	OnyxTestnet = &cli.BoolFlag{
+		Name:  "onyx",
+		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
+	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
@@ -51,21 +61,16 @@ var (
 			"and attestation's aggregated signatures. With this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
-	enableSlasherFlag = &cli.BoolFlag{
-		Name: "enable-slasher",
-		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
-			"the slasher-provider flag can be used to pass its address.",
-	}
 	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-
 	enableLocalProtectionFlag = &cli.BoolFlag{
 		Name: "enable-local-protection",
 		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting any messages that could be considered slashable according to its own history.",
+		Value: true,
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
@@ -103,17 +108,9 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	disableNewStateMgmt = &cli.BoolFlag{
-		Name:  "disable-new-state-mgmt",
-		Usage: "This disables the usage of state mgmt service across Prysm",
-	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
-	}
-	enableHistoricalDetectionFlag = &cli.BoolFlag{
-		Name:  "enable-historical-detection",
-		Usage: "Enables historical attestation detection for the slasher",
 	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
@@ -130,23 +127,11 @@ var (
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
-		Value: "naive",
+		Value: "max_cover",
 	}
-	newBeaconStateLocks = &cli.BoolFlag{
-		Name:  "new-beacon-state-locks",
-		Usage: "Enable new beacon state locking",
-	}
-	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
-		Name:  "attestation-aggregation-force-maxcover",
-		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
-	}
-	altonaTestnet = &cli.BoolFlag{
-		Name:  "altona",
-		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
-	}
-	enableAccountsV2 = &cli.BoolFlag{
-		Name:  "enable-accounts-v2",
-		Usage: "Enables usage of v2 for Prysm validator accounts",
+	disableNewBeaconStateLocks = &cli.BoolFlag{
+		Name:  "disable-new-beacon-state-locks",
+		Usage: "Disable new beacon state locking",
 	}
 	batchBlockVerify = &cli.BoolFlag{
 		Name:  "batch-block-verify",
@@ -154,19 +139,46 @@ var (
 	}
 	initSyncVerbose = &cli.BoolFlag{
 		Name:  "init-sync-verbose",
-		Usage: "Enable logging every processed block during initial syncing. ",
+		Usage: "Enable logging every processed block during initial syncing.",
 	}
 	enableFinalizedDepositsCache = &cli.BoolFlag{
 		Name:  "enable-finalized-deposits-cache",
 		Usage: "Enables utilization of cached finalized deposits",
 	}
+	enableEth1DataMajorityVote = &cli.BoolFlag{
+		Name:  "enable-eth1-data-majority-vote",
+		Usage: "When enabled, voting on eth1 data will use the Voting With The Majority algorithm.",
+	}
+	disableAccountsV2 = &cli.BoolFlag{
+		Name:  "disable-accounts-v2",
+		Usage: "Disables usage of v2 for Prysm validator accounts",
+	}
+	enableAttBroadcastDiscoveryAttempts = &cli.BoolFlag{
+		Name:  "enable-att-broadcast-discovery-attempts",
+		Usage: "Enable experimental attestation subnet discovery before broadcasting.",
+	}
+	enablePeerScorer = &cli.BoolFlag{
+		Name:  "enable-peer-scorer",
+		Usage: "Enable experimental P2P peer scorer",
+	}
+	enableRoughtime = &cli.BoolFlag{
+		Name:  "enable-roughtime",
+		Usage: "Enables periodic roughtime syncs.",
+	}
+	checkPtInfoCache = &cli.BoolFlag{
+		Name:  "use-check-point-cache",
+		Usage: "Enables check point info caching",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	forceMaxCoverAttestationAggregation,
-	newBeaconStateLocks,
+	checkPtInfoCache,
 	batchBlockVerify,
+	enableFinalizedDepositsCache,
+	enableEth1DataMajorityVote,
+	enableAttBroadcastDiscoveryAttempts,
+	enablePeerScorer,
 }
 
 // Deprecated flags list.
@@ -494,6 +506,46 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedMedallaTestnet = &cli.BoolFlag{
+		Name:   "medalla",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableAccountsV2 = &cli.BoolFlag{
+		Name:   "enable-accounts-v2",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedCustomGenesisDelay = &cli.BoolFlag{
+		Name:   "custom-genesis-delay",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedNewBeaconStateLocks = &cli.BoolFlag{
+		Name:   "new-beacon-state-locks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprectedForceMaxCoverAttestationAggregation = &cli.BoolFlag{
+		Name:   "attestation-aggregation-force-maxcover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedNewStateMgmtFlag = &cli.BoolFlag{
+		Name:   "disable-new-state-mgmt",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedSlasherProviderFlag = &cli.StringFlag{
+		Name:   "slasher-provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableSlasherFlag = &cli.BoolFlag{
+		Name:   "enable-slasher",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -561,6 +613,14 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
+	deprecatedMedallaTestnet,
+	deprecatedEnableAccountsV2,
+	deprecatedCustomGenesisDelay,
+	deprecatedNewBeaconStateLocks,
+	deprectedForceMaxCoverAttestationAggregation,
+	deprecatedNewStateMgmtFlag,
+	deprecatedSlasherProviderFlag,
+	deprecatedEnableSlasherFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -569,20 +629,19 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
-	altonaTestnet,
-	enableAccountsV2,
+	AltonaTestnet,
+	OnyxTestnet,
+	disableAccountsV2,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
-	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--wait-for-synced",
-	"--enable-local-protection",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -596,7 +655,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
@@ -606,16 +664,20 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	newBeaconStateLocks,
-	forceMaxCoverAttestationAggregation,
-	altonaTestnet,
+	disableNewBeaconStateLocks,
+	AltonaTestnet,
+	OnyxTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
 	enableFinalizedDepositsCache,
+	enableEth1DataMajorityVote,
+	enableAttBroadcastDiscoveryAttempts,
+	enablePeerScorer,
+	enableRoughtime,
+	checkPtInfoCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -626,4 +688,6 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-finalized-deposits-cache",
+	"--enable-eth1-data-majority-vote",
+	"--use-check-point-cache",
 }

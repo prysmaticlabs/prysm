@@ -12,7 +12,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -59,7 +58,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := stateutil.BlockRoot(b.Block)
+			root, err := b.Block.HashTreeRoot()
 			if err != nil {
 				return nil, err
 			}
@@ -86,7 +85,7 @@ func (bs *Server) ListBlocks(
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
-		root, err := stateutil.BlockRoot(blk.Block)
+		root, err := blk.Block.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +121,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := stateutil.BlockRoot(b.Block)
+			root, err := b.Block.HashTreeRoot()
 			if err != nil {
 				return nil, err
 			}
@@ -145,7 +144,7 @@ func (bs *Server) ListBlocks(
 		if genBlk == nil {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		root, err := stateutil.BlockRoot(genBlk.Block)
+		root, err := genBlk.Block.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
@@ -226,7 +225,7 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.BlockProcessed {
-				res, err := bs.chainHeadRetrieval(bs.Ctx)
+				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
 				}
@@ -250,10 +249,10 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if headBlock == nil {
+	if headBlock == nil || headBlock.Block == nil {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
-	headBlockRoot, err := stateutil.BlockRoot(headBlock.Block)
+	headBlockRoot, err := headBlock.Block.HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
@@ -299,17 +298,29 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		}
 	}
 
+	fSlot, err := helpers.StartSlot(finalizedCheckpoint.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	jSlot, err := helpers.StartSlot(justifiedCheckpoint.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	pjSlot, err := helpers.StartSlot(prevJustifiedCheckpoint.Epoch)
+	if err != nil {
+		return nil, err
+	}
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block.Slot,
 		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block.Slot),
 		HeadBlockRoot:              headBlockRoot[:],
-		FinalizedSlot:              helpers.StartSlot(finalizedCheckpoint.Epoch),
+		FinalizedSlot:              fSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		JustifiedSlot:              helpers.StartSlot(justifiedCheckpoint.Epoch),
+		JustifiedSlot:              jSlot,
 		JustifiedEpoch:             justifiedCheckpoint.Epoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      helpers.StartSlot(prevJustifiedCheckpoint.Epoch),
+		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
 	}, nil

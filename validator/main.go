@@ -14,7 +14,6 @@ import (
 
 	joonix "github.com/joonix/log"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -50,6 +49,7 @@ func startNode(ctx *cli.Context) error {
 
 var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
+	flags.BeaconRPCGatewayProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
@@ -61,8 +61,14 @@ var appFlags = []cli.Flag{
 	flags.UnencryptedKeysFlag,
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
+	flags.RPCHost,
+	flags.RPCPort,
+	flags.GRPCGatewayPort,
+	flags.GRPCGatewayHost,
 	flags.GrpcRetriesFlag,
+	flags.GrpcRetryDelayFlag,
 	flags.GrpcHeadersFlag,
+	flags.GPRCGatewayCorsDomain,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
@@ -70,8 +76,10 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
-	flags.WalletPasswordsDirFlag,
+	flags.DeprecatedPasswordsDirFlag,
+	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
+	flags.EnableWebFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -126,11 +134,12 @@ contract in order to activate the validator client`,
 							cmd.ChainConfigFileFlag,
 						}...),
 					Action: func(cliCtx *cli.Context) error {
+						featureconfig.ConfigureValidator(cliCtx)
+
 						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 							params.LoadChainConfigFile(chainConfigFileName)
 						}
-						featureconfig.ConfigureValidator(cliCtx)
 
 						keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
@@ -170,36 +179,31 @@ contract in order to activate the validator client`,
 						flags.CertFlag,
 						flags.GrpcHeadersFlag,
 						flags.GrpcRetriesFlag,
+						flags.GrpcRetryDelayFlag,
 						flags.KeyManager,
 						flags.KeyManagerOpts,
 					},
 					Action: func(cliCtx *cli.Context) error {
 						var err error
 						var pubKeys [][]byte
-						if cliCtx.String(flags.KeyManager.Name) != "" {
-							pubKeysBytes48, success := node.ExtractPublicKeysFromKeymanager(
-								cliCtx,
-								nil, /* nil v1 keymanager */
-								nil, /* nil v2 keymanager */
-							)
-							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success
-						} else {
+						if cliCtx.String(flags.KeyManager.Name) == "" {
 							keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
 							if err != nil {
 								return err
 							}
 							pubKeys, err = v1.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
+							if err != nil {
+								return err
+							}
 						}
-						if err != nil {
-							return err
-						}
-						ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
+						ctx, cancel := context.WithTimeout(cliCtx.Context, connTimeout)
 						defer cancel()
 						dialOpts := client.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 							cliCtx.String(flags.CertFlag.Name),
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
 							cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+							cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
 							grpc.WithBlock())
 						endpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 						conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
@@ -207,7 +211,7 @@ contract in order to activate the validator client`,
 							log.WithError(err).Errorf("Failed to dial beacon node endpoint at %s", endpoint)
 							return err
 						}
-						err = v1.RunStatusCommand(pubKeys, ethpb.NewBeaconNodeValidatorClient(conn))
+						err = v1.RunStatusCommand(ctx, pubKeys, ethpb.NewBeaconNodeValidatorClient(conn))
 						if closed := conn.Close(); closed != nil {
 							log.WithError(closed).Error("Could not close connection to beacon node")
 						}
@@ -255,7 +259,7 @@ contract in order to activate the validator client`,
 						sources := strings.Split(passedSources, ",")
 						target := cliCtx.String(flags.TargetDirectory.Name)
 
-						if err := v1.Merge(context.Background(), sources, target); err != nil {
+						if err := v1.Merge(cliCtx.Context, sources, target); err != nil {
 							log.WithError(err).Error("Merging validator data failed")
 						} else {
 							log.Info("Merge completed successfully")
@@ -275,7 +279,7 @@ contract in order to activate the validator client`,
 						source := cliCtx.String(flags.SourceDirectory.Name)
 						target := cliCtx.String(flags.TargetDirectory.Name)
 
-						if err := v1.Split(context.Background(), source, target); err != nil {
+						if err := v1.Split(cliCtx.Context, source, target); err != nil {
 							log.WithError(err).Error("Splitting validator data failed")
 						} else {
 							log.Info("Split completed successfully")
@@ -296,6 +300,7 @@ contract in order to activate the validator client`,
 				return err
 			}
 		}
+		flags.ComplainOnDeprecatedFlags(ctx)
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {

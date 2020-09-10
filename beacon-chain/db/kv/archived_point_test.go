@@ -3,6 +3,10 @@ package kv
 import (
 	"context"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
@@ -12,57 +16,33 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 	r1 := [32]byte{'A'}
 
 	received := db.ArchivedPointRoot(ctx, i1)
-	if r1 == received {
-		t.Fatal("Should not have been saved")
-	}
-
-	if err := db.SaveArchivedPointRoot(ctx, r1, i1); err != nil {
-		t.Fatal(err)
-	}
+	require.NotEqual(t, r1, received, "Should not have been saved")
+	st := testutil.NewBeaconState()
+	require.NoError(t, st.SetSlot(i1))
+	require.NoError(t, db.SaveState(ctx, st, r1))
 	received = db.ArchivedPointRoot(ctx, i1)
-	if r1 != received {
-		t.Error("Should have been saved")
-	}
+	assert.Equal(t, r1, received, "Should have been saved")
 }
 
 func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	i, err := db.LastArchivedIndex(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if i != 0 {
-		t.Error("Did not get correct index")
-	}
+	i, err := db.LastArchivedSlot(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), i, "Did not get correct index")
 
-	if err := db.SaveArchivedPointRoot(ctx, [32]byte{'A'}, 1); err != nil {
-		t.Fatal(err)
-	}
+	st := testutil.NewBeaconState()
+	assert.NoError(t, db.SaveState(ctx, st, [32]byte{'A'}))
+	assert.Equal(t, [32]byte{'A'}, db.LastArchivedRoot(ctx), "Did not get wanted root")
 
-	if err := db.SaveArchivedPointRoot(ctx, [32]byte{'B'}, 3); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, st.SetSlot(2))
+	assert.NoError(t, db.SaveState(ctx, st, [32]byte{'B'}))
+	assert.Equal(t, [32]byte{'B'}, db.LastArchivedRoot(ctx))
 
-	if err := db.SaveLastArchivedIndex(ctx, 1); err != nil {
-		t.Fatal(err)
-	}
-	if db.LastArchivedIndexRoot(ctx) != [32]byte{'A'} {
-		t.Error("Did not get wanted root")
-	}
+	assert.NoError(t, st.SetSlot(3))
+	assert.NoError(t, db.SaveState(ctx, st, [32]byte{'C'}))
 
-	if err := db.SaveLastArchivedIndex(ctx, 3); err != nil {
-		t.Fatal(err)
-	}
-	if db.LastArchivedIndexRoot(ctx) != [32]byte{'B'} {
-		t.Error("Did not get wanted root")
-	}
-
-	i, err = db.LastArchivedIndex(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if i != 3 {
-		t.Error("Did not get correct index")
-	}
+	i, err = db.LastArchivedSlot(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(3), i, "Did not get correct index")
 }

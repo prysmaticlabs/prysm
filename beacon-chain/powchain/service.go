@@ -5,6 +5,7 @@ package powchain
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"reflect"
 	"runtime/debug"
@@ -56,6 +57,9 @@ var (
 // time to wait before trying to reconnect with the eth1 node.
 var backOffPeriod = 6 * time.Second
 
+// Amount of times before we log the status of the eth1 dial attempt.
+var logThreshold = 20
+
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
@@ -98,8 +102,7 @@ type Client interface {
 // fetching eth1 data from the clients.
 type RPCDataFetcher interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
-	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
-	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error)
 	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)
 }
 
@@ -129,7 +132,7 @@ type Service struct {
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
-	blockCache              *blockCache // cache to store block hash/block height.
+	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
@@ -177,7 +180,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			BlockHash:          []byte{},
 			LastRequestedBlock: 0,
 		},
-		blockCache:             newBlockCache(),
+		headerCache:            newHeaderCache(),
 		depositContractAddress: config.DepositContract,
 		stateNotifier:          config.StateNotifier,
 		depositTrie:            depositTrie,
@@ -216,6 +219,24 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
+	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
+	// able to generate the genesis state.
+	if !s.chainStartData.Chainstarted && s.httpEndpoint == "" {
+		// check for genesis state before shutting down the node,
+		// if a genesis state exists, we can continue on.
+		genState, err := s.beaconDB.GenesisState(s.ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if genState == nil {
+			log.Fatal("cannot create genesis state: no eth1 http endpoint defined")
+		}
+	}
+
+	// Exit early if eth1 endpoint is not set.
+	if s.httpEndpoint == "" {
+		return
+	}
 	go func() {
 		s.waitForConnection()
 		s.run(s.ctx.Done())
@@ -306,7 +327,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := s.depositCache.AllDeposits(context.TODO(), nil)
+	deposits := s.depositCache.AllDeposits(s.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
@@ -362,8 +383,19 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 	httpClient := ethclient.NewClient(httpRPCClient)
 
 	// Make a simple call to ensure we are actually connected to a working node.
-	if _, err := httpClient.ChainID(s.ctx); err != nil {
+	cID, err := httpClient.ChainID(s.ctx)
+	if err != nil {
 		return nil, nil, err
+	}
+	nID, err := httpClient.NetworkID(s.ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if cID.Uint64() != params.BeaconNetworkConfig().ChainID {
+		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconNetworkConfig().ChainID)
+	}
+	if nID.Uint64() != params.BeaconNetworkConfig().NetworkID {
+		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconNetworkConfig().NetworkID)
 	}
 
 	return httpClient, httpRPCClient, nil
@@ -399,18 +431,29 @@ func (s *Service) waitForConnection() {
 	if errConnect != nil {
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 	}
+	// Use a custom logger to only log errors
+	// once in  a while.
+	logCounter := 0
+	errorLogger := func(err error, msg string) {
+		if logCounter > logThreshold {
+			log.WithError(err).Error(msg)
+			logCounter = 0
+		}
+		logCounter++
+	}
 	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
-				log.WithError(errConnect).Error("Could not connect to powchain endpoint")
+				errorLogger(errConnect, "Could not connect to powchain endpoint")
 				continue
 			}
 			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
-				log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+				errorLogger(errSynced, "Could not check sync status of eth1 chain")
 				continue
 			}
 			if synced {
@@ -418,12 +461,10 @@ func (s *Service) waitForConnection() {
 				log.WithFields(logrus.Fields{
 					"endpoint": s.httpEndpoint,
 				}).Info("Connected to eth1 proof-of-work chain")
-				ticker.Stop()
 				return
 			}
 			log.Debug("Eth1 node is currently syncing")
 		case <-s.ctx.Done():
-			ticker.Stop()
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
 		}
@@ -464,7 +505,7 @@ func (s *Service) initDataFromContract() error {
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
-	if ctrs == nil || len(ctrs) == 0 {
+	if len(ctrs) == 0 {
 		return nil
 	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
@@ -504,7 +545,7 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
 	}).Debug("Latest eth1 chain event")
 
-	if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+	if err := s.headerCache.AddHeader(header); err != nil {
 		s.runError = err
 		log.Errorf("Unable to add block data to cache %v", err)
 	}
@@ -525,7 +566,7 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 		err := error(nil)
 		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), true},
+			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), false},
 			Result: header,
 			Error:  err,
 		})
@@ -543,7 +584,7 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 	}
 	for _, h := range headers {
 		if h != nil {
-			if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h)); err != nil {
+			if err := s.headerCache.AddHeader(h); err != nil {
 				return nil, err
 			}
 		}
@@ -565,6 +606,7 @@ func safelyHandlePanic() {
 
 func (s *Service) handleETH1FollowDistance() {
 	defer safelyHandlePanic()
+	ctx := s.ctx
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
@@ -574,7 +616,7 @@ func (s *Service) handleETH1FollowDistance() {
 		log.Warn("eth1 client is not syncing")
 	}
 	if !s.chainStartData.Chainstarted {
-		if err := s.checkBlockNumberForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
+		if err := s.checkBlockNumberForChainStart(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
 			return
@@ -586,7 +628,7 @@ func (s *Service) handleETH1FollowDistance() {
 	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
 		return
 	}
-	if err := s.requestBatchedLogs(context.Background()); err != nil {
+	if err := s.requestBatchedLogs(ctx); err != nil {
 		s.runError = err
 		log.Error(err)
 		return
@@ -605,6 +647,7 @@ func (s *Service) initPOWService() {
 		case <-s.ctx.Done():
 			return
 		default:
+			ctx := s.ctx
 			err := s.initDataFromContract()
 			if err != nil {
 				log.Errorf("Unable to retrieve data from deposit contract %v", err)
@@ -612,7 +655,7 @@ func (s *Service) initPOWService() {
 				continue
 			}
 
-			header, err := s.eth1DataFetcher.HeaderByNumber(context.Background(), nil)
+			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 				s.retryETH1Node(err)
@@ -623,7 +666,7 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
 
-			if err := s.processPastLogs(context.Background()); err != nil {
+			if err := s.processPastLogs(ctx); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
 				s.retryETH1Node(err)
 				continue

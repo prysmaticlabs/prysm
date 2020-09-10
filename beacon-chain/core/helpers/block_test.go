@@ -1,7 +1,6 @@
 package helpers_test
 
 import (
-	"bytes"
 	"fmt"
 	"testing"
 
@@ -9,6 +8,8 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
@@ -59,22 +60,11 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			s.Slot = tt.stateSlot
 			state, err := beaconstate.InitializeFromProto(s)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			wantedSlot := tt.slot
 			result, err := helpers.BlockRootAtSlot(state, wantedSlot)
-			if err != nil {
-				t.Fatalf("failed to get block root at slot %d: %v",
-					wantedSlot, err)
-			}
-			if !bytes.Equal(result, tt.expectedRoot[:]) {
-				t.Errorf(
-					"result block root was an unexpected value, wanted %v, got %v",
-					tt.expectedRoot,
-					result,
-				)
-			}
+			require.NoError(t, err, "Failed to get block root at slot %d", wantedSlot)
+			assert.DeepEqual(t, tt.expectedRoot[:], result, "Result block root was an unexpected value")
 		})
 	}
 }
@@ -115,15 +105,8 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 		s, err := beaconstate.InitializeFromProto(state)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		_, err = helpers.BlockRootAtSlot(s, tt.slot)
-		if err == nil {
-			t.Errorf("Expected error %s, got nil", tt.expectedErr)
-		}
-		if err != nil && err.Error() != tt.expectedErr {
-			t.Errorf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
-		}
+		assert.ErrorContains(t, tt.expectedErr, err)
 	}
 }

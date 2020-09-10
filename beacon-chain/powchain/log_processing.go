@@ -13,7 +13,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,7 +20,6 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -136,7 +134,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		WithdrawalCredentials: withdrawalCredentials,
 	}
 
-	depositHash, err := ssz.HashTreeRoot(depositData)
+	depositHash, err := depositData.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "Unable to determine hashed value of deposit")
 	}
@@ -173,7 +171,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		}
-		if err := s.processDeposit(eth1Data, deposit); err != nil {
+		if err := s.processDeposit(ctx, eth1Data, deposit); err != nil {
 			log.Errorf("Invalid deposit processed: %v", err)
 			validData = false
 		}
@@ -248,7 +246,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 	// adds in the genesis delay to the eth1 block time
 	// on which it was triggered.
-	return timeStamp + cmd.Get().CustomGenesisDelay
+	return timeStamp + params.BeaconConfig().GenesisDelay
 }
 
 // processPastLogs processes all the past logs from the deposit contract and
@@ -458,9 +456,12 @@ func (s *Service) checkHeaderRange(start uint64, end uint64,
 }
 
 func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
+	if s.preGenesisState.NumValidators() == 0 {
+		return
+	}
 	valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
 	if err != nil {
-		log.WithError(err).Error("Could not determine active validator count from pref genesis state")
+		log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 	}
 	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(blockTime))
 	if triggered {

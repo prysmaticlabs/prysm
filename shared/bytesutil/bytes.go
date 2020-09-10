@@ -264,7 +264,7 @@ func MakeEmptyBitlists(i int) []byte {
 // HighestBitIndex returns the index of the highest
 // bit set from bitlist `b`.
 func HighestBitIndex(b []byte) (int, error) {
-	if b == nil || len(b) == 0 {
+	if len(b) == 0 {
 		return 0, errors.New("input list can't be empty or nil")
 	}
 
@@ -308,9 +308,25 @@ func HighestBitIndexAt(b []byte, index int) (int, error) {
 	return 0, nil
 }
 
-// Uint64ToBytes little endian conversion.
-func Uint64ToBytes(i uint64) []byte {
+// Uint64ToBytesLittleEndian conversion.
+func Uint64ToBytesLittleEndian(i uint64) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, i)
 	return buf
+}
+
+// Uint64ToBytesBigEndian conversion.
+func Uint64ToBytesBigEndian(i uint64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, i)
+	return buf
+}
+
+// BytesToUint64BigEndian conversion. Returns 0 if empty bytes or byte slice with length less
+// than 8.
+func BytesToUint64BigEndian(b []byte) uint64 {
+	if len(b) < 8 { // This will panic otherwise.
+		return 0
+	}
+	return binary.BigEndian.Uint64(b)
 }

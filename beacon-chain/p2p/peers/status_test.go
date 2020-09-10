@@ -1,6 +1,7 @@
 package peers_test
 
 import (
+	"context"
 	"crypto/rand"
 	"testing"
 
@@ -18,14 +19,28 @@ import (
 
 func TestStatus(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 	require.NotNil(t, p, "p not created")
-	assert.Equal(t, maxBadResponses, p.MaxBadResponses(), "maxBadResponses incorrect value")
+	assert.Equal(t, maxBadResponses, p.Scorers().BadResponsesScorer().Params().Threshold, "maxBadResponses incorrect value")
 }
 
 func TestPeerExplicitAdd(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -59,7 +74,14 @@ func TestPeerExplicitAdd(t *testing.T) {
 
 func TestPeerNoENR(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -76,7 +98,14 @@ func TestPeerNoENR(t *testing.T) {
 
 func TestPeerNoOverwriteENR(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -96,7 +125,14 @@ func TestPeerNoOverwriteENR(t *testing.T) {
 
 func TestErrUnknownPeer(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -116,13 +152,20 @@ func TestErrUnknownPeer(t *testing.T) {
 	_, err = p.ChainStateLastUpdated(id)
 	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
 
-	_, err = p.BadResponses(id)
+	_, err = p.Scorers().BadResponsesScorer().Count(id)
 	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
 }
 
 func TestPeerCommitteeIndices(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err, "Failed to create ID")
@@ -152,7 +195,14 @@ func TestPeerCommitteeIndices(t *testing.T) {
 
 func TestPeerSubscribedToSubnet(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	// Add some peers with different states
 	numPeers := 2
@@ -189,7 +239,14 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 
 func TestPeerImplicitAdd(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -205,7 +262,14 @@ func TestPeerImplicitAdd(t *testing.T) {
 
 func TestPeerChainState(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -233,7 +297,14 @@ func TestPeerChainState(t *testing.T) {
 
 func TestPeerBadResponses(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 	require.NoError(t, err)
@@ -249,25 +320,26 @@ func TestPeerBadResponses(t *testing.T) {
 	direction := network.DirInbound
 	p.Add(new(enr.Record), id, address, direction)
 
-	resBadResponses, err := p.BadResponses(id)
+	scorer := p.Scorers().BadResponsesScorer()
+	resBadResponses, err := scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 0, resBadResponses, "Unexpected bad responses")
 	assert.Equal(t, false, p.IsBad(id), "Peer marked as bad when should be good")
 
-	p.IncrementBadResponses(id)
-	resBadResponses, err = p.BadResponses(id)
+	scorer.Increment(id)
+	resBadResponses, err = scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 1, resBadResponses, "Unexpected bad responses")
 	assert.Equal(t, false, p.IsBad(id), "Peer marked as bad when should be good")
 
-	p.IncrementBadResponses(id)
-	resBadResponses, err = p.BadResponses(id)
+	scorer.Increment(id)
+	resBadResponses, err = scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 2, resBadResponses, "Unexpected bad responses")
 	assert.Equal(t, true, p.IsBad(id), "Peer not marked as bad when it should be")
 
-	p.IncrementBadResponses(id)
-	resBadResponses, err = p.BadResponses(id)
+	scorer.Increment(id)
+	resBadResponses, err = scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 3, resBadResponses, "Unexpected bad responses")
 	assert.Equal(t, true, p.IsBad(id), "Peer not marked as bad when it should be")
@@ -275,7 +347,14 @@ func TestPeerBadResponses(t *testing.T) {
 
 func TestAddMetaData(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	// Add some peers with different states
 	numPeers := 5
@@ -297,7 +376,14 @@ func TestAddMetaData(t *testing.T) {
 
 func TestPeerConnectionStatuses(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	// Add some peers with different states
 	numPeersDisconnected := 11
@@ -330,38 +416,16 @@ func TestPeerConnectionStatuses(t *testing.T) {
 	assert.Equal(t, numPeersAll, len(p.All()), "Unexpected number of peers")
 }
 
-func TestDecay(t *testing.T) {
-	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
-
-	// Peer 1 has 0 bad responses.
-	pid1 := addPeer(t, p, peers.PeerConnected)
-	// Peer 2 has 1 bad response.
-	pid2 := addPeer(t, p, peers.PeerConnected)
-	p.IncrementBadResponses(pid2)
-	// Peer 3 has 2 bad response.
-	pid3 := addPeer(t, p, peers.PeerConnected)
-	p.IncrementBadResponses(pid3)
-	p.IncrementBadResponses(pid3)
-
-	// Decay the values
-	p.Decay()
-
-	// Ensure the new values are as expected
-	badResponses1, err := p.BadResponses(pid1)
-	require.NoError(t, err)
-	assert.Equal(t, 0, badResponses1, "Unexpected bad responses for peer 1")
-	badResponses2, err := p.BadResponses(pid2)
-	require.NoError(t, err)
-	assert.Equal(t, 0, badResponses2, "Unexpected bad responses for peer 2")
-	badResponses3, err := p.BadResponses(pid3)
-	require.NoError(t, err)
-	assert.Equal(t, 1, badResponses3, "Unexpected bad responses for peer 3")
-}
-
 func TestPrune(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	for i := 0; i < p.MaxPeerLimit()+100; i++ {
 		if i%7 == 0 {
@@ -377,33 +441,42 @@ func TestPrune(t *testing.T) {
 	secondPID := disPeers[1]
 	thirdPID := disPeers[2]
 
+	scorer := p.Scorers().BadResponsesScorer()
+
 	// Make first peer a bad peer
-	p.IncrementBadResponses(firstPID)
-	p.IncrementBadResponses(firstPID)
+	scorer.Increment(firstPID)
+	scorer.Increment(firstPID)
 
 	// Add bad response for p2.
-	p.IncrementBadResponses(secondPID)
+	scorer.Increment(secondPID)
 
 	// Prune peers
 	p.Prune()
 
 	// Bad peer is expected to still be kept in handler.
-	badRes, err := p.BadResponses(firstPID)
+	badRes, err := scorer.Count(firstPID)
 	assert.NoError(t, err, "error is supposed to be  nil")
 	assert.Equal(t, 2, badRes, "Did not get expected amount")
 
 	// Not so good peer is pruned away so that we can reduce the
 	// total size of the handler.
-	badRes, err = p.BadResponses(secondPID)
+	badRes, err = scorer.Count(secondPID)
 	assert.NotNil(t, err, "error is supposed to be not nil")
 
 	// Last peer has been removed.
-	badRes, err = p.BadResponses(thirdPID)
+	badRes, err = scorer.Count(thirdPID)
 	assert.NotNil(t, err, "error is supposed to be not nil")
 }
 
 func TestTrimmedOrderedPeers(t *testing.T) {
-	p := peers.NewStatus(1, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
 
 	expectedTarget := uint64(2)
 	maxPeers := 3
@@ -418,30 +491,35 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 	// Peer 1
 	pid1 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid1, &pb.Status{
+		HeadSlot:       3 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 3,
 		FinalizedRoot:  mockroot3[:],
 	})
 	// Peer 2
 	pid2 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid2, &pb.Status{
+		HeadSlot:       4 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 4,
 		FinalizedRoot:  mockroot4[:],
 	})
 	// Peer 3
 	pid3 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid3, &pb.Status{
+		HeadSlot:       5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 5,
 		FinalizedRoot:  mockroot5[:],
 	})
 	// Peer 4
 	pid4 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid4, &pb.Status{
+		HeadSlot:       2 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 2,
 		FinalizedRoot:  mockroot2[:],
 	})
 	// Peer 5
 	pid5 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid5, &pb.Status{
+		HeadSlot:       2 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: 2,
 		FinalizedRoot:  mockroot2[:],
 	})
@@ -461,7 +539,14 @@ func TestBestPeer(t *testing.T) {
 	expectedFinEpoch := uint64(4)
 	expectedRoot := [32]byte{'t', 'e', 's', 't'}
 	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	// Peer 1
 	pid1 := addPeer(t, p, peers.PeerConnected)
@@ -506,7 +591,14 @@ func TestBestPeer(t *testing.T) {
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	maxBadResponses := 2
 	maxPeers := 10
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 
 	for i := 0; i <= maxPeers+100; i++ {
 		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
@@ -520,9 +612,41 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	assert.Equal(t, maxPeers, len(pids), "Wrong number of peers returned")
 }
 
+func TestStatus_BestNonFinalized(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: 2,
+			},
+		},
+	})
+
+	peerSlots := []uint64{32, 32, 32, 32, 235, 233, 258, 268, 270}
+	for i, headSlot := range peerSlots {
+		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
+		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
+		p.SetChainState(peer.ID(i), &pb.Status{
+			HeadSlot: headSlot,
+		})
+	}
+
+	expectedEpoch := uint64(8)
+	retEpoch, pids := p.BestNonFinalized(3, 5)
+	assert.Equal(t, expectedEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
+	assert.Equal(t, 3, len(pids), "Unexpected number of peers")
+}
+
 func TestStatus_CurrentEpoch(t *testing.T) {
 	maxBadResponses := 2
-	p := peers.NewStatus(maxBadResponses, 30)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
 	// Peer 1
 	pid1 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid1, &pb.Status{

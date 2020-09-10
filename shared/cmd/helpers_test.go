@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestEnterPassword(t *testing.T) {
@@ -64,14 +65,11 @@ func TestEnterPassword(t *testing.T) {
 				m.EXPECT().ReadPassword().Return(ret.pw, ret.err)
 			}
 			pw, err := EnterPassword(true, m)
-			if pw != tc.expectedPw {
-				t.Errorf("got %v, wanted %v", pw, tc.expectedPw)
-			}
-			if err == nil && tc.expectedErr != nil {
-				t.Errorf("got nil err, expected %v err", tc.expectedErr.Error())
-			}
-			if err != nil && tc.expectedErr != nil && errors.Cause(err).Error() != tc.expectedErr.Error() {
-				t.Errorf("got %v, wanted %v", errors.Cause(err), tc.expectedErr.Error())
+			assert.Equal(t, tc.expectedPw, pw)
+			if tc.expectedErr != nil {
+				assert.ErrorContains(t, tc.expectedErr.Error(), err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

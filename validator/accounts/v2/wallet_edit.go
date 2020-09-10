@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -10,60 +9,48 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// EditWalletConfiguration for a user's on-disk wallet, being able to change
+// EditWalletConfigurationCli for a user's on-disk wallet, being able to change
 // things such as remote gRPC credentials for remote signing, derivation paths
 // for HD wallets, and more.
-func EditWalletConfiguration(cliCtx *cli.Context) error {
-	// Read a wallet's directory from user input.
-	walletDir, err := inputWalletDir(cliCtx)
-	if errors.Is(err, ErrNoWalletFound) {
-		log.Fatal("No wallet found, create a new one with ./prysm.sh validator wallet-v2 create")
-	} else if err != nil {
-		log.Fatal("Could not parse wallet directory")
-	}
-	// Determine the keymanager kind for the wallet.
-	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
-	if err != nil {
-		log.Fatalf("Could not select keymanager kind: %v", err)
-	}
-	ctx := context.Background()
-	wallet, err := OpenWallet(ctx, &WalletConfig{
-		CanUnlockAccounts: false,
-		WalletDir:         walletDir,
-		KeymanagerKind:    keymanagerKind,
+func EditWalletConfigurationCli(cliCtx *cli.Context) error {
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New(
+			"no wallet found, no configuration to edit",
+		)
 	})
 	if err != nil {
-		log.Fatalf("Could not open wallet: %v", err)
+		return errors.Wrap(err, "could not open wallet")
 	}
-	switch keymanagerKind {
+	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
-		log.Fatal("No configuration options available to edit for direct keymanager")
+		return errors.New("not possible to edit direct keymanager configuration")
 	case v2keymanager.Derived:
-		log.Fatal("Derived keymanager is not yet supported")
+		return errors.New("derived keymanager is not yet supported")
 	case v2keymanager.Remote:
-		enc, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+		enc, err := wallet.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 		if err != nil {
-			log.Fatalf("Could not read: %v", err)
+			return errors.Wrap(err, "could not read config")
 		}
-		cfg, err := remote.UnmarshalConfigFile(enc)
+		opts, err := remote.UnmarshalOptionsFile(enc)
 		if err != nil {
-			log.Fatalf("Could not unmarshal: %v", err)
+			return errors.Wrap(err, "could not unmarshal config")
 		}
-		log.Infof("Current configuration")
-		fmt.Printf("%s\n", cfg)
+		log.Info("Current configuration")
+		// Prints the current configuration to stdout.
+		fmt.Println(opts)
 		newCfg, err := inputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
-			log.Fatal(err)
+			return errors.Wrap(err, "could not get keymanager config")
 		}
-		encodedCfg, err := remote.MarshalConfigFile(ctx, newCfg)
+		encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, newCfg)
 		if err != nil {
-			log.Fatal(err)
+			return errors.Wrap(err, "could not marshal config file")
 		}
-		if err := wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg); err != nil {
-			log.Fatal(err)
+		if err := wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg); err != nil {
+			return errors.Wrap(err, "could not write config to disk")
 		}
 	default:
-		log.Fatalf("Keymanager type %s is not supported", keymanagerKind)
+		return fmt.Errorf("keymanager type %s is not supported", wallet.KeymanagerKind())
 	}
 	return nil
 }

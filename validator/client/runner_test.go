@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -18,19 +19,15 @@ func cancelledContext() context.Context {
 }
 
 func TestCancelledContext_CleansUpValidator(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
-	if !v.DoneCalled {
-		t.Error("Expected Done() to be called")
-	}
+	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
 }
 
 func TestCancelledContext_WaitsForChainStart(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
-	if !v.WaitForChainStartCalled {
-		t.Error("Expected WaitForChainStart() to be called")
-	}
+	assert.Equal(t, true, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
 func TestCancelledContext_WaitsForSynced(t *testing.T) {
@@ -39,23 +36,30 @@ func TestCancelledContext_WaitsForSynced(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
-	if !v.WaitForSyncedCalled {
-		t.Error("Expected WaitForSynced() to be called")
-	}
+	assert.Equal(t, true, v.WaitForSyncedCalled, "Expected WaitForSynced() to be called")
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	run(cancelledContext(), v)
-	if !v.WaitForActivationCalled {
-		t.Error("Expected WaitForActivation() to be called")
+	assert.Equal(t, true, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
+}
+
+func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
+	v := &FakeValidator{}
+	cfg := &featureconfig.Flags{
+		SlasherProtection: true,
 	}
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
+	run(cancelledContext(), v)
+	assert.Equal(t, true, v.SlasherReadyCalled, "Expected SlasherReady() to be called")
 }
 
 func TestUpdateDuties_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -69,17 +73,13 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 
 	run(ctx, v)
 
-	if !v.UpdateDutiesCalled {
-		t.Fatalf("Expected UpdateAssignments(%d) to be called", slot)
-	}
-	if v.UpdateDutiesArg1 != slot {
-		t.Errorf("UpdateAssignments was called with wrong argument. Want=%d, got=%d", slot, v.UpdateDutiesArg1)
-	}
+	require.Equal(t, true, v.UpdateDutiesCalled, "Expected UpdateAssignments(%d) to be called", slot)
+	assert.Equal(t, slot, v.UpdateDutiesArg1, "UpdateAssignments was called with wrong argument")
 }
 
 func TestUpdateDuties_HandlesError(t *testing.T) {
 	hook := logTest.NewGlobal()
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -94,11 +94,11 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 
 	run(ctx, v)
 
-	testutil.AssertLogsContain(t, hook, "Failed to update assignments")
+	require.LogsContain(t, hook, "Failed to update assignments")
 }
 
 func TestRoleAt_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -112,22 +112,18 @@ func TestRoleAt_NextSlot(t *testing.T) {
 
 	run(ctx, v)
 
-	if !v.RoleAtCalled {
-		t.Fatalf("Expected RoleAt(%d) to be called", slot)
-	}
-	if v.RoleAtArg1 != slot {
-		t.Errorf("RoleAt called with the wrong arg. Want=%d, got=%d", slot, v.RoleAtArg1)
-	}
+	require.Equal(t, true, v.RoleAtCalled, "Expected RoleAt(%d) to be called", slot)
+	assert.Equal(t, slot, v.RoleAtArg1, "RoleAt called with the wrong arg")
 }
 
 func TestAttests_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []validatorRole{roleAttester}
+	v.RolesAtRet = []ValidatorRole{roleAttester}
 	go func() {
 		ticker <- slot
 
@@ -136,22 +132,18 @@ func TestAttests_NextSlot(t *testing.T) {
 	timer := time.NewTimer(200 * time.Millisecond)
 	run(ctx, v)
 	<-timer.C
-	if !v.AttestToBlockHeadCalled {
-		t.Fatalf("SubmitAttestation(%d) was not called", slot)
-	}
-	if v.AttestToBlockHeadArg1 != slot {
-		t.Errorf("SubmitAttestation was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
-	}
+	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
+	assert.Equal(t, slot, v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
 }
 
 func TestProposes_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []validatorRole{roleProposer}
+	v.RolesAtRet = []ValidatorRole{roleProposer}
 	go func() {
 		ticker <- slot
 
@@ -160,22 +152,18 @@ func TestProposes_NextSlot(t *testing.T) {
 	timer := time.NewTimer(200 * time.Millisecond)
 	run(ctx, v)
 	<-timer.C
-	if !v.ProposeBlockCalled {
-		t.Fatalf("ProposeBlock(%d) was not called", slot)
-	}
-	if v.ProposeBlockArg1 != slot {
-		t.Errorf("ProposeBlock was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
-	}
+	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
+	assert.Equal(t, slot, v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
 
 func TestBothProposesAndAttests_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
+	v := &FakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []validatorRole{roleAttester, roleProposer}
+	v.RolesAtRet = []ValidatorRole{roleAttester, roleProposer}
 	go func() {
 		ticker <- slot
 
@@ -184,16 +172,8 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	timer := time.NewTimer(200 * time.Millisecond)
 	run(ctx, v)
 	<-timer.C
-	if !v.AttestToBlockHeadCalled {
-		t.Fatalf("SubmitAttestation(%d) was not called", slot)
-	}
-	if v.AttestToBlockHeadArg1 != slot {
-		t.Errorf("SubmitAttestation was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
-	}
-	if !v.ProposeBlockCalled {
-		t.Fatalf("ProposeBlock(%d) was not called", slot)
-	}
-	if v.ProposeBlockArg1 != slot {
-		t.Errorf("ProposeBlock was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
-	}
+	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
+	assert.Equal(t, slot, v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
+	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
+	assert.Equal(t, slot, v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }

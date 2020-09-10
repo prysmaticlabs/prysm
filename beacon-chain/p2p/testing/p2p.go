@@ -53,12 +53,20 @@ func NewTestP2P(t *testing.T) *TestP2P {
 		t.Fatal(err)
 	}
 
+	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &peers.PeerScorerConfig{
+			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+				Threshold: 5,
+			},
+		},
+	})
 	return &TestP2P{
 		t:            t,
 		BHost:        h,
 		pubsub:       ps,
 		joinedTopics: map[string]*pubsub.Topic{},
-		peers:        peers.NewStatus(5, 30),
+		peers:        peerStatuses,
 	}
 }
 
@@ -305,14 +313,12 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *TestP2P) FindPeersWithSubnet(index uint64) (bool, error) {
+func (p *TestP2P) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
 	return false, nil
 }
 
 // RefreshENR mocks the p2p func.
-func (p *TestP2P) RefreshENR() {
-	return
-}
+func (p *TestP2P) RefreshENR() {}
 
 // ForkDigest mocks the p2p func.
 func (p *TestP2P) ForkDigest() ([4]byte, error) {

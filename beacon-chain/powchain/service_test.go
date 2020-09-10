@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,6 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -71,44 +74,24 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
-func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
 	if g.backend == nil {
-		return gethTypes.NewBlock(
-			&gethTypes.Header{
-				Number: big.NewInt(0),
-			},
-			[]*gethTypes.Transaction{},
-			[]*gethTypes.Header{},
-			[]*gethTypes.Receipt{},
-		), nil
+		return &gethTypes.Header{
+			Number: big.NewInt(0),
+		}, nil
 	}
-	return g.backend.Blockchain().GetBlockByHash(hash), nil
+	return g.backend.Blockchain().GetHeaderByHash(hash), nil
 
-}
-
-func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	if g.backend == nil {
-		return gethTypes.NewBlock(
-			&gethTypes.Header{
-				Number: big.NewInt(15),
-				Time:   150,
-			},
-			[]*gethTypes.Transaction{},
-			[]*gethTypes.Header{},
-			[]*gethTypes.Receipt{},
-		), nil
-	}
-
-	return g.backend.Blockchain().GetBlockByNumber(number.Uint64()), nil
 }
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
 	if g.backend == nil {
 		return &gethTypes.Header{
-			Number: big.NewInt(0),
+			Number: big.NewInt(15),
+			Time:   150,
 		}, nil
 	}
 	if number == nil {
@@ -127,23 +110,17 @@ func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
+	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testAcc.Backend.Commit()
 
 	web3Service.Start()
@@ -158,85 +135,151 @@ func TestStart_OK(t *testing.T) {
 	web3Service.cancel()
 }
 
+func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	s, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err)
+	// Set custom exit func so test can proceed
+	log.Logger.ExitFunc = func(i int) {
+		panic(i)
+	}
+	defer func() {
+		log.Logger.ExitFunc = nil
+	}()
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	// Expect Start function to fail from a fatal call due
+	// to no state existing.
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				wg.Done()
+			}
+		}()
+		s.Start()
+	}()
+	testutil.WaitTimeout(wg, time.Second)
+	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
+	hook.Reset()
+}
+
+func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	st, _ := testutil.DeterministicGenesisState(t, 10)
+	b := testutil.NewBeaconBlock()
+	genRoot, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(context.Background(), genRoot))
+	s, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err)
+
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+
+	go func() {
+		s.Start()
+		wg.Done()
+	}()
+	s.cancel()
+	testutil.WaitTimeout(wg, time.Second)
+	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
+	hook.Reset()
+}
+
+func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB, _ := dbutil.SetupDB(t)
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+
+	require.NoError(t, beaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
+		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
+		Trie:           &protodb.SparseMerkleTrie{},
+	}))
+	s, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    "", // No endpoint defined!
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err)
+
+	s.Start()
+	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
+	hook.Reset()
+}
+
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
+	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	testAcc.Backend.Commit()
 
-	if err := web3Service.Stop(); err != nil {
-		t.Fatalf("Unable to stop web3 ETH1.0 chain service: %v", err)
-	}
+	err = web3Service.Stop()
+	require.NoError(t, err, "Unable to stop web3 ETH1.0 chain service")
 
 	// The context should have been canceled.
-	if web3Service.ctx.Err() == nil {
-		t.Error("context was not canceled")
-	}
+	assert.NotNil(t, web3Service.ctx.Err(), "Context wasnt canceled")
+
 	hook.Reset()
 }
 
 func TestService_Eth1Synced(t *testing.T) {
 	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
+	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	testAcc.Backend.Commit()
 
 	synced, err := web3Service.isEth1NodeSynced()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !synced {
-		t.Error("Expected eth1 nodes to be synced")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, true, synced, "Expected eth1 nodes to be synced")
 }
 
 func TestFollowBlock_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
+	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
 	// simulated backend sets eth1 block
 	// time as 10 seconds
@@ -259,12 +302,8 @@ func TestFollowBlock_OK(t *testing.T) {
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 
 	h, err := web3Service.followBlockHeight(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if h != baseHeight {
-		t.Errorf("Unexpected block height of %d received instead of %d", h, baseHeight)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, baseHeight, h, "Unexpected block height")
 	numToForward := uint64(2)
 	expectedHeight := numToForward + baseHeight
 	// forward 2 blocks
@@ -276,38 +315,27 @@ func TestFollowBlock_OK(t *testing.T) {
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 
 	h, err = web3Service.followBlockHeight(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if h != expectedHeight {
-		t.Errorf("Unexpected block height of %d received instead of %d", h, expectedHeight)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, expectedHeight, h, "Unexpected block height")
 }
 
 func TestInitDataFromContract_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
+	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	testAcc.Backend.Commit()
-	if err := web3Service.initDataFromContract(); err != nil {
-		t.Fatalf("Could not init from deposit contract: %v", err)
-	}
+	err = web3Service.initDataFromContract()
+	require.NoError(t, err, "Could not init from deposit contract")
 }
 
 func TestStatus(t *testing.T) {
@@ -329,13 +357,10 @@ func TestStatus(t *testing.T) {
 	for web3ServiceState, wantedErrorText := range testCases {
 		status := web3ServiceState.Status()
 		if status == nil {
-			if wantedErrorText != "" {
-				t.Errorf("Wanted: \"%v\", but Status() return nil", wantedErrorText)
-			}
+			assert.Equal(t, "", wantedErrorText)
+
 		} else {
-			if status.Error() != wantedErrorText {
-				t.Errorf("Wanted: \"%v\", but Status() return: \"%v\"", wantedErrorText, status.Error())
-			}
+			assert.Equal(t, wantedErrorText, status.Error())
 		}
 	}
 }
@@ -347,11 +372,9 @@ func TestHandlePanic_OK(t *testing.T) {
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	// nil eth1DataFetcher would panic if cached value not used
 	web3Service.eth1DataFetcher = nil
 	web3Service.processBlockHeader(nil)
-	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
+	require.LogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }

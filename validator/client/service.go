@@ -3,8 +3,11 @@ package client
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/dgraph-io/ristretto"
+	fssz "github.com/ferranbt/fastssz"
+	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -14,15 +17,17 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -33,43 +38,62 @@ import (
 
 var log = logrus.WithField("prefix", "validator")
 
+// SyncChecker is able to determine if a beacon node is currently
+// going through chain synchronization.
+type SyncChecker interface {
+	Syncing(ctx context.Context) (bool, error)
+}
+
+// GenesisFetcher can retrieve genesis information such as
+// the genesis time and the validator deposit contract address.
+type GenesisFetcher interface {
+	GenesisInfo(ctx context.Context) (*ethpb.Genesis, error)
+}
+
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	validator            Validator
-	graffiti             []byte
-	conn                 *grpc.ClientConn
-	endpoint             string
-	withCert             string
-	dataDir              string
-	keyManager           keymanager.KeyManager
-	keyManagerV2         v2.IKeymanager
-	logValidatorBalances bool
-	emitAccountMetrics   bool
-	maxCallRecvMsgSize   int
-	validatingPubKeys    [][48]byte
-	grpcRetries          uint
-	grpcHeaders          []string
-	protector            slashingprotection.Protector
+	useWeb                bool
+	emitAccountMetrics    bool
+	logValidatorBalances  bool
+	conn                  *grpc.ClientConn
+	grpcRetryDelay        time.Duration
+	grpcRetries           uint
+	maxCallRecvMsgSize    int
+	walletInitializedFeed *event.Feed
+	cancel                context.CancelFunc
+	db                    db.Database
+	keyManager            keymanager.KeyManager
+	dataDir               string
+	withCert              string
+	endpoint              string
+	validator             Validator
+	protector             slashingprotection.Protector
+	ctx                   context.Context
+	keyManagerV2          v2.IKeymanager
+	grpcHeaders           []string
+	graffiti              []byte
 }
 
 // Config for the validator service.
 type Config struct {
-	Endpoint                   string
-	DataDir                    string
-	CertFlag                   string
-	GraffitiFlag               string
-	ValidatingPubKeys          [][48]byte
-	KeyManager                 keymanager.KeyManager
-	KeyManagerV2               v2.IKeymanager
+	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
-	GrpcMaxCallRecvMsgSizeFlag int
+	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
-	GrpcHeadersFlag            string
+	GrpcRetryDelay             time.Duration
+	GrpcMaxCallRecvMsgSizeFlag int
 	Protector                  slashingprotection.Protector
+	Endpoint                   string
+	Validator                  Validator
+	ValDB                      db.Database
+	KeyManagerV2               v2.IKeymanager
+	KeyManager                 keymanager.KeyManager
+	GraffitiFlag               string
+	CertFlag                   string
+	DataDir                    string
+	GrpcHeadersFlag            string
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -77,21 +101,25 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ValidatorService{
-		ctx:                  ctx,
-		cancel:               cancel,
-		endpoint:             cfg.Endpoint,
-		withCert:             cfg.CertFlag,
-		dataDir:              cfg.DataDir,
-		graffiti:             []byte(cfg.GraffitiFlag),
-		keyManager:           cfg.KeyManager,
-		keyManagerV2:         cfg.KeyManagerV2,
-		validatingPubKeys:    cfg.ValidatingPubKeys,
-		logValidatorBalances: cfg.LogValidatorBalances,
-		emitAccountMetrics:   cfg.EmitAccountMetrics,
-		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:          cfg.GrpcRetriesFlag,
-		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:            cfg.Protector,
+		ctx:                   ctx,
+		cancel:                cancel,
+		endpoint:              cfg.Endpoint,
+		withCert:              cfg.CertFlag,
+		dataDir:               cfg.DataDir,
+		graffiti:              []byte(cfg.GraffitiFlag),
+		keyManager:            cfg.KeyManager,
+		keyManagerV2:          cfg.KeyManagerV2,
+		logValidatorBalances:  cfg.LogValidatorBalances,
+		emitAccountMetrics:    cfg.EmitAccountMetrics,
+		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:           cfg.GrpcRetriesFlag,
+		grpcRetryDelay:        cfg.GrpcRetryDelay,
+		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
+		protector:             cfg.Protector,
+		validator:             cfg.Validator,
+		db:                    cfg.ValDB,
+		walletInitializedFeed: cfg.WalletInitializedFeed,
+		useWeb:                cfg.UseWeb,
 	}, nil
 }
 
@@ -108,6 +136,7 @@ func (v *ValidatorService) Start() {
 		v.withCert,
 		v.grpcHeaders,
 		v.grpcRetries,
+		v.grpcRetryDelay,
 		streamInterceptor,
 	)
 	if dialOpts == nil {
@@ -120,12 +149,6 @@ func (v *ValidatorService) Start() {
 	}
 	if v.withCert != "" {
 		log.Info("Established secure gRPC connection")
-	}
-
-	valDB, err := kv.NewKVStore(v.dataDir, v.validatingPubKeys)
-	if err != nil {
-		log.Errorf("Could not initialize db: %v", err)
-		return
 	}
 
 	v.conn = conn
@@ -145,7 +168,7 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.validator = &validator{
-		db:                             valDB,
+		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
@@ -161,8 +184,11 @@ func (v *ValidatorService) Start() {
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
+		useWeb:                         v.useWeb,
+		walletInitializedFeed:          v.walletInitializedFeed,
 	}
 	go run(v.ctx, v.validator)
+	go v.recheckKeys(v.ctx)
 }
 
 // Stop the validator service.
@@ -175,9 +201,7 @@ func (v *ValidatorService) Stop() error {
 	return nil
 }
 
-// Status ...
-//
-// WIP - not done.
+// Status of the validator service.
 func (v *ValidatorService) Status() error {
 	if v.conn == nil {
 		return errors.New("no connection to beacon RPC")
@@ -185,7 +209,42 @@ func (v *ValidatorService) Status() error {
 	return nil
 }
 
+func (v *ValidatorService) recheckKeys(ctx context.Context) {
+	if featureconfig.Get().EnableAccountsV2 {
+		if v.useWeb {
+			initializedChan := make(chan iface.Wallet)
+			sub := v.walletInitializedFeed.Subscribe(initializedChan)
+			defer sub.Unsubscribe()
+			wallet := <-initializedChan
+			keyManagerV2, err := wallet.InitializeKeymanager(
+				ctx, true, /* skipMnemonicConfirm */
+			)
+			if err != nil {
+				log.Fatalf("Could not read keymanager for wallet: %v", err)
+			}
+			v.keyManagerV2 = keyManagerV2
+		}
+		validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+		go recheckValidatingKeysBucket(ctx, v.db, v.keyManagerV2)
+	} else {
+		validatingKeys, err := v.keyManager.FetchValidatingKeys()
+		if err != nil {
+			log.WithError(err).Debug("Could not fetch validating keys")
+		}
+		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+			log.WithError(err).Debug("Could not update public keys buckets")
+		}
+	}
+}
+
 // signObject signs a generic object, with protection if available.
+// This should only be used for accounts v1.
 func (v *validator) signObject(
 	ctx context.Context,
 	pubKey [48]byte,
@@ -193,17 +252,18 @@ func (v *validator) signObject(
 	domain []byte,
 ) (bls.Signature, error) {
 	if featureconfig.Get().EnableAccountsV2 {
-		root, err := helpers.ComputeSigningRoot(object, domain)
-		if err != nil {
-			return nil, err
-		}
-		return v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
-			PublicKey:   pubKey[:],
-			SigningRoot: root[:],
-		})
+		return nil, errors.New("signObject not supported for accounts v2")
 	}
+
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		root, err := ssz.HashTreeRoot(object)
+		var root [32]byte
+		var err error
+		if v, ok := object.(fssz.HashRoot); ok {
+			root, err = v.HashTreeRoot()
+		} else {
+			root, err = ssz.HashTreeRoot(object)
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +274,7 @@ func (v *validator) signObject(
 	if err != nil {
 		return nil, err
 	}
-	return v.keyManager.Sign(pubKey, root)
+	return v.keyManager.Sign(ctx, pubKey, root)
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
@@ -223,6 +283,7 @@ func ConstructDialOptions(
 	withCert string,
 	grpcHeaders []string,
 	grpcRetries uint,
+	grpcRetryDelay time.Duration,
 	extraOpts ...grpc.DialOption,
 ) []grpc.DialOption {
 	var transportSecurity grpc.DialOption
@@ -261,6 +322,7 @@ func ConstructDialOptions(
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
 			grpc_retry.WithMax(grpcRetries),
+			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(grpcRetryDelay)),
 			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
@@ -270,11 +332,54 @@ func ConstructDialOptions(
 			grpc_retry.UnaryClientInterceptor(),
 			grpcutils.LogGRPCRequests,
 		)),
+		grpc.WithChainStreamInterceptor(
+			grpcutils.LogGRPCStream,
+			grpc_opentracing.StreamClientInterceptor(),
+			grpc_prometheus.StreamClientInterceptor,
+			grpc_retry.StreamClientInterceptor(),
+		),
 	}
 
-	for _, opt := range extraOpts {
-		dialOpts = append(dialOpts, opt)
-	}
-
+	dialOpts = append(dialOpts, extraOpts...)
 	return dialOpts
+}
+
+// Syncing returns whether or not the beacon node is currently synchronizing the chain.
+func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
+	nc := ethpb.NewNodeClient(v.conn)
+	resp, err := nc.GetSyncStatus(ctx, &ptypes.Empty{})
+	if err != nil {
+		return false, err
+	}
+	return resp.Syncing, nil
+}
+
+// GenesisInfo queries the beacon node for the chain genesis info containing
+// the genesis time along with the validator deposit contract address.
+func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
+	nc := ethpb.NewNodeClient(v.conn)
+	return nc.GetGenesis(ctx, &ptypes.Empty{})
+}
+
+// to accounts changes in the keymanager, then updates those keys'
+// buckets in bolt DB if a bucket for a key does not exist.
+func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
+	directKeymanager, ok := km.(*direct.Keymanager)
+	if !ok {
+		return
+	}
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	sub := directKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case keys := <-validatingPubKeysChan:
+			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
+				log.WithError(err).Debug("Could not update public keys buckets")
+				continue
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

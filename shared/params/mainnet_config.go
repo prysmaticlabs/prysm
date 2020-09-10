@@ -31,6 +31,8 @@ var mainnetNetworkConfig = &NetworkConfig{
 	AttSubnetKey:                      "attnets",
 	ContractDeploymentBlock:           0,
 	DepositContractAddress:            "0x", // To be updated once the mainnet contract is deployed.
+	ChainID:                           1,    // Chain ID of eth1 mainnet.
+	NetworkID:                         1,    // Network ID of eth1 mainnet.
 	BootstrapNodes:                    []string{},
 }
 
@@ -123,10 +125,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxPeersToSync:            15,
 	SlotsPerArchivedPoint:     2048,
 	GenesisCountdownInterval:  time.Minute,
+	NetworkName:               "Mainnet",
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
 	PruneSlasherStoragePeriod: 10,
+
+	// Weak subjectivity values.
+	SafetyDecay: 1 / 10,
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},

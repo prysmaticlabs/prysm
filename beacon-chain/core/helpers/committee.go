@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -27,11 +28,10 @@ var committeeCache = cache.NewCommitteesCache()
 //
 //
 // Spec pseudocode definition:
-//   def get_committee_count_at_slot(state: BeaconState, slot: Slot) -> uint64:
+//   def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
 //    """
-//    Return the number of committees at ``slot``.
+//    Return the number of committees in each slot for the given ``epoch``.
 //    """
-//    epoch = compute_epoch_at_slot(slot)
 //    return max(1, min(
 //        MAX_COMMITTEES_PER_SLOT,
 //        len(get_active_validator_indices(state, epoch)) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
@@ -133,6 +133,10 @@ func ComputeCommittee(
 	start := sliceutil.SplitOffset(validatorCount, count, index)
 	end := sliceutil.SplitOffset(validatorCount, count, index+1)
 
+	if start > validatorCount || end > validatorCount {
+		return nil, errors.New("index out of range")
+	}
+
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
 	shuffledIndices := make([]uint64, len(indices))
 	copy(shuffledIndices, indices)
@@ -140,7 +144,30 @@ func ComputeCommittee(
 	// for fast computation of committees.
 	// Reference implementation: https://github.com/protolambda/eth2-shuffle
 	shuffledList, err := UnshuffleList(shuffledIndices, seed)
-	return shuffledList[start:end], err
+	if err != nil {
+		return nil, err
+	}
+
+	// This updates the cache on a miss.
+	if featureconfig.Get().UseCheckPointInfoCache {
+		sortedIndices := make([]uint64, len(indices))
+		copy(sortedIndices, indices)
+		sort.Slice(sortedIndices, func(i, j int) bool {
+			return sortedIndices[i] < sortedIndices[j]
+		})
+
+		count = SlotCommitteeCount(uint64(len(shuffledIndices)))
+		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
+			ShuffledIndices: shuffledList,
+			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
+			Seed:            seed,
+			SortedIndices:   sortedIndices,
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	return shuffledList[start:end], nil
 }
 
 // CommitteeAssignmentContainer represents a committee, index, and attester slot for a given epoch.
@@ -173,7 +200,10 @@ func CommitteeAssignments(
 	// We determine the slots in which proposers are supposed to act.
 	// Some validators may need to propose multiple times per epoch, so
 	// we use a map of proposer idx -> []slot to keep track of this possibility.
-	startSlot := StartSlot(epoch)
+	startSlot, err := StartSlot(epoch)
+	if err != nil {
+		return nil, nil, err
+	}
 	proposerIndexToSlots := make(map[uint64][]uint64, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
@@ -353,7 +383,10 @@ func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uin
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate seed")
 	}
-	slot := StartSlot(e)
+	slot, err := StartSlot(e)
+	if err != nil {
+		return nil, err
+	}
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot+i)...)
 		seedWithSlotHash := hashFunc(seedWithSlot)

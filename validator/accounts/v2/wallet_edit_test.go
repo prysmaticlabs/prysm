@@ -1,13 +1,11 @@
 package v2
 
 import (
-	"context"
 	"flag"
-	"os"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
@@ -15,12 +13,21 @@ import (
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir := testutil.TempDir() + "/wallet"
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-	}()
-	ctx := context.Background()
-	originalCfg := &remote.Config{
+	walletDir, _, _ := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:      walletDir,
+		keymanagerKind: v2keymanager.Remote,
+	})
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &WalletConfig{
+			WalletDir:      walletDir,
+			KeymanagerKind: v2keymanager.Remote,
+			WalletPassword: "Passwordz0320$",
+		},
+	})
+	require.NoError(t, err)
+
+	originalCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/a.crt",
 			ClientKeyPath:  "/tmp/b.key",
@@ -28,17 +35,11 @@ func TestEditWalletConfiguration(t *testing.T) {
 		},
 		RemoteAddr: "my.server.com:4000",
 	}
-	encodedCfg, err := remote.MarshalConfigFile(ctx, originalCfg)
+	encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, originalCfg)
 	assert.NoError(t, err)
-	walletConfig := &WalletConfig{
-		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Remote,
-	}
-	wallet, err := NewWallet(ctx, walletConfig)
-	assert.NoError(t, err)
-	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(ctx, encodedCfg))
+	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg))
 
-	wantCfg := &remote.Config{
+	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",
 			ClientKeyPath:  "/tmp/client.key",
@@ -58,13 +59,14 @@ func TestEditWalletConfiguration(t *testing.T) {
 	assert.NoError(t, set.Set(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath))
 	assert.NoError(t, set.Set(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath))
 	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
-	cliCtx := cli.NewContext(&app, set, nil)
+	cliCtx = cli.NewContext(&app, set, nil)
 
-	assert.NoError(t, EditWalletConfiguration(cliCtx))
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
-	assert.NoError(t, err)
+	err = EditWalletConfigurationCli(cliCtx)
+	require.NoError(t, err)
+	encoded, err := wallet.ReadKeymanagerConfigFromDisk(cliCtx.Context)
+	require.NoError(t, err)
 
-	cfg, err := remote.UnmarshalConfigFile(encoded)
+	cfg, err := remote.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, wantCfg, cfg)
 }

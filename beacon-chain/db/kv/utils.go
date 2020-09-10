@@ -84,6 +84,14 @@ func deleteValueForIndices(ctx context.Context, indicesByBucket map[string][]byt
 			copy(valuesEnd, valuesAtIndex[start+len(root):])
 
 			valuesAtIndex = append(valuesStart, valuesEnd...)
+
+			// If this removes the last value, delete the whole key/value entry.
+			if len(valuesAtIndex) == 0 {
+				if err := bkt.Delete(idx); err != nil {
+					return err
+				}
+				continue
+			}
 			if err := bkt.Put(idx, valuesAtIndex); err != nil {
 				return err
 			}

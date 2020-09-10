@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	log "github.com/sirupsen/logrus"
@@ -127,7 +126,7 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					if text = strings.Replace(text, "\n", "", -1); text == "" {
+					if text = strings.ReplaceAll(text, "\n", ""); text == "" {
 						log.Fatal("Empty block path given")
 					}
 					blockPath = text
@@ -136,7 +135,7 @@ func main() {
 				if err := dataFetcher(blockPath, block); err != nil {
 					log.Fatal(err)
 				}
-				blkRoot, err := stateutil.BlockRoot(block.Block)
+				blkRoot, err := block.Block.HashTreeRoot()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -148,7 +147,7 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					if text = strings.Replace(text, "\n", "", -1); text == "" {
+					if text = strings.ReplaceAll(text, "\n", ""); text == "" {
 						log.Fatal("Empty state path given")
 					}
 					preStatePath = text

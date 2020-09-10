@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	"github.com/urfave/cli/v2"
 )
@@ -17,25 +19,18 @@ func TestNode_Builds(t *testing.T) {
 	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
 	dir := testutil.TempDir() + "/keystore1"
 	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.RemoveAll(dir))
 	}()
 	defer func() {
-		if err := os.RemoveAll(testutil.TempDir() + "/datadir"); err != nil {
-			t.Log(err)
-		}
+		assert.NoError(t, os.RemoveAll(testutil.TempDir()+"/datadir"))
 	}()
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")
 	set.String("verbosity", "debug", "log verbosity")
+	set.Bool("disable-accounts-v2", true, "disabling accounts v2")
 	context := cli.NewContext(&app, set, nil)
 
-	if err := v1.NewValidatorAccount(dir, "1234"); err != nil {
-		t.Fatalf("Could not create validator account: %v", err)
-	}
+	require.NoError(t, v1.NewValidatorAccount(dir, "1234"), "Could not create validator account")
 	_, err := NewValidatorClient(context)
-	if err != nil {
-		t.Fatalf("Failed to create ValidatorClient: %v", err)
-	}
+	require.NoError(t, err, "Failed to create ValidatorClient")
 }

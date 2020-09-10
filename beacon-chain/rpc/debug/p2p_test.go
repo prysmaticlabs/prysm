@@ -7,6 +7,8 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestDebugServer_GetPeer(t *testing.T) {
@@ -19,19 +21,11 @@ func TestDebugServer_GetPeer(t *testing.T) {
 	firstPeer := peersProvider.Peers().All()[0]
 
 	res, err := ds.GetPeer(context.Background(), &ethpb.PeerRequest{PeerId: firstPeer.String()})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.PeerId != firstPeer.String() {
-		t.Fatalf("Expected peer id to be %s, but received: %s", firstPeer.String(), res.PeerId)
-	}
+	require.NoError(t, err)
+	require.Equal(t, firstPeer.String(), res.PeerId, "Unexpected peer ID")
 
-	if int(res.Direction) != int(ethpb.PeerDirection_INBOUND) {
-		t.Errorf("Expected 1st peer to be an inbound (%d) connection, received %d", ethpb.PeerDirection_INBOUND, res.Direction)
-	}
-	if res.ConnectionState != ethpb.ConnectionState_CONNECTED {
-		t.Errorf("Expected peer to be connected received %s", res.ConnectionState.String())
-	}
+	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Direction), "Expected 1st peer to be an inbound connection")
+	assert.Equal(t, ethpb.ConnectionState_CONNECTED, res.ConnectionState, "Expected peer to be connected")
 }
 
 func TestDebugServer_ListPeers(t *testing.T) {
@@ -43,22 +37,14 @@ func TestDebugServer_ListPeers(t *testing.T) {
 	}
 
 	res, err := ds.ListPeers(context.Background(), &ptypes.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(res.Responses) != 2 {
-		t.Fatalf("Expected 2 peers, received %d: %v", len(res.Responses), res.Responses)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(res.Responses))
 
-	if int(res.Responses[0].Direction) != int(ethpb.PeerDirection_INBOUND) {
-		t.Errorf("Expected 1st peer to be an inbound (%d) connection, received %d", ethpb.PeerDirection_INBOUND, res.Responses[0].Direction)
-	}
+	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Responses[0].Direction), "Expected 1st peer to be an inbound")
 	if len(res.Responses[0].ListeningAddresses) == 0 {
 		t.Errorf("Expected 1st peer to have a multiaddress, instead they have no addresses")
 	}
-	if res.Responses[1].Direction != ethpb.PeerDirection_OUTBOUND {
-		t.Errorf("Expected 2st peer to be an outbound (%d) connection, received %d", ethpb.PeerDirection_OUTBOUND, res.Responses[0].Direction)
-	}
+	assert.Equal(t, ethpb.PeerDirection_OUTBOUND, res.Responses[1].Direction, "Expected 2st peer to be an outbound connection")
 	if len(res.Responses[1].ListeningAddresses) == 0 {
 		t.Errorf("Expected 2nd peer to have a multiaddress, instead they have no addresses")
 	}

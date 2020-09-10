@@ -34,12 +34,6 @@ func negotiateContentType(r *http.Request) string {
 
 // writeResponse is content-type aware response writer.
 func writeResponse(w http.ResponseWriter, r *http.Request, response generatedResponse) error {
-	if response.Err != "" {
-		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
-
 	switch negotiateContentType(r) {
 	case contentTypePlainText:
 		buf, ok := response.Data.(bytes.Buffer)

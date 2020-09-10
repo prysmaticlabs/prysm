@@ -7,6 +7,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestInfostream_EpochToTimestamp(t *testing.T) {
@@ -42,9 +43,7 @@ func TestInfostream_EpochToTimestamp(t *testing.T) {
 	is := &infostream{}
 	for _, test := range tests {
 		timestamp := is.epochToTimestamp(test.epoch)
-		if timestamp != test.timestamp {
-			t.Errorf("Incorrect timestamp: expected %v, received %v", test.timestamp, timestamp)
-		}
+		assert.Equal(t, test.timestamp, timestamp, "Incorrect timestamp")
 	}
 }
 
@@ -77,12 +76,8 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if err := is.handleSetValidatorKeys(test.reqPubKeys); err != nil {
-				t.Error(err)
-			}
-			if len(is.pubKeys) != len(test.reqPubKeys) {
-				t.Errorf("Incorrect number of keys: expected %v, received %v", len(test.reqPubKeys), len(is.pubKeys))
-			}
+			assert.NoError(t, is.handleSetValidatorKeys(test.reqPubKeys))
+			assert.Equal(t, len(test.reqPubKeys), len(is.pubKeys), "Incorrect number of keys")
 		})
 	}
 }
@@ -127,15 +122,9 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
-			t.Error(err)
-		}
-		if err := is.handleAddValidatorKeys(test.reqPubKeys); err != nil {
-			t.Error(err)
-		}
-		if len(is.pubKeys) != test.finalLen {
-			t.Errorf("Incorrect number of keys: expected %v, received %v", len(is.pubKeys), test.finalLen)
-		}
+		assert.NoError(t, is.handleSetValidatorKeys(test.initialPubKeys))
+		assert.NoError(t, is.handleAddValidatorKeys(test.reqPubKeys))
+		assert.Equal(t, test.finalLen, len(is.pubKeys), "Incorrect number of keys")
 	}
 }
 
@@ -179,12 +168,8 @@ func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, is.handleSetValidatorKeys(test.initialPubKeys))
 		is.handleRemoveValidatorKeys(test.reqPubKeys)
-		if len(is.pubKeys) != test.finalLen {
-			t.Errorf("Incorrect number of keys: expected %v, received %v", len(is.pubKeys), test.finalLen)
-		}
+		assert.Equal(t, test.finalLen, len(is.pubKeys), "Incorrect number of keys")
 	}
 }

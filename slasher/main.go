@@ -66,9 +66,10 @@ var appFlags = []cli.Flag{
 	flags.RPCHost,
 	flags.CertFlag,
 	flags.KeyFlag,
-	flags.RebuildSpanMapsFlag,
 	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
+	flags.EnableHistoricalDetectionFlag,
+	flags.SpanCacheSize,
 }
 
 func init() {
@@ -103,13 +104,10 @@ func main() {
 			// the colors are ANSI codes and seen as Gibberish in the log files.
 			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
-			break
 		case "fluentd":
 			logrus.SetFormatter(joonix.NewFormatter())
-			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-			break
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

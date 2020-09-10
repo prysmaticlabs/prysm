@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -24,7 +25,8 @@ func ProcessPreGenesisDeposits(
 	deposits []*ethpb.Deposit,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
+	beaconState, err = ProcessDeposits(ctx, beaconState, &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Deposits: deposits}}})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
@@ -65,10 +67,14 @@ func ProcessPreGenesisDeposits(
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	deposits []*ethpb.Deposit,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	var err error
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
 
+	deposits := b.Block.Body.Deposits
+	var err error
 	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	if err != nil {
 		return nil, err
@@ -178,10 +184,8 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
-	} else {
-		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-			return nil, err
-		}
+	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
+		return nil, err
 	}
 
 	return beaconState, nil
@@ -198,7 +202,7 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 	}
 
 	receiptRoot := eth1Data.DepositRoot
-	leaf, err := ssz.HashTreeRoot(deposit.Data)
+	leaf, err := deposit.Data.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
@@ -207,41 +211,20 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 		leaf[:],
 		int(beaconState.Eth1DepositIndex()),
 		deposit.Proof,
+		params.BeaconConfig().DepositContractTreeDepth,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",
 			receiptRoot,
 		)
 	}
+
 	return nil
 }
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
 func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain []byte) error {
-	publicKey, err := bls.PublicKeyFromBytes(pub)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
-	}
-	sig, err := bls.SignatureFromBytes(signature)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
-	}
-	root, err := ssz.SigningRoot(obj)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root")
-	}
-	signingData := &pb.SigningData{
-		ObjectRoot: root[:],
-		Domain:     domain,
-	}
-	ctrRoot, err := ssz.HashTreeRoot(signingData)
-	if err != nil {
-		return errors.Wrap(err, "could not get container root")
-	}
-	if !sig.Verify(publicKey, ctrRoot[:]) {
-		return helpers.ErrSigFailedToVerify
-	}
-	return nil
+	return depositutil.VerifyDepositSignature(obj, domain)
 }
 
 func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain []byte) error {
@@ -277,7 +260,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 			ObjectRoot: root[:],
 			Domain:     domain,
 		}
-		ctrRoot, err := ssz.HashTreeRoot(signingData)
+		ctrRoot, err := signingData.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not get container root")
 		}

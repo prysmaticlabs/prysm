@@ -8,7 +8,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -42,7 +41,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
-		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
+		valMapHandler:         newValHandler(st.Validators),
 	}
 
 	for i := 0; i < fieldCount; i++ {
@@ -118,7 +117,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 			// Copy on write validator index map.
-			valIdxMap: b.valIdxMap,
+			valMapHandler: b.valMapHandler,
 		}
 	} else {
 		dst = &BeaconState{
@@ -159,7 +158,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 			// Copy on write validator index map.
-			valIdxMap: b.valIdxMap,
+			valMapHandler: b.valMapHandler,
 		}
 	}
 
@@ -167,6 +166,9 @@ func (b *BeaconState) Copy() *BeaconState {
 		ref.AddRef()
 		dst.sharedFieldReferences[field] = ref
 	}
+
+	// Increment ref for validator map
+	b.valMapHandler.mapRef.AddRef()
 
 	for i := range b.dirtyFields {
 		dst.dirtyFields[i] = true
@@ -244,6 +246,25 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		delete(b.dirtyFields, field)
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
+
+// FieldReferencesCount returns the reference count held by each field. This
+// also includes the field trie held by each field.
+func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
+	refMap := make(map[string]uint64)
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	for i, f := range b.sharedFieldReferences {
+		refMap[i.String()] = uint64(f.Refs())
+	}
+	for i, f := range b.stateFieldLeaves {
+		f.lock.RLock()
+		if len(f.fieldLayers) != 0 {
+			refMap[i.String()+"_trie"] = uint64(f.Refs())
+		}
+		f.lock.RUnlock()
+	}
+	return refMap
 }
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning

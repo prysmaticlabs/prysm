@@ -25,34 +25,51 @@ var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 // computation in this method and methods it calls into.
 //
 // Spec pseudocode definition:
-//   def on_block(store: Store, block: BeaconBlock) -> None:
-//    # Make a copy of the state to avoid mutability issues
+//   def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
+//    block = signed_block.message
+//    # Parent block must be known
 //    assert block.parent_root in store.block_states
-//    pre_state = store.block_states[block.parent_root].copy()
+//    # Make a copy of the state to avoid mutability issues
+//    pre_state = copy(store.block_states[block.parent_root])
 //    # Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
-//    assert store.time >= pre_state.genesis_time + block.slot * SECONDS_PER_SLOT
-//    # Add new block to the store
-//    store.blocks[signing_root(block)] = block
-//    # Check block is a descendant of the finalized block
-//    assert (
-//        get_ancestor(store, signing_root(block), store.blocks[store.finalized_checkpoint.root].slot) ==
-//        store.finalized_checkpoint.root
-//    )
-//    # Check that block is later than the finalized epoch slot
-//    assert block.slot > compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//    assert get_current_slot(store) >= block.slot
+//
+//    # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
+//    finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//    assert block.slot > finalized_slot
+//    # Check block is a descendant of the finalized block at the checkpoint finalized slot
+//    assert get_ancestor(store, block.parent_root, finalized_slot) == store.finalized_checkpoint.root
+//
 //    # Check the block is valid and compute the post-state
-//    state = state_transition(pre_state, block)
+//    state = state_transition(pre_state, signed_block, True)
+//    # Add new block to the store
+//    store.blocks[hash_tree_root(block)] = block
 //    # Add new state for this block to the store
-//    store.block_states[signing_root(block)] = state
+//    store.block_states[hash_tree_root(block)] = state
 //
 //    # Update justified checkpoint
 //    if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
 //        if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
 //            store.best_justified_checkpoint = state.current_justified_checkpoint
+//        if should_update_justified_checkpoint(store, state.current_justified_checkpoint):
+//            store.justified_checkpoint = state.current_justified_checkpoint
 //
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
+//
+//        # Potentially update justified if different from store
+//        if store.justified_checkpoint != state.current_justified_checkpoint:
+//            # Update justified if new justified is later than store justified
+//            if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
+//                store.justified_checkpoint = state.current_justified_checkpoint
+//                return
+//
+//            # Update justified if store justified is not in chain with finalized checkpoint
+//            finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
+//            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
+//                store.justified_checkpoint = state.current_justified_checkpoint
 func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
@@ -157,6 +174,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, true /* init sync */); err != nil {
 		return err
 	}
+	// Save the latest block as head in cache.
+	if err := s.saveHeadNoDB(ctx, signed, blockRoot, postState); err != nil {
+		return err
+	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
@@ -183,28 +204,28 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock,
-	blockRoots [][32]byte) (*stateTrie.BeaconState, []*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
+	blockRoots [][32]byte) ([]*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
 	if len(blks) == 0 || len(blockRoots) == 0 {
-		return nil, nil, nil, errors.New("no blocks provided")
+		return nil, nil, errors.New("no blocks provided")
 	}
 	if blks[0] == nil || blks[0].Block == nil {
-		return nil, nil, nil, errors.New("nil block")
+		return nil, nil, errors.New("nil block")
 	}
 	b := blks[0].Block
 
 	// Retrieve incoming block's pre state.
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	preState, err := s.stateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if preState == nil {
-		return nil, nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot)
+		return nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot)
 	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
@@ -219,11 +240,14 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	for i, b := range blks {
 		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		// Save potential boundary states.
 		if helpers.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
+			if err := s.handleEpochBoundary(preState); err != nil {
+				return nil, nil, fmt.Errorf("could not handle epoch boundary state")
+			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
@@ -231,17 +255,26 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	}
 	verify, err := bls.VerifyMultipleSignatures(sigSet.Signatures, sigSet.Messages, sigSet.PublicKeys)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	if !verify {
-		return nil, nil, nil, errors.New("batch block signature verification failed")
+		return nil, nil, errors.New("batch block signature verification failed")
 	}
 	for r, st := range boundaries {
 		if err := s.stateGen.SaveState(ctx, r, st); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 	}
-	return preState, fCheckpoints, jCheckpoints, nil
+	// Also saves the last post state which to be used as pre state for the next batch.
+	lastB := blks[len(blks)-1]
+	lastBR := blockRoots[len(blockRoots)-1]
+	if err := s.stateGen.SaveState(ctx, lastBR, preState); err != nil {
+		return nil, nil, err
+	}
+	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
+		return nil, nil, err
+	}
+	return fCheckpoints, jCheckpoints, nil
 }
 
 // handles a block after the block's batch has been verified, where we can save blocks
@@ -272,10 +305,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return err
-		}
-		s.clearInitSyncBlocks()
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
@@ -287,8 +316,11 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 func (s *Service) handleEpochBoundary(postState *stateTrie.BeaconState) error {
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		reportEpochMetrics(postState)
-		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
-
+		var err error
+		s.nextEpochBoundarySlot, err = helpers.StartSlot(helpers.NextEpoch(postState))
+		if err != nil {
+			return err
+		}
 		// Update committees cache at epoch boundary slot.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
@@ -343,10 +375,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.Si
 	defer span.End()
 	if initSync {
 		s.saveInitSyncBlock(r, b)
-	} else {
-		if err := s.beaconDB.SaveBlock(ctx, b); err != nil {
-			return errors.Wrapf(err, "could not save block from slot %d", b.Block.Slot)
-		}
+	} else if err := s.beaconDB.SaveBlock(ctx, b); err != nil {
+		return errors.Wrapf(err, "could not save block from slot %d", b.Block.Slot)
 	}
 	if err := s.stateGen.SaveState(ctx, r, state); err != nil {
 		return errors.Wrap(err, "could not save state")

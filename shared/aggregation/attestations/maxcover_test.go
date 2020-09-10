@@ -1,13 +1,12 @@
 package attestations
 
 import (
-	"errors"
-	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
@@ -15,29 +14,24 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 		atts []*ethpb.Attestation
 	}
 	tests := []struct {
-		name        string
-		args        args
-		want        *aggregation.MaxCoverProblem
-		wantErr     bool
-		expectedErr error
+		name      string
+		args      args
+		want      *aggregation.MaxCoverProblem
+		wantedErr string
 	}{
 		{
 			name: "nil attestations",
 			args: args{
 				atts: nil,
 			},
-			want:        nil,
-			wantErr:     true,
-			expectedErr: ErrInvalidAttestationCount,
+			wantedErr: ErrInvalidAttestationCount.Error(),
 		},
 		{
 			name: "no attestations",
 			args: args{
 				atts: []*ethpb.Attestation{},
 			},
-			want:        nil,
-			wantErr:     true,
-			expectedErr: ErrInvalidAttestationCount,
+			wantedErr: ErrInvalidAttestationCount.Error(),
 		},
 		{
 			name: "attestations of different bitlist length",
@@ -47,9 +41,7 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 					{AggregationBits: bitfield.NewBitlist(128)},
 				},
 			},
-			want:        nil,
-			wantErr:     true,
-			expectedErr: aggregation.ErrBitsDifferentLen,
+			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
 		},
 		{
 			name: "single attestation",
@@ -63,7 +55,6 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 					aggregation.NewMaxCoverCandidate(0, &bitfield.Bitlist{0b00001010, 0b1}),
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name: "multiple attestations",
@@ -85,18 +76,16 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 					aggregation.NewMaxCoverCandidate(4, &bitfield.Bitlist{0b00000001, 0b1}),
 				},
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewMaxCover(tt.args.atts)
-			if (err != nil) != tt.wantErr || !errors.Is(err, tt.expectedErr) {
-				t.Errorf("NewMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewMaxCoverProblem() got: %v, want: %v", got, tt.want)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+				assert.DeepEqual(t, tt.want, got)
 			}
 		})
 	}

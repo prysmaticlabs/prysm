@@ -35,8 +35,13 @@ import (
 func ProcessAttesterSlashings(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
+
+	body := b.Block.Body
 	for idx, slashing := range body.AttesterSlashings {
 		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
@@ -48,13 +53,13 @@ func ProcessAttesterSlashings(
 		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 		var err error
 		var slashedAny bool
-		var val *ethpb.Validator
+		var val *stateTrie.ReadOnlyValidator
 		for _, validatorIndex := range slashableIndices {
-			val, err = beaconState.ValidatorAtIndex(validatorIndex)
+			val, err = beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 			if err != nil {
 				return nil, err
 			}
-			if helpers.IsSlashableValidator(val, currentEpoch) {
+			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",

@@ -63,14 +63,26 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return pubsub.ValidationIgnore
 	}
+	// Reject an attestation if it references an invalid block.
+	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Source.Root)) {
+		return pubsub.ValidationReject
+	}
 
 	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
-	hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
+	hasStateSummary := s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
 	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
 	hasBlock := s.db.HasBlock(ctx, blockRoot) || s.chain.HasInitSyncBlock(blockRoot)
 	if !(hasState && hasBlock) {
@@ -86,9 +98,40 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+
+	if featureconfig.Get().UseCheckPointInfoCache {
+		// Use check point info to validate unaggregated attestation.
+		c, err := s.chain.AttestationCheckPtInfo(ctx, att)
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		// Is the attestation subnet correct.
+		indices := c.ActiveIndices
+		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
+		if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
+			return pubsub.ValidationReject
+		}
+		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		// Is the attestation bitfield correct.
+		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
+			return pubsub.ValidationReject
+		}
+		// Is the attestation signature correct.
+		if err := blocks.VerifyAttSigUseCheckPt(ctx, c, att); err != nil {
+			return pubsub.ValidationReject
+		}
+
+		s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
+		msg.ValidatorData = att
+		return pubsub.ValidationAccept
+	}
+
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve pre state")
+		log.Error("Failed to retrieve pre state")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -117,15 +160,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-
 	// Attestation's signature is a valid BLS signature and belongs to correct public key..
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestation(ctx, preState, att); err != nil {
+		if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
 			log.WithError(err).Error("Could not verify attestation")
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject

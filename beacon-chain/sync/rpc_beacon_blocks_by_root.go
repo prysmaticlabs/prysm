@@ -6,12 +6,9 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -33,55 +30,6 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	for i := 0; i < len(blockRoots); i++ {
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
-		// Return error until #6408 is resolved.
-		if err == io.EOF {
-			return err
-		}
-		// Exit if peer sends more than max request blocks.
-		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
-			break
-		}
-		if err != nil {
-			log.WithError(err).Error("Unable to retrieve block from stream")
-			return err
-		}
-
-		blkRoot, err := stateutil.BlockRoot(blk.Block)
-		if err != nil {
-			return err
-		}
-		s.pendingQueueLock.Lock()
-		s.slotToPendingBlocks[blk.Block.Slot] = blk
-		s.seenPendingBlocks[blkRoot] = true
-		s.pendingQueueLock.Unlock()
-
-	}
-	return nil
-}
-
-// Deprecated: sendRecentBeaconBlocksRequestFallback sends a recent beacon blocks request to a peer to get
-// those corresponding blocks from that peer. This is a method implemented so that we are eventually
-// backward compatible with old Onyx nodes.
-// TODO(#6408)
-func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, respTimeout)
-	defer cancel()
-	req := &pbp2p.BeaconBlocksByRootRequest{}
-	for _, root := range blockRoots {
-		req.BlockRoots = append(req.BlockRoots, root[:])
-	}
-	stream, err := s.p2p.Send(ctx, req, p2p.RPCBlocksByRootTopic, id)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
-		}
-	}()
-	for i := 0; i < len(blockRoots); i++ {
-		isFirstChunk := i == 0
-		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
 		if err == io.EOF {
 			break
 		}
@@ -90,17 +38,16 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 			break
 		}
 		if err != nil {
-			log.WithError(err).Error("Unable to retrieve block from stream")
+			log.WithError(err).Debug("Unable to retrieve block from stream")
 			return err
 		}
 
-		blkRoot, err := stateutil.BlockRoot(blk.Block)
+		blkRoot, err := blk.Block.HashTreeRoot()
 		if err != nil {
 			return err
 		}
 		s.pendingQueueLock.Lock()
-		s.slotToPendingBlocks[blk.Block.Slot] = blk
-		s.seenPendingBlocks[blkRoot] = true
+		s.insertBlockToPendingQueue(blk.Block.Slot, blk, blkRoot)
 		s.pendingQueueLock.Unlock()
 
 	}
@@ -111,7 +58,7 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
@@ -121,66 +68,44 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 
 	blockRoots, ok := msg.([][32]byte)
 	if !ok {
-		return errors.New("message is not type BeaconBlocksByRootRequest")
+		return errors.New("message is not type [][32]byte")
+	}
+	if err := s.rateLimiter.validateRequest(stream, uint64(len(blockRoots))); err != nil {
+		return err
 	}
 	if len(blockRoots) == 0 {
+		// Add to rate limiter in the event no
+		// roots are requested.
+		s.rateLimiter.add(stream, 1)
 		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
 		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
-		} else {
-			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
-			}
+			log.WithError(err).Debug("Failed to generate a response error")
+		} else if _, err := stream.Write(resp); err != nil {
+			log.WithError(err).Debugf("Failed to write to stream")
 		}
 		return errors.New("no block roots provided")
-	}
-
-	if int64(len(blockRoots)) > s.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String()) {
-		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
-		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
-			log.Debug("Disconnecting bad peer")
-			defer func() {
-				if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
-					log.WithError(err).Error("Failed to disconnect peer")
-				}
-			}()
-		}
-		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
-		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
-		} else {
-			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
-			}
-		}
-		return errors.New(rateLimitedError)
 	}
 
 	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
 		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "requested more than the max block limit")
 		if err != nil {
-			log.WithError(err).Error("Failed to generate a response error")
-		} else {
-			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
-			}
+			log.WithError(err).Debug("Failed to generate a response error")
+		} else if _, err := stream.Write(resp); err != nil {
+			log.WithError(err).Debugf("Failed to write to stream")
 		}
 		return errors.New("requested more than the max block limit")
 	}
-
-	s.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(len(blockRoots)))
+	s.rateLimiter.add(stream, int64(len(blockRoots)))
 
 	for _, root := range blockRoots {
 		blk, err := s.db.Block(ctx, root)
 		if err != nil {
-			log.WithError(err).Error("Failed to fetch block")
+			log.WithError(err).Debug("Failed to fetch block")
 			resp, err := s.generateErrorResponse(responseCodeServerError, genericError)
 			if err != nil {
-				log.WithError(err).Error("Failed to generate a response error")
-			} else {
-				if _, err := stream.Write(resp); err != nil {
-					log.WithError(err).Errorf("Failed to write to stream")
-				}
+				log.WithError(err).Debug("Failed to generate a response error")
+			} else if _, err := stream.Write(resp); err != nil {
+				log.WithError(err).Debugf("Failed to write to stream")
 			}
 			return err
 		}

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -22,7 +23,7 @@ type KeyManager interface {
 	FetchValidatingKeys() ([][48]byte, error)
 	// Sign signs a message for the validator to broadcast.
 	// Note that the domain should already be part of the root, but it is passed along for security purposes.
-	Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error)
+	Sign(ctx context.Context, pubKey [48]byte, root [32]byte) (bls.Signature, error)
 }
 
 // ProtectingKeyManager provides access to a keymanager that protects its clients from slashing events.
