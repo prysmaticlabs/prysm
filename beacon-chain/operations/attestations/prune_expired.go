@@ -35,6 +35,9 @@ func (s *Service) pruneExpiredAtts() {
 		}
 	}
 
+	if _, err := s.pool.DeleteSeenUnaggregatedAttestations(); err == nil {
+		log.WithError(err).Error("Cannot delete seen attestations")
+	}
 	unAggregatedAtts, err := s.pool.UnaggregatedAttestations()
 	if err != nil {
 		log.WithError(err).Error("Could not get unaggregated attestations")
