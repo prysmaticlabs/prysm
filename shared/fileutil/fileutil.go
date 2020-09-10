@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -77,4 +79,19 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 		return nil, errors.Wrap(err, "could not determine absolute path of password file")
 	}
 	return ioutil.ReadFile(filePath)
+}
+
+// CopyFile copy a file from source to destination path.
+func CopyFile(src, dst string) error {
+	input, err := ioutil.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(dst, input, params.BeaconIoConfig().ReadWritePermissions)
+	if err != nil {
+		err := errors.Wrapf(err, "error creating file %s", dst)
+		return err
+	}
+	return nil
 }
