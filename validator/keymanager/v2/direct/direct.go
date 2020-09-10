@@ -370,10 +370,10 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		// If the password fails for an individual account, we ask the user to input
 		// that individual account's password until it succeeds.
 		enc, password, err = askUntilPasswordConfirms(decryptor, keystoreFile)
-		dr.wallet.SetPassword(password) // Write the correct password to the wallet.
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
+		dr.wallet.SetPassword(password) // Write the correct password to the wallet.
 	} else if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
