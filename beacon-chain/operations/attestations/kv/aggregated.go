@@ -17,6 +17,18 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 	if err != nil {
 		return err
 	}
+	return p.aggregateUnaggregatedAttestations(unaggregatedAtts)
+}
+
+// AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves
+// newly aggregated attestations in the pool. Unaggregated attestations are filtered by slot and
+// committee index.
+func (p *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) error {
+	unaggregatedAtts := p.UnaggregatedAttestationsBySlotIndex(slot, committeeIndex)
+	return p.aggregateUnaggregatedAttestations(unaggregatedAtts)
+}
+
+func (p *AttCaches) aggregateUnaggregatedAttestations(unaggregatedAtts []*ethpb.Attestation) error {
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := att.Data.HashTreeRoot()
