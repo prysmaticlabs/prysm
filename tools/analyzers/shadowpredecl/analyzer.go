@@ -3,6 +3,7 @@ package shadowpredecl
 import (
 	"errors"
 	"go/ast"
+	"go/token"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -35,8 +36,9 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	nodeFilter := []ast.Node{
 		(*ast.FuncDecl)(nil),
-		(*ast.TypeSpec)(nil),
+		(*ast.FuncLit)(nil),
 		(*ast.AssignStmt)(nil),
+		(*ast.TypeSpec)(nil),
 		(*ast.ValueSpec)(nil),
 	}
 
@@ -47,15 +49,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if shadows(name) {
 				pass.Reportf(declaration.Name.NamePos, messageTemplate, "Function", name)
 			}
-			for _, paramList := range declaration.Type.Params.List {
-				for _, identifier := range paramList.Names {
-					name := identifier.Name
-					if shadows(name) {
-						pass.Reportf(identifier.NamePos, messageTemplate, "Identifier", name)
-					}
-				}
-			}
+			inspectFunctionParams(pass, declaration.Type.Params.List)
+		case *ast.FuncLit:
+			inspectFunctionParams(pass, declaration.Type.Params.List)
 		case *ast.AssignStmt:
+			if declaration.Tok == token.ASSIGN {
+				return
+			}
 			for _, expr := range declaration.Lhs {
 				if identifier, ok := expr.(*ast.Ident); ok {
 					name := identifier.Name
@@ -80,6 +80,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	})
 
 	return nil, nil
+}
+
+func inspectFunctionParams(pass *analysis.Pass, paramList []*ast.Field) {
+	for _, field := range paramList {
+		for _, identifier := range field.Names {
+			name := identifier.Name
+			if shadows(name) {
+				pass.Reportf(identifier.NamePos, messageTemplate, "Identifier", name)
+			}
+		}
+	}
 }
 
 func shadows(name string) bool {

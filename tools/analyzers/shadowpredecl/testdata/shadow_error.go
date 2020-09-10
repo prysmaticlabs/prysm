@@ -11,9 +11,10 @@ func TypeAlias() {
 }
 
 func UninitializedVar() {
-	var error int // want "Identifier 'error' shadows a predeclared identifier with the same name. Choose another name."
-	error = 1     // No diagnostic because the original declaration already triggered one.
-	if error == 0 {
+	var error int        // want "Identifier 'error' shadows a predeclared identifier with the same name. Choose another name."
+	error = 1            // No diagnostic because the original declaration already triggered one.
+	other, error := 0, 0 // No diagnostic because the original declaration already triggered one.
+	if error == 0 && other == 0 {
 	}
 }
 
@@ -39,7 +40,13 @@ func Const() {
 	const error = 0 // want "Identifier 'error' shadows a predeclared identifier with the same name. Choose another name."
 }
 
+// Test function and parameter names.
 func error(len int) { // want "Function 'error' shadows a predeclared identifier with the same name. Choose another name." "Identifier 'len' shadows a predeclared identifier with the same name. Choose another name."
 	if len == 0 {
 	}
+
+	f := func(int string) { // want "Identifier 'int' shadows a predeclared identifier with the same name. Choose another name."
+	}
+
+	f("")
 }
