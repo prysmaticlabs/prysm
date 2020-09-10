@@ -219,7 +219,7 @@ var (
 	// VoluntaryExitPublicKeysFlag defines a comma-separated list of hex string public keys
 	// for accounts on which a user wants to perform a voluntary exit.
 	VoluntaryExitPublicKeysFlag = &cli.StringFlag{
-		Name: "voluntary-exit-public-keys",
+		Name: "public-keys",
 		Usage: "Comma-separated list of public key hex strings to specify on which validator accounts to perform " +
 			"a voluntary exit",
 		Value: "",

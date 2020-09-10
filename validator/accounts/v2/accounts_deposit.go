@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -60,7 +59,7 @@ func SendDepositCli(cliCtx *cli.Context) error {
 }
 
 func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.SendDepositConfig, error) {
-	pubKeysBytes, err := km.FetchValidatingPublicKeys(context.Background())
+	pubKeysBytes, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch validating public keys")
 	}
