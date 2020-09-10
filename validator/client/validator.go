@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -92,7 +92,7 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	if !v.useWeb {
 		return nil
 	}
-	walletChan := make(chan *accountsv2.Wallet)
+	walletChan := make(chan iface.Wallet)
 	sub := v.walletInitializedFeed.Subscribe(walletChan)
 	defer sub.Unsubscribe()
 	for {
@@ -216,6 +216,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 			return nil
 		}
 		ticker := time.NewTicker(reconnectPeriod)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:

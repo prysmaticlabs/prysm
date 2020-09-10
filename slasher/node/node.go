@@ -75,7 +75,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 	cmd.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(cliCtx.Context)
 	slasher := &SlasherNode{
 		cliCtx:                cliCtx,
 		ctx:                   ctx,

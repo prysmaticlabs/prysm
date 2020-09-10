@@ -259,7 +259,7 @@ func (s *Service) initializeBeaconChain(
 	genesisTime time.Time,
 	preGenesisState *stateTrie.BeaconState,
 	eth1data *ethpb.Eth1Data) (*stateTrie.BeaconState, error) {
-	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())

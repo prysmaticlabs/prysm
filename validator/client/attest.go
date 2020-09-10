@@ -188,7 +188,7 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 			sig, err = protectingKeymanager.SignAttestation(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), data)
 		} else {
-			sig, err = v.keyManager.Sign(pubKey, root)
+			sig, err = v.keyManager.Sign(ctx, pubKey, root)
 		}
 	}
 	if err != nil {

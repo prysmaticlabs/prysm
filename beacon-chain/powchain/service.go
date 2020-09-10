@@ -327,7 +327,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := s.depositCache.AllDeposits(context.TODO(), nil)
+	deposits := s.depositCache.AllDeposits(s.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
@@ -442,6 +442,7 @@ func (s *Service) waitForConnection() {
 		logCounter++
 	}
 	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
@@ -460,12 +461,10 @@ func (s *Service) waitForConnection() {
 				log.WithFields(logrus.Fields{
 					"endpoint": s.httpEndpoint,
 				}).Info("Connected to eth1 proof-of-work chain")
-				ticker.Stop()
 				return
 			}
 			log.Debug("Eth1 node is currently syncing")
 		case <-s.ctx.Done():
-			ticker.Stop()
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
 		}
@@ -607,6 +606,7 @@ func safelyHandlePanic() {
 
 func (s *Service) handleETH1FollowDistance() {
 	defer safelyHandlePanic()
+	ctx := s.ctx
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
@@ -616,7 +616,7 @@ func (s *Service) handleETH1FollowDistance() {
 		log.Warn("eth1 client is not syncing")
 	}
 	if !s.chainStartData.Chainstarted {
-		if err := s.checkBlockNumberForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
+		if err := s.checkBlockNumberForChainStart(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
 			return
@@ -628,7 +628,7 @@ func (s *Service) handleETH1FollowDistance() {
 	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
 		return
 	}
-	if err := s.requestBatchedLogs(context.Background()); err != nil {
+	if err := s.requestBatchedLogs(ctx); err != nil {
 		s.runError = err
 		log.Error(err)
 		return
@@ -647,6 +647,7 @@ func (s *Service) initPOWService() {
 		case <-s.ctx.Done():
 			return
 		default:
+			ctx := s.ctx
 			err := s.initDataFromContract()
 			if err != nil {
 				log.Errorf("Unable to retrieve data from deposit contract %v", err)
@@ -654,7 +655,7 @@ func (s *Service) initPOWService() {
 				continue
 			}
 
-			header, err := s.eth1DataFetcher.HeaderByNumber(context.Background(), nil)
+			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 				s.retryETH1Node(err)
@@ -665,7 +666,7 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
 
-			if err := s.processPastLogs(context.Background()); err != nil {
+			if err := s.processPastLogs(ctx); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
 				s.retryETH1Node(err)
 				continue

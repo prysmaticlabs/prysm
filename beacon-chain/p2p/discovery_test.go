@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"math/rand"
@@ -180,7 +181,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.StaticPeers = staticPeers
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	cfg.NoDiscovery = true
-	s, err := NewService(cfg)
+	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
 
 	exitRoutine := make(chan bool)

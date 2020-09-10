@@ -171,7 +171,7 @@ func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot ui
 	// Verify the validator has been active long enough.
 	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod {
 		return fmt.Errorf(
-			"validator has not been active long enough to exit, wanted epoch %d >= %d",
+			"validator has not been active long enough to exit: %d epochs vs required %d epochs",
 			currentEpoch,
 			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)

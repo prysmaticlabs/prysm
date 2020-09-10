@@ -149,6 +149,7 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	var atts []*ethpb.IndexedAttestation
 	halfSlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
 	ticker := time.NewTicker(halfSlot)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
@@ -185,6 +186,7 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 
 func (bs *Service) restartBeaconConnection(ctx context.Context) error {
 	ticker := time.NewTicker(reconnectPeriod)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
@@ -203,12 +205,10 @@ func (bs *Service) restartBeaconConnection(ctx context.Context) error {
 				continue
 			}
 			log.Info("Beacon node is fully synced")
-
 			return nil
 		case <-ctx.Done():
 			log.Debug("Context closed, exiting reconnect routine")
 			return errors.New("context closed, no longer attempting to restart stream")
 		}
 	}
-
 }

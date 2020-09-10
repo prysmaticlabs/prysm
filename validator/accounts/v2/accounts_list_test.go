@@ -70,7 +70,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	os.Stdout = w
 
 	// We call the list direct keymanager accounts function.
-	require.NoError(t, listDirectKeymanagerAccounts(true /* show deposit data */, keymanager))
+	require.NoError(t, listDirectKeymanagerAccounts(context.Background(), true /* show deposit data */, keymanager))
 
 	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
@@ -201,7 +201,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	os.Stdout = w
 
 	// We call the list direct keymanager accounts function.
-	require.NoError(t, listDerivedKeymanagerAccounts(true /* show deposit data */, keymanager))
+	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true /* show deposit data */, keymanager))
 
 	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
@@ -334,7 +334,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		},
 	}
 	// We call the list remote keymanager accounts function.
-	require.NoError(t, listRemoteKeymanagerAccounts(wallet, km, km.opts))
+	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), wallet, km, km.opts))
 
 	require.NoError(t, w.Close())
 	out, err := ioutil.ReadAll(r)
