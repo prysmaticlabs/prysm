@@ -119,6 +119,11 @@ func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *
 		return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
 	}
 
+	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
+	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot, as.GenesisTimeFetcher.GenesisTime()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
+	}
+
 	if err := as.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast signed aggregated attestation: %v", err)
 	}
