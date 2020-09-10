@@ -169,7 +169,7 @@ func (w *Wallet) Password() string {
 	return w.walletPassword
 }
 
-// Set Password for the wallet.
+// SetPassword sets a new password for the wallet.
 func (w *Wallet) SetPassword(newPass string) {
 	w.walletPassword = newPass
 }

@@ -50,7 +50,7 @@ func (m *Wallet) Password() string {
 	return m.WalletPassword
 }
 
-// Set Password for the wallet.
+// SetPassword sets a new password for the wallet.
 func (m *Wallet) SetPassword(newPass string) {
 	m.WalletPassword = newPass
 }
