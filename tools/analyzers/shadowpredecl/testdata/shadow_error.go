@@ -1,7 +1,9 @@
 package testdata
 
 func Struct() {
-	type error struct{} // want "Type 'error' shadows a predeclared identifier with the same name. Choose another name."
+	type error struct { // want "Type 'error' shadows a predeclared identifier with the same name. Choose another name."
+		int int // No diagnostic because the name is always referenced indirectly through a struct variable.
+	}
 }
 
 func TypeAlias() {
@@ -10,6 +12,7 @@ func TypeAlias() {
 
 func UninitializedVar() {
 	var error int // want "Identifier 'error' shadows a predeclared identifier with the same name. Choose another name."
+	error = 1     // No diagnostic because the original declaration already triggered one.
 	if error == 0 {
 	}
 }
@@ -32,10 +35,11 @@ func SecondInVarList() {
 	}
 }
 
-func Parameter() {
-	f := func(error int) { // want "Identifier 'error' shadows a predeclared identifier with the same name. Choose another name."
-		if error == 0 {
-		}
+func Const() {
+	const error = 0 // want "Identifier 'error' shadows a predeclared identifier with the same name. Choose another name."
+}
+
+func error(len int) { // want "Function 'error' shadows a predeclared identifier with the same name. Choose another name." "Identifier 'len' shadows a predeclared identifier with the same name. Choose another name."
+	if len == 0 {
 	}
-	f(0)
 }

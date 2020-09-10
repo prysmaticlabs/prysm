@@ -37,6 +37,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.FuncDecl)(nil),
 		(*ast.TypeSpec)(nil),
 		(*ast.AssignStmt)(nil),
+		(*ast.ValueSpec)(nil),
 	}
 
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
@@ -45,6 +46,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			name := declaration.Name.Name
 			if shadows(name) {
 				pass.Reportf(declaration.Name.NamePos, messageTemplate, "Function", name)
+			}
+			for _, paramList := range declaration.Type.Params.List {
+				for _, identifier := range paramList.Names {
+					name := identifier.Name
+					if shadows(name) {
+						pass.Reportf(identifier.NamePos, messageTemplate, "Identifier", name)
+					}
+				}
 			}
 		case *ast.AssignStmt:
 			for _, expr := range declaration.Lhs {
@@ -59,6 +68,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			name := declaration.Name.Name
 			if shadows(name) {
 				pass.Reportf(declaration.Name.NamePos, messageTemplate, "Type", name)
+			}
+		case *ast.ValueSpec:
+			for _, identifier := range declaration.Names {
+				name := identifier.Name
+				if shadows(name) {
+					pass.Reportf(identifier.NamePos, messageTemplate, "Identifier", name)
+				}
 			}
 		}
 	})
