@@ -188,7 +188,7 @@ func WeakSubjectivityCheckptEpoch(valCount uint64, fEpoch uint64) uint64 {
 		v := 256 * ((d * q / 2) / 256)
 		weakSubMod += v
 	} else {
-		v := 256 * ((d * valCount / 2 * m) / 256)
+		v := 256 * ((d * valCount / (2 * m)) / 256)
 		weakSubMod += v
 	}
 	return fEpoch / weakSubMod
