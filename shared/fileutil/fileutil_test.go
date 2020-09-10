@@ -19,15 +19,12 @@ import (
 	"bufio"
 	"bytes"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/user"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -64,25 +61,18 @@ func TestCopyFile(t *testing.T) {
 		assert.NoError(t, os.Remove(fName+"copy"))
 	}()
 
-	assert.Equal(t, true, deepCompare(fName, fName+"copy"))
+	assert.Equal(t, true, deepCompare(t, fName, fName+"copy"))
 }
 
-func deepCompare(file1, file2 string) bool {
+func deepCompare(t *testing.T, file1, file2 string) bool {
 	sf, err := os.Open(file1)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	assert.NoError(t, err)
 	df, err := os.Open(file2)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	assert.NoError(t, err)
 	sscan := bufio.NewScanner(sf)
 	dscan := bufio.NewScanner(df)
 
-	for sscan.Scan() {
-		dscan.Scan()
+	for sscan.Scan() && dscan.Scan() {
 		if !bytes.Equal(sscan.Bytes(), dscan.Bytes()) {
 			return false
 		}
