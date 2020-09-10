@@ -59,7 +59,7 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	if err := as.AttPool.AggregateUnaggregatedAttestations(); err != nil {
+	if err := as.AttPool.AggregateUnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
 	}
 	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
