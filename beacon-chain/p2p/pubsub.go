@@ -88,7 +88,13 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 
 func peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 	for id, snap := range peerMap {
-		log.Debugf("Peer id %s with score %f", id.String(), snap.Score)
+		log.Debugf("Peer id %s with score %f and behaviour penalty %f", id.String(), snap.Score,
+			snap.BehaviourPenalty)
+		for t, p := range snap.Topics {
+			log.Debugf("peer %s with topic %s and first deliveires %f , invalid deliveries %f, "+
+				"mesh deliveries %f and time in mesh %d ms ", id.String(), t, p.FirstMessageDeliveries,
+				p.InvalidMessageDeliveries, p.MeshMessageDeliveries, p.TimeInMesh.Milliseconds())
+		}
 	}
 }
 
@@ -104,18 +110,18 @@ func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) 
 		Topics:        make(map[string]*pubsub.TopicScoreParams),
 		TopicScoreCap: 32.72,
 		AppSpecificScore: func(p peer.ID) float64 {
-			return 1
+			return 0
 		},
 		AppSpecificWeight:           1,
-		IPColocationFactorWeight:    -1,
+		IPColocationFactorWeight:    -35.11,
 		IPColocationFactorThreshold: 10,
 		IPColocationFactorWhitelist: nil,
-		BehaviourPenaltyWeight:      -99,
-		BehaviourPenaltyThreshold:   0,
-		BehaviourPenaltyDecay:       0.994,
-		DecayInterval:               1 * time.Second,
+		BehaviourPenaltyWeight:      -15.92,
+		BehaviourPenaltyThreshold:   6,
+		BehaviourPenaltyDecay:       0.9857,
+		DecayInterval:               1 * oneSlotDuration(),
 		DecayToZero:                 0.1,
-		RetainScore:                 100,
+		RetainScore:                 100 * oneEpochDuration(),
 	}
 	return scoreParams, thresholds
 }
@@ -153,21 +159,21 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     0.5,
 		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
 		TimeInMeshCap:                   300,
 		FirstMessageDeliveriesWeight:    1,
 		FirstMessageDeliveriesDecay:     0.9928,
 		FirstMessageDeliveriesCap:       23,
-		MeshMessageDeliveriesWeight:     -0.020408,
+		MeshMessageDeliveriesWeight:     -0.717,
 		MeshMessageDeliveriesDecay:      0.9928,
-		MeshMessageDeliveriesCap:        35,
-		MeshMessageDeliveriesThreshold:  139,
-		MeshMessageDeliveriesWindow:     200 * time.Millisecond,
-		MeshMessageDeliveriesActivation: time.Duration(8*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot) * time.Second,
-		MeshFailurePenaltyWeight:        -0.02048,
+		MeshMessageDeliveriesCap:        139,
+		MeshMessageDeliveriesThreshold:  14,
+		MeshMessageDeliveriesWindow:     2 * time.Second,
+		MeshMessageDeliveriesActivation: 4 * oneEpochDuration(),
+		MeshFailurePenaltyWeight:        -0.717,
 		MeshFailurePenaltyDecay:         0.9928,
-		InvalidMessageDeliveriesWeight:  -99,
-		InvalidMessageDeliveriesDecay:   0.9994,
+		InvalidMessageDeliveriesWeight:  -140.4475,
+		InvalidMessageDeliveriesDecay:   0.9971,
 	}
 }
 
@@ -175,20 +181,28 @@ func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     0.5,
 		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
 		TimeInMeshCap:                   300,
-		FirstMessageDeliveriesWeight:    0.05,
-		FirstMessageDeliveriesDecay:     0.631,
-		FirstMessageDeliveriesCap:       463,
-		MeshMessageDeliveriesWeight:     -0.0026,
-		MeshMessageDeliveriesDecay:      0.631,
-		MeshMessageDeliveriesCap:        98,
-		MeshMessageDeliveriesThreshold:  390,
-		MeshMessageDeliveriesWindow:     200 * time.Millisecond,
-		MeshMessageDeliveriesActivation: time.Duration(4*params.BeaconConfig().SecondsPerSlot) * time.Second,
-		MeshFailurePenaltyWeight:        -0.0026,
-		MeshFailurePenaltyDecay:         0.631,
-		InvalidMessageDeliveriesWeight:  -99,
-		InvalidMessageDeliveriesDecay:   0.994,
+		FirstMessageDeliveriesWeight:    0.128,
+		FirstMessageDeliveriesDecay:     0.866,
+		FirstMessageDeliveriesCap:       179,
+		MeshMessageDeliveriesWeight:     -0.064,
+		MeshMessageDeliveriesDecay:      0.866,
+		MeshMessageDeliveriesCap:        1075,
+		MeshMessageDeliveriesThreshold:  47,
+		MeshMessageDeliveriesWindow:     2 * time.Second,
+		MeshMessageDeliveriesActivation: 32 * oneSlotDuration(),
+		MeshFailurePenaltyWeight:        -0.064,
+		MeshFailurePenaltyDecay:         0.866,
+		InvalidMessageDeliveriesWeight:  -140.4475,
+		InvalidMessageDeliveriesDecay:   0.9971,
 	}
+}
+
+func oneSlotDuration() time.Duration {
+	return time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+}
+
+func oneEpochDuration() time.Duration {
+	return time.Duration(params.BeaconConfig().SlotsPerEpoch) * oneSlotDuration()
 }
