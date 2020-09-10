@@ -90,7 +90,7 @@ func CopyFile(src, dst string) error {
 
 	err = ioutil.WriteFile(dst, input, params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
-		err := errors.Wrapf(err, "Error creating file: %s", dst)
+		err := errors.Wrapf(err, "error creating file %s", dst)
 		return err
 	}
 	return nil
