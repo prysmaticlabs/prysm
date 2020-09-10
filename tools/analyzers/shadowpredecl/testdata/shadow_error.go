@@ -10,7 +10,7 @@ func TypeAlias() {
 	type error string // want "Type 'error' shadows a predeclared identifier with the same name. Choose another name."
 }
 
-func UninitializedVar() {
+func UninitializedVarAndAssignments() {
 	var error int        // want "Identifier 'error' shadows a predeclared identifier with the same name. Choose another name."
 	error = 1            // No diagnostic because the original declaration already triggered one.
 	other, error := 0, 0 // No diagnostic because the original declaration already triggered one.
