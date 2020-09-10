@@ -114,6 +114,36 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	assert.ErrorContains(t, want, err)
 }
 
+func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
+	exits := []*ethpb.SignedVoluntaryExit{
+		{
+			Exit: &ethpb.VoluntaryExit{
+				Epoch: 10,
+			},
+		},
+	}
+	registry := []*ethpb.Validator{
+		{
+			ExitEpoch: 10,
+		},
+	}
+	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Validators: registry,
+		Slot:       0,
+	})
+	require.NoError(t, err)
+	b := testutil.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
+			VoluntaryExits: exits,
+		},
+	}
+
+	want := "validator has already submitted an exit, which will take place at epoch: 10"
+	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
+	assert.ErrorContains(t, want, err)
+}
+
 func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	exits := []*ethpb.SignedVoluntaryExit{
 		{
