@@ -137,6 +137,8 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 				return nil, err
 			}
 			config.Eth1PrivateKey = strings.TrimRight(string(fileBytes), "\r\n")
+		} else {
+			config.Eth1KeystoreUTCFile = flags.Eth1KeystoreUTCPathFlag.Name
 		}
 		return config, nil
 	}
