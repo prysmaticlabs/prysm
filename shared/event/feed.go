@@ -108,7 +108,7 @@ func (f *Feed) remove(sub *feedSub) {
 	f.mu.Lock()
 	index := f.inbox.find(ch)
 	if index != -1 {
-		f.inbox = f.inbox.delete(index)
+		f.inbox = f.inbox.remove(index)
 		f.mu.Unlock()
 		return
 	}
@@ -118,8 +118,8 @@ func (f *Feed) remove(sub *feedSub) {
 	case f.removeSub <- ch:
 		// Send will remove the channel from f.sendCases.
 	case <-f.sendLock:
-		// No Send is in progress, delete the channel now that we have the send lock.
-		f.sendCases = f.sendCases.delete(f.sendCases.find(ch))
+		// No Send is in progress, remove the channel now that we have the send lock.
+		f.sendCases = f.sendCases.remove(f.sendCases.find(ch))
 		f.sendLock <- struct{}{}
 	}
 }
@@ -170,7 +170,7 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 		chosen, recv, _ := reflect.Select(cases)
 		if chosen == 0 /* <-f.removeSub */ {
 			index := f.sendCases.find(recv.Interface())
-			f.sendCases = f.sendCases.delete(index)
+			f.sendCases = f.sendCases.remove(index)
 			if index >= 0 && index < len(cases) {
 				// Shrink 'cases' too because the removed case was still active.
 				cases = f.sendCases[:len(cases)-1]
@@ -219,8 +219,8 @@ func (cs caseList) find(channel interface{}) int {
 	return -1
 }
 
-// delete removes the given case from cs.
-func (cs caseList) delete(index int) caseList {
+// remove removes the given case from cs.
+func (cs caseList) remove(index int) caseList {
 	return append(cs[:index], cs[index+1:]...)
 }
 
