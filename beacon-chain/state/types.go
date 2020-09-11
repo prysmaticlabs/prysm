@@ -190,7 +190,7 @@ func newValHandler(vals []*ethpb.Validator) *validatorMapHandler {
 }
 
 // copies the whole map and returns a map handler with the copied map.
-func (v *validatorMapHandler) copy() *validatorMapHandler {
+func (v *validatorMapHandler) copyHandler() *validatorMapHandler {
 	if v == nil || v.valIdxMap == nil {
 		return &validatorMapHandler{valIdxMap: map[[48]byte]uint64{}, mapRef: new(reference)}
 	}

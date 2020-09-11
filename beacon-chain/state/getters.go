@@ -662,7 +662,7 @@ func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.valMapHandler.copy().valIdxMap
+	return b.valMapHandler.copyHandler().valIdxMap
 }
 
 // PubkeyAtIndex returns the pubkey at the given

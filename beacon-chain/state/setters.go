@@ -375,7 +375,7 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ui
 	defer b.lock.Unlock()
 
 	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
-		valMap := b.valMapHandler.copy()
+		valMap := b.valMapHandler.copyHandler()
 		ref.MinusRef()
 		b.valMapHandler = valMap
 	}
@@ -643,7 +643,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	// Copy if this is a shared validator map
 	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
-		valMap := b.valMapHandler.copy()
+		valMap := b.valMapHandler.copyHandler()
 		ref.MinusRef()
 		b.valMapHandler = valMap
 	}
