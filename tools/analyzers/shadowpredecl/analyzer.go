@@ -15,7 +15,7 @@ const Doc = "Tool to detect declarations that shadow predeclared identifiers by 
 
 const messageTemplate = "%s '%s' shadows a predeclared identifier with the same name. Choose another name."
 
-var predeclared = []string{"true", "false", "iota", "nil", "append", "cap", "close", "complex", "copy", "delete", "imag",
+var predeclared = []string{"true", "false", "iota", "nil", "append", "cap", "close", "complex" /*"copy",*/, "delete", "imag",
 	"len", "make", "new", "panic", "print", "println", "real", "recover", "bool", "complex128", "complex64",
 	"error", "float32", "int", "int16", "int32", "int64", "int8", "rune", "string", "uint", "uint16", "uint32",
 	"uint64", "uint8", "uintptr"}
