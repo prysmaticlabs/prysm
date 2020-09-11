@@ -29,7 +29,7 @@ const (
 	ConfirmPass
 )
 
-// PasswordReaderFunc takes in a file and returns a password using the terminal package
+// PasswordReaderFunc takes in a *file and returns a password using the terminal package
 func passwordReaderFunc(file *os.File) ([]byte, error) {
 	pass, err := terminal.ReadPassword(int(file.Fd()))
 	return pass, err
@@ -37,9 +37,6 @@ func passwordReaderFunc(file *os.File) ([]byte, error) {
 
 // PasswordReader has passwordReaderFunc as the default but can be changed for testing purposes.
 var PasswordReader func(file *os.File) ([]byte, error) = passwordReaderFunc
-
-// PasswordReader will default to terminal.ReadPassword but can be altered for testing purposes.
-//var PasswordReader func(fd int) ([]byte, error) = terminal.ReadPassword
 
 // ValidatePrompt requests the user for text and expects the user to fulfill the provided validation function.
 func ValidatePrompt(r io.Reader, promptText string, validateFunc func(string) error) (string, error) {
@@ -113,9 +110,6 @@ func PasswordPrompt(promptText string, validateFunc func(string) error) (string,
 	var response string
 	for !responseValid {
 		fmt.Printf("%s: ", au.Bold(promptText))
-
-		//term := terminal.NewTerminal(InputType,"")
-		//term := terminal.NewTerminal()
 		bytePassword, err := PasswordReader(os.Stdin)
 		if err != nil {
 			return "", err
