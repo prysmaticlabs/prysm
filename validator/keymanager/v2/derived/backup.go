@@ -22,7 +22,7 @@ func (dr *Keymanager) ExtractKeystores(
 	keystores := make([]*v2keymanager.Keystore, len(publicKeys))
 	for i, pk := range publicKeys {
 		pubKeyBytes := pk.Marshal()
-		secretKey, ok := dr.keysCache[bytesutil.ToBytes48(pubKeyBytes)]
+		secretKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
 		if !ok {
 			return nil, fmt.Errorf(
 				"secret key for public key %#x not found in cache",

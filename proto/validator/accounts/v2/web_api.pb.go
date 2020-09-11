@@ -56,57 +56,18 @@ func (CreateWalletRequest_KeymanagerKind) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_8a5153635bfe042e, []int{0, 0}
 }
 
-type ListStatusesResponse_ValidatorStatus int32
-
-const (
-	ListStatusesResponse_UNKNOWN_STATUS ListStatusesResponse_ValidatorStatus = 0
-	ListStatusesResponse_DEPOSITED      ListStatusesResponse_ValidatorStatus = 1
-	ListStatusesResponse_PENDING        ListStatusesResponse_ValidatorStatus = 2
-	ListStatusesResponse_ACTIVE         ListStatusesResponse_ValidatorStatus = 3
-	ListStatusesResponse_EXITING        ListStatusesResponse_ValidatorStatus = 4
-	ListStatusesResponse_SLASHING       ListStatusesResponse_ValidatorStatus = 5
-	ListStatusesResponse_EXITED         ListStatusesResponse_ValidatorStatus = 6
-	ListStatusesResponse_INVALID        ListStatusesResponse_ValidatorStatus = 7
-)
-
-var ListStatusesResponse_ValidatorStatus_name = map[int32]string{
-	0: "UNKNOWN_STATUS",
-	1: "DEPOSITED",
-	2: "PENDING",
-	3: "ACTIVE",
-	4: "EXITING",
-	5: "SLASHING",
-	6: "EXITED",
-	7: "INVALID",
-}
-
-var ListStatusesResponse_ValidatorStatus_value = map[string]int32{
-	"UNKNOWN_STATUS": 0,
-	"DEPOSITED":      1,
-	"PENDING":        2,
-	"ACTIVE":         3,
-	"EXITING":        4,
-	"SLASHING":       5,
-	"EXITED":         6,
-	"INVALID":        7,
-}
-
-func (x ListStatusesResponse_ValidatorStatus) String() string {
-	return proto.EnumName(ListStatusesResponse_ValidatorStatus_name, int32(x))
-}
-
-func (ListStatusesResponse_ValidatorStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{9, 0}
-}
-
 type CreateWalletRequest struct {
 	WalletPath           string                             `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
 	Keymanager           CreateWalletRequest_KeymanagerKind `protobuf:"varint,2,opt,name=keymanager,proto3,enum=ethereum.validator.accounts.v2.CreateWalletRequest_KeymanagerKind" json:"keymanager,omitempty"`
 	WalletPassword       string                             `protobuf:"bytes,3,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
-	RemoteAddr           string                             `protobuf:"bytes,4,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
-	RemoteCrtPath        string                             `protobuf:"bytes,5,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
-	RemoteKeyPath        string                             `protobuf:"bytes,6,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
-	RemoteCaCrtPath      string                             `protobuf:"bytes,7,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
+	Mnemonic             string                             `protobuf:"bytes,4,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
+	NumAccounts          uint64                             `protobuf:"varint,5,opt,name=num_accounts,json=numAccounts,proto3" json:"num_accounts,omitempty"`
+	KeystoresImported    []string                           `protobuf:"bytes,6,rep,name=keystores_imported,json=keystoresImported,proto3" json:"keystores_imported,omitempty"`
+	KeystoresPassword    string                             `protobuf:"bytes,7,opt,name=keystores_password,json=keystoresPassword,proto3" json:"keystores_password,omitempty"`
+	RemoteAddr           string                             `protobuf:"bytes,8,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
+	RemoteCrtPath        string                             `protobuf:"bytes,9,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
+	RemoteKeyPath        string                             `protobuf:"bytes,10,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
+	RemoteCaCrtPath      string                             `protobuf:"bytes,11,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
 	XXX_unrecognized     []byte                             `json:"-"`
 	XXX_sizecache        int32                              `json:"-"`
@@ -162,6 +123,34 @@ func (m *CreateWalletRequest) GetKeymanager() CreateWalletRequest_KeymanagerKind
 func (m *CreateWalletRequest) GetWalletPassword() string {
 	if m != nil {
 		return m.WalletPassword
+	}
+	return ""
+}
+
+func (m *CreateWalletRequest) GetMnemonic() string {
+	if m != nil {
+		return m.Mnemonic
+	}
+	return ""
+}
+
+func (m *CreateWalletRequest) GetNumAccounts() uint64 {
+	if m != nil {
+		return m.NumAccounts
+	}
+	return 0
+}
+
+func (m *CreateWalletRequest) GetKeystoresImported() []string {
+	if m != nil {
+		return m.KeystoresImported
+	}
+	return nil
+}
+
+func (m *CreateWalletRequest) GetKeystoresPassword() string {
+	if m != nil {
+		return m.KeystoresPassword
 	}
 	return ""
 }
@@ -265,6 +254,53 @@ func (m *EditWalletConfigRequest) GetRemoteCaCrtPath() string {
 	return ""
 }
 
+type GenerateMnemonicResponse struct {
+	Mnemonic             string   `protobuf:"bytes,1,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GenerateMnemonicResponse) Reset()         { *m = GenerateMnemonicResponse{} }
+func (m *GenerateMnemonicResponse) String() string { return proto.CompactTextString(m) }
+func (*GenerateMnemonicResponse) ProtoMessage()    {}
+func (*GenerateMnemonicResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{2}
+}
+func (m *GenerateMnemonicResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GenerateMnemonicResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GenerateMnemonicResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GenerateMnemonicResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenerateMnemonicResponse.Merge(m, src)
+}
+func (m *GenerateMnemonicResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GenerateMnemonicResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenerateMnemonicResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GenerateMnemonicResponse proto.InternalMessageInfo
+
+func (m *GenerateMnemonicResponse) GetMnemonic() string {
+	if m != nil {
+		return m.Mnemonic
+	}
+	return ""
+}
+
 type WalletResponse struct {
 	WalletPath           string                           `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
 	KeymanagerConfig     *WalletResponse_KeymanagerConfig `protobuf:"bytes,2,opt,name=keymanager_config,json=keymanagerConfig,proto3" json:"keymanager_config,omitempty"`
@@ -277,7 +313,7 @@ func (m *WalletResponse) Reset()         { *m = WalletResponse{} }
 func (m *WalletResponse) String() string { return proto.CompactTextString(m) }
 func (*WalletResponse) ProtoMessage()    {}
 func (*WalletResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{2}
+	return fileDescriptor_8a5153635bfe042e, []int{3}
 }
 func (m *WalletResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -331,7 +367,7 @@ func (m *WalletResponse_KeymanagerConfig) Reset()         { *m = WalletResponse_
 func (m *WalletResponse_KeymanagerConfig) String() string { return proto.CompactTextString(m) }
 func (*WalletResponse_KeymanagerConfig) ProtoMessage()    {}
 func (*WalletResponse_KeymanagerConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{2, 0}
+	return fileDescriptor_8a5153635bfe042e, []int{3, 0}
 }
 func (m *WalletResponse_KeymanagerConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -378,7 +414,7 @@ func (m *CreateAccountResponse) Reset()         { *m = CreateAccountResponse{} }
 func (m *CreateAccountResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateAccountResponse) ProtoMessage()    {}
 func (*CreateAccountResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{3}
+	return fileDescriptor_8a5153635bfe042e, []int{4}
 }
 func (m *CreateAccountResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -425,7 +461,7 @@ func (m *ListAccountsRequest) Reset()         { *m = ListAccountsRequest{} }
 func (m *ListAccountsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListAccountsRequest) ProtoMessage()    {}
 func (*ListAccountsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{4}
+	return fileDescriptor_8a5153635bfe042e, []int{5}
 }
 func (m *ListAccountsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -472,7 +508,7 @@ func (m *ListAccountsResponse) Reset()         { *m = ListAccountsResponse{} }
 func (m *ListAccountsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListAccountsResponse) ProtoMessage()    {}
 func (*ListAccountsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{5}
+	return fileDescriptor_8a5153635bfe042e, []int{6}
 }
 func (m *ListAccountsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -522,7 +558,7 @@ func (m *Account) Reset()         { *m = Account{} }
 func (m *Account) String() string { return proto.CompactTextString(m) }
 func (*Account) ProtoMessage()    {}
 func (*Account) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{6}
+	return fileDescriptor_8a5153635bfe042e, []int{7}
 }
 func (m *Account) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -591,7 +627,7 @@ func (m *AccountRequest) Reset()         { *m = AccountRequest{} }
 func (m *AccountRequest) String() string { return proto.CompactTextString(m) }
 func (*AccountRequest) ProtoMessage()    {}
 func (*AccountRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{7}
+	return fileDescriptor_8a5153635bfe042e, []int{8}
 }
 func (m *AccountRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -634,250 +670,6 @@ func (m *AccountRequest) GetIndices() []uint64 {
 	return nil
 }
 
-type ListBalancesResponse struct {
-	PublicKeys           [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
-	Indices              []uint64 `protobuf:"varint,2,rep,packed,name=indices,proto3" json:"indices,omitempty"`
-	Balances             []uint64 `protobuf:"varint,3,rep,packed,name=balances,proto3" json:"balances,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ListBalancesResponse) Reset()         { *m = ListBalancesResponse{} }
-func (m *ListBalancesResponse) String() string { return proto.CompactTextString(m) }
-func (*ListBalancesResponse) ProtoMessage()    {}
-func (*ListBalancesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{8}
-}
-func (m *ListBalancesResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ListBalancesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ListBalancesResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ListBalancesResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListBalancesResponse.Merge(m, src)
-}
-func (m *ListBalancesResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *ListBalancesResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListBalancesResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ListBalancesResponse proto.InternalMessageInfo
-
-func (m *ListBalancesResponse) GetPublicKeys() [][]byte {
-	if m != nil {
-		return m.PublicKeys
-	}
-	return nil
-}
-
-func (m *ListBalancesResponse) GetIndices() []uint64 {
-	if m != nil {
-		return m.Indices
-	}
-	return nil
-}
-
-func (m *ListBalancesResponse) GetBalances() []uint64 {
-	if m != nil {
-		return m.Balances
-	}
-	return nil
-}
-
-type ListStatusesResponse struct {
-	PublicKeys           [][]byte                               `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
-	Indices              []uint64                               `protobuf:"varint,2,rep,packed,name=indices,proto3" json:"indices,omitempty"`
-	Statuses             []ListStatusesResponse_ValidatorStatus `protobuf:"varint,3,rep,packed,name=statuses,proto3,enum=ethereum.validator.accounts.v2.ListStatusesResponse_ValidatorStatus" json:"statuses,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                               `json:"-"`
-	XXX_unrecognized     []byte                                 `json:"-"`
-	XXX_sizecache        int32                                  `json:"-"`
-}
-
-func (m *ListStatusesResponse) Reset()         { *m = ListStatusesResponse{} }
-func (m *ListStatusesResponse) String() string { return proto.CompactTextString(m) }
-func (*ListStatusesResponse) ProtoMessage()    {}
-func (*ListStatusesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{9}
-}
-func (m *ListStatusesResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ListStatusesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ListStatusesResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ListStatusesResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListStatusesResponse.Merge(m, src)
-}
-func (m *ListStatusesResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *ListStatusesResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListStatusesResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ListStatusesResponse proto.InternalMessageInfo
-
-func (m *ListStatusesResponse) GetPublicKeys() [][]byte {
-	if m != nil {
-		return m.PublicKeys
-	}
-	return nil
-}
-
-func (m *ListStatusesResponse) GetIndices() []uint64 {
-	if m != nil {
-		return m.Indices
-	}
-	return nil
-}
-
-func (m *ListStatusesResponse) GetStatuses() []ListStatusesResponse_ValidatorStatus {
-	if m != nil {
-		return m.Statuses
-	}
-	return nil
-}
-
-type ListPerformanceResponse struct {
-	PublicKeys           [][]byte                              `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
-	Indices              []uint64                              `protobuf:"varint,2,rep,packed,name=indices,proto3" json:"indices,omitempty"`
-	Submissions          []*ListPerformanceResponse_Submission `protobuf:"bytes,3,rep,name=submissions,proto3" json:"submissions,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                              `json:"-"`
-	XXX_unrecognized     []byte                                `json:"-"`
-	XXX_sizecache        int32                                 `json:"-"`
-}
-
-func (m *ListPerformanceResponse) Reset()         { *m = ListPerformanceResponse{} }
-func (m *ListPerformanceResponse) String() string { return proto.CompactTextString(m) }
-func (*ListPerformanceResponse) ProtoMessage()    {}
-func (*ListPerformanceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{10}
-}
-func (m *ListPerformanceResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ListPerformanceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ListPerformanceResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ListPerformanceResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListPerformanceResponse.Merge(m, src)
-}
-func (m *ListPerformanceResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *ListPerformanceResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListPerformanceResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ListPerformanceResponse proto.InternalMessageInfo
-
-func (m *ListPerformanceResponse) GetPublicKeys() [][]byte {
-	if m != nil {
-		return m.PublicKeys
-	}
-	return nil
-}
-
-func (m *ListPerformanceResponse) GetIndices() []uint64 {
-	if m != nil {
-		return m.Indices
-	}
-	return nil
-}
-
-func (m *ListPerformanceResponse) GetSubmissions() []*ListPerformanceResponse_Submission {
-	if m != nil {
-		return m.Submissions
-	}
-	return nil
-}
-
-type ListPerformanceResponse_Submission struct {
-	BlockCount           uint64   `protobuf:"varint,1,opt,name=block_count,json=blockCount,proto3" json:"block_count,omitempty"`
-	AttestationCount     uint64   `protobuf:"varint,2,opt,name=attestation_count,json=attestationCount,proto3" json:"attestation_count,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ListPerformanceResponse_Submission) Reset()         { *m = ListPerformanceResponse_Submission{} }
-func (m *ListPerformanceResponse_Submission) String() string { return proto.CompactTextString(m) }
-func (*ListPerformanceResponse_Submission) ProtoMessage()    {}
-func (*ListPerformanceResponse_Submission) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{10, 0}
-}
-func (m *ListPerformanceResponse_Submission) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ListPerformanceResponse_Submission) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ListPerformanceResponse_Submission.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ListPerformanceResponse_Submission) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListPerformanceResponse_Submission.Merge(m, src)
-}
-func (m *ListPerformanceResponse_Submission) XXX_Size() int {
-	return m.Size()
-}
-func (m *ListPerformanceResponse_Submission) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListPerformanceResponse_Submission.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ListPerformanceResponse_Submission proto.InternalMessageInfo
-
-func (m *ListPerformanceResponse_Submission) GetBlockCount() uint64 {
-	if m != nil {
-		return m.BlockCount
-	}
-	return 0
-}
-
-func (m *ListPerformanceResponse_Submission) GetAttestationCount() uint64 {
-	if m != nil {
-		return m.AttestationCount
-	}
-	return 0
-}
-
 type AuthRequest struct {
 	Password             string   `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -889,7 +681,7 @@ func (m *AuthRequest) Reset()         { *m = AuthRequest{} }
 func (m *AuthRequest) String() string { return proto.CompactTextString(m) }
 func (*AuthRequest) ProtoMessage()    {}
 func (*AuthRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{11}
+	return fileDescriptor_8a5153635bfe042e, []int{9}
 }
 func (m *AuthRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -937,7 +729,7 @@ func (m *AuthResponse) Reset()         { *m = AuthResponse{} }
 func (m *AuthResponse) String() string { return proto.CompactTextString(m) }
 func (*AuthResponse) ProtoMessage()    {}
 func (*AuthResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{12}
+	return fileDescriptor_8a5153635bfe042e, []int{10}
 }
 func (m *AuthResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -980,11 +772,90 @@ func (m *AuthResponse) GetTokenExpiration() uint64 {
 	return 0
 }
 
+type NodeConnectionResponse struct {
+	BeaconNodeEndpoint     string   `protobuf:"bytes,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
+	Connected              bool     `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
+	Syncing                bool     `protobuf:"varint,3,opt,name=syncing,proto3" json:"syncing,omitempty"`
+	GenesisTime            uint64   `protobuf:"varint,4,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	DepositContractAddress []byte   `protobuf:"bytes,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
+	XXX_NoUnkeyedLiteral   struct{} `json:"-"`
+	XXX_unrecognized       []byte   `json:"-"`
+	XXX_sizecache          int32    `json:"-"`
+}
+
+func (m *NodeConnectionResponse) Reset()         { *m = NodeConnectionResponse{} }
+func (m *NodeConnectionResponse) String() string { return proto.CompactTextString(m) }
+func (*NodeConnectionResponse) ProtoMessage()    {}
+func (*NodeConnectionResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{11}
+}
+func (m *NodeConnectionResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *NodeConnectionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_NodeConnectionResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *NodeConnectionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NodeConnectionResponse.Merge(m, src)
+}
+func (m *NodeConnectionResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *NodeConnectionResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_NodeConnectionResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NodeConnectionResponse proto.InternalMessageInfo
+
+func (m *NodeConnectionResponse) GetBeaconNodeEndpoint() string {
+	if m != nil {
+		return m.BeaconNodeEndpoint
+	}
+	return ""
+}
+
+func (m *NodeConnectionResponse) GetConnected() bool {
+	if m != nil {
+		return m.Connected
+	}
+	return false
+}
+
+func (m *NodeConnectionResponse) GetSyncing() bool {
+	if m != nil {
+		return m.Syncing
+	}
+	return false
+}
+
+func (m *NodeConnectionResponse) GetGenesisTime() uint64 {
+	if m != nil {
+		return m.GenesisTime
+	}
+	return 0
+}
+
+func (m *NodeConnectionResponse) GetDepositContractAddress() []byte {
+	if m != nil {
+		return m.DepositContractAddress
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterEnum("ethereum.validator.accounts.v2.CreateWalletRequest_KeymanagerKind", CreateWalletRequest_KeymanagerKind_name, CreateWalletRequest_KeymanagerKind_value)
-	proto.RegisterEnum("ethereum.validator.accounts.v2.ListStatusesResponse_ValidatorStatus", ListStatusesResponse_ValidatorStatus_name, ListStatusesResponse_ValidatorStatus_value)
 	proto.RegisterType((*CreateWalletRequest)(nil), "ethereum.validator.accounts.v2.CreateWalletRequest")
 	proto.RegisterType((*EditWalletConfigRequest)(nil), "ethereum.validator.accounts.v2.EditWalletConfigRequest")
+	proto.RegisterType((*GenerateMnemonicResponse)(nil), "ethereum.validator.accounts.v2.GenerateMnemonicResponse")
 	proto.RegisterType((*WalletResponse)(nil), "ethereum.validator.accounts.v2.WalletResponse")
 	proto.RegisterType((*WalletResponse_KeymanagerConfig)(nil), "ethereum.validator.accounts.v2.WalletResponse.KeymanagerConfig")
 	proto.RegisterMapType((map[string]string)(nil), "ethereum.validator.accounts.v2.WalletResponse.KeymanagerConfig.ConfigsEntry")
@@ -993,12 +864,9 @@ func init() {
 	proto.RegisterType((*ListAccountsResponse)(nil), "ethereum.validator.accounts.v2.ListAccountsResponse")
 	proto.RegisterType((*Account)(nil), "ethereum.validator.accounts.v2.Account")
 	proto.RegisterType((*AccountRequest)(nil), "ethereum.validator.accounts.v2.AccountRequest")
-	proto.RegisterType((*ListBalancesResponse)(nil), "ethereum.validator.accounts.v2.ListBalancesResponse")
-	proto.RegisterType((*ListStatusesResponse)(nil), "ethereum.validator.accounts.v2.ListStatusesResponse")
-	proto.RegisterType((*ListPerformanceResponse)(nil), "ethereum.validator.accounts.v2.ListPerformanceResponse")
-	proto.RegisterType((*ListPerformanceResponse_Submission)(nil), "ethereum.validator.accounts.v2.ListPerformanceResponse.Submission")
 	proto.RegisterType((*AuthRequest)(nil), "ethereum.validator.accounts.v2.AuthRequest")
 	proto.RegisterType((*AuthResponse)(nil), "ethereum.validator.accounts.v2.AuthResponse")
+	proto.RegisterType((*NodeConnectionResponse)(nil), "ethereum.validator.accounts.v2.NodeConnectionResponse")
 }
 
 func init() {
@@ -1006,89 +874,87 @@ func init() {
 }
 
 var fileDescriptor_8a5153635bfe042e = []byte{
-	// 1304 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x96, 0x41, 0x6f, 0x1b, 0xc5,
-	0x17, 0xc0, 0xbb, 0xeb, 0xc4, 0x76, 0x9f, 0x1d, 0x67, 0x3b, 0x49, 0x5b, 0xff, 0xdd, 0x36, 0xcd,
-	0x7f, 0x11, 0x6d, 0xda, 0xc0, 0x5a, 0x72, 0xa9, 0x8a, 0x72, 0x41, 0xae, 0xbd, 0xa2, 0x56, 0x82,
-	0x13, 0xad, 0xdd, 0x14, 0x95, 0xc3, 0x32, 0xf6, 0x4e, 0x9c, 0x55, 0xec, 0x5d, 0xb3, 0x3b, 0x4e,
-	0x6b, 0x71, 0xa2, 0xe2, 0xc0, 0x19, 0x10, 0x02, 0x21, 0x71, 0xe0, 0x1b, 0xf4, 0x42, 0xbf, 0x42,
-	0x8f, 0x48, 0x1c, 0xe0, 0x88, 0x2a, 0x3e, 0x08, 0xda, 0x99, 0xd9, 0xf5, 0xda, 0x4a, 0x6a, 0x3b,
-	0xb4, 0x27, 0x7b, 0xde, 0x7b, 0xfb, 0xde, 0xef, 0xbd, 0x99, 0x79, 0x6f, 0xe0, 0x56, 0xdf, 0x73,
-	0xa9, 0x5b, 0x3c, 0xc6, 0x5d, 0xdb, 0xc2, 0xd4, 0xf5, 0x8a, 0xb8, 0xdd, 0x76, 0x07, 0x0e, 0xf5,
-	0x8b, 0xc7, 0xa5, 0xe2, 0x13, 0xd2, 0x32, 0x71, 0xdf, 0xd6, 0x98, 0x0d, 0x5a, 0x23, 0xf4, 0x90,
-	0x78, 0x64, 0xd0, 0xd3, 0x22, 0x6b, 0x2d, 0xb4, 0xd6, 0x8e, 0x4b, 0x85, 0xab, 0x1d, 0xd7, 0xed,
-	0x74, 0x49, 0x11, 0xf7, 0xed, 0x22, 0x76, 0x1c, 0x97, 0x62, 0x6a, 0xbb, 0x8e, 0xcf, 0xbf, 0x2e,
-	0x5c, 0x11, 0x5a, 0xb6, 0x6a, 0x0d, 0x0e, 0x8a, 0xa4, 0xd7, 0xa7, 0x43, 0xae, 0x54, 0x7f, 0x4c,
-	0xc0, 0x4a, 0xc5, 0x23, 0x98, 0x92, 0x47, 0xb8, 0xdb, 0x25, 0xd4, 0x20, 0x5f, 0x0c, 0x88, 0x4f,
-	0xd1, 0x75, 0xc8, 0x3c, 0x61, 0x02, 0xb3, 0x8f, 0xe9, 0x61, 0x5e, 0x5a, 0x97, 0x36, 0xce, 0x1b,
-	0xc0, 0x45, 0x7b, 0x98, 0x1e, 0xa2, 0x16, 0xc0, 0x11, 0x19, 0xf6, 0xb0, 0x83, 0x3b, 0xc4, 0xcb,
-	0xcb, 0xeb, 0xd2, 0x46, 0xae, 0x74, 0x5f, 0x7b, 0x3d, 0xa8, 0x76, 0x42, 0x24, 0x6d, 0x3b, 0xf2,
-	0xb2, 0x6d, 0x3b, 0x96, 0x11, 0xf3, 0x8a, 0x6e, 0xc2, 0x72, 0x04, 0xe1, 0xfb, 0x4f, 0x5c, 0xcf,
-	0xca, 0x27, 0x18, 0x48, 0x2e, 0x04, 0xe1, 0xd2, 0x80, 0xd6, 0x23, 0x3d, 0x97, 0x12, 0x13, 0x5b,
-	0x96, 0x97, 0x5f, 0xe0, 0xb4, 0x5c, 0x54, 0xb6, 0x2c, 0x0f, 0xdd, 0x80, 0x65, 0x61, 0xd0, 0xf6,
-	0x44, 0x4a, 0x8b, 0xcc, 0x68, 0x89, 0x8b, 0x2b, 0x1e, 0xcf, 0x6a, 0x64, 0x77, 0x44, 0x86, 0xdc,
-	0x2e, 0x19, 0xb7, 0xdb, 0x26, 0x43, 0x66, 0xb7, 0x09, 0x28, 0xf4, 0x87, 0x47, 0x2e, 0x53, 0xcc,
-	0x54, 0x78, 0xa8, 0x60, 0xe1, 0x54, 0xbd, 0x0b, 0xb9, 0xf1, 0x24, 0x51, 0x06, 0x52, 0x55, 0xdd,
-	0xa8, 0xed, 0xeb, 0x55, 0xe5, 0x1c, 0x02, 0x48, 0x56, 0x6b, 0x86, 0x5e, 0x69, 0x2a, 0x52, 0xf0,
-	0xdf, 0xd0, 0x3f, 0xd9, 0x6d, 0xea, 0x8a, 0xac, 0xbe, 0x90, 0xe0, 0xb2, 0x6e, 0xd9, 0x94, 0x97,
-	0xab, 0xe2, 0x3a, 0x07, 0x76, 0x27, 0xb6, 0x3d, 0xf1, 0x84, 0xa5, 0x59, 0x12, 0x96, 0x67, 0x4c,
-	0x38, 0x31, 0x7b, 0xc2, 0x0b, 0x27, 0x27, 0xfc, 0x97, 0x0c, 0xb9, 0x70, 0x93, 0xfd, 0xbe, 0xeb,
-	0xf8, 0x64, 0xfa, 0x79, 0xea, 0xc2, 0x85, 0xd1, 0xce, 0x9b, 0x6d, 0x96, 0x2d, 0x43, 0xce, 0x94,
-	0x3e, 0x9a, 0x76, 0xac, 0xc6, 0x63, 0xc5, 0x4e, 0x94, 0x28, 0x9a, 0x72, 0x34, 0x21, 0x29, 0xfc,
-	0x26, 0x81, 0x32, 0x69, 0x86, 0x0e, 0x20, 0xc5, 0xe3, 0xfa, 0x79, 0x69, 0x3d, 0xb1, 0x91, 0x29,
-	0xed, 0xfc, 0xc7, 0xc0, 0x1a, 0xff, 0xf1, 0x75, 0x87, 0x7a, 0x43, 0x23, 0x74, 0x5e, 0xd8, 0x82,
-	0x6c, 0x5c, 0x81, 0x14, 0x48, 0x1c, 0x91, 0xa1, 0xa8, 0x49, 0xf0, 0x17, 0xad, 0xc2, 0xe2, 0x31,
-	0xee, 0x0e, 0x88, 0xd8, 0x33, 0xbe, 0xd8, 0x92, 0x3f, 0x94, 0xd4, 0xc7, 0x70, 0x91, 0x5f, 0xa2,
-	0x32, 0xc7, 0x88, 0x0a, 0x5c, 0x86, 0x94, 0x20, 0x63, 0x8e, 0x32, 0xa5, 0x9b, 0xd3, 0xe0, 0x43,
-	0x0f, 0xe1, 0x77, 0x6a, 0x15, 0x56, 0x76, 0x6c, 0x9f, 0x0a, 0xb9, 0x1f, 0x9e, 0xb5, 0xf7, 0x61,
-	0xa5, 0x43, 0xa8, 0x69, 0x91, 0xbe, 0xeb, 0xdb, 0xd4, 0xa4, 0x4f, 0x4d, 0x0b, 0x53, 0xcc, 0xa2,
-	0xa4, 0x0d, 0xa5, 0x43, 0x68, 0x95, 0x6b, 0x9a, 0x4f, 0xab, 0x98, 0x62, 0xf5, 0x33, 0x58, 0x1d,
-	0xf7, 0x22, 0x00, 0x2b, 0x90, 0x0e, 0xa3, 0x8b, 0xf2, 0xce, 0x4c, 0x18, 0x7d, 0xa8, 0x3e, 0x97,
-	0x20, 0x25, 0xa4, 0xa8, 0x04, 0x17, 0xc5, 0x67, 0xb6, 0xd3, 0x31, 0xfb, 0x83, 0x56, 0xd7, 0x6e,
-	0x9b, 0x61, 0x21, 0xb3, 0xc6, 0xca, 0x48, 0xb9, 0xc7, 0x74, 0xdb, 0x64, 0x88, 0xfe, 0x0f, 0x59,
-	0xe1, 0xcb, 0x74, 0x70, 0x2f, 0xac, 0x6f, 0x46, 0xc8, 0xea, 0xb8, 0x47, 0x82, 0x1b, 0x31, 0x99,
-	0x6a, 0x82, 0x39, 0x5c, 0xb2, 0xe2, 0x79, 0x06, 0xcd, 0xc9, 0x22, 0x9e, 0x7d, 0xcc, 0x7a, 0x6d,
-	0xfc, 0x3a, 0xe4, 0x46, 0x62, 0x76, 0x1b, 0xb6, 0x21, 0x17, 0x6d, 0x56, 0x74, 0x7b, 0x47, 0xb8,
-	0xbc, 0x1a, 0x59, 0x03, 0xfa, 0x21, 0xa5, 0x8f, 0xf2, 0x90, 0xb2, 0x1d, 0xcb, 0x6e, 0x13, 0x3f,
-	0x2f, 0xaf, 0x27, 0x36, 0x16, 0x8c, 0x70, 0xa9, 0xf6, 0x78, 0x75, 0xef, 0xe3, 0x2e, 0x76, 0xda,
-	0xc4, 0x8f, 0xdf, 0xaf, 0x33, 0xba, 0x44, 0x05, 0x48, 0xb7, 0x84, 0xbb, 0x7c, 0x82, 0xa9, 0xa2,
-	0xb5, 0xfa, 0x42, 0xe6, 0xf1, 0x1a, 0x14, 0xd3, 0x81, 0xff, 0x66, 0xe2, 0x7d, 0x0e, 0x69, 0x5f,
-	0xb8, 0x63, 0xf1, 0x72, 0xa5, 0xea, 0xb4, 0x83, 0x70, 0x12, 0x82, 0xb6, 0x1f, 0x9a, 0x72, 0x8d,
-	0x11, 0x79, 0x55, 0xbf, 0x92, 0x60, 0x79, 0x42, 0x8b, 0x10, 0xe4, 0x1e, 0xd6, 0xb7, 0xeb, 0xbb,
-	0x8f, 0xea, 0x66, 0xa3, 0x59, 0x6e, 0x3e, 0x6c, 0x28, 0xe7, 0xd0, 0x12, 0x9c, 0xaf, 0xea, 0x7b,
-	0xbb, 0x8d, 0x5a, 0x53, 0xaf, 0x2a, 0x52, 0xd0, 0x95, 0xf7, 0xf4, 0x7a, 0xb5, 0x56, 0xff, 0x58,
-	0x91, 0x83, 0x4e, 0x5c, 0xae, 0x34, 0x6b, 0xfb, 0xba, 0x92, 0x08, 0x14, 0xfa, 0xa7, 0xb5, 0x66,
-	0xa0, 0x58, 0x40, 0x59, 0x48, 0x37, 0x76, 0xca, 0x8d, 0x07, 0xc1, 0x6a, 0x31, 0x30, 0x0b, 0x54,
-	0x7a, 0x55, 0x49, 0x06, 0x66, 0xb5, 0xfa, 0x7e, 0x79, 0xa7, 0x56, 0x55, 0x52, 0xea, 0x0f, 0x32,
-	0x5c, 0x0e, 0xb0, 0xf7, 0x88, 0x77, 0xe0, 0x7a, 0xbd, 0xa0, 0x9c, 0x6f, 0xa2, 0x78, 0x16, 0x64,
-	0xfc, 0x41, 0xab, 0x67, 0xfb, 0x7e, 0x30, 0xe1, 0x59, 0xfd, 0x32, 0xd3, 0xe7, 0xee, 0x29, 0x20,
-	0x5a, 0x23, 0x72, 0x65, 0xc4, 0xdd, 0x16, 0x1e, 0x03, 0x8c, 0x54, 0x01, 0x6e, 0xab, 0xeb, 0xb6,
-	0x8f, 0xcc, 0x51, 0x7b, 0x59, 0x30, 0x80, 0x89, 0x2a, 0xec, 0x26, 0x6e, 0xc2, 0x05, 0x4c, 0x29,
-	0xf1, 0xf9, 0xbb, 0x43, 0x98, 0xc9, 0xcc, 0x4c, 0x89, 0x29, 0x98, 0xb1, 0x7a, 0x0b, 0x32, 0xe5,
-	0x01, 0x3d, 0x0c, 0xef, 0x42, 0x01, 0xd2, 0xd1, 0x70, 0xe7, 0x1d, 0x30, 0x5a, 0xab, 0xbb, 0x90,
-	0xe5, 0xa6, 0xa2, 0x6e, 0xab, 0xb0, 0x48, 0xdd, 0x23, 0xe2, 0x08, 0x43, 0xbe, 0x40, 0xb7, 0x40,
-	0x61, 0x7f, 0x4c, 0xf2, 0xb4, 0x6f, 0x7b, 0x2c, 0x92, 0x08, 0xbe, 0xcc, 0xe4, 0x7a, 0x24, 0x2e,
-	0xbd, 0x4c, 0x40, 0x92, 0xf7, 0x6c, 0xf4, 0xb3, 0x04, 0xd9, 0xf8, 0x73, 0x04, 0xdd, 0x39, 0xc3,
-	0xe3, 0xa5, 0xa0, 0xcd, 0x37, 0x21, 0xd4, 0x1b, 0xcf, 0xfe, 0xf8, 0xe7, 0x3b, 0x79, 0x5d, 0xbd,
-	0x12, 0x3c, 0xf2, 0x46, 0x4f, 0x3f, 0x3e, 0x07, 0x8b, 0x6d, 0x16, 0x61, 0x4b, 0xba, 0x8d, 0x7e,
-	0x95, 0x00, 0x82, 0xd9, 0x2f, 0x26, 0xd3, 0xbd, 0x69, 0x61, 0x4e, 0x79, 0x27, 0xcc, 0xcd, 0xb7,
-	0xc9, 0xf8, 0xde, 0x55, 0xd7, 0x4f, 0xe6, 0x63, 0xbe, 0x8b, 0xc4, 0xb2, 0x69, 0x00, 0xf9, 0x25,
-	0x64, 0xe3, 0x31, 0xd1, 0x25, 0x8d, 0xbf, 0x34, 0xb5, 0xf0, 0xa5, 0xa9, 0xe9, 0xc1, 0x4b, 0x73,
-	0x6e, 0x88, 0x77, 0x18, 0xc4, 0x35, 0x74, 0xe5, 0x35, 0x10, 0xa5, 0xe7, 0x32, 0xa4, 0xc3, 0x19,
-	0x83, 0xbe, 0x91, 0x60, 0x69, 0x6c, 0x2c, 0x9e, 0xca, 0x72, 0x77, 0xb6, 0x5d, 0x9e, 0x98, 0xae,
-	0xea, 0x06, 0x43, 0x52, 0xd5, 0x6b, 0xe3, 0x48, 0xd1, 0x93, 0x7d, 0xb4, 0x73, 0x3f, 0x49, 0x90,
-	0x8d, 0xcf, 0xbf, 0xe9, 0xe7, 0xea, 0x84, 0x99, 0x5b, 0xf8, 0x60, 0xbe, 0x8f, 0x04, 0xe5, 0x1a,
-	0xa3, 0xcc, 0xa3, 0x4b, 0x27, 0x53, 0x96, 0xfe, 0x4c, 0x40, 0xf2, 0x01, 0xc1, 0x5d, 0x7a, 0x88,
-	0xbe, 0x17, 0x98, 0xe1, 0x20, 0x41, 0xda, 0xac, 0xc3, 0x78, 0x1e, 0xc2, 0xc9, 0x31, 0x75, 0x1a,
-	0x61, 0x38, 0x6f, 0x22, 0xac, 0xb0, 0xd9, 0xbf, 0x1d, 0xac, 0xc9, 0x51, 0x72, 0x1a, 0x56, 0x38,
-	0x50, 0xd0, 0x2f, 0x12, 0x2c, 0x4f, 0xf4, 0xd0, 0xb9, 0xc9, 0xee, 0x9d, 0xb1, 0x49, 0xab, 0x2a,
-	0x83, 0xbb, 0x8a, 0x0a, 0xe3, 0x70, 0xfd, 0x91, 0xa9, 0x5f, 0xfa, 0x56, 0x86, 0x85, 0xa0, 0x55,
-	0xa2, 0x67, 0x12, 0x2c, 0xee, 0xb8, 0x1d, 0xdb, 0x41, 0x9b, 0x53, 0xf9, 0x46, 0x5d, 0xb8, 0xf0,
-	0xde, 0x6c, 0xc6, 0xe3, 0xe5, 0x52, 0x57, 0xc6, 0x89, 0xba, 0x41, 0xdc, 0xe0, 0x0e, 0x7c, 0x2d,
-	0x41, 0xb2, 0x61, 0x77, 0x9c, 0x41, 0xff, 0x6d, 0x52, 0x5c, 0x67, 0x14, 0xff, 0x53, 0x57, 0x27,
-	0x36, 0x8d, 0x05, 0xde, 0x92, 0x6e, 0xdf, 0xcf, 0xbe, 0x7c, 0xb5, 0x26, 0xfd, 0xfe, 0x6a, 0x4d,
-	0xfa, 0xfb, 0xd5, 0x9a, 0xd4, 0x4a, 0xb2, 0x4e, 0x70, 0xe7, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0xcf, 0x5d, 0xf4, 0x2a, 0x78, 0x0f, 0x00, 0x00,
+	// 1280 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0x4f, 0x6f, 0x1b, 0x45,
+	0x14, 0x67, 0x6c, 0x27, 0x71, 0x9e, 0xdd, 0xd4, 0x9d, 0xa4, 0xa9, 0x71, 0x4b, 0xe2, 0xae, 0xa0,
+	0x75, 0xff, 0xd9, 0xc8, 0xa5, 0xa5, 0xca, 0x05, 0xa5, 0x8e, 0x55, 0xaa, 0xf4, 0x9f, 0x96, 0x08,
+	0x24, 0x38, 0xac, 0x26, 0xbb, 0xaf, 0xce, 0x28, 0xde, 0xd9, 0x65, 0x77, 0x9c, 0xd6, 0xd7, 0x8a,
+	0x03, 0x17, 0x2e, 0x70, 0x40, 0x88, 0x5b, 0xbf, 0x41, 0x0f, 0xc0, 0x57, 0xe0, 0x08, 0xe2, 0xc2,
+	0x0d, 0x54, 0xf1, 0x41, 0xd0, 0xce, 0xcc, 0xae, 0xed, 0xc8, 0xc1, 0x09, 0x88, 0xd3, 0xee, 0xbc,
+	0xf7, 0x9b, 0xf7, 0x7e, 0xf3, 0xe6, 0xfd, 0x19, 0xb8, 0x12, 0x46, 0x81, 0x0c, 0x5a, 0x07, 0xac,
+	0xcf, 0x3d, 0x26, 0x83, 0xa8, 0xc5, 0x5c, 0x37, 0x18, 0x08, 0x19, 0xb7, 0x0e, 0xda, 0xad, 0x67,
+	0xb8, 0xeb, 0xb0, 0x90, 0x37, 0x15, 0x86, 0xae, 0xa1, 0xdc, 0xc3, 0x08, 0x07, 0x7e, 0x33, 0x43,
+	0x37, 0x53, 0x74, 0xf3, 0xa0, 0x5d, 0xbb, 0xd0, 0x0b, 0x82, 0x5e, 0x1f, 0x5b, 0x2c, 0xe4, 0x2d,
+	0x26, 0x44, 0x20, 0x99, 0xe4, 0x81, 0x88, 0xf5, 0xee, 0xda, 0x79, 0xa3, 0x55, 0xab, 0xdd, 0xc1,
+	0xd3, 0x16, 0xfa, 0xa1, 0x1c, 0x6a, 0xa5, 0xf5, 0x43, 0x01, 0x96, 0x3b, 0x11, 0x32, 0x89, 0x9f,
+	0xb0, 0x7e, 0x1f, 0xa5, 0x8d, 0x9f, 0x0f, 0x30, 0x96, 0x74, 0x1d, 0x4a, 0xcf, 0x94, 0xc0, 0x09,
+	0x99, 0xdc, 0xab, 0x92, 0x3a, 0x69, 0x2c, 0xda, 0xa0, 0x45, 0x4f, 0x98, 0xdc, 0xa3, 0xbb, 0x00,
+	0xfb, 0x38, 0xf4, 0x99, 0x60, 0x3d, 0x8c, 0xaa, 0xb9, 0x3a, 0x69, 0x2c, 0xb5, 0xef, 0x36, 0xff,
+	0x99, 0x68, 0x73, 0x8a, 0xa7, 0xe6, 0x76, 0x66, 0x65, 0x9b, 0x0b, 0xcf, 0x1e, 0xb3, 0x4a, 0x2f,
+	0xc3, 0xe9, 0x8c, 0x44, 0x1c, 0x3f, 0x0b, 0x22, 0xaf, 0x9a, 0x57, 0x44, 0x96, 0x52, 0x22, 0x5a,
+	0x4a, 0x6b, 0x50, 0xf4, 0x05, 0xfa, 0x81, 0xe0, 0x6e, 0xb5, 0xa0, 0x10, 0xd9, 0x9a, 0x5e, 0x84,
+	0xb2, 0x18, 0xf8, 0x4e, 0x4a, 0xa3, 0x3a, 0x57, 0x27, 0x8d, 0x82, 0x5d, 0x12, 0x03, 0x7f, 0xd3,
+	0x88, 0xe8, 0x0d, 0xa0, 0xfb, 0x38, 0x8c, 0x65, 0x10, 0x61, 0xec, 0x70, 0x3f, 0x0c, 0x22, 0x89,
+	0x5e, 0x75, 0xbe, 0x9e, 0x6f, 0x2c, 0xda, 0x67, 0x32, 0xcd, 0x7d, 0xa3, 0x98, 0x84, 0x67, 0xcc,
+	0x16, 0x94, 0xdf, 0x11, 0x3c, 0x23, 0xb7, 0x0e, 0xa5, 0x08, 0xfd, 0x40, 0xa2, 0xc3, 0x3c, 0x2f,
+	0xaa, 0x16, 0x75, 0x28, 0xb5, 0x68, 0xd3, 0xf3, 0x22, 0x7a, 0x09, 0x4e, 0x1b, 0x80, 0x1b, 0x99,
+	0x78, 0x2f, 0x2a, 0xd0, 0x29, 0x2d, 0xee, 0x44, 0x3a, 0xe4, 0x23, 0xdc, 0x3e, 0x0e, 0x35, 0x0e,
+	0xc6, 0x71, 0xdb, 0x38, 0x54, 0xb8, 0x6b, 0x40, 0x53, 0x7b, 0x6c, 0x64, 0xb2, 0xa4, 0xa0, 0xc6,
+	0x42, 0x87, 0x19, 0xa3, 0xd6, 0x2d, 0x58, 0x9a, 0xbc, 0x01, 0x5a, 0x82, 0x85, 0xad, 0xae, 0x7d,
+	0xff, 0xe3, 0xee, 0x56, 0xe5, 0x0d, 0x0a, 0x30, 0xbf, 0x75, 0xdf, 0xee, 0x76, 0x76, 0x2a, 0x24,
+	0xf9, 0xb7, 0xbb, 0x0f, 0x1f, 0xef, 0x74, 0x2b, 0x39, 0xeb, 0x27, 0x02, 0xe7, 0xba, 0x1e, 0x97,
+	0xfa, 0x2e, 0x3b, 0x81, 0x78, 0xca, 0x7b, 0x63, 0xb9, 0x33, 0x7e, 0x60, 0x72, 0x9c, 0x03, 0xe7,
+	0x8e, 0x79, 0xe0, 0xfc, 0xf1, 0x0f, 0x5c, 0x98, 0x7e, 0xe0, 0xdb, 0x50, 0xbd, 0x87, 0x02, 0x23,
+	0x26, 0xf1, 0xa1, 0xc9, 0x11, 0x1b, 0xe3, 0x30, 0x10, 0x31, 0x4e, 0xe4, 0x11, 0x99, 0xcc, 0x23,
+	0xeb, 0xf7, 0x1c, 0x2c, 0xa5, 0x99, 0x6b, 0xe0, 0x33, 0x8b, 0xa4, 0x0f, 0x67, 0x46, 0xe9, 0xec,
+	0xb8, 0x2a, 0x4a, 0xea, 0xa8, 0xa5, 0xf6, 0x07, 0xb3, 0x6a, 0x65, 0xd2, 0xd7, 0x58, 0x99, 0x98,
+	0x60, 0x57, 0xf6, 0x0f, 0x49, 0x6a, 0x3f, 0x12, 0xa8, 0x1c, 0x86, 0xd1, 0xa7, 0xb0, 0xa0, 0xfd,
+	0xc6, 0x55, 0x52, 0xcf, 0x37, 0x4a, 0xed, 0x07, 0xff, 0xd1, 0x71, 0x53, 0x7f, 0xe2, 0xae, 0x90,
+	0xd1, 0xd0, 0x4e, 0x8d, 0xd7, 0x36, 0xa0, 0x3c, 0xae, 0xa0, 0x15, 0xc8, 0xef, 0xe3, 0xd0, 0xc4,
+	0x24, 0xf9, 0xa5, 0x2b, 0x30, 0x77, 0xc0, 0xfa, 0x03, 0x34, 0x77, 0xad, 0x17, 0x1b, 0xb9, 0x3b,
+	0xc4, 0xfa, 0x14, 0xce, 0xea, 0xce, 0x60, 0x2a, 0x32, 0x0b, 0xf0, 0x26, 0x2c, 0x18, 0x66, 0xca,
+	0x50, 0xa9, 0x7d, 0x79, 0x16, 0xf9, 0xd4, 0x42, 0xba, 0xcf, 0xda, 0x82, 0xe5, 0x07, 0x3c, 0x96,
+	0x69, 0xad, 0xa7, 0x39, 0x7a, 0x03, 0x96, 0x7b, 0x28, 0x1d, 0x0f, 0xc3, 0x20, 0xe6, 0xd2, 0x91,
+	0xcf, 0x1d, 0x8f, 0x49, 0xa6, 0xbc, 0x14, 0xed, 0x4a, 0x0f, 0xe5, 0x96, 0xd6, 0xec, 0x3c, 0xdf,
+	0x62, 0x92, 0x59, 0x9f, 0xc1, 0xca, 0xa4, 0x15, 0x43, 0xb0, 0x03, 0xc5, 0xac, 0xb1, 0xe8, 0xf0,
+	0x1e, 0x9b, 0x61, 0xb6, 0xd1, 0x7a, 0x45, 0x60, 0xc1, 0x48, 0x69, 0x1b, 0xce, 0x9a, 0x6d, 0x5c,
+	0xf4, 0x9c, 0x70, 0xb0, 0xdb, 0xe7, 0xae, 0x93, 0x06, 0xb2, 0x6c, 0x2f, 0x8f, 0x94, 0x4f, 0x94,
+	0x6e, 0x1b, 0x87, 0x49, 0x87, 0x33, 0xb6, 0x1c, 0xc1, 0xfc, 0x34, 0xbe, 0x25, 0x23, 0x7b, 0xc4,
+	0x7c, 0x4c, 0x2a, 0xe9, 0xf0, 0x51, 0xf3, 0xca, 0xe0, 0x29, 0x6f, 0xfc, 0x9c, 0x49, 0xc7, 0xf5,
+	0x30, 0xe2, 0x07, 0x6a, 0x80, 0x8c, 0x97, 0xd1, 0xd2, 0x48, 0xac, 0xaa, 0x68, 0x1b, 0x96, 0xb2,
+	0xcb, 0xca, 0xaa, 0x7e, 0x44, 0x57, 0x47, 0xa3, 0x6c, 0x43, 0x98, 0xb2, 0x8c, 0x69, 0x15, 0x16,
+	0xb8, 0xf0, 0xb8, 0x8b, 0x71, 0x35, 0x57, 0xcf, 0x37, 0x0a, 0x76, 0xba, 0xb4, 0xae, 0x40, 0x69,
+	0x73, 0x20, 0xf7, 0x52, 0x4b, 0x35, 0x28, 0x66, 0x5d, 0xd5, 0x54, 0x61, 0xba, 0xb6, 0x1e, 0x43,
+	0x59, 0x43, 0xcd, 0x05, 0xac, 0xc0, 0x9c, 0x0c, 0xf6, 0x51, 0x18, 0xa0, 0x5e, 0xd0, 0x2b, 0x50,
+	0x51, 0x3f, 0x0e, 0x3e, 0x0f, 0x79, 0xa4, 0x58, 0xab, 0xa8, 0x14, 0xec, 0xd3, 0x4a, 0xde, 0xcd,
+	0xc4, 0xd6, 0x1f, 0x04, 0x56, 0x1f, 0x05, 0x1e, 0x76, 0x02, 0x21, 0xd0, 0x4d, 0x44, 0x99, 0xed,
+	0x77, 0x61, 0x65, 0x17, 0x99, 0x1b, 0x08, 0x47, 0x04, 0x1e, 0x3a, 0x28, 0xbc, 0x30, 0xe0, 0x26,
+	0x15, 0x17, 0x6d, 0xaa, 0x75, 0xc9, 0xde, 0xae, 0xd1, 0xd0, 0x0b, 0xb0, 0xe8, 0x6a, 0x3b, 0xe8,
+	0x29, 0x87, 0x45, 0x7b, 0x24, 0x48, 0x02, 0x10, 0x0f, 0x85, 0xcb, 0x45, 0x4f, 0x05, 0xbf, 0x68,
+	0xa7, 0xcb, 0xe4, 0x06, 0x7b, 0x28, 0x30, 0xe6, 0xb1, 0x23, 0xb9, 0x8f, 0x2a, 0xe6, 0x05, 0xbb,
+	0x64, 0x64, 0x3b, 0xdc, 0x47, 0x7a, 0x07, 0xaa, 0xe9, 0x0d, 0xba, 0x81, 0x90, 0x11, 0x73, 0xa5,
+	0x6a, 0xaf, 0x18, 0xeb, 0x91, 0x56, 0xb6, 0x57, 0x8d, 0xbe, 0x63, 0xd4, 0x9b, 0x5a, 0xdb, 0xfe,
+	0xb5, 0x00, 0xf3, 0xba, 0xa6, 0xe9, 0xf7, 0x04, 0xca, 0xe3, 0x33, 0x98, 0xde, 0xfc, 0x17, 0x13,
+	0xbb, 0xd6, 0x3c, 0x59, 0x07, 0xb1, 0x2e, 0xbd, 0xf8, 0xed, 0xaf, 0x6f, 0x72, 0x75, 0xeb, 0x7c,
+	0xf2, 0xb2, 0x19, 0xbd, 0x77, 0x74, 0x9f, 0x6c, 0xb9, 0xca, 0xc3, 0x06, 0xb9, 0x4a, 0x5f, 0x12,
+	0x80, 0x64, 0xa6, 0x98, 0xce, 0xf5, 0xfe, 0x2c, 0x37, 0x47, 0xcc, 0x9f, 0x13, 0xf3, 0xbb, 0xa6,
+	0xf8, 0xbd, 0x63, 0xd5, 0xa7, 0xf3, 0x53, 0xb6, 0x5b, 0xe8, 0x71, 0x99, 0x90, 0x94, 0x50, 0x1e,
+	0xf7, 0x49, 0x57, 0x9b, 0xfa, 0x79, 0xd5, 0x4c, 0x9f, 0x57, 0xcd, 0x6e, 0xf2, 0xbc, 0x3a, 0x31,
+	0x89, 0x0b, 0x8a, 0xc4, 0x2a, 0x5d, 0x99, 0x46, 0x82, 0x7e, 0x45, 0xa0, 0x72, 0x78, 0x6a, 0x1d,
+	0xe9, 0xfa, 0xce, 0x2c, 0xd7, 0x47, 0xcd, 0x3f, 0xeb, 0xb2, 0x22, 0x71, 0x91, 0xae, 0x4f, 0x92,
+	0x48, 0x67, 0x60, 0xab, 0x67, 0x36, 0xb6, 0x5f, 0xe5, 0xa0, 0x98, 0x3d, 0x9f, 0xbe, 0x24, 0x70,
+	0x6a, 0xa2, 0x7f, 0x1f, 0xc9, 0xec, 0xd6, 0xf1, 0xd2, 0xed, 0xd0, 0x18, 0xb0, 0x1a, 0x8a, 0x96,
+	0x65, 0xbd, 0x35, 0x49, 0x2b, 0x7b, 0x30, 0x8f, 0x52, 0xe8, 0x3b, 0x02, 0xe5, 0xf1, 0x46, 0x3d,
+	0x3b, 0xc1, 0xa7, 0x0c, 0x87, 0xda, 0x7b, 0x27, 0xdb, 0x64, 0x58, 0xae, 0x29, 0x96, 0x55, 0xba,
+	0x3a, 0x9d, 0x65, 0xfb, 0x25, 0x81, 0xf9, 0x0f, 0x91, 0xf5, 0xe5, 0x1e, 0xfd, 0x96, 0xc0, 0xb9,
+	0x7b, 0x28, 0xef, 0x66, 0x1d, 0x64, 0xd4, 0x7d, 0x8e, 0x8c, 0xdd, 0xed, 0x59, 0xa4, 0xa6, 0x77,
+	0x31, 0xeb, 0xba, 0xa2, 0x75, 0x89, 0xbe, 0x3d, 0x49, 0x6b, 0x4f, 0x31, 0x69, 0xa9, 0xce, 0xe6,
+	0x66, 0xbb, 0xda, 0x5f, 0xe7, 0xa0, 0x90, 0x34, 0x58, 0xfa, 0x82, 0xc0, 0xdc, 0x83, 0xa0, 0xc7,
+	0x05, 0xbd, 0x36, 0x73, 0xa2, 0x8d, 0x7a, 0x77, 0xed, 0xfa, 0xf1, 0xc0, 0x93, 0x21, 0xb3, 0x96,
+	0x27, 0xb9, 0xf5, 0x13, 0xbf, 0xc9, 0x75, 0x7e, 0x41, 0x60, 0xfe, 0x23, 0xde, 0x13, 0x83, 0xf0,
+	0xff, 0x64, 0xb1, 0xae, 0x58, 0xbc, 0x69, 0x1d, 0x2a, 0xbd, 0x58, 0x39, 0xde, 0x20, 0x57, 0xef,
+	0x96, 0x7f, 0x7e, 0xbd, 0x46, 0x7e, 0x79, 0xbd, 0x46, 0xfe, 0x7c, 0xbd, 0x46, 0x76, 0xe7, 0xd5,
+	0xc5, 0xdc, 0xfc, 0x3b, 0x00, 0x00, 0xff, 0xff, 0x4d, 0x4c, 0x28, 0x55, 0xc1, 0x0d, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1106,6 +972,7 @@ type WalletClient interface {
 	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*WalletResponse, error)
 	EditConfig(ctx context.Context, in *EditWalletConfigRequest, opts ...grpc.CallOption) (*WalletResponse, error)
 	WalletConfig(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
+	GenerateMnemonic(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
 }
 
 type walletClient struct {
@@ -1143,11 +1010,21 @@ func (c *walletClient) WalletConfig(ctx context.Context, in *types.Empty, opts .
 	return out, nil
 }
 
+func (c *walletClient) GenerateMnemonic(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
+	out := new(GenerateMnemonicResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WalletServer is the server API for Wallet service.
 type WalletServer interface {
 	CreateWallet(context.Context, *CreateWalletRequest) (*WalletResponse, error)
 	EditConfig(context.Context, *EditWalletConfigRequest) (*WalletResponse, error)
 	WalletConfig(context.Context, *types.Empty) (*WalletResponse, error)
+	GenerateMnemonic(context.Context, *types.Empty) (*GenerateMnemonicResponse, error)
 }
 
 // UnimplementedWalletServer can be embedded to have forward compatible implementations.
@@ -1162,6 +1039,9 @@ func (*UnimplementedWalletServer) EditConfig(ctx context.Context, req *EditWalle
 }
 func (*UnimplementedWalletServer) WalletConfig(ctx context.Context, req *types.Empty) (*WalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WalletConfig not implemented")
+}
+func (*UnimplementedWalletServer) GenerateMnemonic(ctx context.Context, req *types.Empty) (*GenerateMnemonicResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateMnemonic not implemented")
 }
 
 func RegisterWalletServer(s *grpc.Server, srv WalletServer) {
@@ -1222,6 +1102,24 @@ func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).GenerateMnemonic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*types.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Wallet_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.validator.accounts.v2.Wallet",
 	HandlerType: (*WalletServer)(nil),
@@ -1237,6 +1135,10 @@ var _Wallet_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WalletConfig",
 			Handler:    _Wallet_WalletConfig_Handler,
+		},
+		{
+			MethodName: "GenerateMnemonic",
+			Handler:    _Wallet_GenerateMnemonic_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1355,9 +1257,7 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type HealthClient interface {
-	ListBalances(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*ListBalancesResponse, error)
-	ListStatuses(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*ListStatusesResponse, error)
-	ListPerformance(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*ListPerformanceResponse, error)
+	GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
 }
 
 type healthClient struct {
@@ -1368,27 +1268,9 @@ func NewHealthClient(cc *grpc.ClientConn) HealthClient {
 	return &healthClient{cc}
 }
 
-func (c *healthClient) ListBalances(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*ListBalancesResponse, error) {
-	out := new(ListBalancesResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/ListBalances", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *healthClient) ListStatuses(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*ListStatusesResponse, error) {
-	out := new(ListStatusesResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/ListStatuses", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *healthClient) ListPerformance(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*ListPerformanceResponse, error) {
-	out := new(ListPerformanceResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/ListPerformance", in, out, opts...)
+func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
+	out := new(NodeConnectionResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1397,79 +1279,35 @@ func (c *healthClient) ListPerformance(ctx context.Context, in *AccountRequest, 
 
 // HealthServer is the server API for Health service.
 type HealthServer interface {
-	ListBalances(context.Context, *AccountRequest) (*ListBalancesResponse, error)
-	ListStatuses(context.Context, *AccountRequest) (*ListStatusesResponse, error)
-	ListPerformance(context.Context, *AccountRequest) (*ListPerformanceResponse, error)
+	GetBeaconNodeConnection(context.Context, *types.Empty) (*NodeConnectionResponse, error)
 }
 
 // UnimplementedHealthServer can be embedded to have forward compatible implementations.
 type UnimplementedHealthServer struct {
 }
 
-func (*UnimplementedHealthServer) ListBalances(ctx context.Context, req *AccountRequest) (*ListBalancesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListBalances not implemented")
-}
-func (*UnimplementedHealthServer) ListStatuses(ctx context.Context, req *AccountRequest) (*ListStatusesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListStatuses not implemented")
-}
-func (*UnimplementedHealthServer) ListPerformance(ctx context.Context, req *AccountRequest) (*ListPerformanceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListPerformance not implemented")
+func (*UnimplementedHealthServer) GetBeaconNodeConnection(ctx context.Context, req *types.Empty) (*NodeConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconNodeConnection not implemented")
 }
 
 func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
 	s.RegisterService(&_Health_serviceDesc, srv)
 }
 
-func _Health_ListBalances_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AccountRequest)
+func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HealthServer).ListBalances(ctx, in)
+		return srv.(HealthServer).GetBeaconNodeConnection(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.validator.accounts.v2.Health/ListBalances",
+		FullMethod: "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).ListBalances(ctx, req.(*AccountRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Health_ListStatuses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AccountRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HealthServer).ListStatuses(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.validator.accounts.v2.Health/ListStatuses",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).ListStatuses(ctx, req.(*AccountRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Health_ListPerformance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AccountRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HealthServer).ListPerformance(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.validator.accounts.v2.Health/ListPerformance",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).ListPerformance(ctx, req.(*AccountRequest))
+		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*types.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1479,16 +1317,8 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*HealthServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ListBalances",
-			Handler:    _Health_ListBalances_Handler,
-		},
-		{
-			MethodName: "ListStatuses",
-			Handler:    _Health_ListStatuses_Handler,
-		},
-		{
-			MethodName: "ListPerformance",
-			Handler:    _Health_ListPerformance_Handler,
+			MethodName: "GetBeaconNodeConnection",
+			Handler:    _Health_GetBeaconNodeConnection_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1632,26 +1462,54 @@ func (m *CreateWalletRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.RemoteCaCrtPath)
 		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteCaCrtPath)))
 		i--
-		dAtA[i] = 0x3a
+		dAtA[i] = 0x5a
 	}
 	if len(m.RemoteKeyPath) > 0 {
 		i -= len(m.RemoteKeyPath)
 		copy(dAtA[i:], m.RemoteKeyPath)
 		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteKeyPath)))
 		i--
-		dAtA[i] = 0x32
+		dAtA[i] = 0x52
 	}
 	if len(m.RemoteCrtPath) > 0 {
 		i -= len(m.RemoteCrtPath)
 		copy(dAtA[i:], m.RemoteCrtPath)
 		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteCrtPath)))
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x4a
 	}
 	if len(m.RemoteAddr) > 0 {
 		i -= len(m.RemoteAddr)
 		copy(dAtA[i:], m.RemoteAddr)
 		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteAddr)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.KeystoresPassword) > 0 {
+		i -= len(m.KeystoresPassword)
+		copy(dAtA[i:], m.KeystoresPassword)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.KeystoresPassword)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.KeystoresImported) > 0 {
+		for iNdEx := len(m.KeystoresImported) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.KeystoresImported[iNdEx])
+			copy(dAtA[i:], m.KeystoresImported[iNdEx])
+			i = encodeVarintWebApi(dAtA, i, uint64(len(m.KeystoresImported[iNdEx])))
+			i--
+			dAtA[i] = 0x32
+		}
+	}
+	if m.NumAccounts != 0 {
+		i = encodeVarintWebApi(dAtA, i, uint64(m.NumAccounts))
+		i--
+		dAtA[i] = 0x28
+	}
+	if len(m.Mnemonic) > 0 {
+		i -= len(m.Mnemonic)
+		copy(dAtA[i:], m.Mnemonic)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Mnemonic)))
 		i--
 		dAtA[i] = 0x22
 	}
@@ -1726,6 +1584,40 @@ func (m *EditWalletConfigRequest) MarshalToSizedBuffer(dAtA []byte) (int, error)
 		i -= len(m.RemoteAddr)
 		copy(dAtA[i:], m.RemoteAddr)
 		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteAddr)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GenerateMnemonicResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GenerateMnemonicResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenerateMnemonicResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Mnemonic) > 0 {
+		i -= len(m.Mnemonic)
+		copy(dAtA[i:], m.Mnemonic)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Mnemonic)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2050,255 +1942,6 @@ func (m *AccountRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ListBalancesResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListBalancesResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListBalancesResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Balances) > 0 {
-		dAtA6 := make([]byte, len(m.Balances)*10)
-		var j5 int
-		for _, num := range m.Balances {
-			for num >= 1<<7 {
-				dAtA6[j5] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j5++
-			}
-			dAtA6[j5] = uint8(num)
-			j5++
-		}
-		i -= j5
-		copy(dAtA[i:], dAtA6[:j5])
-		i = encodeVarintWebApi(dAtA, i, uint64(j5))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Indices) > 0 {
-		dAtA8 := make([]byte, len(m.Indices)*10)
-		var j7 int
-		for _, num := range m.Indices {
-			for num >= 1<<7 {
-				dAtA8[j7] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j7++
-			}
-			dAtA8[j7] = uint8(num)
-			j7++
-		}
-		i -= j7
-		copy(dAtA[i:], dAtA8[:j7])
-		i = encodeVarintWebApi(dAtA, i, uint64(j7))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.PublicKeys) > 0 {
-		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.PublicKeys[iNdEx])
-			copy(dAtA[i:], m.PublicKeys[iNdEx])
-			i = encodeVarintWebApi(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ListStatusesResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListStatusesResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListStatusesResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Statuses) > 0 {
-		dAtA10 := make([]byte, len(m.Statuses)*10)
-		var j9 int
-		for _, num := range m.Statuses {
-			for num >= 1<<7 {
-				dAtA10[j9] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j9++
-			}
-			dAtA10[j9] = uint8(num)
-			j9++
-		}
-		i -= j9
-		copy(dAtA[i:], dAtA10[:j9])
-		i = encodeVarintWebApi(dAtA, i, uint64(j9))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Indices) > 0 {
-		dAtA12 := make([]byte, len(m.Indices)*10)
-		var j11 int
-		for _, num := range m.Indices {
-			for num >= 1<<7 {
-				dAtA12[j11] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j11++
-			}
-			dAtA12[j11] = uint8(num)
-			j11++
-		}
-		i -= j11
-		copy(dAtA[i:], dAtA12[:j11])
-		i = encodeVarintWebApi(dAtA, i, uint64(j11))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.PublicKeys) > 0 {
-		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.PublicKeys[iNdEx])
-			copy(dAtA[i:], m.PublicKeys[iNdEx])
-			i = encodeVarintWebApi(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ListPerformanceResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListPerformanceResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListPerformanceResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Submissions) > 0 {
-		for iNdEx := len(m.Submissions) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Submissions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintWebApi(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
-	if len(m.Indices) > 0 {
-		dAtA14 := make([]byte, len(m.Indices)*10)
-		var j13 int
-		for _, num := range m.Indices {
-			for num >= 1<<7 {
-				dAtA14[j13] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j13++
-			}
-			dAtA14[j13] = uint8(num)
-			j13++
-		}
-		i -= j13
-		copy(dAtA[i:], dAtA14[:j13])
-		i = encodeVarintWebApi(dAtA, i, uint64(j13))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.PublicKeys) > 0 {
-		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.PublicKeys[iNdEx])
-			copy(dAtA[i:], m.PublicKeys[iNdEx])
-			i = encodeVarintWebApi(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ListPerformanceResponse_Submission) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListPerformanceResponse_Submission) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListPerformanceResponse_Submission) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.AttestationCount != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.AttestationCount))
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.BlockCount != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.BlockCount))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *AuthRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2372,6 +2015,72 @@ func (m *AuthResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *NodeConnectionResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NodeConnectionResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *NodeConnectionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.DepositContractAddress) > 0 {
+		i -= len(m.DepositContractAddress)
+		copy(dAtA[i:], m.DepositContractAddress)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.DepositContractAddress)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.GenesisTime != 0 {
+		i = encodeVarintWebApi(dAtA, i, uint64(m.GenesisTime))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.Syncing {
+		i--
+		if m.Syncing {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Connected {
+		i--
+		if m.Connected {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.BeaconNodeEndpoint) > 0 {
+		i -= len(m.BeaconNodeEndpoint)
+		copy(dAtA[i:], m.BeaconNodeEndpoint)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.BeaconNodeEndpoint)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintWebApi(dAtA []byte, offset int, v uint64) int {
 	offset -= sovWebApi(v)
 	base := offset
@@ -2397,6 +2106,23 @@ func (m *CreateWalletRequest) Size() (n int) {
 		n += 1 + sovWebApi(uint64(m.Keymanager))
 	}
 	l = len(m.WalletPassword)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
+	}
+	l = len(m.Mnemonic)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
+	}
+	if m.NumAccounts != 0 {
+		n += 1 + sovWebApi(uint64(m.NumAccounts))
+	}
+	if len(m.KeystoresImported) > 0 {
+		for _, s := range m.KeystoresImported {
+			l = len(s)
+			n += 1 + l + sovWebApi(uint64(l))
+		}
+	}
+	l = len(m.KeystoresPassword)
 	if l > 0 {
 		n += 1 + l + sovWebApi(uint64(l))
 	}
@@ -2441,6 +2167,22 @@ func (m *EditWalletConfigRequest) Size() (n int) {
 		n += 1 + l + sovWebApi(uint64(l))
 	}
 	l = len(m.RemoteCaCrtPath)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *GenerateMnemonicResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Mnemonic)
 	if l > 0 {
 		n += 1 + l + sovWebApi(uint64(l))
 	}
@@ -2592,119 +2334,6 @@ func (m *AccountRequest) Size() (n int) {
 	return n
 }
 
-func (m *ListBalancesResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
-			l = len(b)
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	if len(m.Indices) > 0 {
-		l = 0
-		for _, e := range m.Indices {
-			l += sovWebApi(uint64(e))
-		}
-		n += 1 + sovWebApi(uint64(l)) + l
-	}
-	if len(m.Balances) > 0 {
-		l = 0
-		for _, e := range m.Balances {
-			l += sovWebApi(uint64(e))
-		}
-		n += 1 + sovWebApi(uint64(l)) + l
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ListStatusesResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
-			l = len(b)
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	if len(m.Indices) > 0 {
-		l = 0
-		for _, e := range m.Indices {
-			l += sovWebApi(uint64(e))
-		}
-		n += 1 + sovWebApi(uint64(l)) + l
-	}
-	if len(m.Statuses) > 0 {
-		l = 0
-		for _, e := range m.Statuses {
-			l += sovWebApi(uint64(e))
-		}
-		n += 1 + sovWebApi(uint64(l)) + l
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ListPerformanceResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
-			l = len(b)
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	if len(m.Indices) > 0 {
-		l = 0
-		for _, e := range m.Indices {
-			l += sovWebApi(uint64(e))
-		}
-		n += 1 + sovWebApi(uint64(l)) + l
-	}
-	if len(m.Submissions) > 0 {
-		for _, e := range m.Submissions {
-			l = e.Size()
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ListPerformanceResponse_Submission) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.BlockCount != 0 {
-		n += 1 + sovWebApi(uint64(m.BlockCount))
-	}
-	if m.AttestationCount != 0 {
-		n += 1 + sovWebApi(uint64(m.AttestationCount))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
 func (m *AuthRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -2733,6 +2362,35 @@ func (m *AuthResponse) Size() (n int) {
 	}
 	if m.TokenExpiration != 0 {
 		n += 1 + sovWebApi(uint64(m.TokenExpiration))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *NodeConnectionResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.BeaconNodeEndpoint)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
+	}
+	if m.Connected {
+		n += 2
+	}
+	if m.Syncing {
+		n += 2
+	}
+	if m.GenesisTime != 0 {
+		n += 1 + sovWebApi(uint64(m.GenesisTime))
+	}
+	l = len(m.DepositContractAddress)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -2860,6 +2518,121 @@ func (m *CreateWalletRequest) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Mnemonic", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Mnemonic = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NumAccounts", wireType)
+			}
+			m.NumAccounts = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NumAccounts |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field KeystoresImported", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.KeystoresImported = append(m.KeystoresImported, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field KeystoresPassword", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.KeystoresPassword = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RemoteAddr", wireType)
 			}
 			var stringLen uint64
@@ -2890,7 +2663,7 @@ func (m *CreateWalletRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.RemoteAddr = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 9:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RemoteCrtPath", wireType)
 			}
@@ -2922,7 +2695,7 @@ func (m *CreateWalletRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.RemoteCrtPath = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 6:
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RemoteKeyPath", wireType)
 			}
@@ -2954,7 +2727,7 @@ func (m *CreateWalletRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.RemoteKeyPath = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 7:
+		case 11:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RemoteCaCrtPath", wireType)
 			}
@@ -3167,6 +2940,92 @@ func (m *EditWalletConfigRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.RemoteCaCrtPath = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipWebApi(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GenerateMnemonicResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowWebApi
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GenerateMnemonicResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GenerateMnemonicResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Mnemonic", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Mnemonic = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -4096,763 +3955,6 @@ func (m *AccountRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ListBalancesResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ListBalancesResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListBalancesResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PublicKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PublicKeys = append(m.PublicKeys, make([]byte, postIndex-iNdEx))
-			copy(m.PublicKeys[len(m.PublicKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType == 0 {
-				var v uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.Indices = append(m.Indices, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA[iNdEx:postIndex] {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.Indices) == 0 {
-					m.Indices = make([]uint64, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowWebApi
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.Indices = append(m.Indices, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field Indices", wireType)
-			}
-		case 3:
-			if wireType == 0 {
-				var v uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.Balances = append(m.Balances, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA[iNdEx:postIndex] {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.Balances) == 0 {
-					m.Balances = make([]uint64, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowWebApi
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.Balances = append(m.Balances, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field Balances", wireType)
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ListStatusesResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ListStatusesResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListStatusesResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PublicKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PublicKeys = append(m.PublicKeys, make([]byte, postIndex-iNdEx))
-			copy(m.PublicKeys[len(m.PublicKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType == 0 {
-				var v uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.Indices = append(m.Indices, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA[iNdEx:postIndex] {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.Indices) == 0 {
-					m.Indices = make([]uint64, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowWebApi
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.Indices = append(m.Indices, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field Indices", wireType)
-			}
-		case 3:
-			if wireType == 0 {
-				var v ListStatusesResponse_ValidatorStatus
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= ListStatusesResponse_ValidatorStatus(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.Statuses = append(m.Statuses, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				if elementCount != 0 && len(m.Statuses) == 0 {
-					m.Statuses = make([]ListStatusesResponse_ValidatorStatus, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v ListStatusesResponse_ValidatorStatus
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowWebApi
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= ListStatusesResponse_ValidatorStatus(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.Statuses = append(m.Statuses, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field Statuses", wireType)
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ListPerformanceResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ListPerformanceResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListPerformanceResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PublicKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PublicKeys = append(m.PublicKeys, make([]byte, postIndex-iNdEx))
-			copy(m.PublicKeys[len(m.PublicKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType == 0 {
-				var v uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.Indices = append(m.Indices, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA[iNdEx:postIndex] {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.Indices) == 0 {
-					m.Indices = make([]uint64, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowWebApi
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.Indices = append(m.Indices, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field Indices", wireType)
-			}
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Submissions", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Submissions = append(m.Submissions, &ListPerformanceResponse_Submission{})
-			if err := m.Submissions[len(m.Submissions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ListPerformanceResponse_Submission) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Submission: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Submission: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BlockCount", wireType)
-			}
-			m.BlockCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BlockCount |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AttestationCount", wireType)
-			}
-			m.AttestationCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.AttestationCount |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *AuthRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -5019,6 +4121,185 @@ func (m *AuthResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipWebApi(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *NodeConnectionResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowWebApi
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: NodeConnectionResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: NodeConnectionResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BeaconNodeEndpoint", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BeaconNodeEndpoint = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Connected", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Connected = bool(v != 0)
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Syncing", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Syncing = bool(v != 0)
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GenesisTime", wireType)
+			}
+			m.GenesisTime = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.GenesisTime |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DepositContractAddress", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWebApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWebApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DepositContractAddress = append(m.DepositContractAddress[:0], dAtA[iNdEx:postIndex]...)
+			if m.DepositContractAddress == nil {
+				m.DepositContractAddress = []byte{}
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipWebApi(dAtA[iNdEx:])

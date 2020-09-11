@@ -41,7 +41,7 @@ type batchBlockReceiverFn func(ctx context.Context, blks []*eth.SignedBeaconBloc
 // after the finalized epoch, request blocks to head from some subset of peers
 // where step = 1.
 func (s *Service) roundRobinSync(genesis time.Time) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 	defer s.chain.ClearCachedStates()
 	state.SkipSlotCache.Disable()
@@ -49,7 +49,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
 	s.lastProcessedSlot = s.chain.HeadSlot()
-	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
+	highestFinalizedSlot, err := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
+	if err != nil {
+		return err
+	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		headFetcher:         s.chain,

@@ -111,9 +111,9 @@ type Service struct {
 }
 
 // NewRegularSync service.
-func NewRegularSync(cfg *Config) *Service {
+func NewRegularSync(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,

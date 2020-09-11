@@ -97,14 +97,17 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	}
 
 	if helpers.CurrentEpoch(headState) < helpers.SlotToEpoch(req.Slot) {
-		headState, err = state.ProcessSlots(ctx, headState, helpers.StartSlot(helpers.SlotToEpoch(req.Slot)))
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 		}
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)
-	epochStartSlot := helpers.StartSlot(targetEpoch)
+	epochStartSlot, err := helpers.StartSlot(targetEpoch)
+	if err != nil {
+		return nil, err
+	}
 	targetRoot := make([]byte, 32)
 	if epochStartSlot == headState.Slot() {
 		targetRoot = headRoot[:]

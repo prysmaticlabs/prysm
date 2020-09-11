@@ -57,18 +57,10 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 		if err != nil {
 			return nil, err
 		}
-		if seen {
-			r, err := hashFn(att)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not tree hash attestation")
-			}
-			delete(p.unAggregatedAtt, r)
-			continue
+		if !seen {
+			atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 		}
-
-		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 	}
-
 	return atts, nil
 }
 
@@ -113,6 +105,29 @@ func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error 
 	delete(p.unAggregatedAtt, r)
 
 	return nil
+}
+
+// DeleteSeenUnaggregatedAttestations deletes the unaggregated attestations in cache
+// that have been already processed once. Returns number of attestations deleted.
+func (p *AttCaches) DeleteSeenUnaggregatedAttestations() (int, error) {
+	p.unAggregateAttLock.Lock()
+	defer p.unAggregateAttLock.Unlock()
+
+	count := 0
+	for _, att := range p.unAggregatedAtt {
+		if att == nil || helpers.IsAggregated(att) {
+			continue
+		}
+		if seen, err := p.hasSeenBit(att); err == nil && seen {
+			r, err := hashFn(att)
+			if err != nil {
+				return count, errors.Wrap(err, "could not tree hash attestation")
+			}
+			delete(p.unAggregatedAtt, r)
+			count++
+		}
+	}
+	return count, nil
 }
 
 // UnaggregatedAttestationCount returns the number of unaggregated attestations key in the pool.

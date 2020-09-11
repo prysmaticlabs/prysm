@@ -21,7 +21,6 @@ func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	}
 	dr := &Keymanager{
 		wallet:              wallet,
-		keysCache:           make(map[[48]byte]bls.SecretKey),
 		accountsChangedFeed: new(event.Feed),
 	}
 
@@ -38,10 +37,16 @@ func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, dr.reloadAccountsFromKeystore(accountsStore))
 
-	// Check the key was added to the keys cache.
-	for _, keyBytes := range pubKeys {
-		_, ok := dr.keysCache[bytesutil.ToBytes48(keyBytes)]
+	// Check that the public keys were added to the public keys cache.
+	for i, keyBytes := range pubKeys {
+		require.Equal(t, bytesutil.ToBytes48(keyBytes), dr.publicKeysCache[i])
+	}
+
+	// Check that the secret keys were added to the secret keys cache.
+	for i, keyBytes := range privKeys {
+		privKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(pubKeys[i])]
 		require.Equal(t, true, ok)
+		require.Equal(t, bytesutil.ToBytes48(keyBytes), bytesutil.ToBytes48(privKey.Marshal()))
 	}
 
 	// Check the key was added to the global accounts store.

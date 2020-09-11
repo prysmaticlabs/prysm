@@ -158,7 +158,7 @@ func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
-	head, err := vs.HeadFetcher.HeadState(context.Background())
+	head, err := vs.HeadFetcher.HeadState(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
@@ -213,7 +213,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 // WaitForSynced subscribes to the state channel and ends the stream when the state channel
 // indicates the beacon node has been initialized and is ready
 func (vs *Server) WaitForSynced(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
-	head, err := vs.HeadFetcher.HeadState(context.Background())
+	head, err := vs.HeadFetcher.HeadState(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}

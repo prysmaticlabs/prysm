@@ -444,7 +444,7 @@ func ProcessBlockNoVerifyAttSigs(
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockNoVerifyAttSigs")
 	defer span.End()
 
 	state, err := b.ProcessBlockHeader(ctx, state, signed)
@@ -491,7 +491,7 @@ func ProcessBlockNoVerifyAnySig(
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 
 	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
@@ -567,7 +567,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signedBeaconBlock *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 
 	if _, err := VerifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
@@ -665,7 +665,7 @@ func CanProcessEpoch(state *stateTrie.BeaconState) bool {
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
 func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpochPrecompute")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
@@ -715,7 +715,7 @@ func ProcessBlockForStateRoot(
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockForStateRoot")
 	defer span.End()
 
 	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
