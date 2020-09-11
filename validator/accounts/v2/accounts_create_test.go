@@ -88,7 +88,7 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.NoError(t, err)
 
-	mockPasswordReader := passwordReader{password: "Pa$sW0rD0__Fo0xPr"}
+	mockPasswordReader := passwordReader{password: "Pa$sW0rD0__Fo0xPr", counter: 3}
 	promptutil.PasswordReader = mockPasswordReader.passwordReaderFunc
 
 	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
@@ -102,6 +102,9 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
 	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.NoError(t, err)
+
+	mockPasswordReader.counter = 3
+
 	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
 		Wallet:      wallet,
 		NumAccounts: 1,
@@ -115,9 +118,14 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 
 type passwordReader struct{
 	password string
+	counter int
 }
 
 func (p *passwordReader) passwordReaderFunc(file *os.File) ([]byte, error){
+	p.counter--
+	if p.counter == 0 {
+		log.Fatalln("Too many password attempts using passwordReaderFunc()")
+	}
 	return []byte(p.password), nil
 }
 
