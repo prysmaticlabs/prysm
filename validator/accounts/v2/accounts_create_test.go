@@ -82,7 +82,6 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("SecoNDxyzPass__9!@#"), os.ModePerm))
 
 	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
@@ -113,19 +112,17 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 
 	assert.LogsContain(t, logHook, "Successfully created new validator account")
 
-
 }
 
-type passwordReader struct{
+type passwordReader struct {
 	password string
-	counter int
+	counter  int
 }
 
-func (p *passwordReader) passwordReaderFunc(file *os.File) ([]byte, error){
+func (p *passwordReader) passwordReaderFunc(file *os.File) ([]byte, error) {
 	p.counter--
 	if p.counter == 0 {
 		log.Fatalln("Too many password attempts using passwordReaderFunc()")
 	}
 	return []byte(p.password), nil
 }
-
