@@ -1,5 +1,13 @@
 package testdata
 
+type len struct { // want "Type 'len' shadows a predeclared identifier with the same name. Choose another name."
+
+}
+
+type int interface { // want "Type 'int' shadows a predeclared identifier with the same name. Choose another name."
+
+}
+
 func Struct() {
 	type error struct { // want "Type 'error' shadows a predeclared identifier with the same name. Choose another name."
 		int int // No diagnostic because the name is always referenced indirectly through a struct variable.
