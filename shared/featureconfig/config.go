@@ -237,9 +237,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Logging every processed block during initial syncing.")
 		cfg.InitSyncVerbose = true
 	}
-	if ctx.Bool(enableFinalizedDepositsCache.Name) {
-		log.Warn("Enabling finalized deposits cache")
-		cfg.EnableFinalizedDepositsCache = true
+	cfg.EnableFinalizedDepositsCache = true
+	if ctx.Bool(disableFinalizedDepositsCache.Name) {
+		log.Warn("Disabling finalized deposits cache")
+		cfg.EnableFinalizedDepositsCache = false
 	}
 	if ctx.Bool(enableEth1DataMajorityVote.Name) {
 		log.Warn("Enabling eth1data majority vote")
