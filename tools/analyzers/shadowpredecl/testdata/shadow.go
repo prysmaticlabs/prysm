@@ -45,7 +45,9 @@ func error(len int) { // want "Function 'error' shadows a predeclared identifier
 	if len == 0 {
 	}
 
-	f := func(int string) { // want "Identifier 'int' shadows a predeclared identifier with the same name. Choose another name."
+	// Test parameter in a new line.
+	f := func(
+		int string) { // want "Identifier 'int' shadows a predeclared identifier with the same name. Choose another name."
 	}
 
 	f("")
