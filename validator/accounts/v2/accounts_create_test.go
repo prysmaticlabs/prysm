@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestCreateAccount_Derived(t *testing.T) {
@@ -63,8 +64,7 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 
 	//Specify the 'initial'/correct password here
-	err := ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm)
-	require.NoError(t, err)
+	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
 
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
@@ -82,29 +82,12 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Now change the password provided to the wrong one
+
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("SecoNDxyzPass__9!@#"), os.ModePerm))
 
 	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.NoError(t, err)
 
-	// Create a file that will hold input we would otherwise type
-	//replaceStdin, err := ioutil.TempFile("", "temp")
-	//require.NoError(t, err)
-	//defer func() {
-	//	fileName := replaceStdin.Name()
-	//	err = replaceStdin.Close()
-	//	require.NoError(t, err)
-	//	err = os.Remove(fileName)
-	//	require.NoError(t, err)
-	//}()
-	// Write in the correct password
-	//_, err = replaceStdin.Write([]byte("Pa$sW0rD0__Fo0xPr"))
-	//require.NoError(t, err)
-	//_, err = replaceStdin.Seek(0, 0)
-	//require.NoError(t, err)
-
-	// @@@FILL IN THIS COMMENT@@@
 	mockPasswordReader := passwordReader{password: "Pa$sW0rD0__Fo0xPr"}
 	promptutil.PasswordReader = mockPasswordReader.passwordReaderFunc
 
@@ -113,6 +96,20 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 		NumAccounts: 1,
 	})
 	require.NoError(t, err)
+
+	// Now make sure a bug did not change the password to "SecoNDxyzPass__9!@#"
+	logHook := logTest.NewGlobal()
+	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
+	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
+	require.NoError(t, err)
+	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
+		Wallet:      wallet,
+		NumAccounts: 1,
+	})
+	require.NoError(t, err)
+
+	assert.LogsContain(t, logHook, "Successfully created new validator account")
+
 
 }
 
