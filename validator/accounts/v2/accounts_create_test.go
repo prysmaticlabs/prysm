@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -81,27 +82,31 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Now change the password provided
+	// Now change the password provided to the wrong one
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("SecoNDxyzPass__9!@#"), os.ModePerm))
 
 	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.NoError(t, err)
 
-	// The bug this regression test is for arises when first there is a wrong password followed by the correct one
-	// If the first password is incorrect, the program will ask for more via standard input
-
-	//tmpFile, err := ioutil.TempFile("", "testFile")
-	//tmpFile.Write([]byte("Pa$sW0rD0__Fo0xPr"))
+	// Create a file that will hold input we would otherwise type
+	//replaceStdin, err := ioutil.TempFile("", "temp")
 	//require.NoError(t, err)
-	//defer os.Remove(tmpFile.Name())
-	//_, err = tmpFile.Seek(0, 0)
-	//require.NoError(t, err)
-	//
-	//savedStdin := os.Stdin
 	//defer func() {
-	//	os.Stdin = savedStdin
+	//	fileName := replaceStdin.Name()
+	//	err = replaceStdin.Close()
+	//	require.NoError(t, err)
+	//	err = os.Remove(fileName)
+	//	require.NoError(t, err)
 	//}()
-	//os.Stdin = tmpFile
+	// Write in the correct password
+	//_, err = replaceStdin.Write([]byte("Pa$sW0rD0__Fo0xPr"))
+	//require.NoError(t, err)
+	//_, err = replaceStdin.Seek(0, 0)
+	//require.NoError(t, err)
+
+	// @@@FILL IN THIS COMMENT@@@
+	mockPasswordReader := passwordReader{password: "Pa$sW0rD0__Fo0xPr"}
+	promptutil.PasswordReader = mockPasswordReader.passwordReaderFunc
 
 	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
 		Wallet:      wallet,
@@ -110,3 +115,12 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	require.NoError(t, err)
 
 }
+
+type passwordReader struct{
+	password string
+}
+
+func (p *passwordReader) passwordReaderFunc(file *os.File) ([]byte, error){
+	return []byte(p.password), nil
+}
+
