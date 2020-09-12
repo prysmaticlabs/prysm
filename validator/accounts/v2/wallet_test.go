@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -142,8 +143,8 @@ func Test_LockUnlockFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir: walletDir,
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New("Failed to open wallet.")
 	})
 	defer unlock(t, wallet)
 	_, err = wallet.InitializeKeymanager(cliCtx.Context, true)
