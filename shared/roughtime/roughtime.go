@@ -58,7 +58,7 @@ func init() {
 }
 
 func recalibrateRoughtime() {
-	if featureconfig.Get().EnableRoughtime {
+	if !featureconfig.Get().EnableRoughtime {
 		return
 	}
 
