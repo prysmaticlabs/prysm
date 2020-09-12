@@ -144,7 +144,7 @@ func Test_LockUnlockFile(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
-		return nil, errors.New("Failed to open wallet.")
+		return nil, errors.New("failed to open wallet")
 	})
 	defer unlock(t, wallet)
 	_, err = wallet.InitializeKeymanager(cliCtx.Context, true)
