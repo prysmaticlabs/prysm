@@ -58,6 +58,10 @@ func init() {
 }
 
 func recalibrateRoughtime() {
+	if featureconfig.Get().EnableRoughtime {
+		return
+	}
+
 	t0 := time.Now()
 	results := rt.Do(rt.Ecosystem, rt.DefaultQueryAttempts, rt.DefaultQueryTimeout, nil)
 
@@ -86,18 +90,16 @@ func recalibrateRoughtime() {
 		log.WithField("offset", newOffset).Warn("Roughtime reports your clock is off by more than 2 seconds")
 	}
 
-	if featureconfig.Get().EnableRoughtime {
-		chain := rt.NewChain(results)
-		ok, err := chain.Verify(nil)
-		if err != nil || !ok {
-			log.WithError(err).WithField("offset", newOffset).Error("Could not verify roughtime responses, not accepting roughtime offset")
-			offsetsRejected.Inc()
-			return
-		}
-
-		log.Debugf("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
-		offset = newOffset
+	chain := rt.NewChain(results)
+	ok, err := chain.Verify(nil)
+	if err != nil || !ok {
+		log.WithError(err).WithField("offset", newOffset).Error("Could not verify roughtime responses, not accepting roughtime offset")
+		offsetsRejected.Inc()
+		return
 	}
+
+	log.Debugf("New calculated roughtime offset is %d ns", newOffset.Nanoseconds())
+	offset = newOffset
 }
 
 // Since returns the duration since t, based on the roughtime response
