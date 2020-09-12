@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "attestation_data.go",
         "checkpoint_state.go",
+        "committees.go",
         "common.go",
         "doc.go",
         "hot_state_cache.go",
