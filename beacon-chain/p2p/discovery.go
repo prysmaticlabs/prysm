@@ -121,21 +121,23 @@ func (s *Service) createListener(
 		}
 		rBootnodes = append(rBootnodes, bootNode)
 	}
+	/*
+		rudpAddr := &net.UDPAddr{
+			IP:   rBootnodes[0].IP(),
+			Port: rBootnodes[0].UDP(),
+		}
 
-	rudpAddr := &net.UDPAddr{
-		IP:   rBootnodes[0].IP(),
-		Port: rBootnodes[0].UDP(),
-	}
 
-	rConn, err := net.DialUDP("udp", udpAddr, rudpAddr)
-	if err != nil {
-		return nil, err
-	}
-	_, err = rConn.Write([]byte("bnbnb"))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not send to UDP")
-	}
-	err = rConn.Close()
+		rConn, err := net.DialUDP("udp", udpAddr, rudpAddr)
+		if err != nil {
+			return nil, err
+		}
+		_, err = rConn.Write([]byte("bnbnb"))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not send to UDP")
+		}
+		err = rConn.Close()
+	*/
 	a, err := net.InterfaceAddrs()
 	all := []string{}
 	for _, bn := range a {
