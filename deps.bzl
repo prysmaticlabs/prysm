@@ -1897,8 +1897,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_cloudflare_roughtime",
         importpath = "github.com/cloudflare/roughtime",
-        sum = "h1:jeSxE3fepJdhASERvBHI6RFkMhISv6Ir2JUybYLIVXs=",
-        version = "v0.0.0-20200205191924-a69ef1dab727",
+        sum = "h1:8W5V13HZUezcWADZvcIBm8/Sp/coyZA1VOMTEJhjd4g=",
+        version = "v0.0.0-20200911173848-eb42b5b8e068",
     )
     go_repository(
         name = "com_googlesource_roughtime_roughtime_git",
@@ -2726,8 +2726,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_crypto",
         importpath = "golang.org/x/crypto",
-        sum = "h1:ikNHVSjEfnvz6sxdSPCaPt572qowuyMDMJLLm3Db3ig=",
-        version = "v0.0.0-20200728195943-123391ffb6de",
+        sum = "h1:vclmkQCjlDX5OydZ9wv8rBCcS0QyQY66Mpf/7BZbInM=",
+        version = "v0.0.0-20200820211705-5c72a883971a",
     )
     go_repository(
         name = "org_golang_x_exp",
@@ -2762,8 +2762,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:sIky/MyNRSHTrdxfsiUSS4WIAMvInbeXljJz+jDjeYE=",
-        version = "v0.0.0-20200728102440-3e129f6d46b1",
+        sum = "h1:W0lCpv29Hv0UaM1LXb9QlBHLNP8UFfcKjblhVCWftOM=",
+        version = "v0.0.0-20200909081042-eff7692f9009",
     )
     go_repository(
         name = "org_golang_x_text",

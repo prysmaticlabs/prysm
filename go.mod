@@ -11,7 +11,7 @@ require (
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cespare/cp v1.1.1 // indirect
-	github.com/cloudflare/roughtime v0.0.0-20200205191924-a69ef1dab727
+	github.com/cloudflare/roughtime v0.0.0-20200911173848-eb42b5b8e068
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/d4l3k/messagediff v1.2.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
@@ -110,10 +110,10 @@ require (
 	go.etcd.io/bbolt v1.3.4
 	go.opencensus.io v0.22.4
 	go.uber.org/automaxprocs v1.3.0
-	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
-	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
+	golang.org/x/sys v0.0.0-20200909081042-eff7692f9009 // indirect
 	golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e
 	google.golang.org/genproto v0.0.0-20200730144737-007c33dbd381
 	google.golang.org/grpc v1.29.1
