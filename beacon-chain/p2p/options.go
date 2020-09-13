@@ -83,6 +83,7 @@ func multiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
 	if parsedIP.To4() != nil {
 		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
 	}
+	log.Errorf("parsed ip: %v and current addr %s", parsedIP.String(), ipAddr)
 	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
 }
 
