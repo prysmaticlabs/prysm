@@ -131,16 +131,10 @@ func TestCreateDepositConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 3, len(depositConfig.DepositPublicKeys), "wrong number of public keys")
-
-	if depositConfig.Eth1PrivateKey != "This should be an ETH1 private key" {
-		require.NoError(t, errors.New("eth1 private key does not match"))
-	}
-	if depositConfig.Web3Provider != "http://localhost:8545" {
-		require.NoError(t, errors.New("web3 provider does not match"))
-	}
-	if depositConfig.Eth1KeystoreUTCFile != "" || depositConfig.Eth1KeystorePasswordFile != "" {
-		require.NoError(t, errors.New("keystore file and keystore password file paths should be empty"))
-	}
+	require.Equal(t, "This should be an ETH1 private key", depositConfig.Eth1PrivateKey, "eth1 private key does not match")
+	require.Equal(t, "http://localhost:8545", depositConfig.Web3Provider, "web3 provider does not match")
+	require.Equal(t, "", depositConfig.Eth1KeystoreUTCFile, "keystore file path should be empty")
+	require.Equal(t, "", depositConfig.Eth1KeystorePasswordFile, "keystore password file path should be empty")
 
 	// Test the case of providing the public keys via command-line.  We also pass in the test eth1 private key file.
 	// hexPubkeysString holds 1 less than all the accounts.
@@ -154,7 +148,6 @@ func TestCreateDepositConfig(t *testing.T) {
 		eth1PrivateKeyFile:          eth1PrivateKeyFile.Name(),
 	})
 	require.NoError(t, err)
-
 	require.Equal(t, 2, len(depositConfig.DepositPublicKeys), "wrong number of public keys")
 
 	// Compare the keys in the config object with the keys we obtained earlier from the keymanager
@@ -178,16 +171,12 @@ func TestCreateDepositConfig(t *testing.T) {
 		eth1KeystorePasswordFile:    "This would be eth1 keystore password file path",
 	})
 	require.NoError(t, err)
-
 	require.Equal(t, 3, len(depositConfig.DepositPublicKeys), "wrong number of public keys")
-
-	if depositConfig.Eth1KeystoreUTCFile != "This would be eth1 keystore file path" ||
-		depositConfig.Eth1KeystorePasswordFile != "This would be eth1 keystore password file path" {
-		require.NoError(t, errors.New("eth1 keystore or keystore password file path incorrect"))
-	}
-	if depositConfig.Eth1PrivateKey != "" {
-		require.NoError(t, errors.New("eth1 private key should be empty string"))
-	}
+	require.Equal(t, "This would be eth1 keystore file path", depositConfig.Eth1KeystoreUTCFile,
+		"eth1 keystore file path incorrect")
+	require.Equal(t, "This would be eth1 keystore password file path", depositConfig.Eth1KeystorePasswordFile,
+		"eth1 keystore password file path incorrect")
+	require.Equal(t, "", depositConfig.Eth1PrivateKey, "eth1 private key should be empty string")
 }
 
 // createDepositConfigHelper returns a SendDepositConfig when given a particular wallet configuration.
