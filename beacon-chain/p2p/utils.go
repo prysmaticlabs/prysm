@@ -160,12 +160,11 @@ func ipAddr() net.IP {
 // Attempt to dial an address to verify its connectivity
 func verifyConnectivity(addr string, port uint, protocol string) {
 	if addr != "" {
-		a := fmt.Sprintf("%s:%d", addr, port)
+		a := net.JoinHostPort(addr, fmt.Sprintf("%d", port))
 		fields := logrus.Fields{
 			"protocol": protocol,
 			"address":  a,
 		}
-		a = net.JoinHostPort(addr, fmt.Sprintf("%d", port))
 		conn, err := net.DialTimeout(protocol, a, dialTimeout)
 		if err != nil {
 			log.WithError(err).WithFields(fields).Warn("IP address is not accessible")
