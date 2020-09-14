@@ -191,7 +191,7 @@ func (s *Service) createLocalNode(
 		return nil, errors.Wrap(err, "could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
-	ipEntry := enr.IPv6(ipAddr)
+	ipEntry := enr.IP(ipAddr)
 	udpEntry := enr.UDP(udpPort)
 	tcpEntry := enr.TCP(tcpPort)
 	localNode.Set(ipEntry)
@@ -201,8 +201,8 @@ func (s *Service) createLocalNode(
 	localNode.Set(ipEntry2)
 	localNode.Set(udpEntry)
 	localNode.Set(tcpEntry)
-	localNode.SetFallbackIP(ipAddr)
-	localNode.SetFallbackUDP(udpPort)
+	//	localNode.SetFallbackIP(ipAddr)
+	//	localNode.SetFallbackUDP(udpPort)
 
 	localNode, err = addForkEntry(localNode, s.genesisTime, s.genesisValidatorsRoot)
 	if err != nil {
