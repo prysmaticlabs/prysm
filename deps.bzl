@@ -81,6 +81,12 @@ def prysm_deps():
         version = "v0.0.1-2019.2.3",
     )
     go_repository(
+        name = "com_github_bloxapp_key_vault",
+        importpath = "github.com/bloxapp/key-vault",
+        sum = "h1:NTrzJLmRPwHlQHLPsIT077me1eMTQy2i4ZOER+/KRtE=",
+        version = "v0.0.0-20200914074406-85e152a9f67c",
+    )
+    go_repository(
         name = "com_github_aead_siphash",
         importpath = "github.com/aead/siphash",
         sum = "h1:FwHfE/T45KPKYuuSAKyyvE+oPWcaQ+CUmFW0bPlM+kg=",
