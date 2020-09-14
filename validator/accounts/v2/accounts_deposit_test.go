@@ -72,13 +72,13 @@ func setupWalletCtxforDeposits(
 func TestCreateDepositConfig(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 
+	// First, create the wallet and several accounts
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		keymanagerKind:     v2keymanager.Derived,
 		walletDir:          walletDir,
 		walletPasswordFile: passwordFilePath,
 		skipDepositConfirm: true,
 	})
-
 	wallet, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
@@ -87,13 +87,13 @@ func TestCreateDepositConfig(t *testing.T) {
 		NumAccounts: 3,
 	})
 	require.NoError(t, err)
-
 	keymanager, err := wallet.InitializeKeymanager(
 		cliCtx.Context,
 		true, /* skip mnemonic confirm */
 	)
 	require.NoError(t, err)
 
+	// Save public keys for comparison and selection purposes later
 	pubkeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	var hexPubkeys []string
@@ -102,11 +102,11 @@ func TestCreateDepositConfig(t *testing.T) {
 		hex.Encode(encoded, pubkey[:])
 		hexPubkeys = append(hexPubkeys, string(encoded))
 	}
-	// Remove the last one for testing purposes
+	// Remove the last key so that we can select a portion and not all of the accounts later
 	hexPubkeys = hexPubkeys[:len(hexPubkeys)-1]
 	hexPubkeysString := strings.Join(hexPubkeys, ",")
 
-	// Create a file holding the ETH1 private key
+	// Create a file holding the test ETH1 private key
 	eth1PrivateKeyFile, err := ioutil.TempFile("", "testing")
 	require.NoError(t, err)
 	defer func() {
@@ -119,7 +119,6 @@ func TestCreateDepositConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// First we test the behavior when depositAllAccountsFlag is set to true
-
 	depositConfig, err := createDepositConfigHelper(t, &depositTestWalletConfig{
 		keymanagerKind:              v2keymanager.Derived,
 		walletDir:                   walletDir,
@@ -133,7 +132,7 @@ func TestCreateDepositConfig(t *testing.T) {
 	if len(depositConfig.DepositPublicKeys) != 3 {
 		require.NoError(t, errors.New("wrong number of public keys"))
 	}
-	if depositConfig.Eth1PrivateKey != "This should be a ETH1 private key" {
+	if depositConfig.Eth1PrivateKey != "This should be an ETH1 private key" {
 		require.NoError(t, errors.New("eth1 private key does not match"))
 	}
 	if depositConfig.Web3Provider != "http://localhost:8545" {
@@ -143,7 +142,8 @@ func TestCreateDepositConfig(t *testing.T) {
 		require.NoError(t, errors.New("keystore file and keystore password file paths should be empty"))
 	}
 
-	// Test the case of providing the public keys via command-line by leaving depositAllAccountsFlag unset
+	// Test the case of providing the public keys via command-line.  We also pass in the test eth1 private key file.
+	// hexPubkeysString holds 1 less than all the accounts.
 	depositConfig, err = createDepositConfigHelper(t, &depositTestWalletConfig{
 		keymanagerKind:              v2keymanager.Derived,
 		walletDir:                   walletDir,
@@ -158,15 +158,17 @@ func TestCreateDepositConfig(t *testing.T) {
 	if len(depositConfig.DepositPublicKeys) != 2 {
 		require.NoError(t, errors.New("wrong number of public keys"))
 	}
+
+	// Compare the keys in the config object with the keys we obtained earlier from the keymanager
 	for keyNum, configPubKey := range depositConfig.DepositPublicKeys {
 		for index, eachByte := range bytesutil.ToBytes48(configPubKey.Marshal()) {
 			if eachByte != pubkeys[keyNum][index] {
-				require.NoError(t, errors.New("public key in deposit config that was not selected"))
+				require.NoError(t, errors.New("public keys do not match"))
 			}
 		}
 	}
 
-	// Now we test when private key file is not provided but rather the keystore and keystore password file
+	// Now we test when private key file is not provided but rather the keystore and keystore password files
 	depositConfig, err = createDepositConfigHelper(t, &depositTestWalletConfig{
 		keymanagerKind:              v2keymanager.Derived,
 		walletDir:                   walletDir,
@@ -189,13 +191,11 @@ func TestCreateDepositConfig(t *testing.T) {
 	if depositConfig.Eth1PrivateKey != "" {
 		require.NoError(t, errors.New("eth1 private key should be empty string"))
 	}
-
 }
 
-// createDepositConfigHelper returns the created SendDepositConfig when given a particular wallet configuration
+// createDepositConfigHelper returns a SendDepositConfig when given a particular wallet configuration.
 func createDepositConfigHelper(t *testing.T, config *depositTestWalletConfig) (*derived.SendDepositConfig, error) {
 	cliCtx := setupWalletCtxforDeposits(t, config)
-
 	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
 		err := errors.New("could not open wallet")
 		require.NoError(t, err)
@@ -208,12 +208,13 @@ func createDepositConfigHelper(t *testing.T, config *depositTestWalletConfig) (*
 		true, /* skip mnemonic confirm */
 	)
 	require.NoError(t, err)
-
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {
 		log.Fatalf("keymanager must be derived type")
 	}
 
+	// Now we finally call the function we are testing.
 	depositConfig, err := createDepositConfig(cliCtx, km)
+	require.NoError(t, err)
 	return depositConfig, nil
 }
