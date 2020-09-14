@@ -44,9 +44,9 @@ func NewBeaconState() *stateTrie.BeaconState {
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round
 // trip testing.
-func filledByteSlice2D(len, innerLen uint64) [][]byte {
-	b := make([][]byte, len)
-	for i := uint64(0); i < len; i++ {
+func filledByteSlice2D(length, innerLen uint64) [][]byte {
+	b := make([][]byte, length)
+	for i := uint64(0); i < length; i++ {
 		b[i] = make([]byte, innerLen)
 	}
 	return b
