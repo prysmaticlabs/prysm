@@ -24,6 +24,8 @@ func ExternalIPv4() (string, error) {
 	return "127.0.0.1", nil
 }
 
+// ExternalIPv6 retrieves any allocated IPv6 addresses
+// from the accessible network interfaces.
 func ExternalIPv6() (string, error) {
 	ips, err := retrieveIPAddrs()
 	if err != nil {
