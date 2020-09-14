@@ -84,7 +84,7 @@ def prysm_deps():
         name = "com_github_bloxapp_key_vault",
         importpath = "github.com/bloxapp/key-vault",
         sum = "h1:NTrzJLmRPwHlQHLPsIT077me1eMTQy2i4ZOER+/KRtE=",
-        version = "v0.0.0-20200914074406-85e152a9f67c",
+        version = "v0.1.1",
     )
     go_repository(
         name = "com_github_aead_siphash",
