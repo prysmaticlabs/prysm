@@ -33,7 +33,7 @@ type depositTestWalletConfig struct {
 }
 
 func setupWalletCtxforDeposits(
-	tb testing.TB,
+	t *testing.T,
 	cfg *depositTestWalletConfig,
 ) *cli.Context {
 	app := cli.App{}
@@ -48,24 +48,24 @@ func setupWalletCtxforDeposits(
 	set.String(flags.DepositPublicKeysFlag.Name, cfg.publicKeysFlag, "")
 	set.Bool(flags.DepositAllAccountsFlag.Name, cfg.depositAllAccountsFlag, "")
 	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirmationFlag, "")
-	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
-	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
-	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
-	assert.NoError(tb, set.Set(flags.HTTPWeb3ProviderFlag.Name, cfg.httpWeb3ProviderFlag))
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
+	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
+	assert.NoError(t, set.Set(flags.HTTPWeb3ProviderFlag.Name, cfg.httpWeb3ProviderFlag))
 	if cfg.eth1KeystoreFile != "" {
-		assert.NoError(tb, set.Set(flags.Eth1KeystoreUTCPathFlag.Name, cfg.eth1KeystoreFile))
-		assert.NoError(tb, set.Set(flags.Eth1KeystorePasswordFileFlag.Name, cfg.eth1KeystorePasswordFile))
+		assert.NoError(t, set.Set(flags.Eth1KeystoreUTCPathFlag.Name, cfg.eth1KeystoreFile))
+		assert.NoError(t, set.Set(flags.Eth1KeystorePasswordFileFlag.Name, cfg.eth1KeystorePasswordFile))
 	}
 	if cfg.eth1PrivateKeyFile != "" {
-		assert.NoError(tb, set.Set(flags.Eth1PrivateKeyFileFlag.Name, cfg.eth1PrivateKeyFile))
+		assert.NoError(t, set.Set(flags.Eth1PrivateKeyFileFlag.Name, cfg.eth1PrivateKeyFile))
 	}
 	if cfg.publicKeysFlag != "" {
-		assert.NoError(tb, set.Set(flags.DepositPublicKeysFlag.Name, cfg.publicKeysFlag))
+		assert.NoError(t, set.Set(flags.DepositPublicKeysFlag.Name, cfg.publicKeysFlag))
 	}
 	if cfg.depositAllAccountsFlag == true {
-		assert.NoError(tb, set.Set(flags.DepositAllAccountsFlag.Name, strconv.FormatBool(cfg.depositAllAccountsFlag)))
+		assert.NoError(t, set.Set(flags.DepositAllAccountsFlag.Name, strconv.FormatBool(cfg.depositAllAccountsFlag)))
 	}
-	assert.NoError(tb, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirmationFlag)))
+	assert.NoError(t, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirmationFlag)))
 	return cli.NewContext(&app, set, nil)
 }
 
@@ -129,9 +129,9 @@ func TestCreateDepositConfig(t *testing.T) {
 		eth1PrivateKeyFile:          eth1PrivateKeyFile.Name(),
 	})
 	require.NoError(t, err)
-	if len(depositConfig.DepositPublicKeys) != 3 {
-		require.NoError(t, errors.New("wrong number of public keys"))
-	}
+
+	require.Equal(t, 3, len(depositConfig.DepositPublicKeys), "wrong number of public keys")
+
 	if depositConfig.Eth1PrivateKey != "This should be an ETH1 private key" {
 		require.NoError(t, errors.New("eth1 private key does not match"))
 	}
@@ -155,9 +155,7 @@ func TestCreateDepositConfig(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	if len(depositConfig.DepositPublicKeys) != 2 {
-		require.NoError(t, errors.New("wrong number of public keys"))
-	}
+	require.Equal(t, 2, len(depositConfig.DepositPublicKeys), "wrong number of public keys")
 
 	// Compare the keys in the config object with the keys we obtained earlier from the keymanager
 	for keyNum, configPubKey := range depositConfig.DepositPublicKeys {
@@ -181,9 +179,8 @@ func TestCreateDepositConfig(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	if len(depositConfig.DepositPublicKeys) != 3 {
-		require.NoError(t, errors.New("wrong number of public keys"))
-	}
+	require.Equal(t, 3, len(depositConfig.DepositPublicKeys), "wrong number of public keys")
+
 	if depositConfig.Eth1KeystoreUTCFile != "This would be eth1 keystore file path" ||
 		depositConfig.Eth1KeystorePasswordFile != "This would be eth1 keystore password file path" {
 		require.NoError(t, errors.New("eth1 keystore or keystore password file path incorrect"))
