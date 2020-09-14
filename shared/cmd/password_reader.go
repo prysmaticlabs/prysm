@@ -17,6 +17,6 @@ type StdInPasswordReader struct {
 
 // ReadPassword reads a password from stdin.
 func (pr StdInPasswordReader) ReadPassword() (string, error) {
-	pwd, error := terminal.ReadPassword(int(os.Stdin.Fd()))
-	return string(pwd), error
+	pwd, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	return string(pwd), err
 }
