@@ -4,13 +4,17 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "fuzz_p2p.go",
         "mock_broadcaster.go",
         "mock_peermanager.go",
         "mock_peersprovider.go",
         "p2p.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/p2p/encoder:go_default_library",
         "//beacon-chain/p2p/peers:go_default_library",
