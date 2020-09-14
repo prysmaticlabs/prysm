@@ -169,13 +169,13 @@ func TestCopy_OK(t *testing.T) {
 	}
 	source, err := GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	require.NoError(t, err)
-	copy := source.Copy()
+	copiedTrie := source.Copy()
 
-	if copy == source {
+	if copiedTrie == source {
 		t.Errorf("Original trie returned.")
 	}
-	copyHash := copy.HashTreeRoot()
-	require.DeepEqual(t, copyHash, copy.HashTreeRoot())
+	copyHash := copiedTrie.HashTreeRoot()
+	require.DeepEqual(t, copyHash, copiedTrie.HashTreeRoot())
 }
 
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
