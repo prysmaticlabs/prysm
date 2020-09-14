@@ -99,7 +99,7 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 func (db *Store) CacheLength(ctx context.Context) int {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.CacheLength")
 	defer span.End()
-	len := db.flatSpanCache.Length()
-	log.Debugf("Span cache length %d", len)
-	return len
+	length := db.flatSpanCache.Length()
+	log.Debugf("Span cache length %d", length)
+	return length
 }

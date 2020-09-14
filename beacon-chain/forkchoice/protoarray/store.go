@@ -169,9 +169,10 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint6
 		}
 
 		i = f.store.nodes[i].parent
-	}
-	if i >= uint64(len(f.store.nodes)) {
-		return nil, errors.New("node index out of range")
+
+		if i >= uint64(len(f.store.nodes)) {
+			return nil, errors.New("node index out of range")
+		}
 	}
 
 	return f.store.nodes[i].root[:], nil

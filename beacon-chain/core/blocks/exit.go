@@ -160,7 +160,7 @@ func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot ui
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
 		return errors.New("non-active validator cannot exit")
 	}
-	// Verify the validator has not yet exited.
+	// Verify the validator has not yet submitted an exit.
 	if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 		return fmt.Errorf(
 			"validator has already submitted an exit, which will take place at epoch: %v",
