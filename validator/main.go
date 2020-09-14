@@ -49,6 +49,7 @@ func startNode(ctx *cli.Context) error {
 
 var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
+	flags.BeaconRPCGatewayProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
@@ -67,6 +68,7 @@ var appFlags = []cli.Flag{
 	flags.GrpcRetriesFlag,
 	flags.GrpcRetryDelayFlag,
 	flags.GrpcHeadersFlag,
+	flags.GPRCGatewayCorsDomain,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
@@ -194,7 +196,7 @@ contract in order to activate the validator client`,
 								return err
 							}
 						}
-						ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
+						ctx, cancel := context.WithTimeout(cliCtx.Context, connTimeout)
 						defer cancel()
 						dialOpts := client.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
@@ -209,7 +211,7 @@ contract in order to activate the validator client`,
 							log.WithError(err).Errorf("Failed to dial beacon node endpoint at %s", endpoint)
 							return err
 						}
-						err = v1.RunStatusCommand(pubKeys, ethpb.NewBeaconNodeValidatorClient(conn))
+						err = v1.RunStatusCommand(ctx, pubKeys, ethpb.NewBeaconNodeValidatorClient(conn))
 						if closed := conn.Close(); closed != nil {
 							log.WithError(closed).Error("Could not close connection to beacon node")
 						}
@@ -257,7 +259,7 @@ contract in order to activate the validator client`,
 						sources := strings.Split(passedSources, ",")
 						target := cliCtx.String(flags.TargetDirectory.Name)
 
-						if err := v1.Merge(context.Background(), sources, target); err != nil {
+						if err := v1.Merge(cliCtx.Context, sources, target); err != nil {
 							log.WithError(err).Error("Merging validator data failed")
 						} else {
 							log.Info("Merge completed successfully")
@@ -277,7 +279,7 @@ contract in order to activate the validator client`,
 						source := cliCtx.String(flags.SourceDirectory.Name)
 						target := cliCtx.String(flags.TargetDirectory.Name)
 
-						if err := v1.Split(context.Background(), source, target); err != nil {
+						if err := v1.Split(cliCtx.Context, source, target); err != nil {
 							log.WithError(err).Error("Splitting validator data failed")
 						} else {
 							log.Info("Split completed successfully")

@@ -163,15 +163,6 @@ func ValidateSlotClock(slot uint64, genesisTimeSec uint64) error {
 	return nil
 }
 
-// GenesisTime prioritizes to return the genesis time in config unless the config
-// genesis time is 0. Then it returns the genesis time in state.
-func GenesisTime(state *stateTrie.BeaconState) uint64 {
-	if params.BeaconConfig().GenesisTime == 0 {
-		return state.GenesisTime()
-	}
-	return params.BeaconConfig().GenesisTime
-}
-
 // RoundUpToNearestEpoch rounds up the provided slot value to the nearest epoch.
 func RoundUpToNearestEpoch(slot uint64) uint64 {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
@@ -179,4 +170,26 @@ func RoundUpToNearestEpoch(slot uint64) uint64 {
 		slot += params.BeaconConfig().SlotsPerEpoch
 	}
 	return slot
+}
+
+// WeakSubjectivityCheckptEpoch returns the epoch of the latest weak subjectivity checkpoint for the active validator count and
+// finalized epoch.
+//
+// Reference spec implementation:
+// https://notes.ethereum.org/@adiasg/weak-subjectvity-eth2#Updating-Weak-Subjectivity-Checkpoint-States
+func WeakSubjectivityCheckptEpoch(valCount uint64, fEpoch uint64) uint64 {
+	weakSubMod := params.BeaconConfig().MinValidatorWithdrawabilityDelay
+
+	m := params.BeaconConfig().MinPerEpochChurnLimit
+	q := params.BeaconConfig().ChurnLimitQuotient
+	d := params.BeaconConfig().SafetyDecay
+	churnMultiplier := m * q
+	if valCount >= churnMultiplier {
+		v := 256 * ((d * q / 2) / 256)
+		weakSubMod += v
+	} else {
+		v := 256 * ((d * valCount / (2 * m)) / 256)
+		weakSubMod += v
+	}
+	return fEpoch / weakSubMod
 }

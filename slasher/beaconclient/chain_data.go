@@ -60,6 +60,7 @@ func (bs *Service) querySyncStatus(ctx context.Context) {
 		return
 	}
 	ticker := time.NewTicker(syncStatusPollingInterval)
+	defer ticker.Stop()
 	log.Info("Waiting for beacon node to be fully synced...")
 	for {
 		select {

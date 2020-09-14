@@ -39,7 +39,9 @@ type Config struct {
 	ValDB                 db.Database
 	ValidatorService      *client.ValidatorService
 	SyncChecker           client.SyncChecker
+	GenesisFetcher        client.GenesisFetcher
 	WalletInitializedFeed *event.Feed
+	NodeGatewayEndpoint   string
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -58,9 +60,11 @@ type Server struct {
 	jwtKey                []byte
 	validatorService      *client.ValidatorService
 	syncChecker           client.SyncChecker
+	genesisFetcher        client.GenesisFetcher
 	wallet                *accountsv2.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
+	nodeGatewayEndpoint   string
 }
 
 // NewServer instantiates a new gRPC server.
@@ -76,8 +80,10 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		valDB:                 cfg.ValDB,
 		validatorService:      cfg.ValidatorService,
 		syncChecker:           cfg.SyncChecker,
+		genesisFetcher:        cfg.GenesisFetcher,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
+		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
 	}
 }
 

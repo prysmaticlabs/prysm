@@ -8,7 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // ExpandPath given a string which may be a relative path.
@@ -60,10 +63,13 @@ func FileExists(filename string) bool {
 		return false
 	}
 	info, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.WithError(err).Info("Checking for file existence returned an error")
+		}
 		return false
 	}
-	return !info.IsDir()
+	return info != nil && !info.IsDir()
 }
 
 // ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.
@@ -73,4 +79,19 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 		return nil, errors.Wrap(err, "could not determine absolute path of password file")
 	}
 	return ioutil.ReadFile(filePath)
+}
+
+// CopyFile copy a file from source to destination path.
+func CopyFile(src, dst string) error {
+	input, err := ioutil.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(dst, input, params.BeaconIoConfig().ReadWritePermissions)
+	if err != nil {
+		err := errors.Wrapf(err, "error creating file %s", dst)
+		return err
+	}
+	return nil
 }

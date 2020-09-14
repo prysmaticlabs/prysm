@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,6 +25,26 @@ import (
 
 type mocks struct {
 	validatorClient *mock.MockBeaconNodeValidatorClient
+	nodeClient      *mock.MockNodeClient
+	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+}
+
+type mockSignature struct{}
+
+func (mockSignature) Verify(bls.PublicKey, []byte) bool {
+	return true
+}
+func (mockSignature) AggregateVerify([]bls.PublicKey, [][32]byte) bool {
+	return true
+}
+func (mockSignature) FastAggregateVerify([]bls.PublicKey, [32]byte) bool {
+	return true
+}
+func (mockSignature) Marshal() []byte {
+	return make([]byte, 32)
+}
+func (m mockSignature) Copy() bls.Signature {
+	return m
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
@@ -28,6 +52,10 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		nodeClient:      mock.NewMockNodeClient(ctrl),
+		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+			return mockSignature{}, nil
+		},
 	}
 
 	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
@@ -373,81 +401,149 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	assert.Equal(t, string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
 }
 
-func TestProposeExit_DomainDataFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
+	_, m, finish := setup(t)
 	defer finish()
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(nil /*response*/, errors.New("uh oh"))
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, errors.New("uh oh"))
 
-	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, "uh oh", err)
+	assert.ErrorContains(t, "gRPC call to get validator index failed", err)
+}
 
-	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+func TestProposeExit_GetGenesisFailed(t *testing.T) {
+	_, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(nil, nil)
+
+	m.nodeClient.EXPECT().
+		GetGenesis(gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("uh oh"))
+
+	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, "uh oh", err)
+	assert.ErrorContains(t, "gRPC call to get genesis time failed", err)
+}
+
+func TestProposeExit_DomainDataFailed(t *testing.T) {
+	_, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
+
+	// Any time in the past will suffice
+	genesisTime := &types.Timestamp{
+		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+	}
+
+	m.nodeClient.EXPECT().
+		GetGenesis(gomock.Any(), gomock.Any()).
+		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("uh oh"))
+
+	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
 	assert.ErrorContains(t, "uh oh", err)
-	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
+	assert.ErrorContains(t, "failed to sign voluntary exit", err)
 }
 
 func TestProposeExit_DomainDataIsNil(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	_, m, finish := setup(t)
 	defer finish()
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(nil /*response*/, nil)
+	m.validatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+	// Any time in the past will suffice
+	genesisTime := &types.Timestamp{
+		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+	}
 
-	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	m.nodeClient.EXPECT().
+		GetGenesis(gomock.Any(), gomock.Any()).
+		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(nil, nil)
+
+	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
-	assert.LogsContain(t, hook, "Failed to sign voluntary exit")
+	assert.ErrorContains(t, "failed to sign voluntary exit", err)
 }
 
 func TestProposeBlock_ProposeExitFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	_, m, finish := setup(t)
 	defer finish()
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	m.validatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	m.validatorClient.EXPECT().ProposeExit(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{}),
-	).Return(nil /*response*/, errors.New("uh oh"))
+	// Any time in the past will suffice
+	genesisTime := &types.Timestamp{
+		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+	}
 
-	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+	m.nodeClient.EXPECT().
+		GetGenesis(gomock.Any(), gomock.Any()).
+		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
-	err := validator.ProposeExit(context.Background(), exit, validatorPubKey)
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+
+	m.validatorClient.EXPECT().
+		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
+		Return(nil, errors.New("uh oh"))
+
+	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
-	assert.LogsContain(t, hook, "Failed to propose voluntary exit")
+	assert.ErrorContains(t, "failed to propose voluntary exit", err)
 }
 
 func TestProposeExit_BroadcastsBlock(t *testing.T) {
-	validator, m, finish := setup(t)
+	_, m, finish := setup(t)
 	defer finish()
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	m.validatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	m.validatorClient.EXPECT().ProposeExit(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{}),
-	).Return(&ethpb.ProposeExitResponse{}, nil /*error*/)
+	// Any time in the past will suffice
+	genesisTime := &types.Timestamp{
+		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+	}
 
-	exit := &ethpb.VoluntaryExit{Epoch: 1, ValidatorIndex: 1}
+	m.nodeClient.EXPECT().
+		GetGenesis(gomock.Any(), gomock.Any()).
+		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
-	assert.NoError(t, validator.ProposeExit(context.Background(), exit, validatorPubKey))
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+
+	m.validatorClient.EXPECT().
+		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
+		Return(&ethpb.ProposeExitResponse{}, nil)
+
+	assert.NoError(t, ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:]))
 }

@@ -149,8 +149,13 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 		return nil, err
 	}
 	pkMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, []uint64{req.Header.ProposerIndex})
+	if err != nil {
+		return nil, err
+	}
 	if err := helpers.VerifyBlockHeaderSigningRoot(
-		req.Header, pkMap[req.Header.ProposerIndex], req.Signature, domain); err != nil {
+		req.Header,
+		pkMap[req.Header.ProposerIndex],
+		req.Signature, domain); err != nil {
 		return nil, err
 	}
 

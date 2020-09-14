@@ -349,7 +349,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 }
 
 func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(context.Background(), AccountsPath, accountsKeystoreFileName)
+	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.
 		return nil
@@ -471,7 +471,7 @@ func askUntilPasswordConfirms(
 	formattedPublicKey := fmt.Sprintf("%#x", bytesutil.Trunc(publicKey))
 	for {
 		password, err = promptutil.PasswordPrompt(
-			fmt.Sprintf("\nPlease try again, could not use password to import account %s", au.BrightGreen(formattedPublicKey)),
+			fmt.Sprintf("\nPlease try again, incorrect password for account %s", au.BrightGreen(formattedPublicKey)),
 			promptutil.NotEmpty,
 		)
 		if err != nil {

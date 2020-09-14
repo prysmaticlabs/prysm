@@ -41,7 +41,7 @@ type batchBlockReceiverFn func(ctx context.Context, blks []*eth.SignedBeaconBloc
 // after the finalized epoch, request blocks to head from some subset of peers
 // where step = 1.
 func (s *Service) roundRobinSync(genesis time.Time) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 	defer s.chain.ClearCachedStates()
 	state.SkipSlotCache.Disable()

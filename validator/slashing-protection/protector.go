@@ -11,6 +11,6 @@ type Protector interface {
 	CheckAttestationSafety(ctx context.Context, attestation *eth.IndexedAttestation) bool
 	CommitAttestation(ctx context.Context, attestation *eth.IndexedAttestation) bool
 	CheckBlockSafety(ctx context.Context, blockHeader *eth.BeaconBlockHeader) bool
-	CommitBlock(ctx context.Context, blockHeader *eth.SignedBeaconBlockHeader) bool
+	CommitBlock(ctx context.Context, blockHeader *eth.SignedBeaconBlockHeader) (bool, error)
 	Status() error
 }

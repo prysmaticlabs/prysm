@@ -62,7 +62,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 	topic := baseTopic + s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	s.p2p.SetStreamHandler(topic, func(stream network.Stream) {
-		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
+		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
 		defer func() {
 			if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
