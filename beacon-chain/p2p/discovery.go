@@ -3,7 +3,6 @@ package p2p
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -106,10 +105,6 @@ func (s *Service) createListener(
 	} else {
 		networkVersion = "udp6"
 	}
-	udpAddr, err := net.ResolveUDPAddr(networkVersion, net.JoinHostPort(ipAddr.String(), fmt.Sprintf("%d", s.cfg.UDPPort)))
-	if err != nil {
-		return nil, err
-	}
 	// Check for the real local address which may
 	// be different in the presence of virtual networks.
 	ipAddr = s.localAddress(networkVersion, ipAddr)
@@ -120,7 +115,7 @@ func (s *Service) createListener(
 			return nil, errors.New("invalid local ip provided")
 		}
 	}
-	udpAddr = &net.UDPAddr{
+	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
 		Port: int(s.cfg.UDPPort),
 	}
