@@ -62,11 +62,11 @@ func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 		}
 		return passwordFilePath, nil
 	}
-	walletPassword, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
+	walletPasswordFilePath, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
 	if err != nil {
 		return "", fmt.Errorf("could not read account password: %v", err)
 	}
-	return walletPassword, nil
+	return walletPasswordFilePath, nil
 }
 
 func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
