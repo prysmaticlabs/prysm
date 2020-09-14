@@ -115,7 +115,7 @@ func TestCreateDepositConfig(t *testing.T) {
 		err = os.Remove(eth1PrivateKeyFile.Name())
 		require.NoError(t, err)
 	}()
-	_, err = eth1PrivateKeyFile.WriteString("This should be a ETH1 private key")
+	_, err = eth1PrivateKeyFile.WriteString("This should be an ETH1 private key")
 	require.NoError(t, err)
 
 	// First we test the behavior when depositAllAccountsFlag is set to true
