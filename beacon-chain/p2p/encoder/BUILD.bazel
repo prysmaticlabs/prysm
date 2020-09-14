@@ -12,6 +12,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
     ],
     deps = [
         "//shared/params:go_default_library",
