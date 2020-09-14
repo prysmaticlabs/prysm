@@ -70,6 +70,11 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 				}
 			}
 			ds.submitAttesterSlashings(ctx, slashings)
+
+			// update highest attestation
+			if err := ds.UpdateHighestAttestation(ctx, indexedAtt); err != nil {
+				log.WithError(err).Error("Could not update highest attestation")
+			}
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return

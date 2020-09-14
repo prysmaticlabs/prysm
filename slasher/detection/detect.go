@@ -216,3 +216,26 @@ func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.Indexed
 	return incomingAtt.Data.Source.Epoch < prevAtt.Data.Source.Epoch &&
 		incomingAtt.Data.Target.Epoch > prevAtt.Data.Target.Epoch
 }
+
+
+
+
+
+
+
+func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
+	for _, idx := range att.AttestingIndices {
+		foundAtt, err := ds.slasherDB.HighestAttestation(ctx, idx)
+		if err != nil {
+			return err
+		}
+		if foundAtt != nil {
+			// check if found should be updated
+		} else {
+			if err := ds.slasherDB.SaveHighestAttestation(ctx, idx, att); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

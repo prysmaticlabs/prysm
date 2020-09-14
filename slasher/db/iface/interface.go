@@ -30,6 +30,9 @@ type ReadOnlyDatabase interface {
 	IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error)
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 
+	// Highest Attestation related methods.
+	HighestAttestation(ctx context.Context, validatorID uint64) (*ethpb.IndexedAttestation, error)
+
 	// MinMaxSpan related methods.
 	EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (*detectionTypes.EpochStore, error)
 	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, bool, error)
@@ -67,6 +70,9 @@ type WriteAccessDatabase interface {
 	SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
+
+	// Highest Attestation related methods.
+	SaveHighestAttestation(ctx context.Context, validatorIdx uint64, idxAttestation *ethpb.IndexedAttestation) error
 
 	// MinMaxSpan related methods.
 	SaveEpochSpans(ctx context.Context, epoch uint64, spans *detectionTypes.EpochStore, toCache bool) error
