@@ -191,14 +191,14 @@ func (s *Service) createLocalNode(
 		return nil, errors.Wrap(err, "could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
-	ipEntry := enr.IP(ipAddr)
+	ipEntry := enr.IPv6(ipAddr)
 	udpEntry := enr.UDP(udpPort)
 	tcpEntry := enr.TCP(tcpPort)
 	localNode.Set(ipEntry)
 	ip, err := iputils.ExternalIPv4()
 	_ = err
-	ipEntry = enr.IP(ip)
-	localNode.Set(ipEntry)
+	ipEntry2 := enr.IPv4(ip)
+	localNode.Set(ipEntry2)
 	localNode.Set(udpEntry)
 	localNode.Set(tcpEntry)
 	localNode.SetFallbackIP(ipAddr)
