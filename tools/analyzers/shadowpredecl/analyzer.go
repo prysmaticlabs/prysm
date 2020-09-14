@@ -46,6 +46,9 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		switch declaration := node.(type) {
 		case *ast.FuncDecl:
+			if declaration.Recv != nil {
+				return
+			}
 			name := declaration.Name.Name
 			if shadows(name) {
 				pass.Reportf(declaration.Name.NamePos, messageTemplate, "Function", name)
