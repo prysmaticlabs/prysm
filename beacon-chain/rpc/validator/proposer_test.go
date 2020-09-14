@@ -1030,7 +1030,7 @@ func TestProposer_Eth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	assert.NoError(t, err, "A failed request should not have returned an error, got %v")
 }
 
-func TestProposer_DefaultEth1Data_NoBlockExists(t *testing.T) {
+func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
