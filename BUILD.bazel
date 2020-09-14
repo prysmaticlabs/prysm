@@ -109,6 +109,7 @@ nogo(
         "//tools/analyzers/errcheck:go_tool_library",
         "//tools/analyzers/featureconfig:go_tool_library",
         "//tools/analyzers/comparesame:go_tool_library",
+        "//tools/analyzers/shadowpredecl:go_tool_library",
     ] + select({
         # nogo checks that fail with coverage enabled.
         ":coverage_enabled": [],
