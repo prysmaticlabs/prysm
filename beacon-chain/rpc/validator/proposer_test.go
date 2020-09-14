@@ -39,7 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestGetBlock_OK(t *testing.T) {
+func TestProposer_GetBlock_OK(t *testing.T) {
 	db, sc := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -122,7 +122,7 @@ func TestGetBlock_OK(t *testing.T) {
 	assert.DeepEqual(t, attSlashings, block.Body.AttesterSlashings)
 }
 
-func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
+func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	db, sc := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -209,7 +209,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	assert.Equal(t, false, hasUnaggregatedAtt, "Expected block to not have unaggregated attestation")
 }
 
-func TestProposeBlock_OK(t *testing.T) {
+func TestProposer_ProposeBlock_OK(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
@@ -245,7 +245,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	assert.NoError(t, err, "Could not propose block correctly")
 }
 
-func TestComputeStateRoot_OK(t *testing.T) {
+func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	db, sc := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -290,7 +290,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
+func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -369,7 +369,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
+func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -483,7 +483,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending deposits")
 }
 
-func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
+func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -613,7 +613,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	assert.Equal(t, len(recentDeposits), len(deposits), "Received unexpected number of pending deposits")
 }
 
-func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
+func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	ctx := context.Background()
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOW.POWChain{
@@ -707,7 +707,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	assert.Equal(t, expectedDeposits, len(deposits), "Received unexpected number of pending deposits")
 }
 
-func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
+func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -801,7 +801,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	assert.Equal(t, params.BeaconConfig().MaxDeposits, uint64(len(deposits)), "Received unexpected number of pending deposits")
 }
 
-func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
+func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -895,7 +895,7 @@ func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	assert.Equal(t, 3, len(deposits), "Received unexpected number of pending deposits")
 }
 
-func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
+func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	ctx := context.Background()
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableFinalizedDepositsCache: true})
 	defer resetCfg()
@@ -1008,7 +1008,7 @@ func TestDepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	assert.Equal(t, expectedRoot, actualRoot, "Incorrect deposit trie root")
 }
 
-func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
+func TestProposer_Eth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte{'a'},
@@ -1030,7 +1030,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	assert.NoError(t, err, "A failed request should not have returned an error, got %v")
 }
 
-func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
+func TestProposer_DefaultEth1Data_NoBlockExists(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -1097,7 +1097,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	}
 }
 
-func TestEth1Data(t *testing.T) {
+func TestProposer_Eth1Data(t *testing.T) {
 	slot := uint64(20000)
 
 	p := &mockPOW.POWChain{
@@ -1131,7 +1131,7 @@ func TestEth1Data(t *testing.T) {
 	assert.Equal(t, uint64(55), eth1Data.DepositCount)
 }
 
-func TestEth1Data_SmallerDepositCount(t *testing.T) {
+func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 	slot := uint64(20000)
 	deps := []*dbpb.DepositContainer{
 		{
@@ -1193,7 +1193,7 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 	assert.Equal(t, uint64(10), eth1Data.DepositCount)
 }
 
-func TestEth1Data_MockEnabled(t *testing.T) {
+func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	// If a mock eth1 data votes is specified, we use the following for the
 	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
@@ -1235,7 +1235,7 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	}
 }
 
-func TestEth1DataMajorityVote_ChooseHighestCount(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_ChooseHighestCount(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1294,7 +1294,7 @@ func TestEth1DataMajorityVote_ChooseHighestCount(t *testing.T) {
 	}
 }
 
-func TestEth1DataMajorityVote_HighestCountBeforeRange_ChooseHighestCountWithinRange(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_HighestCountBeforeRange_ChooseHighestCountWithinRange(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1354,7 +1354,7 @@ func TestEth1DataMajorityVote_HighestCountBeforeRange_ChooseHighestCountWithinRa
 	}
 }
 
-func TestEth1DataMajorityVote_HighestCountAfterRange_ChooseHighestCountWithinRange(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_HighestCountAfterRange_ChooseHighestCountWithinRange(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1413,7 +1413,7 @@ func TestEth1DataMajorityVote_HighestCountAfterRange_ChooseHighestCountWithinRan
 	}
 }
 
-func TestEth1DataMajorityVote_HighestCountOnUnknownBlock_ChooseKnownBlockWithHighestCount(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_HighestCountOnUnknownBlock_ChooseKnownBlockWithHighestCount(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1472,7 +1472,7 @@ func TestEth1DataMajorityVote_HighestCountOnUnknownBlock_ChooseKnownBlockWithHig
 	}
 }
 
-func TestEth1DataMajorityVote_NoVotesInRange_ChooseDefault(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_NoVotesInRange_ChooseDefault(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1533,7 +1533,7 @@ func TestEth1DataMajorityVote_NoVotesInRange_ChooseDefault(t *testing.T) {
 	}
 }
 
-func TestEth1DataMajorityVote_NoVotes_ChooseDefault(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_NoVotes_ChooseDefault(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1588,7 +1588,7 @@ func TestEth1DataMajorityVote_NoVotes_ChooseDefault(t *testing.T) {
 	}
 }
 
-func TestEth1DataMajorityVote_SameCount_ChooseMoreRecentBlock(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_SameCount_ChooseMoreRecentBlock(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1646,7 +1646,7 @@ func TestEth1DataMajorityVote_SameCount_ChooseMoreRecentBlock(t *testing.T) {
 	}
 }
 
-func TestEth1DataMajorityVote_HighestCountOnBlockWithLessDeposits_ChooseAnotherBlock(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_HighestCountOnBlockWithLessDeposits_ChooseAnotherBlock(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1705,7 +1705,7 @@ func TestEth1DataMajorityVote_HighestCountOnBlockWithLessDeposits_ChooseAnotherB
 	}
 }
 
-func TestEth1DataMajorityVote_NoDeposits_ChooseChainStartEth1Data(t *testing.T) {
+func TestProposer_Eth1DataMajorityVote_NoDeposits_ChooseChainStartEth1Data(t *testing.T) {
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
 			32 * params.BeaconConfig().SecondsPerSlot: big.NewInt(50),
@@ -1752,7 +1752,7 @@ func TestEth1DataMajorityVote_NoDeposits_ChooseChainStartEth1Data(t *testing.T) 
 	}
 }
 
-func TestFilterAttestation_OK(t *testing.T) {
+func TestProposer_FilterAttestation_OK(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -1914,7 +1914,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 }
 
-func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing.T) {
+func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -2009,7 +2009,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending deposits")
 }
 
-func TestDeleteAttsInPool_Aggregated(t *testing.T) {
+func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	s := &Server{
 		AttPool: attestations.NewPool(),
 	}
@@ -2030,7 +2030,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	assert.Equal(t, 0, len(atts), "Did not delete unaggregated attestation")
 }
 
-func TestSortProfitableAtts(t *testing.T) {
+func TestProposer_SortProfitableAtts(t *testing.T) {
 	atts := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
 		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
