@@ -193,7 +193,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 		eth1KeystorePasswordFile, err := inputWeakPassword(
 			cliCtx,
 			flags.Eth1KeystorePasswordFileFlag,
-			"Enter the file path a .txt file containing your eth1 keystore password",
+			"Enter the file path to a text containing your eth1 keystore password",
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read eth1 keystore password file path")
