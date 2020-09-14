@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -106,42 +107,9 @@ func (s *Service) createListener(
 	} else {
 		networkVersion = "udp6"
 	}
-
 	udpAddr, err := net.ResolveUDPAddr(networkVersion, net.JoinHostPort(ipAddr.String(), fmt.Sprintf("%d", s.cfg.UDPPort)))
 	if err != nil {
-		log.Fatal(err)
-	}
-	log.Errorf("udp addr: %s", udpAddr.String())
-
-	rBootnodes := []*enode.Node{}
-	for _, addr := range s.cfg.Discv5BootStrapAddr {
-		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not bootstrap addr")
-		}
-		rBootnodes = append(rBootnodes, bootNode)
-	}
-	/*
-		rudpAddr := &net.UDPAddr{
-			IP:   rBootnodes[0].IP(),
-			Port: rBootnodes[0].UDP(),
-		}
-
-
-		rConn, err := net.DialUDP("udp", udpAddr, rudpAddr)
-		if err != nil {
-			return nil, err
-		}
-		_, err = rConn.Write([]byte("bnbnb"))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not send to UDP")
-		}
-		err = rConn.Close()
-	*/
-	a, err := net.InterfaceAddrs()
-	all := []string{}
-	for _, bn := range a {
-		all = append(all, bn.String())
+		return nil, err
 	}
 	// Check for the real local address which may
 	// be different in the presence of virtual networks.
@@ -161,7 +129,6 @@ func (s *Service) createListener(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to UDP")
 	}
-	log.Errorf("version: %s with ipaddr %v and port %d", networkVersion, all, udpAddr.Port)
 
 	localNode, err := s.createLocalNode(
 		privKey,
@@ -228,6 +195,9 @@ func (s *Service) createLocalNode(
 	udpEntry := enr.UDP(udpPort)
 	tcpEntry := enr.TCP(tcpPort)
 	localNode.Set(ipEntry)
+	ip, err := iputils.ExternalIPv4()
+	_ = err
+	ipEntry = enr.IP(ip)
 	localNode.Set(udpEntry)
 	localNode.Set(tcpEntry)
 	localNode.SetFallbackIP(ipAddr)

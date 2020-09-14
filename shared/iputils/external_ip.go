@@ -2,7 +2,6 @@
 package iputils
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -30,14 +29,10 @@ func ExternalIPv6() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("\n addresses: %v", ips)
 	if len(ips) == 0 {
 		return "127.0.0.1", nil
 	}
 	for _, ip := range ips {
-		if ip.String() == "123.123.22.22" {
-			return ip.String(), nil
-		}
 		if ip.To4() != nil {
 			continue // not an ipv6 address
 		}
