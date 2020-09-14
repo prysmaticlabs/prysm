@@ -230,10 +230,15 @@ func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Inde
 			return err
 		}
 		if foundAtt != nil {
-			// check if found should be updated
+			if att.Data.Source.Epoch >= foundAtt.Data.Source.Epoch && att.Data.Source.Epoch >= foundAtt.Data.Target.Epoch {
+
+			}
 		} else {
 			if err := ds.slasherDB.SaveHighestAttestation(ctx, idx, att); err != nil {
 				return err
+			}
+			if idx == 40 {
+				log.Printf("updated highest attestation, val %d, source: %d, target: %d", idx, att.Data.Source.Epoch, att.Data.Target.Epoch)
 			}
 		}
 	}

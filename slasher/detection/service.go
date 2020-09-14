@@ -196,6 +196,11 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				}
 			}
 			ds.submitAttesterSlashings(ctx, slashings)
+
+			// update highest attestation
+			if err := ds.UpdateHighestAttestation(ctx, att); err != nil {
+				log.WithError(err).Errorf("could not update highest attestation")
+			}
 		}
 		latestStoredHead = &ethpb.ChainHead{HeadEpoch: epoch}
 		if err := ds.slasherDB.SaveChainHead(ctx, latestStoredHead); err != nil {
