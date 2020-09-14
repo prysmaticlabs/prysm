@@ -4,7 +4,7 @@ import "testing"
 
 // SetupTestConfigCleanup preserves configurations allowing to modify them within tests without any
 // restrictions, everything is restored after the test.
-func SetupTestConfigCleanup(t *testing.T) {
+func SetupTestConfigCleanup(t testing.TB) {
 	prevDefaultBeaconConfig := mainnetBeaconConfig.Copy()
 	prevBeaconConfig := beaconConfig.Copy()
 	prevNetworkCfg := mainnetNetworkConfig.Copy()
