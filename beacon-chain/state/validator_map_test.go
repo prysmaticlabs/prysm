@@ -30,7 +30,7 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 		})
 	}
 	handler := newValHandler(vals)
-	newHandler := handler.copyHandler()
+	newHandler := handler.copy()
 	wantedPubkey := strconv.Itoa(22)
 	handler.valIdxMap[bytesutil.ToBytes48([]byte(wantedPubkey))] = 27
 	assert.NotEqual(t, handler.valIdxMap[bytesutil.ToBytes48([]byte(wantedPubkey))], newHandler.valIdxMap[bytesutil.ToBytes48([]byte(wantedPubkey))], "Values are supposed to be unequal due to copy")
