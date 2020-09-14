@@ -1,3 +1,5 @@
+// -build libfuzzer
+
 package cache
 
 import (
@@ -12,10 +14,6 @@ import (
 )
 
 var (
-	// ErrNotCommittee will be returned when a cache object is not a pointer to
-	// a Committee struct.
-	ErrNotCommittee = errors.New("object is not a committee struct")
-
 	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
 	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
 	maxCommitteesCacheSize = uint64(32)
@@ -31,15 +29,6 @@ var (
 		Help: "The number of committee requests that are present in the cache.",
 	})
 )
-
-// Committees defines the shuffled committees seed.
-type Committees struct {
-	CommitteeCount  uint64
-	Seed            [32]byte
-	ShuffledIndices []uint64
-	SortedIndices   []uint64
-	ProposerIndices []uint64
-}
 
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type CommitteeCache struct {
@@ -214,6 +203,12 @@ func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
 	}
 
 	return item.ProposerIndices, nil
+}
+
+// HasEntry returns true if the committee cache has a value.
+func (c *CommitteeCache) HasEntry(seed string) bool {
+	_, ok, err := c.CommitteeCache.GetByKey(seed)
+	return err == nil && ok
 }
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
