@@ -197,8 +197,7 @@ func (s *Service) createLocalNode(
 	localNode.Set(ipEntry)
 	ip, err := iputils.ExternalIPv4()
 	_ = err
-	log.Errorf("ipv4: %s", ip.String())
-	ipEntry2 := enr.IPv4(ip)
+	ipEntry2 := enr.IPv4(net.ParseIP(ip))
 	localNode.Set(ipEntry2)
 	localNode.Set(udpEntry)
 	localNode.Set(tcpEntry)
