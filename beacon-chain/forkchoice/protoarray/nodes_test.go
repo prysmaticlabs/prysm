@@ -414,3 +414,24 @@ func TestStore_AncestorRoot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'b'})
 }
+
+func TestStore_AncestorRootOutOfBound(t *testing.T) {
+	ctx := context.Background()
+	f := &ForkChoice{store: &Store{}}
+	f.store.nodesIndices = map[[32]byte]uint64{}
+	_, err := f.AncestorRoot(ctx, [32]byte{'a'}, 0)
+	assert.ErrorContains(t, "node does not exist", err)
+	f.store.nodesIndices[[32]byte{'a'}] = 0
+	_, err = f.AncestorRoot(ctx, [32]byte{'a'}, 0)
+	assert.ErrorContains(t, "node index out of range", err)
+	f.store.nodesIndices[[32]byte{'b'}] = 1
+	f.store.nodesIndices[[32]byte{'c'}] = 2
+	f.store.nodes = []*Node{
+		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
+		{slot: 2, root: [32]byte{'b'}, parent: 100}, // Out of bound parent.
+		{slot: 3, root: [32]byte{'c'}, parent: 1},
+	}
+
+	_, err = f.AncestorRoot(ctx, [32]byte{'c'}, 1)
+	require.ErrorContains(t, "node index out of range", err)
+}

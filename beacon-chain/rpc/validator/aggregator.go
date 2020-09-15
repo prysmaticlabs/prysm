@@ -59,7 +59,7 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	if err := as.AttPool.AggregateUnaggregatedAttestations(); err != nil {
+	if err := as.AttPool.AggregateUnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
 	}
 	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
@@ -117,6 +117,11 @@ func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *
 	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
 		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
 		return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
+	}
+
+	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
+	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot, as.GenesisTimeFetcher.GenesisTime()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
 	}
 
 	if err := as.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {

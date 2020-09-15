@@ -15,6 +15,10 @@ var (
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
+	spadinaTestnet = &cli.BoolFlag{
+		Name:  "spadina",
+		Usage: "This defines the flag through which we can run on the Spadina Multiclient Testnet",
+	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
@@ -141,9 +145,9 @@ var (
 		Name:  "init-sync-verbose",
 		Usage: "Enable logging every processed block during initial syncing.",
 	}
-	enableFinalizedDepositsCache = &cli.BoolFlag{
-		Name:  "enable-finalized-deposits-cache",
-		Usage: "Enables utilization of cached finalized deposits",
+	disableFinalizedDepositsCache = &cli.BoolFlag{
+		Name:  "disable-finalized-deposits-cache",
+		Usage: "Disables utilization of cached finalized deposits",
 	}
 	enableEth1DataMajorityVote = &cli.BoolFlag{
 		Name:  "enable-eth1-data-majority-vote",
@@ -175,7 +179,6 @@ var (
 var devModeFlags = []cli.Flag{
 	checkPtInfoCache,
 	batchBlockVerify,
-	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -546,6 +549,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableFinalizedDepositsCache = &cli.BoolFlag{
+		Name:   "enable-finalized-deposits-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -621,6 +629,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedNewStateMgmtFlag,
 	deprecatedSlasherProviderFlag,
 	deprecatedEnableSlasherFlag,
+	deprecatedEnableFinalizedDepositsCache,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -631,6 +640,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
+	spadinaTestnet,
 	disableAccountsV2,
 }...)
 
@@ -670,9 +680,10 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
+	spadinaTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
-	enableFinalizedDepositsCache,
+	disableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -687,7 +698,6 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
-	"--enable-finalized-deposits-cache",
 	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
 }

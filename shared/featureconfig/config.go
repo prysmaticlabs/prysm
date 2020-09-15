@@ -33,8 +33,10 @@ type Flags struct {
 	// State locks
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
-	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
-	OnyxTestnet   bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
+	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
+	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
+	SpadinaTestnet bool // Spadina defines the flag through which we can enable the node to run on the spadina testnet.
+
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -133,6 +135,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(spadinaTestnet.Name) {
+		log.Warn("Running Node on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -237,9 +245,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Logging every processed block during initial syncing.")
 		cfg.InitSyncVerbose = true
 	}
-	if ctx.Bool(enableFinalizedDepositsCache.Name) {
-		log.Warn("Enabling finalized deposits cache")
-		cfg.EnableFinalizedDepositsCache = true
+	cfg.EnableFinalizedDepositsCache = true
+	if ctx.Bool(disableFinalizedDepositsCache.Name) {
+		log.Warn("Disabling finalized deposits cache")
+		cfg.EnableFinalizedDepositsCache = false
 	}
 	if ctx.Bool(enableEth1DataMajorityVote.Name) {
 		log.Warn("Enabling eth1data majority vote")
@@ -297,6 +306,12 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(spadinaTestnet.Name) {
+		log.Warn("Running Node on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
 	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true
