@@ -1,4 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@prysm//tools/go:def.bzl", "go_library")
 
 #  Build with --define=blst_enabled=false to exclude blst library.
@@ -51,32 +52,13 @@ config_setting(
 go_library(
     name = "go_default_library",
     srcs =
-        select({
-            ":blst_enabled_linux_amd64": [
-                "aliases.go",
-                "doc.go",
-                "init.go",
-                "public_key.go",
-                "secret_key.go",
-                "signature.go",
-            ],
-            ":blst_enabled_linux_arm64": [
-                "aliases.go",
-                "doc.go",
-                "init.go",
-                "public_key.go",
-                "secret_key.go",
-                "signature.go",
-            ],
-            ":blst_enabled_android_amd64": [
-                "aliases.go",
-                "doc.go",
-                "init.go",
-                "public_key.go",
-                "secret_key.go",
-                "signature.go",
-            ],
-            ":blst_enabled_android_arm64": [
+        selects.with_or({
+            (
+                ":blst_enabled_linux_amd64",
+                ":blst_enabled_linux_arm64",
+                ":blst_enabled_android_amd64",
+                ":blst_enabled_android_arm64",
+            ): [
                 "aliases.go",
                 "doc.go",
                 "init.go",
@@ -92,35 +74,13 @@ go_library(
     visibility = [
         "//shared/bls:__pkg__",
     ],
-    deps = select({
-        ":blst_enabled_linux_amd64": [
-            "//shared/bls/iface:go_default_library",
-            "//shared/featureconfig:go_default_library",
-            "//shared/params:go_default_library",
-            "//shared/rand:go_default_library",
-            "@com_github_dgraph_io_ristretto//:go_default_library",
-            "@com_github_pkg_errors//:go_default_library",
-            "@com_github_supranational_blst//:go_default_library",
-        ],
-        ":blst_enabled_linux_arm64": [
-            "//shared/bls/iface:go_default_library",
-            "//shared/featureconfig:go_default_library",
-            "//shared/params:go_default_library",
-            "//shared/rand:go_default_library",
-            "@com_github_dgraph_io_ristretto//:go_default_library",
-            "@com_github_pkg_errors//:go_default_library",
-            "@com_github_supranational_blst//:go_default_library",
-        ],
-        ":blst_enabled_android_amd64": [
-            "//shared/bls/iface:go_default_library",
-            "//shared/featureconfig:go_default_library",
-            "//shared/params:go_default_library",
-            "//shared/rand:go_default_library",
-            "@com_github_dgraph_io_ristretto//:go_default_library",
-            "@com_github_pkg_errors//:go_default_library",
-            "@com_github_supranational_blst//:go_default_library",
-        ],
-        ":blst_enabled_android_arm64": [
+    deps = selects.with_or({
+        (
+            ":blst_enabled_linux_amd64",
+            ":blst_enabled_linux_arm64",
+            ":blst_enabled_android_amd64",
+            ":blst_enabled_android_arm64",
+        ): [
             "//shared/bls/iface:go_default_library",
             "//shared/featureconfig:go_default_library",
             "//shared/params:go_default_library",
@@ -136,43 +96,26 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs =
-        select({
-            ":blst_enabled_android_amd64": [
-                "public_key_test.go",
-                "secret_key_test.go",
-                "signature_test.go",
-            ],
-            ":blst_enabled_linux_amd64": [
-                "public_key_test.go",
-                "secret_key_test.go",
-                "signature_test.go",
-            ],
-            ":blst_enabled_android_arm64": [
-                "public_key_test.go",
-                "secret_key_test.go",
-                "signature_test.go",
-            ],
-            ":blst_enabled_linux_arm64": [
+        selects.with_or({
+            (
+                ":blst_enabled_linux_amd64",
+                ":blst_enabled_linux_arm64",
+                ":blst_enabled_android_amd64",
+                ":blst_enabled_android_arm64",
+            ): [
                 "public_key_test.go",
                 "secret_key_test.go",
                 "signature_test.go",
             ],
             "//conditions:default": [],
         }),
-    deps = select({
-        ":blst_enabled_android_amd64": [
-            "//shared/bls/iface:go_default_library",
-            "//shared/bytesutil:go_default_library",
-        ],
-        ":blst_enabled_linux_amd64": [
-            "//shared/bls/iface:go_default_library",
-            "//shared/bytesutil:go_default_library",
-        ],
-        ":blst_enabled_android_arm64": [
-            "//shared/bls/iface:go_default_library",
-            "//shared/bytesutil:go_default_library",
-        ],
-        ":blst_enabled_linux_arm64": [
+    deps = selects.with_or({
+        (
+            ":blst_enabled_linux_amd64",
+            ":blst_enabled_linux_arm64",
+            ":blst_enabled_android_amd64",
+            ":blst_enabled_android_arm64",
+        ): [
             "//shared/bls/iface:go_default_library",
             "//shared/bytesutil:go_default_library",
         ],
