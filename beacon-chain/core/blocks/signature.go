@@ -37,15 +37,22 @@ func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domai
 
 // verifies the signature from the raw data, public key and domain provided.
 func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
-	signingData := &pb.SigningData{
-		ObjectRoot: signedData,
-		Domain:     domain,
-	}
-	root, err := signingData.HashTreeRoot()
+	set, err := retrieveSignatureSet(signedData, pub, signature, domain)
 	if err != nil {
-		return errors.Wrap(err, "could not hash container")
+		return err
 	}
-	if !bls.VerifyCompressed(signature, pub, root[:]) {
+	if len(set.Signatures) != 1 {
+		return errors.Errorf("signature set contains %d signatures instead of 1", len(set.Signatures))
+	}
+	// We assume only one signature set is returned here.
+	sig := set.Signatures[0]
+	publicKey := set.PublicKeys[0]
+	root := set.Messages[0]
+	rSig, err := bls.SignatureFromBytes(sig)
+	if err != nil {
+		return err
+	}
+	if !rSig.Verify(publicKey, root[:]) {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
