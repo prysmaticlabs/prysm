@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,12 +14,19 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-// ProposeBlock A new beacon block for a given slot. This method collects the
+type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+
+const domainDataErr = "could not get domain data"
+const signingRootErr = "could not get signing root"
+const signExitErr = "could not sign voluntary exit proposal"
+
+// ProposeBlock proposes a new beacon block for a given slot. This method collects the
 // previous beacon block, any pending deposits, and ETH1 data from the beacon
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
@@ -114,16 +122,56 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 }
 
-// ProposeExit --
-func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
-	return errors.New("unimplemented")
+// ProposeExit performs a voluntary exit on a validator.
+// The exit is signed by the validator before being sent to the beacon node for broadcasting.
+func ProposeExit(
+	ctx context.Context,
+	validatorClient ethpb.BeaconNodeValidatorClient,
+	nodeClient ethpb.NodeClient,
+	signer signingFunc,
+	pubKey []byte,
+) error {
+	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
+	defer span.End()
+
+	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
+	if err != nil {
+		return errors.Wrap(err, "gRPC call to get validator index failed")
+	}
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &types.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "gRPC call to get genesis time failed")
+	}
+	totalSecondsPassed := roughtime.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+
+	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign voluntary exit")
+	}
+
+	signedExit := &ethpb.SignedVoluntaryExit{Exit: exit, Signature: sig}
+	exitResp, err := validatorClient.ProposeExit(ctx, signedExit)
+	if err != nil {
+		return errors.Wrap(err, "failed to propose voluntary exit")
+	}
+
+	span.AddAttributes(
+		trace.StringAttribute("exitRoot", fmt.Sprintf("%#x", exitResp.ExitRoot)),
+	)
+
+	return nil
 }
 
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get domain data")
+		return nil, errors.Wrap(err, domainDataErr)
+	}
+	if domain == nil {
+		return nil, errors.New(domainDataErr)
 	}
 
 	var randaoReveal bls.Signature
@@ -155,14 +203,17 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get domain data")
+		return nil, errors.Wrap(err, domainDataErr)
 	}
-	var sig bls.Signature
+	if domain == nil {
+		return nil, errors.New(domainDataErr)
+	}
 
+	var sig bls.Signature
 	if featureconfig.Get().EnableAccountsV2 {
 		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get signing root")
+			return nil, errors.Wrap(err, signingRootErr)
 		}
 		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
 			PublicKey:       pubKey[:],
@@ -178,7 +229,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
 		bodyRoot, err := b.Body.HashTreeRoot()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get signing root")
+			return nil, errors.Wrap(err, signingRootErr)
 		}
 		blockHeader := &ethpb.BeaconBlockHeader{
 			Slot:          b.Slot,
@@ -194,12 +245,50 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	} else {
 		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get signing root")
+			return nil, errors.Wrap(err, signingRootErr)
 		}
-		sig, err = v.keyManager.Sign(pubKey, blockRoot)
+		sig, err = v.keyManager.Sign(ctx, pubKey, blockRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
+	}
+	return sig.Marshal(), nil
+}
+
+// Sign voluntary exit with proposer domain and private key.
+func signVoluntaryExit(
+	ctx context.Context,
+	validatorClient ethpb.BeaconNodeValidatorClient,
+	signer signingFunc,
+	pubKey []byte,
+	exit *ethpb.VoluntaryExit,
+) ([]byte, error) {
+	req := &ethpb.DomainRequest{
+		Epoch:  exit.Epoch,
+		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
+	}
+
+	domain, err := validatorClient.DomainData(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, domainDataErr)
+	}
+	if domain == nil {
+		return nil, errors.New(domainDataErr)
+	}
+
+	exitRoot, err := helpers.ComputeSigningRoot(exit, domain.SignatureDomain)
+	if err != nil {
+		return nil, errors.Wrap(err, signingRootErr)
+	}
+
+	sig, err := signer(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     exitRoot[:],
+		SignatureDomain: domain.SignatureDomain,
+		Object:          &validatorpb.SignRequest_Exit{Exit: exit},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, signExitErr)
 	}
 	return sig.Marshal(), nil
 }

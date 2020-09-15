@@ -6,12 +6,6 @@ load("@io_bazel_rules_docker//go:image.bzl", GO_DEFAULT_BASE = "DEFAULT_BASE")
 load("//tools:build_settings.bzl", "base_image")
 
 sh_binary(
-    name = "fuzzit_wrapper",
-    srcs = ["fuzzit_wrapper.sh"],
-    data = ["@fuzzit_linux//:fuzzit"],
-)
-
-sh_binary(
     name = "fuzz_wrapper",
     srcs = ["fuzz_wrapper.sh"],
 )

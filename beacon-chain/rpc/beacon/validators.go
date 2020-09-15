@@ -11,13 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -60,7 +56,11 @@ func (bs *Server) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	startSlot, err := helpers.StartSlot(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state")
 	}
@@ -193,7 +193,11 @@ func (bs *Server) ListValidators(
 	var reqState *statetrie.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
-		reqState, err = bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+		s, err := helpers.StartSlot(requestedEpoch)
+		if err != nil {
+			return nil, err
+		}
+		reqState, err = bs.StateGen.StateBySlot(ctx, s)
 	} else {
 		reqState, err = bs.HeadFetcher.HeadState(ctx)
 	}
@@ -202,14 +206,18 @@ func (bs *Server) ListValidators(
 		return nil, status.Error(codes.Internal, "Could not get requested state")
 	}
 
-	if helpers.StartSlot(requestedEpoch) > reqState.Slot() {
+	s, err := helpers.StartSlot(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	if s > reqState.Slot() {
 		reqState = reqState.Copy()
-		reqState, err = state.ProcessSlots(ctx, reqState, helpers.StartSlot(requestedEpoch))
+		reqState, err = state.ProcessSlots(ctx, reqState, s)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"Could not process slots up to %d: %v",
-				helpers.StartSlot(requestedEpoch),
+				"Could not process slots up to epoch %d: %v",
+				requestedEpoch,
 				err,
 			)
 		}
@@ -265,7 +273,7 @@ func (bs *Server) ListValidators(
 		}
 	}
 
-	if !featureconfig.Get().NewStateMgmt && requestedEpoch < currentEpoch {
+	if requestedEpoch < currentEpoch {
 		stopIdx := len(validatorList)
 		for idx, item := range validatorList {
 			// The first time we see a validator with an activation epoch > the requested epoch,
@@ -393,7 +401,11 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	slashedIndices := make([]uint64, 0)
 	ejectedIndices := make([]uint64, 0)
 
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	s, err := helpers.StartSlot(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -479,13 +491,15 @@ func (bs *Server) GetValidatorParticipation(
 	}
 	// Calculate the end slot of the next epoch.
 	// Ex: requested epoch 1, this gets slot 95.
-	nextEpochEndSlot := helpers.StartSlot(requestedEpoch+2) - 1
+	nextEpochEndSlot, err := helpers.StartSlot(requestedEpoch + 2)
+	if err != nil {
+		return nil, err
+	}
+	nextEpochEndSlot--
 	requestedState, err := bs.StateGen.StateBySlot(ctx, nextEpochEndSlot)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get state")
 	}
-
-	requestedState, err = bs.appendNonFinalizedBlockAttsToState(ctx, requestedState, requestedEpoch)
 
 	v, b, err := precompute.New(ctx, requestedState)
 	if err != nil {
@@ -517,45 +531,6 @@ func (bs *Server) GetValidatorParticipation(
 			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
 		},
 	}, nil
-}
-
-// This appends non finalized block atts to state. To replay for a state, a node does not replay non canonical
-// nor finalized blocks. To count participation, this includes the attestations from the orphaned block to state.
-func (bs *Server) appendNonFinalizedBlockAttsToState(ctx context.Context, s *statetrie.BeaconState, e uint64) (*statetrie.BeaconState, error) {
-	start := helpers.StartSlot(e)
-	end := helpers.StartSlot(e + 1)
-	f := filters.NewFilter().SetStartSlot(start).SetEndSlot(end)
-	blks, err := bs.BeaconDB.Blocks(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-
-	nonFinalizedBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
-	for i := len(blks) - 1; i >= 0; i-- {
-		r, err := stateutil.BlockRoot(blks[i].Block)
-		if err != nil {
-			return nil, err
-		}
-		if !bs.BeaconDB.IsFinalizedBlock(ctx, r) {
-			nonFinalizedBlks = append(nonFinalizedBlks, blks[i])
-		}
-	}
-	for _, b := range nonFinalizedBlks {
-		for _, a := range b.Block.Body.Attestations {
-			if a.Data.Target.Epoch == e {
-				pa := &pb.PendingAttestation{
-					Data:            a.Data,
-					AggregationBits: a.AggregationBits,
-					InclusionDelay:  params.BeaconConfig().FarFutureEpoch,
-				}
-				if err := s.AppendPreviousEpochAttestations(pa); err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-
-	return s, nil
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
@@ -793,7 +768,11 @@ func (bs *Server) GetIndividualVotes(
 		)
 	}
 
-	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(req.Epoch))
+	s, err := helpers.StartSlot(req.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", req.Epoch, err)
 	}

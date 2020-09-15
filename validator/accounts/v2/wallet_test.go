@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"crypto/rand"
 	"flag"
 	"fmt"
@@ -50,6 +49,7 @@ type testWalletConfig struct {
 	walletPasswordFile      string
 	accountPasswordFile     string
 	privateKeyFile          string
+	skipDepositConfirm      bool
 	numAccounts             int64
 	keymanagerKind          v2keymanager.Kind
 }
@@ -72,6 +72,8 @@ func setupWalletCtx(
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
+
 	if cfg.privateKeyFile != "" {
 		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
 		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
@@ -88,6 +90,7 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
 	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
 	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
+	assert.NoError(tb, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirm)))
 	return cli.NewContext(&app, set, nil)
 }
 
@@ -139,22 +142,23 @@ func Test_LockUnlockFile(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateWallet(cliCtx)
+	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx)
+	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+		WalletDir: walletDir,
+	})
 	defer unlock(t, wallet)
-	_, err = wallet.InitializeKeymanager(cliCtx, true)
+	_, err = wallet.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	err = wallet.LockConfigFile(ctx)
+	err = wallet.LockWalletConfigFile(cliCtx.Context)
 	assert.NoError(t, err)
-	err = wallet.LockConfigFile(ctx)
+	err = wallet.LockWalletConfigFile(cliCtx.Context)
 	assert.ErrorContains(t, "failed to lock wallet config file", err)
 	unlock(t, wallet)
-	err = wallet.LockConfigFile(ctx)
+	err = wallet.LockWalletConfigFile(cliCtx.Context)
 	assert.NoError(t, err)
 
 }

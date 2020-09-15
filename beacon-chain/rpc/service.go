@@ -307,9 +307,6 @@ func (s *Service) Start() {
 			}
 		}
 	}()
-	if featureconfig.Get().EnableSlasherConnection {
-		s.startSlasherClient()
-	}
 }
 
 func (s *Service) startSlasherClient() {

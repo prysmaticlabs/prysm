@@ -61,11 +61,6 @@ var (
 			"and attestation's aggregated signatures. With this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
-	enableSlasherFlag = &cli.BoolFlag{
-		Name: "enable-slasher",
-		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
-			"the slasher-provider flag can be used to pass its address.",
-	}
 	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
@@ -113,10 +108,6 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	disableNewStateMgmt = &cli.BoolFlag{
-		Name:  "disable-new-state-mgmt",
-		Usage: "This disables the usage of state mgmt service across Prysm",
-	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -154,9 +145,9 @@ var (
 		Name:  "blst",
 		Usage: "Enable new BLS library, blst, from Supranational",
 	}
-	enableFinalizedDepositsCache = &cli.BoolFlag{
-		Name:  "enable-finalized-deposits-cache",
-		Usage: "Enables utilization of cached finalized deposits",
+	disableFinalizedDepositsCache = &cli.BoolFlag{
+		Name:  "disable-finalized-deposits-cache",
+		Usage: "Disables utilization of cached finalized deposits",
 	}
 	enableEth1DataMajorityVote = &cli.BoolFlag{
 		Name:  "enable-eth1-data-majority-vote",
@@ -188,7 +179,6 @@ var (
 var devModeFlags = []cli.Flag{
 	checkPtInfoCache,
 	batchBlockVerify,
-	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -544,6 +534,26 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedNewStateMgmtFlag = &cli.BoolFlag{
+		Name:   "disable-new-state-mgmt",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedSlasherProviderFlag = &cli.StringFlag{
+		Name:   "slasher-provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableSlasherFlag = &cli.BoolFlag{
+		Name:   "enable-slasher",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableFinalizedDepositsCache = &cli.BoolFlag{
+		Name:   "enable-finalized-deposits-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -616,6 +626,10 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCustomGenesisDelay,
 	deprecatedNewBeaconStateLocks,
 	deprectedForceMaxCoverAttestationAggregation,
+	deprecatedNewStateMgmtFlag,
+	deprecatedSlasherProviderFlag,
+	deprecatedEnableSlasherFlag,
+	deprecatedEnableFinalizedDepositsCache,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -651,7 +665,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
@@ -661,7 +674,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
@@ -670,8 +682,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	OnyxTestnet,
 	batchBlockVerify,
 	initSyncVerbose,
+	disableFinalizedDepositsCache,
 	enableBlst,
-	enableFinalizedDepositsCache,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -686,7 +698,6 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
-	"--enable-finalized-deposits-cache",
 	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
 }

@@ -8,8 +8,10 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -95,4 +97,33 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 	err = e.DecodeWithMaxLength(buf, decoded)
 	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxChunkSize)
 	assert.ErrorContains(t, wanted, err)
+}
+
+func TestSszNetworkEncoder_DecodeWithMultipleFrames(t *testing.T) {
+	buf := new(bytes.Buffer)
+	st, _ := testutil.DeterministicGenesisState(t, 100)
+	e := &encoder.SszNetworkEncoder{}
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconNetworkConfig()
+	// 4 * 1 Mib
+	maxChunkSize := uint64(1 << 22)
+	c.MaxChunkSize = maxChunkSize
+	params.OverrideBeaconNetworkConfig(c)
+	_, err := e.EncodeWithMaxLength(buf, st.InnerStateUnsafe())
+	require.NoError(t, err)
+	// Max snappy block size
+	if buf.Len() <= 76490 {
+		t.Errorf("buffer smaller than expected, wanted > %d but got %d", 76490, buf.Len())
+	}
+	decoded := new(pb.BeaconState)
+	err = e.DecodeWithMaxLength(buf, decoded)
+	assert.NoError(t, err)
+}
+
+func TestSszNetworkEncoder_NegativeMaxLength(t *testing.T) {
+	e := &encoder.SszNetworkEncoder{}
+	length, err := e.MaxLength(0xfffffffffff)
+
+	assert.Equal(t, 0, length, "Received non zero length on bad message length")
+	assert.ErrorContains(t, "max encoded length is negative", err)
 }

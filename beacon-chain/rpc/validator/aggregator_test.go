@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -398,4 +399,52 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	res, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	require.NoError(t, err)
 	assert.DeepEqual(t, att1, res.AggregateAndProof.Aggregate, "Did not receive wanted attestation")
+}
+
+func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) {
+	aggregatorServer := &Server{}
+	req := &ethpb.SignedAggregateSubmitRequest{
+		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
+			Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{},
+				},
+			},
+		},
+	}
+	_, err := aggregatorServer.SubmitSignedAggregateSelectionProof(context.Background(), req)
+	require.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+
+	req = &ethpb.SignedAggregateSubmitRequest{
+		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
+			Signature: []byte{'a'},
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{},
+				},
+				SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+			},
+		},
+	}
+	_, err = aggregatorServer.SubmitSignedAggregateSelectionProof(context.Background(), req)
+	require.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+}
+
+func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
+	c := &mock.ChainService{Genesis: time.Now()}
+	aggregatorServer := &Server{GenesisTimeFetcher: c}
+	req := &ethpb.SignedAggregateSubmitRequest{
+		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
+			Signature: []byte{'a'},
+			Message: &ethpb.AggregateAttestationAndProof{
+				SelectionProof: []byte{'a'},
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: 1000},
+				},
+			},
+		},
+	}
+	_, err := aggregatorServer.SubmitSignedAggregateSelectionProof(context.Background(), req)
+	require.ErrorContains(t, "Attestation slot is no longer valid from current time", err)
 }

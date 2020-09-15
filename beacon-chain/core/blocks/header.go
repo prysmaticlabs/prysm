@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -36,6 +37,7 @@ import (
 //    # Verify proposer signature
 //    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
 func ProcessBlockHeader(
+	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
 	block *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {

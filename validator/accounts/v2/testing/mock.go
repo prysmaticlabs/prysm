@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"strings"
 	"sync"
+
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.
@@ -17,6 +19,7 @@ type Wallet struct {
 	Files             map[string]map[string][]byte
 	EncryptedSeedFile []byte
 	AccountPasswords  map[string]string
+	WalletPassword    string
 	UnlockAccounts    bool
 	lock              sync.RWMutex
 }
@@ -40,6 +43,11 @@ func (m *Wallet) AccountsDir() string {
 // Exists --
 func (m *Wallet) Exists() (bool, error) {
 	return len(m.Directories) > 0, nil
+}
+
+// Password --
+func (m *Wallet) Password() string {
+	return m.WalletPassword
 }
 
 // WriteFileAtPath --
@@ -78,4 +86,9 @@ func (m *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 	defer m.lock.Unlock()
 	m.EncryptedSeedFile = encoded
 	return nil
+}
+
+// InitializeKeymanager --
+func (m *Wallet) InitializeKeymanager(ctx context.Context, skipMnemonicConfirm bool) (v2keymanager.IKeymanager, error) {
+	return nil, nil
 }

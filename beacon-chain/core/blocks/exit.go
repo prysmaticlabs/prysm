@@ -39,8 +39,13 @@ import (
 func ProcessVoluntaryExits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
+	if b.Block == nil || b.Block.Body == nil {
+		return nil, errors.New("block and block body can't be nil")
+	}
+
+	body := b.Block.Body
 	exits := body.VoluntaryExits
 	for idx, exit := range exits {
 		if exit == nil || exit.Exit == nil {
@@ -155,9 +160,11 @@ func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot ui
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
 		return errors.New("non-active validator cannot exit")
 	}
-	// Verify the validator has not yet exited.
+	// Verify the validator has not yet submitted an exit.
 	if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch())
+		return fmt.Errorf(
+			"validator has already submitted an exit, which will take place at epoch: %v",
+			validator.ExitEpoch())
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
@@ -166,7 +173,7 @@ func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot ui
 	// Verify the validator has been active long enough.
 	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod {
 		return fmt.Errorf(
-			"validator has not been active long enough to exit, wanted epoch %d >= %d",
+			"validator has not been active long enough to exit: %d epochs vs required %d epochs",
 			currentEpoch,
 			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)

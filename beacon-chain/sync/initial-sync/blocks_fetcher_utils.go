@@ -94,7 +94,10 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	// Quickly find the close enough epoch where a non-empty slot definitely exists.
 	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
 	slot = slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
-	upperBoundSlot := helpers.StartSlot(targetEpoch + 1)
+	upperBoundSlot, err := helpers.StartSlot(targetEpoch + 1)
+	if err != nil {
+		return 0, err
+	}
 	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
 		start := ind + uint64(f.rand.Intn(int(slotsPerEpoch)))
 		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch/2, slotsPerEpoch)
@@ -112,12 +115,19 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	if upperBoundSlot > slotsPerEpoch {
 		upperBoundSlot -= slotsPerEpoch
 	}
-	upperBoundSlot = helpers.StartSlot(helpers.SlotToEpoch(upperBoundSlot))
+	upperBoundSlot, err = helpers.StartSlot(helpers.SlotToEpoch(upperBoundSlot))
+	if err != nil {
+		return 0, err
+	}
 	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch*2, 1)
 	if err != nil {
 		return 0, err
 	}
-	if nextSlot < slot || helpers.StartSlot(targetEpoch+1) < nextSlot {
+	s, err := helpers.StartSlot(targetEpoch + 1)
+	if err != nil {
+		return 0, err
+	}
+	if nextSlot < slot || s < nextSlot {
 		return 0, errors.New("invalid range for non-skipped slot")
 	}
 	return nextSlot, nil
@@ -126,12 +136,12 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 // bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
 func (f *blocksFetcher) bestFinalizedSlot() uint64 {
 	finalizedEpoch, _ := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, f.finalizationFetcher.FinalizedCheckpt().Epoch)
-	return helpers.StartSlot(finalizedEpoch)
+	return finalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 }
 
 // bestNonFinalizedSlot returns the highest non-finalized slot of enough number of connected peers.
 func (f *blocksFetcher) bestNonFinalizedSlot() uint64 {
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	targetEpoch, _ := f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers*2, headEpoch)
-	return helpers.StartSlot(targetEpoch)
+	return targetEpoch * params.BeaconConfig().SlotsPerEpoch
 }

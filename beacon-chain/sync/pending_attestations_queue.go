@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
@@ -24,12 +23,11 @@ var processPendingAttsPeriod = slotutil.DivideSlotBy(2 /* twice per slot */)
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
-	ctx := context.Background()
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
 		mutex.Lock()
-		if err := s.processPendingAtts(ctx); err != nil {
+		if err := s.processPendingAtts(s.ctx); err != nil {
 			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
 		}
 		mutex.Unlock()
@@ -63,7 +61,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		attestations := s.blkRootToPendingAtts[bRoot]
 		s.pendingAttsLock.RUnlock()
 		// Has the pending attestation's missing block arrived and the node processed block yet?
-		hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
+		hasStateSummary := s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
 		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || hasStateSummary) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, signedAtt := range attestations {

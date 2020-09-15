@@ -20,7 +20,7 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.BeaconBlockBody) (*beaconstate.BeaconState, error)
+type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error)
 type epochOperation func(*testing.T, *beaconstate.BeaconState) (*beaconstate.BeaconState, error)
 
 var json = jsoniter.Config{
@@ -42,7 +42,7 @@ func UnmarshalYaml(y []byte, dest interface{}) error {
 
 // TestFolders sets the proper config and returns the result of ReadDir
 // on the passed in eth2-spec-tests directory along with its path.
-func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo, string) {
+func TestFolders(t testing.TB, config string, folderPath string) ([]os.FileInfo, string) {
 	testsFolderPath := path.Join("tests", config, "phase0", folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
 	require.NoError(t, err)
@@ -105,7 +105,9 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	beaconState, err := operationFn(context.Background(), preState, body)
+	b := NewBeaconBlock()
+	b.Block.Body = body
+	beaconState, err := operationFn(context.Background(), preState, b)
 	if postSSZExists {
 		require.NoError(t, err)
 

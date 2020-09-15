@@ -73,12 +73,26 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 
 // AttestationPreState returns the pre state of attestation.
 func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error) {
+	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	if err := helpers.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
+		return nil, err
+	}
 	return s.getAttPreState(ctx, att.Data.Target)
 }
 
 // AttestationCheckPtInfo returns the check point info of attestation that can be used to verify the attestation
 // contents and signatures.
 func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
+	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	if err := helpers.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
+		return nil, err
+	}
 	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
 }
 
@@ -97,7 +111,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 		case <-s.ctx.Done():
 			return
 		case <-st.C():
-			ctx := context.Background()
+			ctx := s.ctx
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
 				// Based on the spec, don't process the attestation until the subsequent slot.

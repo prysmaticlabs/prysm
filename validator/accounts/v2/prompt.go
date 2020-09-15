@@ -2,7 +2,6 @@ package v2
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -61,20 +60,16 @@ func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
-		data, err := ioutil.ReadFile(passwordFilePath)
-		if err != nil {
-			return "", errors.Wrap(err, "could not read password file")
-		}
-		return strings.TrimRight(string(data), "\r\n"), nil
+		return passwordFilePath, nil
 	}
-	walletPassword, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
+	walletPasswordFilePath, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
 	if err != nil {
 		return "", fmt.Errorf("could not read account password: %v", err)
 	}
-	return walletPassword, nil
+	return walletPasswordFilePath, nil
 }
 
-func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
+func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
 	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
@@ -129,7 +124,7 @@ func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.Config, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 	}
-	newCfg := &remote.Config{
+	newCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: crtPath,
 			ClientKeyPath:  keyPath,

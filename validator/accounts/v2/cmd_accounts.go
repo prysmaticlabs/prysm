@@ -3,6 +3,7 @@ package v2
 import (
 	"os"
 
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
@@ -31,7 +32,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := CreateAccount(cliCtx); err != nil {
+				if err := CreateAccountCli(cliCtx); err != nil {
 					log.Fatalf("Could not create new account: %v", err)
 				}
 				return nil
@@ -50,7 +51,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := DeleteAccount(cliCtx); err != nil {
+				if err := DeleteAccountCli(cliCtx); err != nil {
 					log.Fatalf("Could not delete account: %v", err)
 				}
 				return nil
@@ -69,7 +70,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ListAccounts(cliCtx); err != nil {
+				if err := ListAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
@@ -83,6 +84,7 @@ this command outputs a deposit data string which is required to become a validat
 				"list of hex string public keys",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
 				flags.BackupDirFlag,
 				flags.BackupPublicKeysFlag,
 				flags.BackupPasswordFile,
@@ -91,7 +93,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := BackupAccounts(cliCtx); err != nil {
+				if err := BackupAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not backup accounts: %v", err)
 				}
 				return nil
@@ -112,7 +114,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ImportAccounts(cliCtx); err != nil {
+				if err := ImportAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil
@@ -126,6 +128,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
 				flags.VoluntaryExitPublicKeysFlag,
+				flags.BeaconRPCProviderFlag,
+				cmd.GrpcMaxCallRecvMsgSizeFlag,
+				flags.CertFlag,
+				flags.GrpcHeadersFlag,
+				flags.GrpcRetriesFlag,
+				flags.GrpcRetryDelayFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 			},
@@ -156,7 +164,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := SendDeposit(cliCtx); err != nil {
+				if err := SendDepositCli(cliCtx); err != nil {
 					log.Fatalf("Could not send validator deposit(s): %v", err)
 				}
 				return nil

@@ -144,6 +144,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 
 	// Test the start function.
 	chainService.Start()
@@ -210,10 +211,12 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, s, blkRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
+
 	// Test the start function.
 	chainService.Start()
 
-	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
+	require.DeepEqual(t, blkRoot[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.justifiedCheckpt.Root, "Justified Checkpoint root is incorrect")
 
 	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
