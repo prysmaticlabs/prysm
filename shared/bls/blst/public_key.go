@@ -52,7 +52,7 @@ func AggregatePublicKeys(pubs [][]byte) (iface.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
-	agg := new(blst.P1Aggregate)
+	agg := new(blstAggregatePublicKey)
 	mulP1 := make([]*blst.P1Affine, 0, len(pubs))
 	for _, pubkey := range pubs {
 		if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
