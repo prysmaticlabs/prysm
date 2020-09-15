@@ -266,9 +266,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling roughtime sync")
 		cfg.EnableRoughtime = true
 	}
-	if ctx.Bool(checkPtInfoCache.Name) {
-		log.Warn("Using advance check point info cache")
-		cfg.UseCheckPointInfoCache = true
+	cfg.UseCheckPointInfoCache = true
+	if ctx.Bool(disableCheckPtInfoCache.Name) {
+		log.Warn("Disabling advanced check point info cache")
+		cfg.UseCheckPointInfoCache = false
 	}
 	if ctx.Bool(enableBlst.Name) {
 		log.Warn("Enabling new BLS library blst")
