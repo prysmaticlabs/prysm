@@ -50,6 +50,7 @@ type testWalletConfig struct {
 	walletPasswordFile      string
 	accountPasswordFile     string
 	privateKeyFile          string
+	skipDepositConfirm      bool
 	numAccounts             int64
 	keymanagerKind          v2keymanager.Kind
 }
@@ -72,6 +73,8 @@ func setupWalletCtx(
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
+
 	if cfg.privateKeyFile != "" {
 		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
 		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
@@ -88,6 +91,7 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
 	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
 	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
+	assert.NoError(tb, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirm)))
 	return cli.NewContext(&app, set, nil)
 }
 
