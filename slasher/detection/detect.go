@@ -225,22 +225,23 @@ func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.Indexed
 
 func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	for _, idx := range att.AttestingIndices {
-		foundAtt, err := ds.slasherDB.HighestAttestation(ctx, idx)
+		sourceEpoch, targetEPoch, err := ds.slasherDB.HighestAttestation(ctx, idx)
 		if err != nil {
 			return err
 		}
-		if foundAtt != nil {
-			if att.Data.Source.Epoch >= foundAtt.Data.Source.Epoch && att.Data.Source.Epoch >= foundAtt.Data.Target.Epoch {
-
-			}
-		} else {
-			if err := ds.slasherDB.SaveHighestAttestation(ctx, idx, att); err != nil {
-				return err
-			}
-			if idx == 40 {
-				log.Printf("updated highest attestation, val %d, source: %d, target: %d", idx, att.Data.Source.Epoch, att.Data.Target.Epoch)
-			}
+		if sourceEpoch < att.Data.Source.Epoch {
+			sourceEpoch = att.Data.Source.Epoch
 		}
+		if targetEPoch < att.Data.Target.Epoch {
+			targetEPoch = att.Data.Target.Epoch
+		}
+
+		if err := ds.slasherDB.SaveHighestAttestation(ctx, idx, sourceEpoch, targetEPoch); err != nil {
+			return err
+		}
+		//if idx == 40 {
+		//	log.Printf("updated highest attestation, val %d, source: %d, target: %d", idx, att.Data.Source.Epoch, att.Data.Target.Epoch)
+		//}
 	}
 	return nil
 }
