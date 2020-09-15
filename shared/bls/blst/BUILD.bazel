@@ -117,6 +117,7 @@ go_test(
             ":blst_enabled_android_arm64",
         ): [
             "//shared/bls/iface:go_default_library",
+            "//shared/bls/blst:go_default_library",
             "//shared/bytesutil:go_default_library",
         ],
         "//conditions:default": [],
