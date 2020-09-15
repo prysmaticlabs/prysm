@@ -373,6 +373,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
+		dr.wallet.SetPassword(password) // Write the correct password to the wallet.
 	} else if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
