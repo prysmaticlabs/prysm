@@ -237,9 +237,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling new beacon state locks")
 		cfg.NewBeaconStateLocks = false
 	}
-	if ctx.Bool(batchBlockVerify.Name) {
-		log.Warn("Performing batch block verification when syncing.")
-		cfg.BatchBlockVerify = true
+	cfg.BatchBlockVerify = true
+	if ctx.Bool(disableBatchBlockVerify.Name) {
+		log.Warn("Disabling batch block verification when syncing.")
+		cfg.BatchBlockVerify = false
 	}
 	if ctx.Bool(initSyncVerbose.Name) {
 		log.Warn("Logging every processed block during initial syncing.")
