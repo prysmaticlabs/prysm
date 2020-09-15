@@ -52,11 +52,8 @@ func TestPublicKeyFromBytes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := blst.PublicKeyFromBytes(test.input)
 			if test.err != nil {
-				if err == nil {
-					t.Errorf("No error returned: expected %v", test.err)
-				} else {
-					assert.ErrorContains(t, test.err.Error(), err, "Unexpected error returned")
-				}
+				assert.NotEqual(t, nil, err, "No error returned")
+				assert.ErrorContains(t, test.err.Error(), err, "Unexpected error returned")
 			} else {
 				assert.NoError(t, err)
 				assert.DeepEqual(t, 0, bytes.Compare(res.Marshal(), test.input))

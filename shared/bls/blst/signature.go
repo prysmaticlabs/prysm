@@ -190,7 +190,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.Pu
 		randGen.Read(rbytes[:])
 		scalar.FromBEndian(rbytes[:])
 	}
-	dummySig := new(blst.P2Affine)
+	dummySig := new(blstSignature)
 	return dummySig.MultipleAggregateVerify(rawSigs, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
 }
 
