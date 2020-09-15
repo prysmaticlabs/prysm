@@ -168,7 +168,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.Pu
 	if len(sigs) == 0 || len(pubKeys) == 0 {
 		return false, nil
 	}
-	rawSigs := new(blst.P2Affine).BatchUncompress(sigs)
+	rawSigs := new(blstSignature).BatchUncompress(sigs)
 
 	length := len(sigs)
 	if length != len(pubKeys) || length != len(msgs) {
