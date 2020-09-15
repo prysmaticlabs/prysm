@@ -105,7 +105,6 @@ build:osx_amd64 --config=cross
 build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
 build:osx_amd64 --compiler=osxcross
 
-
 # windows
 build:windows_amd64 --config=cross
 build:windows_amd64  --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
