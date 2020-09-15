@@ -65,6 +65,7 @@ go_test(
         "accounts_backup_test.go",
         "accounts_create_test.go",
         "accounts_delete_test.go",
+        "accounts_deposit_test.go",
         "accounts_exit_test.go",
         "accounts_import_test.go",
         "accounts_list_test.go",
