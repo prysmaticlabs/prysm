@@ -38,15 +38,48 @@ config_setting(
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "aliases.go",
-        "doc.go",
-        "init.go",
-        "public_key.go",
-        "secret_key.go",
-        "signature.go",
-        "stub.go",
-    ],
+    srcs =
+        select({
+            ":blst_enabled_linux_amd64": [
+                "aliases.go",
+                "doc.go",
+                "init.go",
+                "public_key.go",
+                "secret_key.go",
+                "signature.go",
+                "stub.go",
+            ],
+            ":blst_enabled_linux_arm64": [
+                "aliases.go",
+                "doc.go",
+                "init.go",
+                "public_key.go",
+                "secret_key.go",
+                "signature.go",
+                "stub.go",
+            ],
+            ":blst_enabled_android_amd64": [
+                "aliases.go",
+                "doc.go",
+                "init.go",
+                "public_key.go",
+                "secret_key.go",
+                "signature.go",
+                "stub.go",
+            ],
+            ":blst_enabled_android_arm64": [
+                "aliases.go",
+                "doc.go",
+                "init.go",
+                "public_key.go",
+                "secret_key.go",
+                "signature.go",
+                "stub.go",
+            ],
+            "//conditions:default": [
+                "stub.go",
+            ],
+        }),
     importpath = "github.com/prysmaticlabs/prysm/shared/bls/blst",
     visibility = [
         "//shared/bls:__pkg__",
