@@ -31,7 +31,7 @@ type ReadOnlyDatabase interface {
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 
 	// Highest Attestation related methods.
-	HighestAttestation(ctx context.Context, validatorID uint64) (sourceEpoch uint64, targetEpoch uint64, err error)
+	HighestAttestation(ctx context.Context, validatorID uint64) (*detectionTypes.HighestAttestation, error)
 
 	// MinMaxSpan related methods.
 	EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (*detectionTypes.EpochStore, error)
@@ -72,7 +72,7 @@ type WriteAccessDatabase interface {
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// Highest Attestation related methods.
-	SaveHighestAttestation(ctx context.Context, validatorIdx uint64, sourceEpoch uint64, targetEpoch uint64) error
+	SaveHighestAttestation(ctx context.Context, validatorID uint64, highest *detectionTypes.HighestAttestation) error
 
 	// MinMaxSpan related methods.
 	SaveEpochSpans(ctx context.Context, epoch uint64, spans *detectionTypes.EpochStore, toCache bool) error

@@ -72,7 +72,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		)
 	}
 
-	spanMap, err := s.slasherDB.EpochSpans(ctx, sourceEpoch, dbTypes.UseCache)
+	sourceSpanMap, err := s.slasherDB.EpochSpans(ctx, sourceEpoch, dbTypes.UseCache)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(ctx.Err(), "could not detect slashings")
 		}
-		span, err := spanMap.GetValidatorSpan(idx)
+		span, err := sourceSpanMap.GetValidatorSpan(idx)
 		if err != nil {
 			return nil, err
 		}

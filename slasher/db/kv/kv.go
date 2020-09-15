@@ -19,11 +19,13 @@ var databaseFileName = "slasher.db"
 // Store defines an implementation of the slasher Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db               *bolt.DB
-	databasePath     string
-	spanCache        *cache.EpochSpansCache
-	flatSpanCache    *cache.EpochFlatSpansCache
-	spanCacheEnabled bool
+	db                      *bolt.DB
+	databasePath            string
+	spanCache               *cache.EpochSpansCache
+	flatSpanCache           *cache.EpochFlatSpansCache
+	highestAttestationCache *cache.HighestAttestationCache
+	spanCacheEnabled        bool
+	highestAttCacheEnabled 	bool
 }
 
 // Config options for the slasher db.
@@ -97,6 +99,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	}
 	kv := &Store{db: boltDB, databasePath: datafile}
 	kv.EnableSpanCache(true)
+	kv.EnableHighestAttestationCache(true)
 	spanCache, err := cache.NewEpochSpansCache(cfg.SpanCacheSize, persistSpanMapsOnEviction(kv))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new cache")
@@ -107,6 +110,8 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		return nil, errors.Wrap(err, "could not create new flat cache")
 	}
 	kv.flatSpanCache = flatSpanCache
+	highestAttCache, err := cache.NewHighestAttestationCache(cfg.SpanCacheSize, persistHighestAttestationCacheOnEviction(kv))
+	kv.highestAttestationCache = highestAttCache
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
@@ -121,6 +126,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 			validatorsMinMaxSpanBucketNew,
 			slashingBucket,
 			chainDataBucket,
+			HighestAttestationBucket,
 		)
 	}); err != nil {
 		return nil, err

@@ -90,3 +90,9 @@ func (span Span) Marshal() []byte {
 		attested,
 	}
 }
+
+
+type HighestAttestation struct {
+	HighestSourceEpoch uint64
+	HighestTargetEpoch uint64
+}
