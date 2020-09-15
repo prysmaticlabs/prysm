@@ -2,7 +2,10 @@ package v2
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestCreateOrOpenWallet(t *testing.T) {
@@ -115,6 +119,52 @@ func TestCreateWallet_Derived(t *testing.T) {
 
 	// We assert the created configuration was as desired.
 	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), cfg)
+}
+
+// TestCorrectPassphrase_Derived makes sure the wallet created uses the provided passphrase
+func TestCorrectPassphrase_Derived(t *testing.T) {
+	walletDir, _, passwordFile := setupWalletAndPasswordsDir(t)
+
+	//Specify the password locally to this file for convenience.
+	password := "Pa$sW0rD0__Fo0xPr"
+	require.NoError(t, ioutil.WriteFile(passwordFile, []byte(password), os.ModePerm))
+
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		walletPasswordFile: passwordFile,
+		keymanagerKind:     v2keymanager.Derived,
+	})
+
+	// We attempt to create the wallet.
+	_, err := CreateAndSaveWalletCli(cliCtx)
+	require.Equal(t, nil, err, "error in CreateAndSaveWalletCli()")
+
+	keymanagerKind, err := readKeymanagerKindFromWalletPath(walletDir)
+	require.Equal(t, nil, err, "could not read keymanager kind for wallet")
+
+	walletPath := filepath.Join(walletDir, keymanagerKind.String())
+	wallet := &Wallet{
+		walletDir:      walletDir,
+		accountsPath:   walletPath,
+		keymanagerKind: keymanagerKind,
+	}
+
+	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(cliCtx.Context)
+	require.Equal(t, nil, err, "could not read encrypted seed file from disk")
+	defer func() {
+		err := seedConfigFile.Close()
+		require.Equal(t, nil, err, "Could not close encrypted seed file")
+	}()
+	encodedSeedFile, err := ioutil.ReadAll(seedConfigFile)
+	require.Equal(t, nil, err, "could not read seed configuration file contents")
+
+	seedConfig := &derived.SeedConfig{}
+	err = json.Unmarshal(encodedSeedFile, seedConfig)
+	require.Equal(t, nil, err, "could not unmarshal seed configuration")
+
+	decryptor := keystorev4.New()
+	_, err = decryptor.Decrypt(seedConfig.Crypto, password)
+	require.Equal(t, nil, err, "could not decrypt seed configuration with password")
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
