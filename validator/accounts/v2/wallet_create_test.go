@@ -133,6 +133,7 @@ func TestCorrectPassphrase_Derived(t *testing.T) {
 		walletDir:          walletDir,
 		walletPasswordFile: passwordFile,
 		keymanagerKind:     v2keymanager.Derived,
+		skipDepositConfirm: true,
 	})
 
 	// We attempt to create the wallet.
