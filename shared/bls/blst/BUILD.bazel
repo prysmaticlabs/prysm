@@ -127,26 +127,44 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "public_key_test.go",
-        "secret_key_test.go",
-        "signature_test.go",
-    ],
-    embed = [":go_default_library"],
+    srcs =
+        select({
+            ":blst_enabled_android_amd64": [
+                "public_key_test.go",
+                "secret_key_test.go",
+                "signature_test.go",
+            ],
+            ":blst_enabled_linux_amd64": [
+                "public_key_test.go",
+                "secret_key_test.go",
+                "signature_test.go",
+            ],
+            ":blst_enabled_android_arm64": [
+                "public_key_test.go",
+                "secret_key_test.go",
+                "signature_test.go",
+            ],
+            ":blst_enabled_linux_arm64": [
+                "public_key_test.go",
+                "secret_key_test.go",
+                "signature_test.go",
+            ],
+            "//conditions:default": [],
+        }),
     deps = select({
-        "@io_bazel_rules_go//go/platform:android_amd64": [
+        ":blst_enabled_android_amd64": [
             "//shared/bls/iface:go_default_library",
             "//shared/bytesutil:go_default_library",
         ],
-        "@io_bazel_rules_go//go/platform:linux_amd64": [
+        ":blst_enabled_linux_amd64": [
             "//shared/bls/iface:go_default_library",
             "//shared/bytesutil:go_default_library",
         ],
-        "@io_bazel_rules_go//go/platform:android_arm64": [
+        ":blst_enabled_android_arm64": [
             "//shared/bls/iface:go_default_library",
             "//shared/bytesutil:go_default_library",
         ],
-        "@io_bazel_rules_go//go/platform:linux_arm64": [
+        ":blst_enabled_linux_arm64": [
             "//shared/bls/iface:go_default_library",
             "//shared/bytesutil:go_default_library",
         ],
