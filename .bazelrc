@@ -34,9 +34,9 @@ test --define kafka_enabled=false
 run --define kafka_enabled=false
 
 # Enable blst by default, we use a config so that our fuzzer stops complaining.
-build --define blst_enabled=true
-test --define blst_enabled=true
-run --define blst_enabled=true
+build --config=blst_enabled
+test --config=blst_enabled
+run --config=blst_enabled
 
 build:kafka_enabled --define kafka_enabled=true
 build:kafka_enabled --define gotags=kafka_enabled
@@ -104,14 +104,12 @@ build:linux_amd64 --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64_cgo
 build:osx_amd64 --config=cross
 build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
 build:osx_amd64 --compiler=osxcross
-build:osx_amd64 --define=blst_enabled=false
 
 
 # windows
 build:windows_amd64 --config=cross
 build:windows_amd64  --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
 build:windows_amd64 --compiler=mingw-w64
-build:windows_amd64 --define=blst_enabled=false
 
 
 # linux_arm64 conifg for cross compiler toolchain
