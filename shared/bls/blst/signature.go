@@ -175,7 +175,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.Pu
 		return false, errors.Errorf("provided signatures, pubkeys and messages have differing lengths. S: %d, P: %d,M %d",
 			length, len(pubKeys), len(msgs))
 	}
-	mulP1Aff := make([]*blst.P1Affine, length)
+	mulP1Aff := make([]*blstPublicKey, length)
 	rawMsgs := make([]blst.Message, length)
 
 	for i := 0; i < length; i++ {
