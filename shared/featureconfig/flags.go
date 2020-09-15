@@ -165,15 +165,14 @@ var (
 		Name:  "enable-roughtime",
 		Usage: "Enables periodic roughtime syncs.",
 	}
-	checkPtInfoCache = &cli.BoolFlag{
-		Name:  "use-check-point-cache",
-		Usage: "Enables check point info caching",
+	disableCheckPtInfoCache = &cli.BoolFlag{
+		Name:  "disable-check-point-cache",
+		Usage: "Disables check point info caching",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	checkPtInfoCache,
 	batchBlockVerify,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
@@ -550,6 +549,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedCheckptInfoCache = &cli.BoolFlag{
+		Name:   "check-point-info-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -626,6 +630,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSlasherProviderFlag,
 	deprecatedEnableSlasherFlag,
 	deprecatedEnableFinalizedDepositsCache,
+	deprecatedCheckptInfoCache,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -682,7 +687,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	enableRoughtime,
-	checkPtInfoCache,
+	disableCheckPtInfoCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
