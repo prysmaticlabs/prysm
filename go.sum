@@ -104,6 +104,7 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bloxapp/eth2-key-manager v0.2.9 h1:xjsZmegbj7obJULvHAPM+tFwcW6+ppWrkL2jAxZGueE=
 github.com/bloxapp/eth2-key-manager v0.2.9/go.mod h1:MveXs3HlZKNaG4fkZQuRyvn2Jesq1NcVIlfbSLygksw=
+github.com/bloxapp/key-vault v0.0.0-20200915070441-94450274ae5b/go.mod h1:QQRBl9m2KCR2ZOp47wVn7UsKc7Lrzi1xR6amtIg/GSA=
 github.com/bloxapp/key-vault v0.1.1 h1:CTxi1k+HW8EelEwZASBMZYUdR7gdvj36hY+kd5HriWI=
 github.com/bloxapp/key-vault v0.1.1/go.mod h1:NTrzJLmRPwHlQHLPsIT077me1eMTQy2i4ZOER+/KRtE=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40/go.mod h1:8rLXio+WjiTceGBHIoTvn60HIbs7Hm7bcHjyrSqYB9c=
@@ -1054,6 +1055,7 @@ github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae/go.mod h1:Vec
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796 h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796/go.mod h1:5JkKm84FcLZQPNuHwjX8Mtd5emni/PH5CylWCNqnKos=
 github.com/prysmaticlabs/prysm v1.0.0-alpha.23/go.mod h1:7kmKcqWx4OqVViKdTiti7SmyHki1AXZg3m2WIGm0Esg=
+github.com/prysmaticlabs/prysm v1.0.0-alpha.25/go.mod h1:/o5WnzgAM+ViBamSTgq1FC9v/OoU5ExQo5w3rshRuVk=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
 github.com/rjeczalik/notify v0.9.1/go.mod h1:rKwnCoCGeuQnwBtTSPL9Dad03Vh2n40ePRrjvIXnJho=

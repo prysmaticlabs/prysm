@@ -7,7 +7,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
-	github.com/bloxapp/key-vault v0.1.1
+	github.com/bloxapp/key-vault v0.0.0-20200915070441-94450274ae5b
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cloudflare/roughtime v0.0.0-20200205191924-a69ef1dab727
 	github.com/dgraph-io/ristretto v0.0.3
