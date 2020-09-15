@@ -20,6 +20,11 @@ func persistHighestAttestationCacheOnEviction(db *Store) func(key interface{}, v
 	}
 }
 
+// EnableSpanCache used to enable or disable span map cache in tests.
+func (db *Store) EnableHighestAttestationCache(enable bool) {
+	db.highestAttCacheEnabled = enable
+}
+
 func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*types.HighestAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
 	defer span.End()

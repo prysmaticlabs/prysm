@@ -287,11 +287,6 @@ func (db *Store) EnableSpanCache(enable bool) {
 	db.spanCacheEnabled = enable
 }
 
-// EnableSpanCache used to enable or disable span map cache in tests.
-func (db *Store) EnableHighestAttestationCache(enable bool) {
-	db.highestAttCacheEnabled = enable
-}
-
 // SaveCachedSpansMaps saves all span maps that are currently
 // in memory into the DB. if no span maps are in db or cache is disabled it returns nil.
 func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
