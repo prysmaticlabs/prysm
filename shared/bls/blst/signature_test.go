@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func TestSignVerify(t *testing.T) {
@@ -16,9 +17,7 @@ func TestSignVerify(t *testing.T) {
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
-	if !sig.Verify(pub, msg) {
-		t.Error("Signature did not verify")
-	}
+	assert.Equal(t, true, sig.Verify(pub, msg), "Signature did not verify")
 }
 
 func TestAggregateVerify(t *testing.T) {
@@ -35,9 +34,7 @@ func TestAggregateVerify(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 	aggSig := blst.Aggregate(sigs)
-	if !aggSig.AggregateVerify(pubkeys, msgs) {
-		t.Error("Signature did not verify")
-	}
+	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 }
 
 func TestFastAggregateVerify(t *testing.T) {
@@ -52,9 +49,8 @@ func TestFastAggregateVerify(t *testing.T) {
 		sigs = append(sigs, sig)
 	}
 	aggSig := blst.AggregateSignatures(sigs)
-	if !aggSig.FastAggregateVerify(pubkeys, msg) {
-		t.Error("Signature did not verify")
-	}
+	assert.Equal(t, true, aggSig.FastAggregateVerify(pubkeys, msg), "Signature did not verify")
+
 }
 
 func TestVerifyCompressed(t *testing.T) {
@@ -62,12 +58,8 @@ func TestVerifyCompressed(t *testing.T) {
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
-	if !sig.Verify(pub, msg) {
-		t.Error("Non compressed signature did not verify")
-	}
-	if !blst.VerifyCompressed(sig.Marshal(), pub.Marshal(), msg) {
-		t.Error("Compressed signatures and pubkeys did not verify")
-	}
+	assert.Equal(t, true, sig.Verify(pub, msg), "Non compressed signature did not verify")
+	assert.Equal(t, true, blst.VerifyCompressed(sig.Marshal(), pub.Marshal(), msg), "Compressed signatures and pubkeys did not verify")
 }
 
 func TestMultipleSignatureVerification(t *testing.T) {
@@ -83,97 +75,17 @@ func TestMultipleSignatureVerification(t *testing.T) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	if verify, err := blst.VerifyMultipleSignatures(sigs, msgs, pubkeys); !verify || err != nil {
-		t.Errorf("Signature did not verify: %v and err %v", verify, err)
-	}
+	verify, err := blst.VerifyMultipleSignatures(sigs, msgs, pubkeys)
+	assert.NoError(t, err, "Signature did not verify")
+	assert.Equal(t, true, verify, "Signature did not verify")
 }
 
-/*
-func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
-	pubkeys := make([]iface.PublicKey, 0, 100)
-	sigs := make([]iface.Signature, 0, 100)
-	var msgs [][32]byte
-	for i := 0; i < 100; i++ {
-		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := blst.RandKey()
-		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:])
-		pubkeys = append(pubkeys, pub)
-		sigs = append(sigs, sig)
-		msgs = append(msgs, msg)
-	}
-	// We mess with the last 2 signatures, where we modify their values
-	// such that they wqould not fail in aggregate signature verification.
-	lastSig := sigs[len(sigs)-1]
-	secondLastSig := sigs[len(sigs)-2]
-	// Convert to bls object
-	rawSig := new(bls12.Sign)
-	if err := rawSig.Deserialize(secondLastSig.Marshal()); err != nil {
-		t.Fatal(err)
-	}
-
-	rawSig2 := new(bls12.Sign)
-	if err := rawSig2.Deserialize(lastSig.Marshal()); err != nil {
-		t.Fatal(err)
-	}
-
-	// set random field prime value
-	fprime := new(bls12.Fp)
-	fprime.SetInt64(100)
-
-	// set random field prime value.
-	fprime2 := new(bls12.Fp)
-	fprime2.SetInt64(50)
-
-	// make a combined fp2 object.
-	fp2 := new(bls12.Fp2)
-	fp2.D = [2]bls12.Fp{*fprime, *fprime2}
-
-	g2Point := new(bls12.G2)
-	if err := bls12.MapToG2(g2Point, fp2); err != nil {
-		t.Fatal(err)
-	}
-
-	// We now add/subtract the respective g2 points by a fixed
-	// value. This would cause singluar verification to fail but
-	// not aggregate verification.
-	firstG2 := bls12.CastFromSign(rawSig)
-	secondG2 := bls12.CastFromSign(rawSig2)
-	bls12.G2Add(firstG2, firstG2, g2Point)
-	bls12.G2Sub(secondG2, secondG2, g2Point)
-
-	lastSig, err := blst.SignatureFromBytes(rawSig.Serialize())
-	if err != nil {
-		t.Fatal(err)
-	}
-	secondLastSig, err = blst.SignatureFromBytes(rawSig2.Serialize())
-	if err != nil {
-		t.Fatal(err)
-	}
-	sigs[len(sigs)-1] = lastSig
-	sigs[len(sigs)-2] = secondLastSig
-
-	// This method is expected to pass, as it would not
-	// be able to detect bad signatures
-	aggSig := blst.AggregateSignatures(sigs)
-	if !aggSig.AggregateVerify(pubkeys, msgs) {
-		t.Error("Signature did not verify")
-	}
-	// This method would be expected to fail.
-	if verify, err := blst.VerifyMultipleSignatures(sigs, msgs, pubkeys); verify || err != nil {
-		t.Errorf("Signature verified when it was not supposed to: %v and err %v", verify, err)
-	}
-}
-*/
 func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	var pubkeys []iface.PublicKey
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
 	aggSig := blst.NewAggregateSignature()
-	if aggSig.FastAggregateVerify(pubkeys, msg) != false {
-		t.Error("Expected FastAggregateVerify to return false with empty input " +
-			"of public keys.")
-	}
+	assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, msg), "Expected FastAggregateVerify to return false with empty input ")
 }
 
 func TestSignatureFromBytes(t *testing.T) {
@@ -218,19 +130,13 @@ func TestSignatureFromBytes(t *testing.T) {
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("No error returned: expected %v", test.err)
-				} else if test.err.Error() != err.Error() {
-					t.Errorf("Unexpected error returned: expected %v, received %v", test.err, err)
+				} else {
+					assert.ErrorContains(t, test.err.Error(), err, "Unexpected error returned")
 				}
 			} else {
-				if err != nil {
-					t.Errorf("Unexpected error returned: %v", err)
-				} else {
-					if bytes.Compare(res.Marshal(), test.input) != 0 {
-						t.Errorf("Unexpected result: expected %x, received %x", test.input, res.Marshal())
-					}
-				}
+				assert.NoError(t, err)
+				assert.DeepEqual(t, 0, bytes.Compare(res.Marshal(), test.input))
 			}
-
 		})
 	}
 }
