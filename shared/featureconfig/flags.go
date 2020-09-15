@@ -550,7 +550,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedCheckptInfoCache = &cli.BoolFlag{
-		Name:   "check-point-info-cache",
+		Name:   "use-check-point-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
