@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	blst "github.com/supranational/blst/bindings/go"
 )
 
 var maxKeys = int64(100000)
