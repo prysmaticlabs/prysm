@@ -142,7 +142,8 @@ func Test_LockUnlockFile(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir: walletDir,
+		WalletDir:      walletDir,
+		WalletPassword: password,
 	})
 	defer unlock(t, w)
 	_, err = w.InitializeKeymanager(cliCtx.Context, true)
