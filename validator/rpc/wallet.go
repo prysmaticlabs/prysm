@@ -7,14 +7,16 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	v22 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
@@ -38,7 +40,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			keystores[i] = keystore
 		}
 		wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-			WalletCfg: &v2.WalletConfig{
+			WalletCfg: &v22.WalletConfig{
 				WalletDir:      defaultWalletPath,
 				KeymanagerKind: v2keymanager.Direct,
 				WalletPassword: req.WalletPassword,
@@ -92,8 +94,8 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
-	err := v2.WalletExists(defaultWalletPath)
-	if err != nil && errors.Is(err, v2.ErrNoWalletFound) {
+	err := v22.WalletExists(defaultWalletPath)
+	if err != nil && errors.Is(err, v22.ErrNoWalletFound) {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}

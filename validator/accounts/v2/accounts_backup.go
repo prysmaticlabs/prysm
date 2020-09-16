@@ -17,11 +17,17 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
+)
+
+var (
+	au = aurora.NewAurora(true)
 )
 
 const (
@@ -34,7 +40,7 @@ const (
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other eth2 clients.
 func BackupAccountsCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",
 		)
@@ -57,7 +63,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	}
 
 	// Input the directory where they wish to backup their accounts.
-	backupDir, err := inputDirectory(cliCtx, backupPromptText, flags.BackupDirFlag)
+	backupDir, err := prompt.InputDirectory(cliCtx, backupPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
@@ -68,7 +74,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		cliCtx,
 		flags.BackupPublicKeysFlag,
 		pubKeys,
-		selectAccountsBackupPromptText,
+		prompt.SelectAccountsBackupPromptText,
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not filter public keys for backup")
@@ -80,7 +86,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		flags.BackupPasswordFile,
 		"Enter a new password for your backed up accounts",
 		"Confirm new password",
-		promptutil.ConfirmPass,
+		true,
 		promptutil.ValidatePasswordInput,
 	)
 	if err != nil {

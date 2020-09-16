@@ -4,16 +4,19 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // EditWalletConfigurationCli for a user's on-disk wallet, being able to change
 // things such as remote gRPC credentials for remote signing, derivation paths
 // for HD wallets, and more.
 func EditWalletConfigurationCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no configuration to edit",
 		)
@@ -38,7 +41,7 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 		log.Info("Current configuration")
 		// Prints the current configuration to stdout.
 		fmt.Println(opts)
-		newCfg, err := inputRemoteKeymanagerConfig(cliCtx)
+		newCfg, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return errors.Wrap(err, "could not get keymanager config")
 		}

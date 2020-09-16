@@ -19,6 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -67,7 +69,7 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 
 // ImportAccountsConfig defines values to run the import accounts function.
 type ImportAccountsConfig struct {
-	Wallet          *Wallet
+	Wallet          *wallet.Wallet
 	Keystores       []*v2keymanager.Keystore
 	AccountPassword string
 }
@@ -77,22 +79,20 @@ type ImportAccountsConfig struct {
 // values necessary to run the function.
 func ImportAccountsCli(cliCtx *cli.Context) error {
 	au := aurora.NewAurora(true)
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
 		}
-		accountsPath := filepath.Join(cfg.WalletCfg.WalletDir, cfg.WalletCfg.KeymanagerKind.String())
-		w := &Wallet{
-			accountsPath:   accountsPath,
-			keymanagerKind: cfg.WalletCfg.KeymanagerKind,
-			walletDir:      cfg.WalletCfg.WalletDir,
-			walletPassword: cfg.WalletCfg.WalletPassword,
-		}
+		w := wallet.NewWallet(&wallet.WalletConfig{
+			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
+			WalletDir:      cfg.WalletCfg.WalletDir,
+			WalletPassword: cfg.WalletCfg.WalletPassword,
+		})
 		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created new wallet",
 		)
 		return w, nil
@@ -107,7 +107,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		return importPrivateKeyAsAccount(cliCtx, wallet)
 	}
 
-	keysDir, err := inputDirectory(cliCtx, importKeysDirPromptText, flags.KeysDirFlag)
+	keysDir, err := prompt.InputDirectory(cliCtx, prompt.ImportKeysDirPromptText, flags.KeysDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
@@ -215,7 +215,7 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 
 // Imports a one-off file containing a private key as a hex string into
 // the Prysm validator's accounts.
-func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
+func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet) error {
 	privKeyFile := cliCtx.String(flags.ImportPrivateKeyFileFlag.Name)
 	fullPath, err := fileutil.ExpandPath(privKeyFile)
 	if err != nil {
@@ -242,7 +242,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
 	if err != nil {
 		return errors.Wrap(err, "not a valid BLS private key")
 	}
-	keystore, err := createKeystoreFromPrivateKey(privKey, wallet.walletPassword)
+	keystore, err := createKeystoreFromPrivateKey(privKey, wallet.Password())
 	if err != nil {
 		return errors.Wrap(err, "could not encrypt private key into a keystore file")
 	}
@@ -250,7 +250,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *Wallet) error {
 		cliCtx.Context,
 		&ImportAccountsConfig{
 			Wallet:          wallet,
-			AccountPassword: wallet.walletPassword,
+			AccountPassword: wallet.Password(),
 			Keystores:       []*v2keymanager.Keystore{keystore},
 		},
 	); err != nil {

@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
+
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	v22 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
@@ -20,7 +22,7 @@ func TestServer_CreateAccount(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+		WalletCfg: &v22.WalletConfig{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,
@@ -47,7 +49,7 @@ func TestServer_ListAccounts(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+		WalletCfg: &v22.WalletConfig{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,

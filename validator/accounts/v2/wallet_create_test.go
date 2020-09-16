@@ -7,33 +7,35 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
 )
 
 func TestCreateOrOpenWallet(t *testing.T) {
 	hook := logTest.NewGlobal()
-	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
+	walletDir, passwordsDir, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
+	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		keymanagerKind:     v2keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
-	createDirectWallet := func(cliCtx *cli.Context) (*Wallet, error) {
+	createDirectWallet := func(cliCtx *cli.Context) (*v2.Wallet, error) {
 		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
 		}
 		accountsPath := filepath.Join(cfg.WalletCfg.WalletDir, cfg.WalletCfg.KeymanagerKind.String())
-		w := &Wallet{
+		w := &v2.Wallet{
 			accountsPath:   accountsPath,
 			keymanagerKind: cfg.WalletCfg.KeymanagerKind,
 			walletDir:      cfg.WalletCfg.WalletDir,
@@ -47,19 +49,19 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		)
 		return w, nil
 	}
-	createdWallet, err := OpenWalletOrElseCli(cliCtx, createDirectWallet)
+	createdWallet, err := v2.OpenWalletOrElseCli(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "Successfully created new wallet")
 
-	openedWallet, err := OpenWalletOrElseCli(cliCtx, createDirectWallet)
+	openedWallet, err := v2.OpenWalletOrElseCli(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
 }
 
 func TestCreateWallet_Direct(t *testing.T) {
-	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
+	walletDir, passwordsDir, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
+	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		keymanagerKind:     v2keymanager.Direct,
@@ -71,7 +73,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+	wallet, err := v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
@@ -88,8 +90,8 @@ func TestCreateWallet_Direct(t *testing.T) {
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
-	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
+	walletDir, passwordsDir, passwordFile := v2.setupWalletAndPasswordsDir(t)
+	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
@@ -102,7 +104,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+	wallet, err := v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
@@ -118,7 +120,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
-	walletDir, _, walletPasswordFile := setupWalletAndPasswordsDir(t)
+	walletDir, _, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",
@@ -152,7 +154,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+	wallet, err := v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)

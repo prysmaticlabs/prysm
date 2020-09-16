@@ -9,30 +9,32 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/urfave/cli/v2"
 )
 
 func TestRecoverDerivedWallet(t *testing.T) {
 	testDir := testutil.TempDir()
-	walletDir := filepath.Join(testDir, walletDirName)
-	passwordsDir := filepath.Join(testDir, passwordDirName)
-	exportDir := filepath.Join(testDir, exportDirName)
+	walletDir := filepath.Join(testDir, v2.walletDirName)
+	passwordsDir := filepath.Join(testDir, v2.passwordDirName)
+	exportDir := filepath.Join(testDir, v2.exportDirName)
 	defer func() {
 		assert.NoError(t, os.RemoveAll(walletDir))
 		assert.NoError(t, os.RemoveAll(passwordsDir))
 		assert.NoError(t, os.RemoveAll(exportDir))
 	}()
 
-	passwordFilePath := filepath.Join(testDir, passwordFileName)
-	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
-	mnemonicFilePath := filepath.Join(testDir, mnemonicFileName)
-	require.NoError(t, ioutil.WriteFile(mnemonicFilePath, []byte(mnemonic), os.ModePerm))
+	passwordFilePath := filepath.Join(testDir, v2.passwordFileName)
+	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(v2.password), os.ModePerm))
+	mnemonicFilePath := filepath.Join(testDir, v2.mnemonicFileName)
+	require.NoError(t, ioutil.WriteFile(mnemonicFilePath, []byte(v2.mnemonic), os.ModePerm))
 
 	numAccounts := int64(4)
 	app := cli.App{}
@@ -54,7 +56,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	require.NoError(t, RecoverWalletCli(cliCtx))
 
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+	wallet, err := v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)

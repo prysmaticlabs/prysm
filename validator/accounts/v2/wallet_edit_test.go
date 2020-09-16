@@ -4,22 +4,24 @@ import (
 	"flag"
 	"testing"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir, _, _ := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
+	walletDir, _, _ := v2.setupWalletAndPasswordsDir(t)
+	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+		WalletCfg: &v2.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Remote,
 			WalletPassword: "Passwordz0320$",

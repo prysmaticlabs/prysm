@@ -14,6 +14,9 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -24,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	v22 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -34,8 +37,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -47,7 +48,7 @@ type ValidatorClient struct {
 	db                *kv.Store
 	services          *shared.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
-	wallet            *accountsv2.Wallet
+	wallet            *v22.Wallet
 	walletInitialized *event.Feed
 	stop              chan struct{} // Channel to wait for termination notifications.
 }
@@ -167,7 +168,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			accountsDir = cliCtx.String(flags.KeystorePathFlag.Name)
 		} else {
 			// Read the wallet from the specified path.
-			wallet, err := accountsv2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*accountsv2.Wallet, error) {
+			wallet, err := v22.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v22.Wallet, error) {
 				return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
 			})
 			if err != nil {

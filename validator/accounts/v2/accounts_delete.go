@@ -7,17 +7,20 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/urfave/cli/v2"
 )
 
 // DeleteAccountConfig specifies parameters to run the delete account function.
 type DeleteAccountConfig struct {
-	Wallet     *Wallet
+	Wallet     *v2.Wallet
 	Keymanager v2keymanager.IKeymanager
 	PublicKeys [][]byte
 }
@@ -25,7 +28,7 @@ type DeleteAccountConfig struct {
 // DeleteAccountCli deletes the accounts that the user requests to be deleted from the wallet.
 // This function uses the CLI to extract necessary values.
 func DeleteAccountCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to delete",
 		)
@@ -50,7 +53,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		cliCtx,
 		flags.DeletePublicKeysFlag,
 		validatingPublicKeys,
-		selectAccountsDeletePromptText,
+		prompt.SelectAccountsDeletePromptText,
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not filter public keys for deletion")

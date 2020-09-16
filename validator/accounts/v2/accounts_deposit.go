@@ -8,20 +8,23 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/urfave/cli/v2"
 )
 
 // SendDepositCli transaction for user specified accounts via an interactive
 // CLI process or via command-line flags.
 func SendDepositCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to deposit",
 		)
@@ -78,7 +81,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			cliCtx,
 			flags.DepositPublicKeysFlag,
 			pubKeysBytes,
-			selectAccountsDepositPromptText,
+			prompt.SelectAccountsDepositPromptText,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not filter validating public keys for deposit")
@@ -142,7 +145,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			if cliCtx.IsSet(flags.Eth1KeystorePasswordFileFlag.Name) {
 				config.Eth1KeystorePasswordFile = cliCtx.String(flags.Eth1KeystorePasswordFileFlag.Name)
 			} else {
-				config.Eth1KeystorePasswordFile, err = inputWeakPassword(
+				config.Eth1KeystorePasswordFile, err = prompt.InputWeakPassword(
 					cliCtx,
 					flags.Eth1KeystorePasswordFileFlag,
 					"Enter the file path of a text file containing your eth1 keystore password",
@@ -190,7 +193,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read eth1 keystore UTC path")
 		}
-		eth1KeystorePasswordFile, err := inputWeakPassword(
+		eth1KeystorePasswordFile, err := prompt.InputWeakPassword(
 			cliCtx,
 			flags.Eth1KeystorePasswordFileFlag,
 			"Enter the file path to a text file containing your eth1 keystore password",

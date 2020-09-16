@@ -15,12 +15,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 func TestDeleteAccounts_Noninteractive(t *testing.T) {
-	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	walletDir, _, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
@@ -39,7 +40,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	deletePublicKeys := strings.Join(generatedPubKeys[0:2], ",")
 
 	// We initialize a wallet with a direct keymanager.
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
+	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
 		keymanagerKind:      v2keymanager.Direct,
@@ -51,10 +52,10 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		deletePublicKeys: deletePublicKeys,
 	})
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+		WalletCfg: &v2.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: password,
+			WalletPassword: v2.password,
 		},
 	})
 	require.NoError(t, err)

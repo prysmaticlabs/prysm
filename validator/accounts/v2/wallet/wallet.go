@@ -1,4 +1,4 @@
-package v2
+package wallet
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -24,14 +25,16 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var log = logrus.WithField("prefix", "wallet")
+
 const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// DirectoryPermissions for directories created under the wallet path.
 	DirectoryPermissions        = os.ModePerm
-	newWalletPasswordPromptText = "New wallet password"
-	walletPasswordPromptText    = "Wallet password"
-	confirmPasswordPromptText   = "Confirm password"
+	NewWalletPasswordPromptText = "New wallet password"
+	WalletPasswordPromptText    = "Wallet password"
+	ConfirmPasswordPromptText   = "Confirm password"
 )
 
 var (
@@ -43,12 +46,12 @@ var (
 	ErrWalletExists = errors.New("you already have a wallet at the specified path. You can " +
 		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
 	)
-	keymanagerKindSelections = map[v2keymanager.Kind]string{
+	KeymanagerKindSelections = map[v2keymanager.Kind]string{
 		v2keymanager.Derived: "HD Wallet (Recommended)",
 		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
 		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
-	validateExistingPass = func(input string) error {
+	ValidateExistingPass = func(input string) error {
 		if input == "" {
 			return errors.New("password input cannot be empty")
 		}
@@ -75,6 +78,16 @@ type Wallet struct {
 	walletFileLock      *flock.Flock
 	keymanagerKind      v2keymanager.Kind
 	accountsChangedFeed *event.Feed
+}
+
+func NewWallet(cfg *WalletConfig) *Wallet {
+	accountsPath := filepath.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
+	return &Wallet{
+		walletDir:      cfg.WalletDir,
+		accountsPath:   accountsPath,
+		keymanagerKind: cfg.KeymanagerKind,
+		walletPassword: cfg.WalletPassword,
+	}
 }
 
 // WalletExists check if a wallet at the specified directory
@@ -106,16 +119,16 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		}
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
 	}
 	walletPassword, err := inputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
-		walletPasswordPromptText,
+		WalletPasswordPromptText,
 		false, /* Do not confirm password */
-		validateExistingPass,
+		ValidateExistingPass,
 	)
 	return OpenWallet(cliCtx.Context, &WalletConfig{
 		WalletDir:      walletDir,
@@ -137,10 +150,10 @@ func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager kind for wallet")
 	}
-	walletPath := filepath.Join(cfg.WalletDir, keymanagerKind.String())
+	accountsPath := filepath.Join(cfg.WalletDir, keymanagerKind.String())
 	return &Wallet{
 		walletDir:      cfg.WalletDir,
-		accountsPath:   walletPath,
+		accountsPath:   accountsPath,
 		keymanagerKind: keymanagerKind,
 		walletPassword: cfg.WalletPassword,
 	}, nil
@@ -442,7 +455,7 @@ func inputPassword(
 		}
 
 		if confirmPassword {
-			passwordConfirmation, err := promptutil.PasswordPrompt(confirmPasswordPromptText, passwordValidator)
+			passwordConfirmation, err := promptutil.PasswordPrompt(ConfirmPasswordPromptText, passwordValidator)
 			if err != nil {
 				return "", fmt.Errorf("could not read password confirmation: %v", err)
 			}

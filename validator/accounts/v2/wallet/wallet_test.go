@@ -1,4 +1,4 @@
-package v2
+package wallet
 
 import (
 	"crypto/rand"
@@ -11,15 +11,17 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -117,13 +119,13 @@ func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
 	path := testutil.TempDir()
 	walletDir := filepath.Join(path, "test")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	got, err := isEmptyWallet(path)
+	got, err := v2.isEmptyWallet(path)
 	require.NoError(t, err)
 	assert.Equal(t, true, got)
 
 	walletDir = filepath.Join(path, "direct")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	got, err = isEmptyWallet(path)
+	got, err = v2.isEmptyWallet(path)
 	require.NoError(t, err)
 	assert.Equal(t, false, got)
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
@@ -142,7 +144,7 @@ func Test_LockUnlockFile(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCli(cliCtx)
+	_, err := v2.CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.

@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	v22 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -77,7 +79,7 @@ func ExitAccountsUnimplemented(cliCtx *cli.Context, r io.Reader) error {
 }
 
 func prepareWallet(cliCtx *cli.Context) ([][48]byte, v2.IKeymanager, error) {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := v22.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v22.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no accounts to exit",
 		)
@@ -108,7 +110,7 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 		cliCtx,
 		flags.VoluntaryExitPublicKeysFlag,
 		validatingPublicKeys,
-		selectAccountsVoluntaryExitPromptText,
+		prompt.SelectAccountsVoluntaryExitPromptText,
 	)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")

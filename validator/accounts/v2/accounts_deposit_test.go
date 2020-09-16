@@ -10,13 +10,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/urfave/cli/v2"
 )
 
 type depositTestWalletConfig struct {
@@ -70,10 +72,10 @@ func setupWalletCtxforDeposits(
 }
 
 func TestCreateDepositConfig(t *testing.T) {
-	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	walletDir, _, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
 
 	// First, create the wallet and several accounts
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
+	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
 		keymanagerKind:     v2keymanager.Derived,
 		walletDir:          walletDir,
 		walletPasswordFile: passwordFilePath,
@@ -179,7 +181,7 @@ func TestCreateDepositConfig(t *testing.T) {
 // createDepositConfigHelper returns a SendDepositConfig when given a particular wallet configuration.
 func createDepositConfigHelper(t *testing.T, config *depositTestWalletConfig) *derived.SendDepositConfig {
 	cliCtx := setupWalletCtxforDeposits(t, config)
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
 		err := errors.New("could not open wallet")
 		require.NoError(t, err)
 		return nil, err

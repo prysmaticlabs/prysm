@@ -5,19 +5,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 )
 
 const phraseWordCount = 24
@@ -37,22 +40,23 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get mnemonic phrase")
 	}
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return err
 	}
-	walletPassword, err := inputPassword(
+	walletPassword, err := promptutil.InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
-		newWalletPasswordPromptText,
+		wallet.NewWalletPasswordPromptText,
+		wallet.ConfirmPasswordPromptText,
 		true, /* Should confirm password */
 		promptutil.ValidatePasswordInput,
 	)
 	if err != nil {
 		return err
 	}
-	if err := WalletExists(walletDir); err != nil {
-		if !errors.Is(err, ErrNoWalletFound) {
+	if err := wallet.WalletExists(walletDir); err != nil {
+		if !errors.Is(err, wallet.ErrNoWalletFound) {
 			return errors.Wrap(err, "could not check if wallet exists")
 		}
 	}
@@ -76,14 +80,12 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 }
 
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
-func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*Wallet, error) {
-	accountsPath := filepath.Join(cfg.WalletDir, v2keymanager.Derived.String())
-	wallet := &Wallet{
-		accountsPath:   accountsPath,
-		keymanagerKind: v2keymanager.Derived,
-		walletDir:      cfg.WalletDir,
-		walletPassword: cfg.WalletPassword,
-	}
+func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*v2.Wallet, error) {
+	wallet := wallet.NewWallet(&wallet.WalletConfig{
+		WalletDir:      cfg.WalletDir,
+		KeymanagerKind: v2keymanager.Derived,
+		WalletPassword: cfg.WalletPassword,
+	})
 	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal keymanager config file")

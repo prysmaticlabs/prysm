@@ -8,18 +8,20 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/petnames"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/urfave/cli/v2"
 )
 
 // ListAccountsCli displays all available validator accounts in a Prysm wallet.
 func ListAccountsCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no accounts to list",
 		)
@@ -179,7 +181,7 @@ func listDerivedKeymanagerAccounts(
 
 func listRemoteKeymanagerAccounts(
 	ctx context.Context,
-	wallet *Wallet,
+	wallet *v2.Wallet,
 	keymanager v2keymanager.IKeymanager,
 	opts *remote.KeymanagerOpts,
 ) error {
@@ -187,7 +189,7 @@ func listRemoteKeymanagerAccounts(
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
 	fmt.Printf(
 		"(configuration file path) %s\n",
-		au.BrightGreen(filepath.Join(wallet.AccountsDir(), KeymanagerConfigFileName)).Bold(),
+		au.BrightGreen(filepath.Join(wallet.AccountsDir(), v2.KeymanagerConfigFileName)).Bold(),
 	)
 	fmt.Println(" ")
 	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
