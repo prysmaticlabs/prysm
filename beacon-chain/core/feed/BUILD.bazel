@@ -4,5 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = ["event.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/feed",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared:__subpackages__",
+    ],
 )
