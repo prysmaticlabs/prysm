@@ -2,28 +2,127 @@ package v2
 
 import (
 	"context"
+	"crypto/rand"
 	"flag"
+	"fmt"
+	"io/ioutil"
+	"math/big"
+	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/pkg/errors"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
-
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
 )
+
+const (
+	walletDirName    = "wallet"
+	passwordDirName  = "walletpasswords"
+	exportDirName    = "export"
+	passwordFileName = "password.txt"
+	password         = "OhWOWthisisatest42!$"
+	mnemonicFileName = "mnemonic.txt"
+	mnemonic         = "garage car helmet trade salmon embrace market giant movie wet same champion dawn chair shield drill amazing panther accident puzzle garden mosquito kind arena"
+)
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
+
+type testWalletConfig struct {
+	walletDir               string
+	passwordsDir            string
+	backupDir               string
+	keysDir                 string
+	deletePublicKeys        string
+	voluntaryExitPublicKeys string
+	backupPublicKeys        string
+	backupPasswordFile      string
+	walletPasswordFile      string
+	accountPasswordFile     string
+	privateKeyFile          string
+	skipDepositConfirm      bool
+	numAccounts             int64
+	keymanagerKind          v2keymanager.Kind
+}
+
+func setupWalletCtx(
+	tb testing.TB,
+	cfg *testWalletConfig,
+) *cli.Context {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
+	set.String(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir, "")
+	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
+	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
+	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
+	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
+	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
+	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
+	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
+	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
+	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
+
+	if cfg.privateKeyFile != "" {
+		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
+		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
+	}
+	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(tb, set.Set(flags.DeprecatedPasswordsDirFlag.Name, cfg.passwordsDir))
+	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
+	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
+	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
+	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))
+	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
+	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
+	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
+	assert.NoError(tb, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirm)))
+	return cli.NewContext(&app, set, nil)
+}
+
+func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
+	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
+	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
+	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwordFile")
+	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
+	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
+	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
+		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
+	})
+	return walletDir, passwordsDir, passwordFilePath
+}
 
 func TestCreateOrOpenWallet(t *testing.T) {
 	hook := logTest.NewGlobal()
-	walletDir, passwordsDir, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		keymanagerKind:     v2keymanager.Direct,
@@ -34,17 +133,15 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		accountsPath := filepath.Join(cfg.WalletCfg.WalletDir, cfg.WalletCfg.KeymanagerKind.String())
-		w := &v2.Wallet{
-			accountsPath:   accountsPath,
-			keymanagerKind: cfg.WalletCfg.KeymanagerKind,
-			walletDir:      cfg.WalletCfg.WalletDir,
-			walletPassword: cfg.WalletCfg.WalletPassword,
-		}
+		w := wallet.NewWallet(&wallet.WalletConfig{
+			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
+			WalletDir:      cfg.WalletCfg.WalletDir,
+			WalletPassword: cfg.WalletCfg.WalletPassword,
+		})
 		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
-		log.WithField("wallet-path", w.walletDir).Info(
+		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created new wallet",
 		)
 		return w, nil
@@ -60,8 +157,8 @@ func TestCreateOrOpenWallet(t *testing.T) {
 }
 
 func TestCreateWallet_Direct(t *testing.T) {
-	walletDir, passwordsDir, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		keymanagerKind:     v2keymanager.Direct,
@@ -90,8 +187,8 @@ func TestCreateWallet_Direct(t *testing.T) {
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
-	walletDir, passwordsDir, passwordFile := v2.setupWalletAndPasswordsDir(t)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
@@ -120,7 +217,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
-	walletDir, _, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
+	walletDir, _, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",

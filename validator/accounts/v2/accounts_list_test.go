@@ -36,8 +36,8 @@ func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (
 }
 
 func TestListAccounts_DirectKeymanager(t *testing.T) {
-	walletDir, passwordsDir, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		keymanagerKind:     v2keymanager.Direct,
@@ -160,8 +160,8 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 }
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
-	walletDir, passwordsDir, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		keymanagerKind:     v2keymanager.Derived,
@@ -297,8 +297,8 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 }
 
 func TestListAccounts_RemoteKeymanager(t *testing.T) {
-	walletDir, _, _ := v2.setupWalletAndPasswordsDir(t)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	walletDir, _, _ := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
@@ -306,7 +306,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		WalletCfg: &v2.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Remote,
-			WalletPassword: v2.password,
+			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
@@ -371,13 +371,11 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 
 	// Expected output format definition
 	const prologLength = 10
-	const accountsPathOffset = 1
 	const configOffset = 4
 	const configLength = 4
 	const accountLength = 4
 	const nameOffset = 1
 	const keyOffset = 2
-	const depositOffset = 9
 	const epilogLength = 1
 
 	// Require the output has correct number of lines
@@ -388,10 +386,6 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	kindString := wallet.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
-
-	// Assert that accounts path is printed in the right position
-	accountsPathFound := strings.Contains(lines[accountsPathOffset], wallet.accountsPath)
-	assert.Equal(t, true, accountsPathFound, "Accounts path %s not found on line number %d", accountsPathOffset)
 
 	// Assert that Configuration is printed in the right position
 	configLines := lines[configOffset:(configOffset + configLength)]

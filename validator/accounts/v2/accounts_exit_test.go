@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -49,7 +48,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Return(&ethpb.ProposeExitResponse{}, nil)
 
-	walletDir, _, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
@@ -61,7 +60,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// We initialize a wallet with a direct keymanager.
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
 		keymanagerKind:      v2keymanager.Direct,
@@ -110,8 +109,8 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
-	walletDir, _, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
 		keymanagerKind:      v2keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,

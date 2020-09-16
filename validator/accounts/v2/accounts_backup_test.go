@@ -24,7 +24,7 @@ import (
 )
 
 func TestBackupAccounts_Noninteractive(t *testing.T) {
-	walletDir, _, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
@@ -57,7 +57,7 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 	require.NoError(t, err)
 
 	// We initialize a wallet with a direct keymanager.
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
 		keymanagerKind:      v2keymanager.Direct,

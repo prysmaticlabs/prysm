@@ -72,10 +72,10 @@ func setupWalletCtxforDeposits(
 }
 
 func TestCreateDepositConfig(t *testing.T) {
-	walletDir, _, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 
 	// First, create the wallet and several accounts
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		keymanagerKind:     v2keymanager.Derived,
 		walletDir:          walletDir,
 		walletPasswordFile: passwordFilePath,

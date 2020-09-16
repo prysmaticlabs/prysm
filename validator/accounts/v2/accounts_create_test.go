@@ -17,9 +17,9 @@ import (
 )
 
 func TestCreateAccount_Derived(t *testing.T) {
-	walletDir, passwordsDir, passwordFile := v2.setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
 	numAccounts := int64(5)
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
 		walletPasswordFile:  passwordFile,
@@ -78,12 +78,12 @@ func (p *passwordReader) passwordReaderFunc(file *os.File) ([]byte, error) {
 
 // Test_KeysConsistency_Direct checks that the password does not change due to account creation in a Direct wallet
 func Test_KeysConsistency_Direct(t *testing.T) {
-	walletDir, passwordsDir, walletPasswordFile := v2.setupWalletAndPasswordsDir(t)
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 
 	//Specify the 'initial'/correct password locally to this file for convenience.
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
 
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		keymanagerKind:     v2keymanager.Direct,

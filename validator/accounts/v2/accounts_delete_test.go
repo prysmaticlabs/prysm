@@ -21,7 +21,7 @@ import (
 )
 
 func TestDeleteAccounts_Noninteractive(t *testing.T) {
-	walletDir, _, passwordFilePath := v2.setupWalletAndPasswordsDir(t)
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
@@ -40,7 +40,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	deletePublicKeys := strings.Join(generatedPubKeys[0:2], ",")
 
 	// We initialize a wallet with a direct keymanager.
-	cliCtx := v2.setupWalletCtx(t, &v2.testWalletConfig{
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
 		keymanagerKind:      v2keymanager.Direct,
@@ -55,7 +55,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		WalletCfg: &v2.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: v2.password,
+			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
