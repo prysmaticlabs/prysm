@@ -92,7 +92,7 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
-// Config returns the wallet's configuration. If no wallet exists, we return an empty response.
+// WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
 	err := v22.Exists(defaultWalletPath)
 	if err != nil && errors.Is(err, v22.ErrNoWalletFound) {
