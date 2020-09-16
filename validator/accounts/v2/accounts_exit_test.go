@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
@@ -72,7 +72,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
 	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+		WalletCfg: &wallet.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: "Passwordz0320$",
@@ -117,7 +117,7 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 		accountPasswordFile: passwordFilePath,
 	})
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+		WalletCfg: &wallet.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: "Passwordz0320$",

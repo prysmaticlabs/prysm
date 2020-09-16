@@ -8,23 +8,22 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/urfave/cli/v2"
 )
 
 // SendDepositCli transaction for user specified accounts via an interactive
 // CLI process or via command-line flags.
 func SendDepositCli(cliCtx *cli.Context) error {
-	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to deposit",
 		)
@@ -32,7 +31,7 @@ func SendDepositCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := wallet.InitializeKeymanager(
+	keymanager, err := w.InitializeKeymanager(
 		cliCtx.Context,
 		true, /* skip mnemonic confirm */
 	)
@@ -42,7 +41,7 @@ func SendDepositCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	switch wallet.KeymanagerKind() {
+	switch w.KeymanagerKind() {
 	case v2keymanager.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
 		if !ok {

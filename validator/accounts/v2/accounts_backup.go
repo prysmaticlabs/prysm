@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -40,7 +40,7 @@ const (
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other eth2 clients.
 func BackupAccountsCli(cliCtx *cli.Context) error {
-	wallet, err := v2.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*v2.Wallet, error) {
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",
 		)
@@ -48,12 +48,12 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
-	if wallet.KeymanagerKind() == v2keymanager.Remote {
+	if w.KeymanagerKind() == v2keymanager.Remote {
 		return errors.New(
 			"remote wallets cannot backup accounts",
 		)
 	}
-	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, true /* skip mnemonic confirm */)
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -94,7 +94,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	}
 
 	var keystoresToBackup []*v2keymanager.Keystore
-	switch wallet.KeymanagerKind() {
+	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {

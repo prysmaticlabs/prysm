@@ -8,8 +8,6 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/google/uuid"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -17,6 +15,7 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	v22 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestServer_CreateWallet_Direct(t *testing.T) {

@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -78,8 +77,7 @@ type ImportAccountsConfig struct {
 // new accounts into the Prysm validator wallet. This uses the CLI to extract
 // values necessary to run the function.
 func ImportAccountsCli(cliCtx *cli.Context) error {
-	au := aurora.NewAurora(true)
-	wallet, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
@@ -104,7 +102,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	// Check if the user wishes to import a one-off, private key directly
 	// as an account into the Prysm validator.
 	if cliCtx.IsSet(flags.ImportPrivateKeyFileFlag.Name) {
-		return importPrivateKeyAsAccount(cliCtx, wallet)
+		return importPrivateKeyAsAccount(cliCtx, w)
 	}
 
 	keysDir, err := prompt.InputDirectory(cliCtx, prompt.ImportKeysDirPromptText, flags.KeysDirFlag)
@@ -170,7 +168,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	}
 	fmt.Println("Importing accounts, this may take a while...")
 	if err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
-		Wallet:          wallet,
+		Wallet:          w,
 		Keystores:       keystoresImported,
 		AccountPassword: accountsPassword,
 	}); err != nil {

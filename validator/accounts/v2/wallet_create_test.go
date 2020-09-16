@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -128,7 +127,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		keymanagerKind:     v2keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
-	createDirectWallet := func(cliCtx *cli.Context) (*v2.Wallet, error) {
+	createDirectWallet := func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
 		if err != nil {
 			return nil, err
@@ -146,11 +145,11 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		)
 		return w, nil
 	}
-	createdWallet, err := v2.OpenWalletOrElseCli(cliCtx, createDirectWallet)
+	createdWallet, err := wallet.OpenWalletOrElseCli(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "Successfully created new wallet")
 
-	openedWallet, err := v2.OpenWalletOrElseCli(cliCtx, createDirectWallet)
+	openedWallet, err := wallet.OpenWalletOrElseCli(cliCtx, createDirectWallet)
 	require.NoError(t, err)
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
@@ -170,13 +169,13 @@ func TestCreateWallet_Direct(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	wallet, err := v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(cliCtx.Context)
+	encoded, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	assert.NoError(t, err)
 	cfg, err := direct.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
@@ -201,13 +200,13 @@ func TestCreateWallet_Derived(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
 	cfg, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
@@ -251,13 +250,13 @@ func TestCreateWallet_Remote(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
 	cfg, err := remote.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)

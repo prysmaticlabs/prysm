@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -44,8 +44,8 @@ func TestImport_Noninteractive(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: password,
@@ -55,7 +55,7 @@ func TestImport_Noninteractive(t *testing.T) {
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
-			Wallet: wallet,
+			Wallet: w,
 			Opts:   direct.DefaultKeymanagerOpts(),
 		},
 	)
@@ -73,12 +73,12 @@ func TestImport_Noninteractive(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	wallet, err = v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
+	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(cliCtx.Context, true)
+	km, err := w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -104,8 +104,8 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: password,
@@ -115,7 +115,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
-			Wallet: wallet,
+			Wallet: w,
 			Opts:   direct.DefaultKeymanagerOpts(),
 		},
 	)
@@ -133,12 +133,12 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	wallet, err = v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
+	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(cliCtx.Context, true)
+	km, err := w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -165,8 +165,8 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: password,
@@ -176,7 +176,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
-			Wallet: wallet,
+			Wallet: w,
 			Opts:   direct.DefaultKeymanagerOpts(),
 		},
 	)
@@ -189,12 +189,12 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	wallet, err = v2.OpenWallet(cliCtx.Context, &v2.WalletConfig{
+	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(cliCtx.Context, true)
+	km, err := w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -291,7 +291,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	})
 	walletPass := "Passwordz0320$"
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &v2.WalletConfig{
+		WalletCfg: &wallet.WalletConfig{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: walletPass,
