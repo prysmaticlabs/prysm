@@ -137,9 +137,9 @@ var (
 		Name:  "disable-new-beacon-state-locks",
 		Usage: "Disable new beacon state locking",
 	}
-	batchBlockVerify = &cli.BoolFlag{
-		Name:  "batch-block-verify",
-		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
+	disableBatchBlockVerify = &cli.BoolFlag{
+		Name:  "disable-batch-block-verify",
+		Usage: "Disable full signature verification of blocks in batches instead of singularly.",
 	}
 	initSyncVerbose = &cli.BoolFlag{
 		Name:  "init-sync-verbose",
@@ -181,7 +181,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	batchBlockVerify,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -562,6 +561,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedBatchBlockVerify = &cli.BoolFlag{
+		Name:   "batch-block-verify",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -639,6 +643,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableSlasherFlag,
 	deprecatedEnableFinalizedDepositsCache,
 	deprecatedCheckptInfoCache,
+	deprecatedBatchBlockVerify,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -691,7 +696,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	spadinaTestnet,
-	batchBlockVerify,
+	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
 	enableBlst,
