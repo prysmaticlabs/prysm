@@ -71,7 +71,7 @@ func TestBackupAccounts_Noninteractive(t *testing.T) {
 		backupDir:          backupDir,
 	})
 	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: "Passwordz0320$",

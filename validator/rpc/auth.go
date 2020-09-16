@@ -49,7 +49,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err := s.valDB.SaveHashedPasswordForAPI(ctx, hashedPassword); err != nil {
 		return nil, status.Error(codes.Internal, "Could not save hashed password to database")
 	}
-	if err := s.initializeWallet(ctx, &v22.WalletConfig{
+	if err := s.initializeWallet(ctx, &v22.Config{
 		WalletDir:      defaultWalletPath,
 		WalletPassword: req.Password,
 	}); err != nil {
@@ -69,7 +69,7 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
 		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
 	}
-	if err := s.initializeWallet(ctx, &v22.WalletConfig{
+	if err := s.initializeWallet(ctx, &v22.Config{
 		WalletDir:      defaultWalletPath,
 		WalletPassword: req.Password,
 	}); err != nil {
@@ -108,9 +108,9 @@ func (s *Server) createTokenString() (string, uint64, error) {
 }
 
 // Initialize a wallet and send it over a global feed.
-func (s *Server) initializeWallet(ctx context.Context, cfg *v22.WalletConfig) error {
+func (s *Server) initializeWallet(ctx context.Context, cfg *v22.Config) error {
 	// We first ensure the user has a wallet.
-	if err := v22.WalletExists(cfg.WalletDir); err != nil {
+	if err := v22.Exists(cfg.WalletDir); err != nil {
 		if errors.Is(err, v22.ErrNoWalletFound) {
 			return v22.ErrNoWalletFound
 		}
@@ -118,7 +118,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *v22.WalletConfig) er
 	}
 	// We fire an event with the opened wallet over
 	// a global feed signifying wallet initialization.
-	wallet, err := v22.OpenWallet(ctx, &v22.WalletConfig{
+	wallet, err := v22.OpenWallet(ctx, &v22.Config{
 		WalletDir:      cfg.WalletDir,
 		WalletPassword: cfg.WalletPassword,
 	})

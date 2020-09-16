@@ -17,11 +17,17 @@ import (
 )
 
 const (
-	ImportKeysDirPromptText               = "Enter the directory or filepath where your keystores to import are located"
-	WalletDirPromptText                   = "Enter a wallet directory"
-	SelectAccountsDeletePromptText        = "Select the account(s) you would like to delete"
-	SelectAccountsBackupPromptText        = "Select the account(s) you wish to backup"
-	SelectAccountsDepositPromptText       = "Select the validating public keys you wish to submit deposits for"
+	// ImportKeysDirPromptText for the import keys cli function.
+	ImportKeysDirPromptText = "Enter the directory or filepath where your keystores to import are located"
+	// WalletDirPromptText for the wallet.
+	WalletDirPromptText = "Enter a wallet directory"
+	// SelectAccountsDeletePromptText --
+	SelectAccountsDeletePromptText = "Select the account(s) you would like to delete"
+	// SelectAccountsBackupPromptText --
+	SelectAccountsBackupPromptText = "Select the account(s) you wish to backup"
+	// SelectAccountsDepositPromptText --
+	SelectAccountsDepositPromptText = "Select the validating public keys you wish to submit deposits for"
+	// SelectAccountsVoluntaryExitPromptText --
 	SelectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
 )
 
@@ -30,6 +36,7 @@ var (
 	log = logrus.WithField("prefix", "prompt")
 )
 
+// InputDirectory from the cli.
 func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
@@ -57,6 +64,7 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	return fileutil.ExpandPath(inputtedDir)
 }
 
+// InputWeakPassword from the cli.
 func InputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
@@ -73,6 +81,7 @@ func InputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 	return walletPasswordFilePath, nil
 }
 
+// InputRemoteKeymanagerConfig via the cli.
 func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
 	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
@@ -153,6 +162,7 @@ func validateCertPath(input string) error {
 	return nil
 }
 
+// FormatPromptError for the user.
 func FormatPromptError(err error) error {
 	switch err {
 	case promptui.ErrAbort:

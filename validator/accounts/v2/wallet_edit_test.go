@@ -20,7 +20,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 		keymanagerKind: v2keymanager.Remote,
 	})
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Remote,
 			WalletPassword: "Passwordz0320$",

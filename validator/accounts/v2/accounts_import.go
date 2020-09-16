@@ -82,7 +82,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		w := wallet.NewWallet(&wallet.WalletConfig{
+		w := wallet.NewWallet(&wallet.Config{
 			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,

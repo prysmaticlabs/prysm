@@ -22,7 +22,7 @@ func TestServer_CreateAccount(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v22.WalletConfig{
+		WalletCfg: &v22.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,
@@ -49,7 +49,7 @@ func TestServer_ListAccounts(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v22.WalletConfig{
+		WalletCfg: &v22.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,

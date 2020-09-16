@@ -44,7 +44,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		walletPasswordFile: walletPasswordFile,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: "Passwordz0320$",
@@ -168,7 +168,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		walletPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Derived,
 			WalletPassword: "Passwordz0320$",
@@ -303,7 +303,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		keymanagerKind: v2keymanager.Remote,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Remote,
 			WalletPassword: password,

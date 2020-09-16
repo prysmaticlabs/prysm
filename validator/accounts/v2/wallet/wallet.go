@@ -31,10 +31,13 @@ const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// DirectoryPermissions for directories created under the wallet path.
-	DirectoryPermissions        = os.ModePerm
+	DirectoryPermissions = os.ModePerm
+	// NewWalletPasswordPromptText for wallet creation.
 	NewWalletPasswordPromptText = "New wallet password"
-	WalletPasswordPromptText    = "Wallet password"
-	ConfirmPasswordPromptText   = "Confirm password"
+	// WalletPasswordPromptText for wallet unlocking.
+	WalletPasswordPromptText = "Wallet password"
+	// ConfirmPasswordPromptText for confirming a wallet password.
+	ConfirmPasswordPromptText = "Confirm password"
 )
 
 var (
@@ -46,11 +49,13 @@ var (
 	ErrWalletExists = errors.New("you already have a wallet at the specified path. You can " +
 		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
 	)
+	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[v2keymanager.Kind]string{
 		v2keymanager.Derived: "HD Wallet (Recommended)",
 		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
 		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
+	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
 		if input == "" {
 			return errors.New("password input cannot be empty")
@@ -59,8 +64,8 @@ var (
 	}
 )
 
-// WalletConfig to open a wallet programmatically.
-type WalletConfig struct {
+// Config to open a wallet programmatically.
+type Config struct {
 	WalletDir      string
 	KeymanagerKind v2keymanager.Kind
 	WalletPassword string
@@ -80,7 +85,8 @@ type Wallet struct {
 	accountsChangedFeed *event.Feed
 }
 
-func NewWallet(cfg *WalletConfig) *Wallet {
+// NewWallet creates a struct from config values.
+func NewWallet(cfg *Config) *Wallet {
 	accountsPath := filepath.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	return &Wallet{
 		walletDir:      cfg.WalletDir,
@@ -90,9 +96,9 @@ func NewWallet(cfg *WalletConfig) *Wallet {
 	}
 }
 
-// WalletExists check if a wallet at the specified directory
+// Exists check if a wallet at the specified directory
 // exists and has valid information in it.
-func WalletExists(walletDir string) error {
+func Exists(walletDir string) error {
 	ok, err := fileutil.HasDir(walletDir)
 	if err != nil {
 		return errors.Wrap(err, "could not parse wallet directory")
@@ -113,7 +119,7 @@ func WalletExists(walletDir string) error {
 // OpenWalletOrElseCli tries to open the wallet and if it fails or no wallet
 // is found, invokes a callback function.
 func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
-	if err := WalletExists(cliCtx.String(flags.WalletDirFlag.Name)); err != nil {
+	if err := Exists(cliCtx.String(flags.WalletDirFlag.Name)); err != nil {
 		if errors.Is(err, ErrNoWalletFound) {
 			return otherwise(cliCtx)
 		}
@@ -130,7 +136,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		false, /* Do not confirm password */
 		ValidateExistingPass,
 	)
-	return OpenWallet(cliCtx.Context, &WalletConfig{
+	return OpenWallet(cliCtx.Context, &Config{
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
 	})
@@ -139,8 +145,8 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
-func OpenWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	if err := WalletExists(cfg.WalletDir); err != nil {
+func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
+	if err := Exists(cfg.WalletDir); err != nil {
 		if errors.Is(err, ErrNoWalletFound) {
 			return nil, ErrNoWalletFound
 		}

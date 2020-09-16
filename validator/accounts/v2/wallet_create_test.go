@@ -132,7 +132,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		w := wallet.NewWallet(&wallet.WalletConfig{
+		w := wallet.NewWallet(&wallet.Config{
 			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
@@ -169,7 +169,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
@@ -200,7 +200,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
@@ -250,7 +250,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)

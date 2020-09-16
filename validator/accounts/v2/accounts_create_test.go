@@ -33,7 +33,7 @@ func TestCreateAccount_Derived(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)

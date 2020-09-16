@@ -45,7 +45,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: password,
@@ -73,7 +73,7 @@ func TestImport_Noninteractive(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
@@ -105,7 +105,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: password,
@@ -133,7 +133,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
@@ -166,7 +166,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: password,
@@ -189,7 +189,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
@@ -291,7 +291,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	})
 	walletPass := "Passwordz0320$"
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: walletPass,

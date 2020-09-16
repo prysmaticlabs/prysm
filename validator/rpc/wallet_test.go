@@ -104,7 +104,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	s := &Server{}
 	// We attempt to create the wallet.
 	_, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v22.WalletConfig{
+		WalletCfg: &v22.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,

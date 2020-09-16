@@ -20,7 +20,7 @@ import (
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
 type CreateWalletConfig struct {
-	WalletCfg            *wallet.WalletConfig
+	WalletCfg            *wallet.Config
 	RemoteKeymanagerOpts *remote.KeymanagerOpts
 	SkipMnemonicConfirm  bool
 }
@@ -42,12 +42,12 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 
 // CreateWalletWithKeymanager specified by configuration options.
 func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*wallet.Wallet, error) {
-	if err := wallet.WalletExists(cfg.WalletCfg.WalletDir); err != nil {
+	if err := wallet.Exists(cfg.WalletCfg.WalletDir); err != nil {
 		if !errors.Is(err, wallet.ErrNoWalletFound) {
 			return nil, errors.Wrap(err, "could not check if wallet exists")
 		}
 	}
-	w := wallet.NewWallet(&wallet.WalletConfig{
+	w := wallet.NewWallet(&wallet.Config{
 		WalletDir:      cfg.WalletCfg.WalletDir,
 		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
 		WalletPassword: cfg.WalletCfg.WalletPassword,
@@ -104,7 +104,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2ke
 		return nil, err
 	}
 	createWalletConfig := &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanagerKind,
 			WalletPassword: walletPassword,

@@ -52,7 +52,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		deletePublicKeys: deletePublicKeys,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: password,

@@ -53,7 +53,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := wallet.WalletExists(walletDir); err != nil {
+	if err := wallet.Exists(walletDir); err != nil {
 		if !errors.Is(err, wallet.ErrNoWalletFound) {
 			return errors.Wrap(err, "could not check if wallet exists")
 		}
@@ -79,7 +79,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
 func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Wallet, error) {
-	w := wallet.NewWallet(&wallet.WalletConfig{
+	w := wallet.NewWallet(&wallet.Config{
 		WalletDir:      cfg.WalletDir,
 		KeymanagerKind: v2keymanager.Derived,
 		WalletPassword: cfg.WalletPassword,

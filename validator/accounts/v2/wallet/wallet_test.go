@@ -114,12 +114,12 @@ func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
 	path := testutil.TempDir()
 	walletDir := filepath.Join(path, "test")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	err := wallet.WalletExists(path)
+	err := wallet.Exists(path)
 	require.ErrorContains(t, "no wallet found at path", err)
 
 	walletDir = filepath.Join(path, "direct")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	err = wallet.WalletExists(path)
+	err = wallet.Exists(path)
 	require.NoError(t, err)
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
 }
@@ -141,7 +141,7 @@ func Test_LockUnlockFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	wallet, err := wallet.OpenWallet(cliCtx.Context, &wallet.WalletConfig{
+	wallet, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	defer unlock(t, wallet)

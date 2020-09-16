@@ -40,7 +40,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			keystores[i] = keystore
 		}
 		wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-			WalletCfg: &v22.WalletConfig{
+			WalletCfg: &v22.Config{
 				WalletDir:      defaultWalletPath,
 				KeymanagerKind: v2keymanager.Direct,
 				WalletPassword: req.WalletPassword,
@@ -92,9 +92,9 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
-// WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
+// Config returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
-	err := v22.WalletExists(defaultWalletPath)
+	err := v22.Exists(defaultWalletPath)
 	if err != nil && errors.Is(err, v22.ErrNoWalletFound) {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
