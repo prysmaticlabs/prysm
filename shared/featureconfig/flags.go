@@ -145,6 +145,10 @@ var (
 		Name:  "init-sync-verbose",
 		Usage: "Enable logging every processed block during initial syncing.",
 	}
+	enableBlst = &cli.BoolFlag{
+		Name:  "blst",
+		Usage: "Enable new BLS library, blst, from Supranational",
+	}
 	disableFinalizedDepositsCache = &cli.BoolFlag{
 		Name:  "disable-finalized-deposits-cache",
 		Usage: "Disables utilization of cached finalized deposits",
@@ -652,6 +656,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	OnyxTestnet,
 	spadinaTestnet,
 	disableAccountsV2,
+	enableBlst,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -694,6 +699,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
+	enableBlst,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
