@@ -246,7 +246,7 @@ func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 func ComputeForkDigest(version []byte, genesisValidatorsRoot []byte) ([4]byte, error) {
 	dataRoot, err := computeForkDataRoot(version, genesisValidatorsRoot)
 	if err != nil {
-		return [4]byte{}, nil
+		return [4]byte{}, err
 	}
 	return bytesutil.ToBytes4(dataRoot[:]), nil
 }
