@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = ["wallet.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared/event:go_default_library",
         "//shared/fileutil:go_default_library",
