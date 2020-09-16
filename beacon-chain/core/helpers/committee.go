@@ -350,7 +350,7 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
-		return nil
+		return err
 	}
 	proposerIndices, err := precomputeProposerIndices(state, indices)
 	if err != nil {
