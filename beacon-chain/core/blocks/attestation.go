@@ -205,6 +205,16 @@ func ProcessAttestationNoVerifySignature(
 		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
 	}
 
+	// Verify attesting indices are correct.
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+		return nil, err
+	}
+
 	return beaconState, nil
 }
 
@@ -326,7 +336,7 @@ func verifyAttestationsSigWithDomain(ctx context.Context, beaconState *stateTrie
 	if err != nil {
 		return err
 	}
-	verify, err := bls.VerifyMultipleSignatures(set.Signatures, set.Messages, set.PublicKeys)
+	verify, err := set.Verify()
 	if err != nil {
 		return errors.Errorf("got error in multiple verification: %v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,10 +14,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 
 const domainDataErr = "could not get domain data"
 const signingRootErr = "could not get signing root"
@@ -120,36 +124,42 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 
 // ProposeExit performs a voluntary exit on a validator.
 // The exit is signed by the validator before being sent to the beacon node for broadcasting.
-func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit, pubKey [48]byte) error {
+func ProposeExit(
+	ctx context.Context,
+	validatorClient ethpb.BeaconNodeValidatorClient,
+	nodeClient ethpb.NodeClient,
+	signer signingFunc,
+	pubKey []byte,
+) error {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
-
-	sig, err := v.signVoluntaryExit(ctx, pubKey, exit)
+	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
 	if err != nil {
-		log.WithError(err).Error("Failed to sign voluntary exit")
-		if v.emitAccountMetrics {
-			ValidatorProposeExitFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return err
+		return errors.Wrap(err, "gRPC call to get validator index failed")
+	}
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &types.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "gRPC call to get genesis time failed")
+	}
+	totalSecondsPassed := roughtime.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+
+	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign voluntary exit")
 	}
 
 	signedExit := &ethpb.SignedVoluntaryExit{Exit: exit, Signature: sig}
-	_, err = v.validatorClient.ProposeExit(ctx, signedExit)
+	exitResp, err := validatorClient.ProposeExit(ctx, signedExit)
 	if err != nil {
-		log.WithError(err).Error("Failed to propose voluntary exit")
-		if v.emitAccountMetrics {
-			ValidatorProposeExitFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return err
+		return errors.Wrap(err, "failed to propose voluntary exit")
 	}
 
-	if v.emitAccountMetrics {
-		ValidatorProposeExitSuccessVec.WithLabelValues(fmtKey).Inc()
-	}
+	span.AddAttributes(
+		trace.StringAttribute("exitRoot", fmt.Sprintf("%#x", exitResp.ExitRoot)),
+	)
 
 	return nil
 }
@@ -237,7 +247,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		if err != nil {
 			return nil, errors.Wrap(err, signingRootErr)
 		}
-		sig, err = v.keyManager.Sign(pubKey, blockRoot)
+		sig, err = v.keyManager.Sign(ctx, pubKey, blockRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
@@ -246,8 +256,19 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 }
 
 // Sign voluntary exit with proposer domain and private key.
-func (v *validator) signVoluntaryExit(ctx context.Context, pubKey [48]byte, exit *ethpb.VoluntaryExit) ([]byte, error) {
-	domain, err := v.domainData(ctx, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit[:])
+func signVoluntaryExit(
+	ctx context.Context,
+	validatorClient ethpb.BeaconNodeValidatorClient,
+	signer signingFunc,
+	pubKey []byte,
+	exit *ethpb.VoluntaryExit,
+) ([]byte, error) {
+	req := &ethpb.DomainRequest{
+		Epoch:  exit.Epoch,
+		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
+	}
+
+	domain, err := validatorClient.DomainData(ctx, req)
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
 	}
@@ -260,29 +281,14 @@ func (v *validator) signVoluntaryExit(ctx context.Context, pubKey [48]byte, exit
 		return nil, errors.Wrap(err, signingRootErr)
 	}
 
-	var sig bls.Signature
-	if featureconfig.Get().EnableAccountsV2 {
-		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
-			PublicKey:       pubKey[:],
-			SigningRoot:     exitRoot[:],
-			SignatureDomain: domain.SignatureDomain,
-			Object:          &validatorpb.SignRequest_Exit{Exit: exit},
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, signExitErr)
-		}
-		return sig.Marshal(), nil
-	}
-	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
-		sig, err = protectingKeymanager.SignGeneric(pubKey, exitRoot, bytesutil.ToBytes32(domain.SignatureDomain))
-		if err != nil {
-			return nil, errors.Wrap(err, signExitErr)
-		}
-	} else {
-		sig, err = v.keyManager.Sign(pubKey, exitRoot)
-		if err != nil {
-			return nil, errors.Wrap(err, signExitErr)
-		}
+	sig, err := signer(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     exitRoot[:],
+		SignatureDomain: domain.SignatureDomain,
+		Object:          &validatorpb.SignRequest_Exit{Exit: exit},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, signExitErr)
 	}
 	return sig.Marshal(), nil
 }

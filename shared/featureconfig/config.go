@@ -33,13 +33,16 @@ type Flags struct {
 	// State locks
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
-	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
-	OnyxTestnet   bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
+	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
+	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
+	SpadinaTestnet bool // Spadina defines the flag through which we can enable the node to run on the spadina testnet.
+
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
+	EnableBlst                                 bool // Enables new BLS library from supranational.
 	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
@@ -133,6 +136,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(spadinaTestnet.Name) {
+		log.Warn("Running Node on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -229,17 +238,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling new beacon state locks")
 		cfg.NewBeaconStateLocks = false
 	}
-	if ctx.Bool(batchBlockVerify.Name) {
-		log.Warn("Performing batch block verification when syncing.")
-		cfg.BatchBlockVerify = true
+	cfg.BatchBlockVerify = true
+	if ctx.Bool(disableBatchBlockVerify.Name) {
+		log.Warn("Disabling batch block verification when syncing.")
+		cfg.BatchBlockVerify = false
 	}
 	if ctx.Bool(initSyncVerbose.Name) {
 		log.Warn("Logging every processed block during initial syncing.")
 		cfg.InitSyncVerbose = true
 	}
-	if ctx.Bool(enableFinalizedDepositsCache.Name) {
-		log.Warn("Enabling finalized deposits cache")
-		cfg.EnableFinalizedDepositsCache = true
+	cfg.EnableFinalizedDepositsCache = true
+	if ctx.Bool(disableFinalizedDepositsCache.Name) {
+		log.Warn("Disabling finalized deposits cache")
+		cfg.EnableFinalizedDepositsCache = false
 	}
 	if ctx.Bool(enableEth1DataMajorityVote.Name) {
 		log.Warn("Enabling eth1data majority vote")
@@ -256,9 +267,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling roughtime sync")
 		cfg.EnableRoughtime = true
 	}
-	if ctx.Bool(checkPtInfoCache.Name) {
-		log.Warn("Using advance check point info cache")
-		cfg.UseCheckPointInfoCache = true
+	cfg.UseCheckPointInfoCache = true
+	if ctx.Bool(disableCheckPtInfoCache.Name) {
+		log.Warn("Disabling advanced check point info cache")
+		cfg.UseCheckPointInfoCache = false
+	}
+	if ctx.Bool(enableBlst.Name) {
+		log.Warn("Enabling new BLS library blst")
+		cfg.EnableBlst = true
 	}
 	Init(cfg)
 }
@@ -297,6 +313,12 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(spadinaTestnet.Name) {
+		log.Warn("Running Node on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
 	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true

@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"bytes"
+	"context"
 	"math/rand"
 	"os"
 	"path"
@@ -15,6 +16,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -86,7 +88,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err = NewService(cfg)
+	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
@@ -174,7 +176,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err = NewService(cfg)
+	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 
 	s.genesisTime = genesisTime
@@ -260,7 +262,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	require.NoError(t, err)
 
 	localNode := enode.NewLocalNode(db, pkey)
-	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), []byte{'A', 'B', 'C', 'D'})
+	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
 	require.NoError(t, err)
 	forkEntry, err := retrieveForkEntry(localNode.Node().Record())
 	require.NoError(t, err)

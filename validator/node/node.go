@@ -4,7 +4,6 @@
 package node
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -248,7 +247,8 @@ func moveDb(cliCtx *cli.Context, accountsDir string) string {
 				"oldDbPath": dataDir,
 				"walletDir": accountsDir,
 			}).Info("Moving validator protection db to wallet dir")
-			if err := os.Rename(dataFile, newDataFile); err != nil {
+			err := fileutil.CopyFile(dataFile, newDataFile)
+			if err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -329,7 +329,7 @@ func (s *ValidatorClient) registerClientService(
 	if err := s.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
-	v, err := client.NewValidatorService(context.Background(), &client.Config{
+	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
@@ -363,7 +363,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewSlashingProtectionService(context.Background(), &slashing_protection.Config{
+	sp, err := slashing_protection.NewSlashingProtectionService(s.cliCtx.Context, &slashing_protection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
@@ -385,7 +385,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
-	server := rpc.NewServer(context.Background(), &rpc.Config{
+	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
 		ValDB:                 s.db,
 		Host:                  rpcHost,
 		Port:                  fmt.Sprintf("%d", rpcPort),
@@ -407,7 +407,7 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	gatewaySrv := gateway.New(
-		context.Background(),
+		cliCtx.Context,
 		rpcAddr,
 		gatewayAddress,
 		allowedOrigins,

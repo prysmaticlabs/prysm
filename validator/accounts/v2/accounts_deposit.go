@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -60,7 +59,7 @@ func SendDepositCli(cliCtx *cli.Context) error {
 }
 
 func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.SendDepositConfig, error) {
-	pubKeysBytes, err := km.FetchValidatingPublicKeys(context.Background())
+	pubKeysBytes, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -71,10 +70,10 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			return nil, errors.Wrap(err, "could not parse BLS public key")
 		}
 	}
-	// Allow the user to interactively select the accounts to backup or optionally
+	// Allow the user to interactively select the accounts to deposit or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings. If the user has
 	// selected to deposit all accounts, we skip this part.
-	if !cliCtx.IsSet(flags.DepositPublicKeysFlag.Name) {
+	if !cliCtx.IsSet(flags.DepositAllAccountsFlag.Name) {
 		pubKeys, err = filterPublicKeysFromUserInput(
 			cliCtx,
 			flags.DepositPublicKeysFlag,
@@ -138,6 +137,20 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 				return nil, err
 			}
 			config.Eth1PrivateKey = strings.TrimRight(string(fileBytes), "\r\n")
+		} else {
+			config.Eth1KeystoreUTCFile = cliCtx.String(flags.Eth1KeystoreUTCPathFlag.Name)
+			if cliCtx.IsSet(flags.Eth1KeystorePasswordFileFlag.Name) {
+				config.Eth1KeystorePasswordFile = cliCtx.String(flags.Eth1KeystorePasswordFileFlag.Name)
+			} else {
+				config.Eth1KeystorePasswordFile, err = inputWeakPassword(
+					cliCtx,
+					flags.Eth1KeystorePasswordFileFlag,
+					"Enter the file path of a text file containing your eth1 keystore password",
+				)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not read eth1 keystore password file path")
+				}
+			}
 		}
 		return config, nil
 	}
@@ -180,7 +193,7 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 		eth1KeystorePasswordFile, err := inputWeakPassword(
 			cliCtx,
 			flags.Eth1KeystorePasswordFileFlag,
-			"Enter the file path a .txt file containing your eth1 keystore password",
+			"Enter the file path to a text file containing your eth1 keystore password",
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read eth1 keystore password file path")

@@ -34,6 +34,62 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	require.Equal(t, 1, len(cache.AggregatedAttestationsBySlotIndex(2, 0)), "Did not aggregate correctly")
 }
 
+func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
+	cache := NewAttCaches()
+	genData := func(slot, committeeIndex uint64) *ethpb.AttestationData {
+		return &ethpb.AttestationData{
+			Slot:            slot,
+			CommitteeIndex:  committeeIndex,
+			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			BeaconBlockRoot: make([]byte, 32),
+		}
+	}
+	genSign := func() []byte {
+		priv := bls.RandKey()
+		return priv.Sign([]byte{'a'}).Marshal()
+	}
+
+	atts := []*ethpb.Attestation{
+		// The first slot.
+		{AggregationBits: bitfield.Bitlist{0b1001}, Data: genData(1, 2), Signature: genSign()},
+		{AggregationBits: bitfield.Bitlist{0b1010}, Data: genData(1, 2), Signature: genSign()},
+		{AggregationBits: bitfield.Bitlist{0b1100}, Data: genData(1, 2), Signature: genSign()},
+		{AggregationBits: bitfield.Bitlist{0b1001}, Data: genData(1, 3), Signature: genSign()},
+		{AggregationBits: bitfield.Bitlist{0b1100}, Data: genData(1, 3), Signature: genSign()},
+		// The second slot.
+		{AggregationBits: bitfield.Bitlist{0b1001}, Data: genData(2, 3), Signature: genSign()},
+		{AggregationBits: bitfield.Bitlist{0b1010}, Data: genData(2, 3), Signature: genSign()},
+		{AggregationBits: bitfield.Bitlist{0b1100}, Data: genData(2, 4), Signature: genSign()},
+	}
+
+	// Make sure that no error is produced if aggregation is requested on empty unaggregated list.
+	require.NoError(t, cache.AggregateUnaggregatedAttestationsBySlotIndex(1, 2))
+	require.NoError(t, cache.AggregateUnaggregatedAttestationsBySlotIndex(2, 3))
+	require.Equal(t, 0, len(cache.UnaggregatedAttestationsBySlotIndex(1, 2)))
+	require.Equal(t, 0, len(cache.AggregatedAttestationsBySlotIndex(1, 2)), "Did not aggregate correctly")
+	require.Equal(t, 0, len(cache.UnaggregatedAttestationsBySlotIndex(1, 3)))
+	require.Equal(t, 0, len(cache.AggregatedAttestationsBySlotIndex(1, 3)), "Did not aggregate correctly")
+
+	// Persist unaggregated attestations, and aggregate on per slot/committee index base.
+	require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
+	require.NoError(t, cache.AggregateUnaggregatedAttestationsBySlotIndex(1, 2))
+	require.NoError(t, cache.AggregateUnaggregatedAttestationsBySlotIndex(2, 3))
+
+	// Committee attestations at a slot should be aggregated.
+	require.Equal(t, 0, len(cache.UnaggregatedAttestationsBySlotIndex(1, 2)))
+	require.Equal(t, 1, len(cache.AggregatedAttestationsBySlotIndex(1, 2)), "Did not aggregate correctly")
+	// Committee attestations haven't been aggregated.
+	require.Equal(t, 2, len(cache.UnaggregatedAttestationsBySlotIndex(1, 3)))
+	require.Equal(t, 0, len(cache.AggregatedAttestationsBySlotIndex(1, 3)), "Did not aggregate correctly")
+	// Committee at a second slot is aggregated.
+	require.Equal(t, 0, len(cache.UnaggregatedAttestationsBySlotIndex(2, 3)))
+	require.Equal(t, 1, len(cache.AggregatedAttestationsBySlotIndex(2, 3)), "Did not aggregate correctly")
+	// The second committee at second slot is not aggregated.
+	require.Equal(t, 1, len(cache.UnaggregatedAttestationsBySlotIndex(2, 4)))
+	require.Equal(t, 0, len(cache.AggregatedAttestationsBySlotIndex(2, 4)), "Did not aggregate correctly")
+}
+
 func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 	tests := []struct {
 		name          string

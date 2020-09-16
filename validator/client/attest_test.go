@@ -142,7 +142,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
-	sig, err := validator.keyManager.Sign(validatorPubKey, root)
+	sig, err := validator.keyManager.Sign(context.Background(), validatorPubKey, root)
 	require.NoError(t, err)
 	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {

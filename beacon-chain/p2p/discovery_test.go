@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"math/rand"
@@ -49,7 +50,7 @@ func TestCreateListener(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		cfg:                   &Config{UDPPort: uint(port)},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
@@ -124,7 +125,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	_, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 	node, err := s.createLocalNode(pkey, addr, 0, 0)
 	require.NoError(t, err)
@@ -141,7 +142,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 			UDPPort: 0,
 		},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 	listener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -180,7 +181,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.StaticPeers = staticPeers
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	cfg.NoDiscovery = true
-	s, err := NewService(cfg)
+	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
 
 	exitRoutine := make(chan bool)

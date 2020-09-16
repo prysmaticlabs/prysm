@@ -228,7 +228,7 @@ func (kv *Store) saveArchivedInfo(ctx context.Context,
 
 	lastBlocksRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
 	if err != nil {
-		return nil
+		return err
 	}
 	if err := kv.SaveState(ctx, currentState, lastBlocksRoot); err != nil {
 		return err
