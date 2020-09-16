@@ -100,6 +100,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 0,
 					Slot:          0,
+					BodyRoot:      []byte("foo"),
 				},
 				Signature: bytesutil.PadTo([]byte("A"), 96),
 			},
@@ -107,6 +108,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 0,
 					Slot:          0,
+					BodyRoot:      []byte("bar"),
 				},
 				Signature: bytesutil.PadTo([]byte("B"), 96),
 			},
