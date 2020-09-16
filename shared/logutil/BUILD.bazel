@@ -9,7 +9,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/logutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/core/feed:go_default_library",
         "//shared/event:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_gorilla_websocket//:go_default_library",
