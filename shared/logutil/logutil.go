@@ -10,6 +10,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func addLogWriter(w io.Writer) {
+	mw := io.MultiWriter(logrus.StandardLogger().Out, w)
+	logrus.SetOutput(mw)
+}
+
 // ConfigurePersistentLogging adds a log-to-file writer. File content is identical to stdout.
 func ConfigurePersistentLogging(logFileName string) error {
 	logrus.WithField("logFileName", logFileName).Info("Logs will be made persistent")
@@ -18,8 +23,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 		return err
 	}
 
-	mw := io.MultiWriter(os.Stdout, f)
-	logrus.SetOutput(mw)
+	addLogWriter(f)
 
 	logrus.Info("File logging initialized")
 	return nil
