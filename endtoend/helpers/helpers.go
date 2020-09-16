@@ -25,6 +25,8 @@ const (
 	filePollingInterval = 500 * time.Millisecond
 	memoryHeapFileName  = "node_heap_%d.pb.gz"
 	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
+	fileBufferSize      = 64 * 1024
+	maxFileBufferSize   = 1024 * 1024
 )
 
 // KillProcesses finds the passed in process IDs and kills the process.
@@ -79,8 +81,8 @@ func WaitForTextInFile(file *os.File, text string) error {
 			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
 		case <-ticker.C:
 			fileScanner := bufio.NewScanner(file)
-			buf := make([]byte, 0, 64*1024)
-			fileScanner.Buffer(buf, 1024*1024)
+			buf := make([]byte, 0, fileBufferSize)
+			fileScanner.Buffer(buf, maxFileBufferSize)
 			for fileScanner.Scan() {
 				scanned := fileScanner.Text()
 				if strings.Contains(scanned, text) {
