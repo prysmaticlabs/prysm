@@ -6,12 +6,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
 )
 
 func TestCreateAccount_Derived(t *testing.T) {
@@ -32,8 +34,8 @@ func TestCreateAccount_Derived(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir: walletDir,
+	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+		return nil, errors.New("failed to open wallet")
 	})
 	assert.NoError(t, err)
 
