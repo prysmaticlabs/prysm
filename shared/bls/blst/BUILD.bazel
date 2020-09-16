@@ -93,6 +93,7 @@ go_library(
     }),
 )
 
+# gazelle:ignore
 go_test(
     name = "go_default_test",
     srcs = selects.with_or({
@@ -108,7 +109,6 @@ go_test(
         ],
         "//conditions:default": [],
     }),
-    embed = [":go_default_library"],
     deps = selects.with_or({
         (
             ":blst_enabled_linux_amd64",
