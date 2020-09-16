@@ -176,20 +176,27 @@ func RoundUpToNearestEpoch(slot uint64) uint64 {
 // finalized epoch.
 //
 // Reference spec implementation:
-// https://notes.ethereum.org/@adiasg/weak-subjectvity-eth2#Updating-Weak-Subjectivity-Checkpoint-States
-func WeakSubjectivityCheckptEpoch(valCount uint64, fEpoch uint64) uint64 {
-	weakSubMod := params.BeaconConfig().MinValidatorWithdrawabilityDelay
+// https://github.com/ethereum/eth2.0-specs/blob/weak-subjectivity-guide/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
+//  def compute_weak_subjectivity_period(state):
+//    weak_subjectivity_period = MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+//    val_count = len(get_active_validator_indices(state, get_current_epoch(state)))
+//    if val_count >= MIN_PER_EPOCH_CHURN_LIMIT * CHURN_LIMIT_QUOTIENT:
+//        weak_subjectivity_period += SAFETY_DECAY*CHURN_LIMIT_QUOTIENT/(2*100)
+//    else:
+//        weak_subjectivity_period += SAFETY_DECAY*val_count/(2*100*MIN_PER_EPOCH_CHURN_LIMIT)
+//    return weak_subjectivity_period
+func WeakSubjectivityCheckptEpoch(valCount uint64) uint64 {
+	wsp := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 
 	m := params.BeaconConfig().MinPerEpochChurnLimit
 	q := params.BeaconConfig().ChurnLimitQuotient
 	d := params.BeaconConfig().SafetyDecay
-	churnMultiplier := m * q
-	if valCount >= churnMultiplier {
-		v := 256 * ((d * q / 2) / 256)
-		weakSubMod += v
+	if valCount >= m*q {
+		v := d * q / (2 * 100)
+		wsp += v
 	} else {
-		v := 256 * ((d * valCount / (2 * m)) / 256)
-		weakSubMod += v
+		v := d * valCount / (2 * 100 * m)
+		wsp += v
 	}
-	return fEpoch / weakSubMod
+	return wsp
 }
