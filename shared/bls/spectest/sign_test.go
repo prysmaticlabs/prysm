@@ -8,6 +8,8 @@ import (
 	"path"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -15,6 +17,18 @@ import (
 )
 
 func TestSignMessageYaml(t *testing.T) {
+	flags := &featureconfig.Flags{}
+	reset := featureconfig.InitWithReset(flags)
+	t.Run("herumi", testSignMessageYaml)
+	reset()
+
+	flags.EnableBlst = true
+	reset = featureconfig.InitWithReset(flags)
+	t.Run("blst", testSignMessageYaml)
+	reset()
+}
+
+func testSignMessageYaml(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/sign/small")
 
 	for i, folder := range testFolders {
