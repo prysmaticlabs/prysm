@@ -1,10 +1,11 @@
-package herumi
+// +build linux,amd64 linux,arm64
+
+package blst
 
 import (
 	"fmt"
 
 	"github.com/dgraph-io/ristretto"
-	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -20,7 +21,7 @@ var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 
 // PublicKey used in the BLS signature scheme.
 type PublicKey struct {
-	p *bls12.PublicKey
+	p *blstPublicKey
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
@@ -34,38 +35,47 @@ func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy(), nil
 	}
-	p := &bls12.PublicKey{}
-	err := p.Deserialize(pubKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
+
+	p := new(blstPublicKey).Uncompress(pubKey)
+	if p == nil {
+		return nil, errors.New("could not unmarshal bytes into public key")
 	}
 	pubKeyObj := &PublicKey{p: p}
-	pubkeyCache.Set(string(pubKey), pubKeyObj.Copy(), 48)
+	copiedKey := pubKeyObj.Copy()
+	pubkeyCache.Set(string(pubKey), copiedKey, 48)
 	return pubKeyObj, nil
 }
 
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
 func AggregatePublicKeys(pubs [][]byte) (iface.PublicKey, error) {
-	if len(pubs) == 0 {
+	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
-	p, err := PublicKeyFromBytes(pubs[0])
-	if err != nil {
-		return nil, err
-	}
-	for _, k := range pubs[1:] {
-		pubkey, err := PublicKeyFromBytes(k)
-		if err != nil {
-			return nil, err
+	agg := new(blstAggregatePublicKey)
+	mulP1 := make([]*blstPublicKey, 0, len(pubs))
+	for _, pubkey := range pubs {
+		if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
+			return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 		}
-		p.Aggregate(pubkey)
+		if cv, ok := pubkeyCache.Get(string(pubkey)); ok {
+			mulP1 = append(mulP1, cv.(*PublicKey).Copy().(*PublicKey).p)
+			continue
+		}
+		p := new(blstPublicKey).Uncompress(pubkey)
+		if p == nil {
+			return nil, errors.New("could not unmarshal bytes into public key")
+		}
+		pubKeyObj := &PublicKey{p: p}
+		pubkeyCache.Set(string(pubkey), pubKeyObj.Copy(), 48)
+		mulP1 = append(mulP1, p)
 	}
-	return p, nil
+	agg.Aggregate(mulP1)
+	return &PublicKey{p: agg.ToAffine()}, nil
 }
 
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
-	return p.p.Serialize()
+	return p.p.Compress()
 }
 
 // Copy the public key to a new pointer reference.
@@ -79,6 +89,11 @@ func (p *PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
 	if featureconfig.Get().SkipBLSVerify {
 		return p
 	}
-	p.p.Add(p2.(*PublicKey).p)
+
+	agg := new(blstAggregatePublicKey)
+	agg.Add(p.p)
+	agg.Add(p2.(*PublicKey).p)
+	p.p = agg.ToAffine()
+
 	return p
 }
