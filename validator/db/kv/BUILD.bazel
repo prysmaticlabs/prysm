@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation_history.go",
+        "attestation_history_new.go",
         "db.go",
         "manage.go",
         "proposal_history.go",
@@ -15,6 +16,7 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/slashing:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -28,6 +30,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestation_history_new_test.go",
         "attestation_history_test.go",
         "db_test.go",
         "manage_test.go",

@@ -5,6 +5,8 @@ var (
 	historicProposalsBucket = []byte("proposal-history-bucket")
 	// Validator slashing protection from slashable attestations.
 	historicAttestationsBucket = []byte("attestation-history-bucket")
+	// New Validator slashing protection from slashable attestations.
+	newHistoricAttestationsBucket = []byte("attestation-history-bucket-new")
 	// Bucket for storing important information regarding the validator API
 	// such as a password hash for API authentication.
 	validatorAPIBucket = []byte("validator-api-bucket")
