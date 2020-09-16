@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -179,5 +180,75 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if newStateVals[1].ExitEpoch != beaconState.Validators()[1].ExitEpoch {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
 			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
+	}
+}
+
+func TestVerifyProposerSlashing(t *testing.T) {
+	type args struct {
+		beaconState *stateTrie.BeaconState
+		slashing    *ethpb.ProposerSlashing
+	}
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 2)
+	currentSlot := uint64(0)
+	require.NoError(t, beaconState.SetSlot(currentSlot))
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "same header, no signatures",
+			args: args{
+				slashing: &ethpb.ProposerSlashing{
+					Header_1: &ethpb.SignedBeaconBlockHeader{
+						Header: &ethpb.BeaconBlockHeader{
+							ProposerIndex: 1,
+							Slot:          0,
+						},
+					},
+					Header_2: &ethpb.SignedBeaconBlockHeader{
+						Header: &ethpb.BeaconBlockHeader{
+							ProposerIndex: 1,
+							Slot:          0,
+						},
+					},
+				},
+				beaconState: beaconState,
+			},
+			wantErr: "expected slashing headers to differ",
+		},
+		{ // Regression test for https://github.com/sigp/beacon-fuzz/issues/74
+			name: "same header, different signatures",
+			args: args{
+				slashing: &ethpb.ProposerSlashing{
+					Header_1: &ethpb.SignedBeaconBlockHeader{
+						Header: &ethpb.BeaconBlockHeader{
+							ProposerIndex: 1,
+							Slot:          0,
+						},
+						Signature: bls.RandKey().Sign([]byte("foo")).Marshal(),
+					},
+					Header_2: &ethpb.SignedBeaconBlockHeader{
+						Header: &ethpb.BeaconBlockHeader{
+							ProposerIndex: 1,
+							Slot:          0,
+						},
+						Signature: bls.RandKey().Sign([]byte("bar")).Marshal(),
+					},
+				},
+				beaconState: beaconState,
+			},
+			wantErr: "expected slashing headers to differ",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testutil.ResetCache()
+			if err := blocks.VerifyProposerSlashing(tt.args.beaconState, tt.args.slashing); (err != nil || tt.wantErr != "") && err.Error() != tt.wantErr {
+				t.Errorf("VerifyProposerSlashing() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
