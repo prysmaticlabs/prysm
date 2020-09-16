@@ -193,7 +193,8 @@ func TestSignatureFromBytes(t *testing.T) {
 
 func TestCopy(t *testing.T) {
 	signatureA := &Signature{s: bls12.HashAndMapToSignature([]byte("foo"))}
-	signatureB := signatureA.Copy().(*Signature)
+	signatureB, ok := signatureA.Copy().(*Signature)
+	require.Equal(t, true, ok)
 
 	assert.NotEqual(t, signatureA, signatureB)
 	assert.NotEqual(t, signatureA.s, signatureB.s)
