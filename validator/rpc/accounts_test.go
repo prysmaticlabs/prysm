@@ -5,12 +5,11 @@ import (
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	v22 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
@@ -21,8 +20,8 @@ func TestServer_CreateAccount(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
-	wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v22.Config{
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,
@@ -30,12 +29,12 @@ func TestServer_CreateAccount(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,
 		walletInitialized: true,
-		wallet:            wallet,
+		wallet:            w,
 	}
 	resp, err := s.CreateAccount(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
@@ -48,8 +47,8 @@ func TestServer_ListAccounts(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
-	wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v22.Config{
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,
@@ -57,12 +56,12 @@ func TestServer_ListAccounts(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,
 		walletInitialized: true,
-		wallet:            wallet,
+		wallet:            w,
 	}
 	numAccounts := 5
 	keys := make([][]byte, numAccounts)

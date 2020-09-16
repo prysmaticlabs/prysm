@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	v22 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
@@ -60,7 +60,7 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	_, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &v22.Config{
+		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: strongPass,
