@@ -42,8 +42,6 @@ test --config=blst_enabled
 
 build --bes_backend=grpcs://builds.prylabs.net:1985
 build --bes_results_url=https://builds.prylabs.net/invocation/
-build --remote_cache=grpcs://builds.prylabs.net:1985
-build --noremote_upload_local_results
 
 # Disable flaky test detection for fuzzing.
 test:fuzz --flaky_test_attempts=1
