@@ -115,7 +115,7 @@ func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
 	walletDir := filepath.Join(path, "test")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
 	err := wallet.WalletExists(path)
-	require.NoError(t, err)
+	require.ErrorContains(t, "no wallet found at path", err)
 
 	walletDir = filepath.Join(path, "direct")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
