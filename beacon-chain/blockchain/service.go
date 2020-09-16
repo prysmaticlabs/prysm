@@ -296,8 +296,16 @@ func (s *Service) Stop() error {
 	defer s.cancel()
 
 	if s.stateGen != nil && s.head != nil && s.head.state != nil {
-		return s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root)
+		if err := s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
+			return err
+		}
 	}
+
+	// Save initial sync cached blocks to the DB before stop.
+	if err := s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
