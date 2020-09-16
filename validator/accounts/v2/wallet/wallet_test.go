@@ -141,19 +141,19 @@ func Test_LockUnlockFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	wallet, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
-	defer unlock(t, wallet)
-	_, err = wallet.InitializeKeymanager(cliCtx.Context, true)
+	defer unlock(t, w)
+	_, err = w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	err = wallet.LockWalletConfigFile(cliCtx.Context)
+	err = w.LockWalletConfigFile(cliCtx.Context)
 	assert.NoError(t, err)
-	err = wallet.LockWalletConfigFile(cliCtx.Context)
+	err = w.LockWalletConfigFile(cliCtx.Context)
 	assert.ErrorContains(t, "failed to lock wallet config file", err)
-	unlock(t, wallet)
-	err = wallet.LockWalletConfigFile(cliCtx.Context)
+	unlock(t, w)
+	err = w.LockWalletConfigFile(cliCtx.Context)
 	assert.NoError(t, err)
 
 }
