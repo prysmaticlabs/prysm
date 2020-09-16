@@ -78,15 +78,20 @@ func WaitForTextInFile(file *os.File, text string) error {
 			}
 			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
 		case <-ticker.C:
-			r := bufio.NewReader(file)
-			line, err := r.ReadString('\n')
-			for err == nil {
-				if strings.Contains(line, text) {
+			fileScanner := bufio.NewScanner(file)
+			buf := make([]byte, 0, 64*1024)
+			fileScanner.Buffer(buf, 1024*1024)
+			for fileScanner.Scan() {
+				scanned := fileScanner.Text()
+				if strings.Contains(scanned, text) {
 					return nil
 				}
-				line, err = r.ReadString('\n')
 			}
-			if err != io.EOF {
+			if err := fileScanner.Err(); err != nil {
+				return err
+			}
+			_, err := file.Seek(0, io.SeekStart)
+			if err != nil {
 				return err
 			}
 		}
