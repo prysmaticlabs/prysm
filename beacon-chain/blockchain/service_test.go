@@ -303,6 +303,23 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
 }
 
+func TestServiceStop_SaveCachedBlocks(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	db, _ := testDB.SetupDB(t)
+	s := &Service{
+		ctx:            ctx,
+		cancel:         cancel,
+		beaconDB:       db,
+		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
+	}
+	b := testutil.NewBeaconBlock()
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	s.saveInitSyncBlock(r, b)
+	require.NoError(t, s.Stop())
+	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
+}
+
 func BenchmarkHasBlockDB(b *testing.B) {
 	db, _ := testDB.SetupDB(b)
 	ctx := context.Background()
