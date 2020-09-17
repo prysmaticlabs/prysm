@@ -3,11 +3,12 @@ package v2
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -18,7 +19,7 @@ import (
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
 type CreateWalletConfig struct {
-	WalletCfg            *WalletConfig
+	WalletCfg            *wallet.Config
 	RemoteKeymanagerOpts *remote.KeymanagerOpts
 	SkipMnemonicConfirm  bool
 }
@@ -26,7 +27,7 @@ type CreateWalletConfig struct {
 // CreateAndSaveWalletCli from user input with a desired keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
-func CreateAndSaveWalletCli(cliCtx *cli.Context) (*Wallet, error) {
+func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	keymanagerKind, err := extractKeymanagerKindFromCli(cliCtx)
 	if err != nil {
 		return nil, err
@@ -39,26 +40,24 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*Wallet, error) {
 }
 
 // CreateWalletWithKeymanager specified by configuration options.
-func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*Wallet, error) {
-	if err := WalletExists(cfg.WalletCfg.WalletDir); err != nil {
-		if !errors.Is(err, ErrNoWalletFound) {
+func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*wallet.Wallet, error) {
+	if err := wallet.Exists(cfg.WalletCfg.WalletDir); err != nil {
+		if !errors.Is(err, wallet.ErrNoWalletFound) {
 			return nil, errors.Wrap(err, "could not check if wallet exists")
 		}
 	}
-	accountsPath := filepath.Join(cfg.WalletCfg.WalletDir, cfg.WalletCfg.KeymanagerKind.String())
-	w := &Wallet{
-		accountsPath:   accountsPath,
-		keymanagerKind: cfg.WalletCfg.KeymanagerKind,
-		walletDir:      cfg.WalletCfg.WalletDir,
-		walletPassword: cfg.WalletCfg.WalletPassword,
-	}
+	w := wallet.NewWallet(&wallet.Config{
+		WalletDir:      cfg.WalletCfg.WalletDir,
+		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
+		WalletPassword: cfg.WalletCfg.WalletPassword,
+	})
 	var err error
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
 		if err = createDirectKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
-		log.WithField("--wallet-dir", w.walletDir).Info(
+		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with on-disk keymanager configuration. " +
 				"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 		)
@@ -66,7 +65,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err = createDerivedKeymanagerWallet(ctx, w, cfg.SkipMnemonicConfirm); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
-		log.WithField("--wallet-dir", w.walletDir).Info(
+		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created HD wallet and saved configuration to disk. " +
 				"Make a new validator account with ./prysm.sh validator accounts-2 create",
 		)
@@ -74,7 +73,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err = createRemoteKeymanagerWallet(ctx, w, cfg.RemoteKeymanagerOpts); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with remote keymanager")
 		}
-		log.WithField("--wallet-dir", w.walletDir).Info(
+		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
@@ -88,14 +87,15 @@ func extractKeymanagerKindFromCli(cliCtx *cli.Context) (v2keymanager.Kind, error
 }
 
 func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2keymanager.Kind) (*CreateWalletConfig, error) {
-	walletDir, err := inputDirectory(cliCtx, walletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
 	}
-	walletPassword, err := inputPassword(
+	walletPassword, err := promptutil.InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
-		newWalletPasswordPromptText,
+		wallet.NewWalletPasswordPromptText,
+		wallet.ConfirmPasswordPromptText,
 		true, /* Should confirm password */
 		promptutil.ValidatePasswordInput,
 	)
@@ -103,7 +103,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2ke
 		return nil, err
 	}
 	createWalletConfig := &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanagerKind,
 			WalletPassword: walletPassword,
@@ -112,7 +112,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2ke
 	}
 
 	if keymanagerKind == v2keymanager.Remote {
-		opts, err := inputRemoteKeymanagerConfig(cliCtx)
+		opts, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not input remote keymanager config")
 		}
@@ -121,7 +121,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2ke
 	return createWalletConfig, nil
 }
 
-func createDirectKeymanagerWallet(ctx context.Context, wallet *Wallet) error {
+func createDirectKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
 	if wallet == nil {
 		return errors.New("nil wallet")
 	}
@@ -139,7 +139,7 @@ func createDirectKeymanagerWallet(ctx context.Context, wallet *Wallet) error {
 	return nil
 }
 
-func createDerivedKeymanagerWallet(ctx context.Context, wallet *Wallet, skipMnemonicConfirm bool) error {
+func createDerivedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, skipMnemonicConfirm bool) error {
 	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
@@ -157,7 +157,7 @@ func createDerivedKeymanagerWallet(ctx context.Context, wallet *Wallet, skipMnem
 	return nil
 }
 
-func createRemoteKeymanagerWallet(ctx context.Context, wallet *Wallet, opts *remote.KeymanagerOpts) error {
+func createRemoteKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, opts *remote.KeymanagerOpts) error {
 	keymanagerConfig, err := remote.MarshalOptionsFile(ctx, opts)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal config file")
@@ -178,14 +178,14 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			keymanagerKindSelections[v2keymanager.Derived],
-			keymanagerKindSelections[v2keymanager.Direct],
-			keymanagerKindSelections[v2keymanager.Remote],
+			wallet.KeymanagerKindSelections[v2keymanager.Derived],
+			wallet.KeymanagerKindSelections[v2keymanager.Direct],
+			wallet.KeymanagerKindSelections[v2keymanager.Remote],
 		},
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", formatPromptError(err))
+		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
 	}
 	return v2keymanager.Kind(selection), nil
 }
