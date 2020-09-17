@@ -1691,6 +1691,75 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		}
 	})
 
+	t.Run("only one block at earliest valid time - choose this block", func(t *testing.T) {
+		p := mockPOW.NewPOWChain().InsertBlock(50, earliestValidTime, []byte("earliest"))
+
+		beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+			Slot: slot,
+			Eth1DataVotes: []*ethpb.Eth1Data{
+				{BlockHash: []byte("earliest"), DepositCount: 1},
+			},
+		})
+		require.NoError(t, err)
+
+		ps := &Server{
+			ChainStartFetcher: p,
+			Eth1InfoFetcher:   p,
+			Eth1BlockFetcher:  p,
+			BlockFetcher:      p,
+			DepositFetcher:    depositCache,
+			HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+		}
+
+		ctx := context.Background()
+		majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+		require.NoError(t, err)
+
+		hash := majorityVoteEth1Data.BlockHash
+
+		expectedHash := []byte("earliest")
+		if bytes.Compare(hash, expectedHash) != 0 {
+			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		}
+	})
+
+	t.Run("vote on last block before range - choose next block", func(t *testing.T) {
+		p := mockPOW.NewPOWChain().
+			InsertBlock(49, earliestValidTime-1, []byte("before_range")).
+			// It is important to have height `50` with time `earliestValidTime+1` and not `earliestValidTime`
+			// because of earliest block increment in the algorithm.
+			InsertBlock(50, earliestValidTime+1, []byte("first"))
+
+		beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+			Slot: slot,
+			Eth1DataVotes: []*ethpb.Eth1Data{
+				{BlockHash: []byte("before_range"), DepositCount: 1},
+			},
+		})
+		require.NoError(t, err)
+
+		ps := &Server{
+			ChainStartFetcher: p,
+			Eth1InfoFetcher:   p,
+			Eth1BlockFetcher:  p,
+			BlockFetcher:      p,
+			DepositFetcher:    depositCache,
+			HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 1}},
+		}
+
+		ctx := context.Background()
+		majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+		require.NoError(t, err)
+
+		hash := majorityVoteEth1Data.BlockHash
+
+		expectedHash := make([]byte, 32)
+		copy(expectedHash, "first")
+		if bytes.Compare(hash, expectedHash) != 0 {
+			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		}
+	})
+
 	t.Run("no deposits - choose chain start eth1data", func(t *testing.T) {
 		p := mockPOW.NewPOWChain().
 			InsertBlock(50, earliestValidTime, []byte("earliest")).

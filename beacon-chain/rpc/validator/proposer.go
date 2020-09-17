@@ -227,10 +227,9 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 //  - Determine the earliest and latest timestamps that a valid block can have.
 //  - Determine the first block not before the earliest timestamp. This block is the lower bound.
 //  - Determine the last block not after the latest timestamp. This block is the upper bound.
+//  - If the last block is too early, use current eth1data from the beacon state.
 //  - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
-//  - If no blocks are left after filtering votes:
-//    - Use eth1data from the latest valid block.
-//    - If there are no valid blocks, use the current eth1data from the beacon state.
+//  - If no blocks are left after filtering votes, use eth1data from the latest valid block.
 //  - Otherwise:
 //    - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
 //    - This vote's block is the eth1 block to use for the block proposal.
@@ -279,6 +278,9 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 		log.WithError(err).Error("Failed to get time of last block by latest valid time")
 		return vs.randomETH1DataVote(ctx)
 	}
+	if timeOfLastBlockByLatestValidTime < earliestValidTime {
+		return vs.HeadFetcher.HeadETH1Data(), nil
+	}
 
 	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime)
 	if lastBlockDepositCount == 0 {
@@ -290,29 +292,22 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 		return nil, err
 	}
 	if len(inRangeVotes) == 0 {
-		// If latest block is in range and it doesn't undo deposits, then choose that block.
-		// Otherwise take the current eth1data.
-		currentETH1Data := vs.HeadFetcher.HeadETH1Data()
-		if timeOfLastBlockByLatestValidTime >= earliestValidTime {
-			if lastBlockDepositCount >= currentETH1Data.DepositCount {
-				hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime)
-				if err != nil {
-					log.WithError(err).Error("Failed to get hash of last block by latest valid time")
-					return vs.randomETH1DataVote(ctx)
-				}
-				return &ethpb.Eth1Data{
-					BlockHash:    hash.Bytes(),
-					DepositCount: lastBlockDepositCount,
-					DepositRoot:  lastBlockDepositRoot[:],
-				}, nil
+		if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
+			hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime)
+			if err != nil {
+				log.WithError(err).Error("Failed to get hash of last block by latest valid time")
+				return vs.randomETH1DataVote(ctx)
 			}
-			return vs.HeadFetcher.HeadETH1Data(), nil
+			return &ethpb.Eth1Data{
+				BlockHash:    hash.Bytes(),
+				DepositCount: lastBlockDepositCount,
+				DepositRoot:  lastBlockDepositRoot[:],
+			}, nil
 		}
 		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
 
 	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
-
 	return &chosenVote.data.eth1Data, nil
 }
 
