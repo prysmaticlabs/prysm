@@ -137,13 +137,17 @@ var (
 		Name:  "disable-new-beacon-state-locks",
 		Usage: "Disable new beacon state locking",
 	}
-	batchBlockVerify = &cli.BoolFlag{
-		Name:  "batch-block-verify",
-		Usage: "When enabled we will perform full signature verification of blocks in batches instead of singularly.",
+	disableBatchBlockVerify = &cli.BoolFlag{
+		Name:  "disable-batch-block-verify",
+		Usage: "Disable full signature verification of blocks in batches instead of singularly.",
 	}
 	initSyncVerbose = &cli.BoolFlag{
 		Name:  "init-sync-verbose",
 		Usage: "Enable logging every processed block during initial syncing.",
+	}
+	enableBlst = &cli.BoolFlag{
+		Name:  "blst",
+		Usage: "Enable new BLS library, blst, from Supranational",
 	}
 	disableFinalizedDepositsCache = &cli.BoolFlag{
 		Name:  "disable-finalized-deposits-cache",
@@ -169,16 +173,14 @@ var (
 		Name:  "enable-roughtime",
 		Usage: "Enables periodic roughtime syncs.",
 	}
-	checkPtInfoCache = &cli.BoolFlag{
-		Name:  "use-check-point-cache",
-		Usage: "Enables check point info caching",
+	disableCheckPtInfoCache = &cli.BoolFlag{
+		Name:  "disable-check-point-cache",
+		Usage: "Disables check point info caching",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	checkPtInfoCache,
-	batchBlockVerify,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -554,6 +556,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedCheckptInfoCache = &cli.BoolFlag{
+		Name:   "use-check-point-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedBatchBlockVerify = &cli.BoolFlag{
+		Name:   "batch-block-verify",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -630,6 +642,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSlasherProviderFlag,
 	deprecatedEnableSlasherFlag,
 	deprecatedEnableFinalizedDepositsCache,
+	deprecatedCheckptInfoCache,
+	deprecatedBatchBlockVerify,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -642,6 +656,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	OnyxTestnet,
 	spadinaTestnet,
 	disableAccountsV2,
+	enableBlst,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -681,14 +696,15 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	spadinaTestnet,
-	batchBlockVerify,
+	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
+	enableBlst,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	enableRoughtime,
-	checkPtInfoCache,
+	disableCheckPtInfoCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

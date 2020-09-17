@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
@@ -19,7 +20,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 		keymanagerKind: v2keymanager.Remote,
 	})
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Remote,
 			WalletPassword: "Passwordz0320$",

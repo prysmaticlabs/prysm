@@ -116,6 +116,18 @@ func (s *Service) Start() {
 		genesis = time.Unix(int64(headState.GenesisTime()), 0)
 	}
 
+	if flags.Get().DisableSync {
+		s.synced = true
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: genesis,
+			},
+		})
+		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
+		return
+	}
+
 	if genesis.After(roughtime.Now()) {
 		s.synced = true
 		s.stateNotifier.StateFeed().Send(&feed.Event{

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/gogo/protobuf/proto"
@@ -41,7 +42,7 @@ func TestService_Broadcast(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 
 	msg := &testpb.TestSimpleMessage{
@@ -90,7 +91,7 @@ func TestService_Broadcast(t *testing.T) {
 func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 	p := Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 	assert.ErrorContains(t, ErrMessageNotMapped.Error(), p.Broadcast(context.Background(), &testpb.AddressBook{}))
 }
@@ -152,7 +153,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -317,7 +318,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -332,7 +333,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
