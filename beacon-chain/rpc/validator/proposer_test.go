@@ -1752,7 +1752,7 @@ func TestProposer_Eth1DataMajorityVote_NoDeposits_ChooseChainStartEth1Data(t *te
 	}
 }
 
-func TestProposer_FilterAttestation_OK(t *testing.T) {
+func TestProposer_FilterAttestation(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -1761,8 +1761,8 @@ func TestProposer_FilterAttestation_OK(t *testing.T) {
 	genesis := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), genesis), "Could not save genesis block")
 
-	numDeposits := uint64(64)
-	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
+	numValidators := uint64(64)
+	state, privKeys := testutil.DeterministicGenesisState(t, numValidators)
 	require.NoError(t, state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
 	assert.NoError(t, state.SetSlot(1))
 
@@ -1777,59 +1777,96 @@ func TestProposer_FilterAttestation_OK(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
-	atts := make([]*ethpb.Attestation, 10)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				CommitteeIndex:  uint64(i),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				BeaconBlockRoot: make([]byte, 32),
+	tests := []struct {
+		name         string
+		wantedErr    string
+		inputAtts    func() []*ethpb.Attestation
+		expectedAtts func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation
+	}{
+		{
+			name: "nil attestations",
+			inputAtts: func() []*ethpb.Attestation {
+				return nil
 			},
-			Signature: make([]byte, 96),
-		}
-	}
-	received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
-	require.NoError(t, err)
-	if len(received) > 0 {
-		t.Error("Invalid attestations were filtered")
-	}
-
-	for i := 0; i < len(atts); i++ {
-		aggBits := bitfield.NewBitlist(2)
-		aggBits.SetBitAt(0, true)
-		atts[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				CommitteeIndex:  uint64(i),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
-				BeaconBlockRoot: make([]byte, 32),
+			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
+				return []*ethpb.Attestation{}
 			},
-			AggregationBits: aggBits,
-			Signature:       make([]byte, 96),
-		}
-		committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
-		assert.NoError(t, err)
-		attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
-		assert.NoError(t, err)
-		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
-		require.NoError(t, err)
-		sigs := make([]bls.Signature, len(attestingIndices))
-		zeroSig := [96]byte{}
-		atts[i].Signature = zeroSig[:]
+		},
+		{
+			name: "invalid attestations",
+			inputAtts: func() []*ethpb.Attestation {
+				atts := make([]*ethpb.Attestation, 10)
+				for i := 0; i < len(atts); i++ {
+					atts[i] = &ethpb.Attestation{
+						Data: &ethpb.AttestationData{
+							CommitteeIndex:  uint64(i),
+							Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+							Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+							BeaconBlockRoot: make([]byte, 32),
+						},
+						Signature: make([]byte, 96),
+					}
+				}
+				return atts
+			},
+			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
+				return []*ethpb.Attestation{}
+			},
+		},
+		{
+			name: "filter aggregates ok",
+			inputAtts: func() []*ethpb.Attestation {
+				atts := make([]*ethpb.Attestation, 10)
+				for i := 0; i < len(atts); i++ {
+					atts[i] = &ethpb.Attestation{
+						Data: &ethpb.AttestationData{
+							CommitteeIndex:  uint64(i),
+							Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+							Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+							BeaconBlockRoot: make([]byte, 32),
+						},
+						AggregationBits: bitfield.Bitlist{0b00000110},
+						Signature:       make([]byte, 96),
+					}
+					committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					assert.NoError(t, err)
+					attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
+					assert.NoError(t, err)
+					domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+					require.NoError(t, err)
+					sigs := make([]bls.Signature, len(attestingIndices))
+					zeroSig := [96]byte{}
+					atts[i].Signature = zeroSig[:]
 
-		for i, indice := range attestingIndices {
-			hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
-			require.NoError(t, err)
-			sig := privKeys[indice].Sign(hashTreeRoot[:])
-			sigs[i] = sig
-		}
-		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+					for i, indice := range attestingIndices {
+						hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
+						require.NoError(t, err)
+						sig := privKeys[indice].Sign(hashTreeRoot[:])
+						sigs[i] = sig
+					}
+					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+				}
+				return atts
+			},
+			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
+				return []*ethpb.Attestation{inputAtts[0]}
+			},
+		},
 	}
 
-	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(received), "Did not filter correctly")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			atts := tt.inputAtts()
+			received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+				assert.Equal(t, nil, received)
+			} else {
+				assert.NoError(t, err)
+				assert.DeepEqual(t, tt.expectedAtts(atts), received)
+			}
+		})
+	}
 }
 
 func Benchmark_Eth1Data(b *testing.B) {
