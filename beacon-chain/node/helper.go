@@ -28,7 +28,7 @@ func convertWspInput(wsp string) ([]byte, uint64, error) {
 	// Get the hexadecimal block root from input string.
 	s := strings.Split(wsp, ":")
 	if len(s) != 2 {
-		return nil, 0, errors.New("bad format string")
+		return nil, 0, errors.New("weak subjectivity checkpoint input should be in `block_root:epoch_number` format")
 	}
 
 	bRoot, err := hex.DecodeString(s[0])

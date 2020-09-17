@@ -26,7 +26,7 @@ func TestConvertWspInput(t *testing.T) {
 			name:    "Too many columns in string",
 			input:   "0x010203:123:456",
 			wantErr: false,
-			errStr:  "bad format string",
+			errStr:  "weak subjectivity checkpoint input should be in `block_root:epoch_number` format",
 		},
 		{
 			name:    "Incorrect block root length",
