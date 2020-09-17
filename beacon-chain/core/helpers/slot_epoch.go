@@ -185,7 +185,7 @@ func RoundUpToNearestEpoch(slot uint64) uint64 {
 //    else:
 //        weak_subjectivity_period += SAFETY_DECAY*val_count/(2*100*MIN_PER_EPOCH_CHURN_LIMIT)
 //    return weak_subjectivity_period
-func WeakSubjectivityCheckptEpoch(valCount uint64) uint64 {
+func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
 	wsp := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 
 	m := params.BeaconConfig().MinPerEpochChurnLimit
@@ -195,8 +195,12 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) uint64 {
 		v := d * q / (2 * 100)
 		wsp += v
 	} else {
-		v := d * valCount / (2 * 100 * m)
+		v, err := mathutil.Mul64(d, valCount)
+		if err != nil {
+			return 0, err
+		}
+		v = v / (2 * 100 * m)
 		wsp += v
 	}
-	return wsp
+	return wsp, nil
 }

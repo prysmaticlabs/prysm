@@ -338,7 +338,9 @@ func TestWeakSubjectivityCheckptEpoch(t *testing.T) {
 		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 32, want: 3532},
 	}
 	for _, tt := range tests {
-		if got := WeakSubjectivityCheckptEpoch(tt.valCount); got != tt.want {
+		got, err := WeakSubjectivityCheckptEpoch(tt.valCount)
+		require.NoError(t, err)
+		if got != tt.want {
 			t.Errorf("WeakSubjectivityCheckptEpoch() = %v, want %v", got, tt.want)
 		}
 	}
