@@ -198,4 +198,8 @@ func TestCopy(t *testing.T) {
 
 	assert.NotEqual(t, signatureA, signatureB)
 	assert.NotEqual(t, signatureA.s, signatureB.s)
+	assert.DeepEqual(t, signatureA, signatureB)
+
+	signatureA.s.Add(bls12.HashAndMapToSignature([]byte("bar")))
+	assert.DeepNotEqual(t, signatureA, signatureB)
 }
