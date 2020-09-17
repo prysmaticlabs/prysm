@@ -99,6 +99,7 @@ func NewKeymanager(
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
+	cfg.WalletPassword = cfg.Wallet.Password()
 	if !fileutil.FileExists(filepath.Join(cfg.Wallet.AccountsDir(), EncryptedSeedFileName)) {
 		seedConfig, err := initializeWalletSeedFile(cfg.WalletPassword, cfg.SkipMnemonicConfirm)
 		if err != nil {
