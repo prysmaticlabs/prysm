@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -18,7 +19,7 @@ var log = logrus.WithField("prefix", "accounts-v2")
 
 // CreateAccountConfig to run the create account function.
 type CreateAccountConfig struct {
-	Wallet      *Wallet
+	Wallet      *wallet.Wallet
 	NumAccounts int64
 }
 
@@ -26,14 +27,14 @@ type CreateAccountConfig struct {
 // a wallet from the user's specified path. This uses the CLI to extract information
 // to perform account creation.
 func CreateAccountCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	if err != nil {
 		return err
 	}
 	numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
 	log.Info("Creating a new account...")
 	return CreateAccount(cliCtx.Context, &CreateAccountConfig{
-		Wallet:      wallet,
+		Wallet:      w,
 		NumAccounts: numAccounts,
 	})
 }
