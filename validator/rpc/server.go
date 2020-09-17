@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	accountsv2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -61,7 +61,7 @@ type Server struct {
 	validatorService      *client.ValidatorService
 	syncChecker           client.SyncChecker
 	genesisFetcher        client.GenesisFetcher
-	wallet                *accountsv2.Wallet
+	wallet                *v2.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
 	nodeGatewayEndpoint   string
