@@ -329,11 +329,11 @@ func TestWeakSubjectivityCheckptEpoch(t *testing.T) {
 		fEpoch   uint64
 		want     uint64
 	}{
+		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount, fEpoch: 400, want: 1},
 		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount, fEpoch: 100000, want: 390},
-		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 4, fEpoch: 200000, want: 781},
-		{valCount: 300000, fEpoch: 100000, want: 390},
-		{valCount: 300000, fEpoch: 200000, want: 781},
-		{valCount: 300000, fEpoch: 300000, want: 1171},
+		{valCount: 262144, fEpoch: 100000, want: 30},
+		{valCount: 262144, fEpoch: 200000, want: 60},
+		{valCount: 262144, fEpoch: 300000, want: 90},
 	}
 	for _, tt := range tests {
 		if got := WeakSubjectivityCheckptEpoch(tt.valCount, tt.fEpoch); got != tt.want {
