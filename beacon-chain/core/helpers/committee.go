@@ -312,7 +312,8 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 		if err != nil {
 			return err
 		}
-		if _, exists, err := committeeCache.CommitteeCache.GetByKey(string(seed[:])); err == nil && exists {
+
+		if committeeCache.HasEntry(string(seed[:])) {
 			return nil
 		}
 
@@ -349,7 +350,7 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
-		return nil
+		return err
 	}
 	proposerIndices, err := precomputeProposerIndices(state, indices)
 	if err != nil {

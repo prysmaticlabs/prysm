@@ -13,13 +13,19 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-package fileutil
+package fileutil_test
 
 import (
+	"bufio"
+	"bytes"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -35,8 +41,41 @@ func TestPathExpansion(t *testing.T) {
 	}
 	require.NoError(t, os.Setenv("DDDXXX", "/tmp"))
 	for test, expected := range tests {
-		expanded, err := ExpandPath(test)
+		expanded, err := fileutil.ExpandPath(test)
 		require.NoError(t, err)
 		assert.Equal(t, expected, expanded)
 	}
+}
+
+func TestCopyFile(t *testing.T) {
+	fName := testutil.TempDir() + "testfile"
+	err := ioutil.WriteFile(fName, []byte{1, 2, 3}, params.BeaconIoConfig().ReadWritePermissions)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.Remove(fName))
+	}()
+
+	err = fileutil.CopyFile(fName, fName+"copy")
+	assert.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.Remove(fName+"copy"))
+	}()
+
+	assert.Equal(t, true, deepCompare(t, fName, fName+"copy"))
+}
+
+func deepCompare(t *testing.T, file1, file2 string) bool {
+	sf, err := os.Open(file1)
+	assert.NoError(t, err)
+	df, err := os.Open(file2)
+	assert.NoError(t, err)
+	sscan := bufio.NewScanner(sf)
+	dscan := bufio.NewScanner(df)
+
+	for sscan.Scan() && dscan.Scan() {
+		if !bytes.Equal(sscan.Bytes(), dscan.Bytes()) {
+			return false
+		}
+	}
+	return true
 }

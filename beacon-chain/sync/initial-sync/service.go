@@ -58,8 +58,8 @@ type Service struct {
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewInitialSync(cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewInitialSync(ctx context.Context, cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:           ctx,
 		cancel:        cancel,
@@ -114,6 +114,18 @@ func (s *Service) Start() {
 		stateSub.Unsubscribe()
 	} else {
 		genesis = time.Unix(int64(headState.GenesisTime()), 0)
+	}
+
+	if flags.Get().DisableSync {
+		s.synced = true
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: genesis,
+			},
+		})
+		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
+		return
 	}
 
 	if genesis.After(roughtime.Now()) {
@@ -192,7 +204,7 @@ func (s *Service) Resync() error {
 	// set it to false since we are syncing again
 	s.synced = false
 	defer func() { s.synced = true }() // Reset it at the end of the method.
-	headState, err := s.chain.HeadState(context.Background())
+	headState, err := s.chain.HeadState(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state")
 	}

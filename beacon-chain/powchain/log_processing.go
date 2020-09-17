@@ -171,7 +171,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		}
-		if err := s.processDeposit(eth1Data, deposit); err != nil {
+		if err := s.processDeposit(ctx, eth1Data, deposit); err != nil {
 			log.Errorf("Invalid deposit processed: %v", err)
 			validData = false
 		}
