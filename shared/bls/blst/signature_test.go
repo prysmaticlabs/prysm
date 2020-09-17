@@ -137,3 +137,18 @@ func TestSignatureFromBytes(t *testing.T) {
 		})
 	}
 }
+
+// TODO(7249): Make this test work
+/*func TestCopy(t *testing.T) {
+	key := RandKey().(*bls12SecretKey)
+	signatureA := &Signature{s: new(blstSignature).Sign(key.p, []byte("foo"), dst)}
+	signatureB, ok := signatureA.Copy().(*Signature)
+	require.Equal(t, true, ok)
+
+	assert.NotEqual(t, signatureA, signatureB)
+	assert.NotEqual(t, signatureA.s, signatureB.s)
+	assert.DeepEqual(t, signatureA, signatureB)
+
+	signatureA.s = new(blstSignature).Sign(key.p, []byte("bar"), dst)
+	assert.DeepNotEqual(t, signatureA, signatureB)
+}*/

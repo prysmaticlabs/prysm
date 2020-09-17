@@ -21,6 +21,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -155,7 +156,9 @@ func (s *Service) Start() {
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
-	s.resyncIfBehind()
+	if !flags.Get().DisableSync {
+		s.resyncIfBehind()
+	}
 
 	// Update sync metrics.
 	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
