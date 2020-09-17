@@ -1,4 +1,4 @@
-package v2
+package prompt
 
 import (
 	"fmt"
@@ -12,21 +12,32 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 const (
-	importKeysDirPromptText               = "Enter the directory or filepath where your keystores to import are located"
-	walletDirPromptText                   = "Enter a wallet directory"
-	selectAccountsDeletePromptText        = "Select the account(s) you would like to delete"
-	selectAccountsBackupPromptText        = "Select the account(s) you wish to backup"
-	selectAccountsDepositPromptText       = "Select the validating public keys you wish to submit deposits for"
-	selectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
+	// ImportKeysDirPromptText for the import keys cli function.
+	ImportKeysDirPromptText = "Enter the directory or filepath where your keystores to import are located"
+	// WalletDirPromptText for the wallet.
+	WalletDirPromptText = "Enter a wallet directory"
+	// SelectAccountsDeletePromptText --
+	SelectAccountsDeletePromptText = "Select the account(s) you would like to delete"
+	// SelectAccountsBackupPromptText --
+	SelectAccountsBackupPromptText = "Select the account(s) you wish to backup"
+	// SelectAccountsDepositPromptText --
+	SelectAccountsDepositPromptText = "Select the validating public keys you wish to submit deposits for"
+	// SelectAccountsVoluntaryExitPromptText --
+	SelectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
 )
 
-var au = aurora.NewAurora(true)
+var (
+	au  = aurora.NewAurora(true)
+	log = logrus.WithField("prefix", "prompt")
+)
 
-func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
+// InputDirectory from the cli.
+func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
 		return fileutil.ExpandPath(directory)
@@ -53,7 +64,8 @@ func inputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	return fileutil.ExpandPath(inputtedDir)
 }
 
-func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
+// InputWeakPassword from the cli.
+func InputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
 		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
@@ -69,7 +81,8 @@ func inputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, pr
 	return walletPasswordFilePath, nil
 }
 
-func inputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
+// InputRemoteKeymanagerConfig via the cli.
+func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
 	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
@@ -149,7 +162,8 @@ func validateCertPath(input string) error {
 	return nil
 }
 
-func formatPromptError(err error) error {
+// FormatPromptError for the user.
+func FormatPromptError(err error) error {
 	switch err {
 	case promptui.ErrAbort:
 		return errors.New("wallet creation aborted, closing")

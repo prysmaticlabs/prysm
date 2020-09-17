@@ -6,14 +6,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
 )
 
 func TestCreateAccount_Derived(t *testing.T) {
@@ -34,13 +33,14 @@ func TestCreateAccount_Derived(t *testing.T) {
 
 	// We attempt to open the newly created wallet.
 	ctx := context.Background()
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
-		return nil, errors.New("failed to open wallet")
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+		WalletDir:      walletDir,
+		WalletPassword: password,
 	})
 	assert.NoError(t, err)
 
 	// We read the keymanager config for the newly created wallet.
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
 	opts, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
@@ -50,7 +50,7 @@ func TestCreateAccount_Derived(t *testing.T) {
 
 	require.NoError(t, CreateAccountCli(cliCtx))
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, true)
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {
@@ -90,12 +90,12 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 		walletPasswordFile: walletPasswordFile,
 	})
 
-	wallet, err := CreateAndSaveWalletCli(cliCtx)
+	w, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// Create an account using "Pa$sW0rD0__Fo0xPr"
 	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
-		Wallet:      wallet,
+		Wallet:      w,
 		NumAccounts: 1,
 	})
 	require.NoError(t, err)
@@ -107,7 +107,7 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	// Now we change the password to "SecoNDxyzPass__9!@#"
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("SecoNDxyzPass__9!@#"), os.ModePerm))
 	// OpenWalletOrElseCli() doesn't really 'challenge' the wrong password
-	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
+	w, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.NoError(t, err)
 
 	/*  The purpose of using a passwordReader object is to store a 'canned' response for when the program
@@ -118,7 +118,7 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	promptutil.PasswordReader = mockPasswordReader.passwordReaderFunc
 
 	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
-		Wallet:      wallet,
+		Wallet:      w,
 		NumAccounts: 1,
 	})
 	require.NoError(t, err)
@@ -126,12 +126,12 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	// Now we make sure a bug did not change the password to "SecoNDxyzPass__9!@#"
 	logHook := logTest.NewGlobal()
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
-	wallet, err = OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
+	w, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.NoError(t, err)
 	mockPasswordReader.counter = 3
 
 	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
-		Wallet:      wallet,
+		Wallet:      w,
 		NumAccounts: 1,
 	})
 	require.NoError(t, err)
