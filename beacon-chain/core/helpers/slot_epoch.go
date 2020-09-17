@@ -178,6 +178,7 @@ func RoundUpToNearestEpoch(slot uint64) uint64 {
 // Reference spec implementation:
 // https://notes.ethereum.org/@adiasg/weak-subjectvity-eth2#Updating-Weak-Subjectivity-Checkpoint-States
 func WeakSubjectivityCheckptEpoch(valCount uint64, fEpoch uint64) uint64 {
+	// TODO(7210): Update this function with updated formula.
 	weakSubMod := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 
 	m := params.BeaconConfig().MinPerEpochChurnLimit
@@ -185,10 +186,10 @@ func WeakSubjectivityCheckptEpoch(valCount uint64, fEpoch uint64) uint64 {
 	d := params.BeaconConfig().SafetyDecay
 	churnMultiplier := m * q
 	if valCount >= churnMultiplier {
-		v := 256 * ((d * q / 2) / 256)
+		v := 256 * ((q / (2 * d)) / 256)
 		weakSubMod += v
 	} else {
-		v := 256 * ((d * valCount / (2 * m)) / 256)
+		v := 256 * ((valCount / (2 * m * d)) / 256)
 		weakSubMod += v
 	}
 	return fEpoch / weakSubMod

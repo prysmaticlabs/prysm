@@ -132,7 +132,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	PruneSlasherStoragePeriod: 10,
 
 	// Weak subjectivity values.
-	SafetyDecay: 1 / 10,
+	SafetyDecay: 10,
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},

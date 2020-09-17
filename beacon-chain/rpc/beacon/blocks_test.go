@@ -11,12 +11,14 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -607,4 +609,33 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 		})
 	}
 	<-exitRoutine
+}
+
+func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
+	params.UseMainnetConfig()
+
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+	beaconState := testutil.NewBeaconState()
+	b := testutil.NewBeaconBlock()
+	r, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, b))
+	require.NoError(t, db.SaveState(ctx, beaconState, r))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
+	chainService := &chainMock.ChainService{State: beaconState}
+	server := &Server{
+		Ctx:           ctx,
+		BlockNotifier: chainService.BlockNotifier(),
+		HeadFetcher:   chainService,
+		BeaconDB:      db,
+		StateGen:      stategen.New(db, cache.NewStateSummaryCache()),
+	}
+
+	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), c.Epoch)
+	r, err = beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, bytesutil.PadTo(c.StateRoot, 32), bytesutil.PadTo(r[:], 32))
 }
