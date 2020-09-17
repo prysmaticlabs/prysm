@@ -138,7 +138,7 @@ func TestSignatureFromBytes(t *testing.T) {
 	}
 }
 
-// TODO: Make this test work
+// TODO(7249): Make this test work
 /*func TestCopy(t *testing.T) {
 	key := RandKey().(*bls12SecretKey)
 	signatureA := &Signature{s: new(blstSignature).Sign(key.p, []byte("foo"), dst)}
