@@ -98,6 +98,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.HTTPWeb3ProviderFlag,
 			flags.SetGCPercent,
 			flags.UnsafeSync,
+			flags.DisableSync,
 			flags.SlotsPerArchivedPoint,
 			flags.DisableDiscv5,
 			flags.BlockBatchLimit,
