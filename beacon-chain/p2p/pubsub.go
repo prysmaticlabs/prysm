@@ -132,6 +132,8 @@ func topicScoreParams(topic string) *pubsub.TopicScoreParams {
 		return defaultBlockTopicParams()
 	case strings.Contains(topic, "beacon_aggregate_and_proof"):
 		return defaultAggregateTopicParams()
+	case strings.Contains(topic, "beacon_attestation"):
+		return defaultAggregateSubnetTopicParams()
 	default:
 		return nil
 	}
@@ -195,6 +197,28 @@ func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
 		MeshFailurePenaltyWeight:        -0.064,
 		MeshFailurePenaltyDecay:         0.866,
 		InvalidMessageDeliveriesWeight:  -140.4475,
+		InvalidMessageDeliveriesDecay:   0.9971,
+	}
+}
+
+func defaultAggregateSubnetTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     0.015264,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    0.955,
+		FirstMessageDeliveriesDecay:     0.866,
+		FirstMessageDeliveriesCap:       24,
+		MeshMessageDeliveriesWeight:     -37.55,
+		MeshMessageDeliveriesDecay:      0.96477,
+		MeshMessageDeliveriesCap:        553,
+		MeshMessageDeliveriesThreshold:  11,
+		MeshMessageDeliveriesWindow:     2 * time.Second,
+		MeshMessageDeliveriesActivation: 17 * oneSlotDuration(),
+		MeshFailurePenaltyWeight:        -37.55,
+		MeshFailurePenaltyDecay:         0.9647,
+		InvalidMessageDeliveriesWeight:  -4544,
 		InvalidMessageDeliveriesDecay:   0.9971,
 	}
 }
