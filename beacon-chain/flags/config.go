@@ -10,6 +10,7 @@ import (
 // beacon node.
 type GlobalFlags struct {
 	UnsafeSync                 bool
+	DisableSync                bool
 	DisableDiscv5              bool
 	MinimumSyncPeers           int
 	BlockBatchLimit            int
@@ -35,12 +36,9 @@ func Init(c *GlobalFlags) {
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg := &GlobalFlags{}
-	if ctx.Bool(UnsafeSync.Name) {
-		cfg.UnsafeSync = true
-	}
-	if ctx.Bool(DisableDiscv5.Name) {
-		cfg.DisableDiscv5 = true
-	}
+	cfg.UnsafeSync = ctx.Bool(UnsafeSync.Name)
+	cfg.DisableSync = ctx.Bool(DisableSync.Name)
+	cfg.DisableDiscv5 = ctx.Bool(DisableDiscv5.Name)
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
 	configureMinimumPeers(ctx, cfg)
