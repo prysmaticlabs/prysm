@@ -6,14 +6,14 @@ import (
 
 	"github.com/gorilla/websocket"
 	lru "github.com/hashicorp/golang-lru"
-	log "github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	log "github.com/sirupsen/logrus"
 )
 
-// LOG_CACHE_SIZE is the number of log entries to keep in memory for new
+// LogCacheSize is the number of log entries to keep in memory for new
 // websocket connections.
-const LOG_CACHE_SIZE = 20
+const LogCacheSize = 20
 
 // Compile time interface check.
 var _ = io.Writer(&StreamServer{})
@@ -28,9 +28,9 @@ type StreamServer struct {
 // NewLogStreamServer initializes a new stream server capable of
 // streaming log events via a websocket connection.
 func NewLogStreamServer() *StreamServer {
-	c, err := lru.New(LOG_CACHE_SIZE)
+	c, err := lru.New(LogCacheSize)
 	if err != nil {
-		panic(err) // This can only occur when the LOG_CACHE_SIZE is negative.
+		panic(err) // This can only occur when the LogCacheSize is negative.
 	}
 	ss := &StreamServer{
 		feed:  new(event.Feed),
