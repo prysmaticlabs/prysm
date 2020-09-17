@@ -42,8 +42,14 @@ func (ss *StreamServer) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Errorf("Could not write websocket message: %v", err)
 		return
 	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Errorf("Could not close websocket connection: %v", err)
+		}
+	}()
 
-	ch := make(chan []byte)
+	ch := make(chan []byte, 1)
+	defer close(ch)
 	sub := ss.feed.Subscribe(ch)
 	defer sub.Unsubscribe()
 
@@ -52,14 +58,17 @@ func (ss *StreamServer) Handler(w http.ResponseWriter, r *http.Request) {
 		case evt := <-ch:
 			if err := conn.WriteMessage(websocket.TextMessage, evt); err != nil {
 				log.Errorf("Could not write websocket message: %v", err)
+				return
 			}
 		case <-r.Context().Done():
 			if err := conn.WriteMessage(websocket.CloseNormalClosure, []byte("context canceled")); err != nil {
 				log.Error(err)
+				return
 			}
 		case err := <-sub.Err():
 			if err := conn.WriteMessage(websocket.CloseInternalServerErr, []byte(err.Error())); err != nil {
 				log.Error(err)
+				return
 			}
 		}
 	}
