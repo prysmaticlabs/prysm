@@ -217,6 +217,39 @@ func TestCreateWallet_Derived(t *testing.T) {
 	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), cfg)
 }
 
+// TestCreateWallet_ifExistingWallet checks for expected error if create wallet is issued at site of current wallet.
+func TestCreateWallet_ifExistingWallet(t *testing.T) {
+	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		walletPasswordFile: passwordFile,
+		keymanagerKind:     v2keymanager.Derived,
+	})
+
+	// We attempt to create the wallet.
+	_, err := CreateAndSaveWalletCli(cliCtx)
+	require.NoError(t, err)
+
+	// We attempt to create another wallet at the same location.  We expect an error.
+	_, err = CreateAndSaveWalletCli(cliCtx)
+	require.NotEqual(t, nil, err,
+		"Creating a wallet of the same type at an existing wallet location should return error")
+
+	cliCtx = setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		walletPasswordFile: passwordFile,
+		keymanagerKind:     v2keymanager.Direct,
+	})
+
+	// We attempt to create another wallet of different type at the same location.  We don't expect an error.
+	_, err = CreateAndSaveWalletCli(cliCtx)
+	require.Equal(t, nil, err,
+		"Creating a wallet of a different type at an existing wallet location should not return a error")
+
+}
+
 // TestCorrectPassphrase_Derived makes sure the wallet created uses the provided passphrase
 func TestCorrectPassphrase_Derived(t *testing.T) {
 	walletDir, _, passwordFile := setupWalletAndPasswordsDir(t)
