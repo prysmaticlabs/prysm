@@ -36,6 +36,14 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = wallet.Exists(createWalletConfig.WalletCfg.WalletDir)
+	if err != wallet.ErrNoWalletFound {
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New("a directory already exists at this location. Please input an" +
+			" alternative location for the new wallet or remove the current wallet")
+	}
 	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 }
 
