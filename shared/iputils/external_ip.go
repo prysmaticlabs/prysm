@@ -3,6 +3,7 @@ package iputils
 
 import (
 	"net"
+	"sort"
 )
 
 // ExternalIPv4 returns the first IPv4 available.
@@ -84,11 +85,20 @@ func retrieveIPAddrs() ([]net.IP, error) {
 			case *net.IPAddr:
 				ip = v.IP
 			}
-			if ip == nil || ip.IsLoopback() {
+			if ip == nil || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
 				continue
 			}
 			ipAddrs = append(ipAddrs, ip)
 		}
 	}
-	return ipAddrs, nil
+	return SortAddresses(ipAddrs), nil
+}
+
+// SortAddresses sorts a set of addresses in the order of
+// ipv4 -> ipv6.
+func SortAddresses(ipAddrs []net.IP) []net.IP {
+	sort.Slice(ipAddrs, func(i, j int) bool {
+		return ipAddrs[i].To4() != nil && ipAddrs[j].To4() == nil
+	})
+	return ipAddrs
 }

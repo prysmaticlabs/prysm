@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -54,12 +55,12 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	require.NoError(t, RecoverWalletCli(cliCtx))
 
 	ctx := context.Background()
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
 
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
 	cfg, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
@@ -68,7 +69,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	wantCfg := derived.DefaultKeymanagerOpts()
 	assert.DeepEqual(t, wantCfg, cfg)
 
-	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, true)
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {

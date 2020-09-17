@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -42,8 +43,8 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		keymanagerKind:     v2keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: "Passwordz0320$",
@@ -53,7 +54,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
-			Wallet: wallet,
+			Wallet: w,
 			Opts:   direct.DefaultKeymanagerOpts(),
 		},
 	)
@@ -65,14 +66,14 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 		require.NoError(t, err)
 	}
 	rescueStdout := os.Stdout
-	r, w, err := os.Pipe()
+	r, writer, err := os.Pipe()
 	require.NoError(t, err)
-	os.Stdout = w
+	os.Stdout = writer
 
 	// We call the list direct keymanager accounts function.
 	require.NoError(t, listDirectKeymanagerAccounts(context.Background(), true /* show deposit data */, keymanager))
 
-	require.NoError(t, w.Close())
+	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
@@ -166,8 +167,8 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keymanagerKind:     v2keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 	})
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Derived,
 			WalletPassword: "Passwordz0320$",
@@ -179,7 +180,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		cliCtx.Context,
 		&derived.SetupConfig{
 			Opts:                derived.DefaultKeymanagerOpts(),
-			Wallet:              wallet,
+			Wallet:              w,
 			SkipMnemonicConfirm: true,
 		},
 	)
@@ -196,14 +197,14 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	}
 
 	rescueStdout := os.Stdout
-	r, w, err := os.Pipe()
+	r, writer, err := os.Pipe()
 	require.NoError(t, err)
-	os.Stdout = w
+	os.Stdout = writer
 
 	// We call the list direct keymanager accounts function.
 	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true /* show deposit data */, keymanager))
 
-	require.NoError(t, w.Close())
+	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
@@ -257,7 +258,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.Equal(t, lineCount, len(lines))
 
 	// Assert the keymanager kind is printed on the first line.
-	kindString := wallet.KeymanagerKind().String()
+	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
@@ -301,8 +302,8 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: v2keymanager.Remote,
 	})
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Remote,
 			WalletPassword: password,
@@ -311,9 +312,9 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
-	r, w, err := os.Pipe()
+	r, writer, err := os.Pipe()
 	require.NoError(t, err)
-	os.Stdout = w
+	os.Stdout = writer
 
 	numAccounts := 3
 	pubKeys := make([][48]byte, numAccounts)
@@ -334,9 +335,9 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		},
 	}
 	// We call the list remote keymanager accounts function.
-	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), wallet, km, km.opts))
+	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), w, km, km.opts))
 
-	require.NoError(t, w.Close())
+	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
@@ -370,13 +371,11 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 
 	// Expected output format definition
 	const prologLength = 10
-	const accountsPathOffset = 1
 	const configOffset = 4
 	const configLength = 4
 	const accountLength = 4
 	const nameOffset = 1
 	const keyOffset = 2
-	const depositOffset = 9
 	const epilogLength = 1
 
 	// Require the output has correct number of lines
@@ -384,13 +383,9 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	require.Equal(t, lineCount, len(lines))
 
 	// Assert the keymanager kind is printed on the first line.
-	kindString := wallet.KeymanagerKind().String()
+	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
-
-	// Assert that accounts path is printed in the right position
-	accountsPathFound := strings.Contains(lines[accountsPathOffset], wallet.accountsPath)
-	assert.Equal(t, true, accountsPathFound, "Accounts path %s not found on line number %d", accountsPathOffset)
 
 	// Assert that Configuration is printed in the right position
 	configLines := lines[configOffset:(configOffset + configLength)]
