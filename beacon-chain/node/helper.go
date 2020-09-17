@@ -2,6 +2,7 @@ package node
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ func convertWspInput(wsp string) ([]byte, uint64, error) {
 
 	// Weak subjectivity input string must contain ":" to separate epoch and block root.
 	if !strings.Contains(wsp, ":") {
-		return nil, 0, fmt.Errorf("incorrect input %s did not contain column", wsp)
+		return nil, 0, fmt.Errorf("%s did not contain column", wsp)
 	}
 
 	// Strip prefix "0x" if it's part of the input string.
@@ -26,9 +27,16 @@ func convertWspInput(wsp string) ([]byte, uint64, error) {
 
 	// Get the hexadecimal block root from input string.
 	s := strings.Split(wsp, ":")
+	if len(s) != 2 {
+		return nil, 0, errors.New("bad format string")
+	}
+
 	bRoot, err := hex.DecodeString(s[0])
 	if err != nil {
 		return nil, 0, err
+	}
+	if len(bRoot) != 32 {
+		return nil, 0, errors.New("block root is not length of 32")
 	}
 
 	// Get the epoch number from input string.
