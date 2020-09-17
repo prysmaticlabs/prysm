@@ -93,8 +93,9 @@ func (m *POWChain) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.
 	var chosenTime uint64
 	var chosenNumber *big.Int
 	for t, num := range m.BlockNumberByTime {
-		if chosenNumber == nil || (t > chosenTime && t <= time) {
+		if t > chosenTime && t <= time {
 			chosenNumber = num
+			chosenTime = t
 		}
 	}
 	return chosenNumber, nil
