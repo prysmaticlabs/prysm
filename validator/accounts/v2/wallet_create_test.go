@@ -217,8 +217,8 @@ func TestCreateWallet_Derived(t *testing.T) {
 	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), cfg)
 }
 
-// TestCreateWallet_ifExistingWallet checks for expected error if trying to create a wallet where they is already one.
-func TestCreateWallet_ifExistingWallet(t *testing.T) {
+// TestCreateWallet_IfExistingWallet checks for expected error if trying to create a wallet where they is already one.
+func TestCreateWallet_IfExistingWallet(t *testing.T) {
 	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
