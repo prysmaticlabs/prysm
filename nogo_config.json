@@ -123,5 +123,12 @@
       "rules_go_work-.*": "Third party code",
       "tools/analyzers/shadowpredecl/testdata/shadow.go": "Analyzer testdata has to break rules"
     }
+  },
+  "nop": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code",
+      "tools/analyzers/nop/testdata/no_op.go": "Analyzer testdata has to break rules"
+    }
   }
 }
