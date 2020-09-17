@@ -6,13 +6,12 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockBeaconChainClient is a mock of BeaconChainClient interface
@@ -216,6 +215,26 @@ func (mr *MockBeaconChainClientMockRecorder) GetValidatorQueue(arg0, arg1 interf
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorQueue", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorQueue), varargs...)
+}
+
+// GetWeakSubjectivityCheckpoint mocks base method
+func (m *MockBeaconChainClient) GetWeakSubjectivityCheckpoint(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.WeakSubjectivityCheckpoint, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetWeakSubjectivityCheckpoint", varargs...)
+	ret0, _ := ret[0].(*eth.WeakSubjectivityCheckpoint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWeakSubjectivityCheckpoint indicates an expected call of GetWeakSubjectivityCheckpoint
+func (mr *MockBeaconChainClientMockRecorder) GetWeakSubjectivityCheckpoint(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWeakSubjectivityCheckpoint", reflect.TypeOf((*MockBeaconChainClient)(nil).GetWeakSubjectivityCheckpoint), varargs...)
 }
 
 // ListAttestations mocks base method
