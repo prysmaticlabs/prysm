@@ -40,6 +40,8 @@ type Config struct {
 	Chain         blockchainService
 	StateNotifier statefeed.Notifier
 	BlockNotifier blockfeed.Notifier
+	WspBlockRoot  []byte
+	WspEpoch      uint64
 }
 
 // Service service.
