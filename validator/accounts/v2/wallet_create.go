@@ -40,7 +40,7 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	}
 
 	walletDir := createWalletConfig.WalletCfg.WalletDir
-	keymanagerKind := createWalletConfig.WalletCfg.KeymanagerKind
+	keymanagerKind = createWalletConfig.WalletCfg.KeymanagerKind
 	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
 	ok, err := fileutil.HasDir(accountsPath)
 	if err != nil {
