@@ -105,7 +105,6 @@ go_test(
         ): [
             "public_key_test.go",
             "secret_key_test.go",
-            "signature_test.go",
         ],
         "//conditions:default": [],
     }),
@@ -117,6 +116,37 @@ go_test(
             ":blst_enabled_android_arm64",
         ): [
             "//shared/bls/blst:go_default_library",
+            "//shared/bls/iface:go_default_library",
+            "//shared/bytesutil:go_default_library",
+            "//shared/testutil/assert:go_default_library",
+            "//shared/testutil/require:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+# gazelle:ignore
+go_test(
+    name = "go_signature_test",
+    srcs = selects.with_or({
+        (
+            ":blst_enabled_linux_amd64",
+            ":blst_enabled_linux_arm64",
+            ":blst_enabled_android_amd64",
+            ":blst_enabled_android_arm64",
+        ): [
+            "signature_test.go",
+        ],
+        "//conditions:default": [],
+    }),
+    embed = [":go_default_library"],
+    deps = selects.with_or({
+        (
+            ":blst_enabled_linux_amd64",
+            ":blst_enabled_linux_arm64",
+            ":blst_enabled_android_amd64",
+            ":blst_enabled_android_arm64",
+        ): [
             "//shared/bls/iface:go_default_library",
             "//shared/bytesutil:go_default_library",
             "//shared/testutil/assert:go_default_library",

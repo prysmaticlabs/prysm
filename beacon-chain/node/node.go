@@ -539,6 +539,12 @@ func (b *BeaconNode) registerSyncService() error {
 }
 
 func (b *BeaconNode) registerInitialSyncService() error {
+	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
+	bRoot, epoch, err := convertWspInput(wsp)
+	if err != nil {
+		return err
+	}
+
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -550,6 +556,8 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		P2P:           b.fetchP2P(),
 		StateNotifier: b,
 		BlockNotifier: b,
+		WspBlockRoot:  bRoot,
+		WspEpoch:      epoch,
 	})
 	return b.services.RegisterService(is)
 }
