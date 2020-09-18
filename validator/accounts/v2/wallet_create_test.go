@@ -231,7 +231,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
-	// We attempt to create another wallet of the same type at the same location.  We expect an error.
+	// We attempt to create another wallet of the same type at the same location. We expect an error.
 	_, err = CreateAndSaveWalletCli(cliCtx)
 	require.NotEqual(t, nil, err,
 		"Creating a wallet of the same type at an existing wallet location should return error")
