@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"sort"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -47,21 +46,6 @@ type eth1DataSingleVote struct {
 type eth1DataAggregatedVote struct {
 	data  eth1DataSingleVote
 	votes int
-}
-
-// profitableAtts implements the Sort interface to sort attestations
-// by highest slot and by highest aggregation bit count.
-type profitableAtts struct {
-	atts []*ethpb.Attestation
-}
-
-func (p profitableAtts) Len() int      { return len(p.atts) }
-func (p profitableAtts) Swap(i, j int) { p.atts[i], p.atts[j] = p.atts[j], p.atts[i] }
-func (p profitableAtts) Less(i, j int) bool {
-	if p.atts[i].Data.Slot == p.atts[j].Data.Slot {
-		return p.atts[i].AggregationBits.Count() > p.atts[j].AggregationBits.Count()
-	}
-	return p.atts[i].Data.Slot > p.atts[j].Data.Slot
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -698,7 +682,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 		}
 
-		attsForInclusion := make([]*ethpb.Attestation, 0)
+		attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
 		for _, as := range attsByDataRoot {
 			as, err := attaggregation.Aggregate(as)
 			if err != nil {
@@ -706,13 +690,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			}
 			attsForInclusion = append(attsForInclusion, as...)
 		}
-
-		if uint64(len(attsForInclusion)) > params.BeaconConfig().MaxAttestations {
-			sort.Sort(profitableAtts{atts: attsForInclusion})
-			attsForInclusion = attsForInclusion[:params.BeaconConfig().MaxAttestations]
-		}
-
-		atts = attsForInclusion
+		atts = attsForInclusion.sortByProfitability().limitToMaxAttestations()
 	}
 	return atts, nil
 }
