@@ -39,9 +39,9 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
-	extractedWalletDir := createWalletConfig.WalletCfg.WalletDir
-	extractedKeymanagerKind := createWalletConfig.WalletCfg.KeymanagerKind
-	accountsPath := filepath.Join(extractedWalletDir, extractedKeymanagerKind.String())
+	walletDir := createWalletConfig.WalletCfg.WalletDir
+	keymanagerKind := createWalletConfig.WalletCfg.KeymanagerKind
+	accountsPath := filepath.Join(walletDir, keymanagerKind.String())
 	ok, err := fileutil.HasDir(accountsPath)
 	if err != nil {
 		return nil, err
