@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -124,4 +126,36 @@ func (s *Server) GenerateMnemonic(ctx context.Context, _ *ptypes.Empty) (*pb.Gen
 	return &pb.GenerateMnemonicResponse{
 		Mnemonic: mnemonic,
 	}, nil
+}
+
+// ChangePassword allows changing a wallet password via the API as
+// an authenticated method.
+func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
+	err := wallet.Exists(defaultWalletPath)
+	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+	}
+	if req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")
+	}
+	if req.Password != req.PasswordConfirmation {
+		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
+	}
+	switch s.wallet.KeymanagerKind() {
+	case v2keymanager.Direct:
+		km, ok := s.keymanager.(*direct.Keymanager)
+		if !ok {
+			return nil, status.Error(codes.FailedPrecondition, "Not a valid direct keymanager")
+		}
+		s.wallet.SetPassword(req.Password)
+		if err := km.RefreshWalletPassword(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
+		}
+	case v2keymanager.Remote:
+		return nil, status.Error(codes.Internal, "Cannot change password for remote keymanager")
+	}
+	return &ptypes.Empty{}, nil
 }
