@@ -3,9 +3,11 @@ package v2
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -35,6 +37,19 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	createWalletConfig, err := extractWalletCreationConfigFromCli(cliCtx, keymanagerKind)
 	if err != nil {
 		return nil, err
+	}
+
+	dir := createWalletConfig.WalletCfg.WalletDir
+	kmKind := createWalletConfig.WalletCfg.KeymanagerKind
+	accountsPath := filepath.Join(dir, kmKind.String())
+	ok, err := fileutil.HasDir(accountsPath)
+	if err != nil {
+		return nil, err
+	}
+	// This wallet type already exists
+	if ok {
+		return nil, errors.New("a wallet of this type already exists at this location. Please input an" +
+			" alternative location for the new wallet or remove the current wallet")
 	}
 	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 }
