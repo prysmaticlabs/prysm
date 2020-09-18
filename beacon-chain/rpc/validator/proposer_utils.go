@@ -12,10 +12,10 @@ import (
 
 type proposerAtts []*ethpb.Attestation
 
-// split splits attestation list into two groups: valid and invalid attestations.
+// filter separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
-func (al proposerAtts) split(ctx context.Context, state *stateTrie.BeaconState) (proposerAtts, proposerAtts) {
+func (al proposerAtts) filter(ctx context.Context, state *stateTrie.BeaconState) (proposerAtts, proposerAtts) {
 	validAtts := make([]*ethpb.Attestation, 0, len(al))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(al))
 	for _, att := range al {

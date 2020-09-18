@@ -611,7 +611,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
-	validAtts, invalidAtts := proposerAtts(atts).split(ctx, state)
+	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, state)
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
