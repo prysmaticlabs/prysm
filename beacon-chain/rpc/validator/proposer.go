@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"sort"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -47,21 +46,6 @@ type eth1DataSingleVote struct {
 type eth1DataAggregatedVote struct {
 	data  eth1DataSingleVote
 	votes int
-}
-
-// profitableAtts implements the Sort interface to sort attestations
-// by highest slot and by highest aggregation bit count.
-type profitableAtts struct {
-	atts []*ethpb.Attestation
-}
-
-func (p profitableAtts) Len() int      { return len(p.atts) }
-func (p profitableAtts) Swap(i, j int) { p.atts[i], p.atts[j] = p.atts[j], p.atts[i] }
-func (p profitableAtts) Less(i, j int) bool {
-	if p.atts[i].Data.Slot == p.atts[j].Data.Slot {
-		return p.atts[i].AggregationBits.Count() > p.atts[j].AggregationBits.Count()
-	}
-	return p.atts[i].Data.Slot > p.atts[j].Data.Slot
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -627,27 +611,11 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
-	validAtts := make([]*ethpb.Attestation, 0, len(atts))
-	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
-
-	for i, att := range atts {
-		if uint64(i) == params.BeaconConfig().MaxAttestations {
-			break
-		}
-
-		if _, err := blocks.ProcessAttestation(ctx, state, att); err != nil {
-			inValidAtts = append(inValidAtts, att)
-			continue
-
-		}
-		validAtts = append(validAtts, att)
-	}
-
-	if err := vs.deleteAttsInPool(ctx, inValidAtts); err != nil {
+	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, state)
+	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-
-	return validAtts, nil
+	return validAtts.sortByProfitability().limitToMaxAttestations(), nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -714,7 +682,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 		}
 
-		attsForInclusion := make([]*ethpb.Attestation, 0)
+		attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
 		for _, as := range attsByDataRoot {
 			as, err := attaggregation.Aggregate(as)
 			if err != nil {
@@ -722,13 +690,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			}
 			attsForInclusion = append(attsForInclusion, as...)
 		}
-
-		if uint64(len(attsForInclusion)) > params.BeaconConfig().MaxAttestations {
-			sort.Sort(profitableAtts{atts: attsForInclusion})
-			attsForInclusion = attsForInclusion[:params.BeaconConfig().MaxAttestations]
-		}
-
-		atts = attsForInclusion
+		atts = attsForInclusion.sortByProfitability().limitToMaxAttestations()
 	}
 	return atts, nil
 }
