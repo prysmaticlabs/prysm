@@ -1852,6 +1852,49 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				return []*ethpb.Attestation{inputAtts[0]}
 			},
 		},
+		{
+			name: "filter already voted validators",
+			inputAtts: func() []*ethpb.Attestation {
+				atts := make([]*ethpb.Attestation, 10)
+				require.NoError(t, state.SetPreviousEpochAttestations([]*pbp2p.PendingAttestation{}))
+				require.NoError(t, state.SetCurrentEpochAttestations([]*pbp2p.PendingAttestation{}))
+				assert.Equal(t, 0, len(state.PreviousEpochAttestations()))
+				assert.Equal(t, 0, len(state.CurrentEpochAttestations()))
+				for i := 0; i < len(atts); i++ {
+					atts[i] = &ethpb.Attestation{
+						Data: &ethpb.AttestationData{
+							CommitteeIndex:  uint64(i),
+							Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+							Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+							BeaconBlockRoot: make([]byte, 32),
+						},
+						AggregationBits: bitfield.Bitlist{0b00000110},
+						Signature:       make([]byte, 96),
+					}
+					committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					assert.NoError(t, err)
+					attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
+					assert.NoError(t, err)
+					domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+					require.NoError(t, err)
+					sigs := make([]bls.Signature, len(attestingIndices))
+					zeroSig := [96]byte{}
+					atts[i].Signature = zeroSig[:]
+
+					for i, indice := range attestingIndices {
+						hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
+						require.NoError(t, err)
+						sig := privKeys[indice].Sign(hashTreeRoot[:])
+						sigs[i] = sig
+					}
+					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+				}
+				return atts
+			},
+			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
+				return []*ethpb.Attestation{inputAtts[0]}
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -614,27 +614,11 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
-	validAtts := make([]*ethpb.Attestation, 0, len(atts))
-	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
-
-	for i, att := range atts {
-		if uint64(i) == params.BeaconConfig().MaxAttestations {
-			break
-		}
-
-		if _, err := blocks.ProcessAttestation(ctx, state, att); err != nil {
-			inValidAtts = append(inValidAtts, att)
-			continue
-
-		}
-		validAtts = append(validAtts, att)
-	}
-
-	if err := vs.deleteAttsInPool(ctx, inValidAtts); err != nil {
+	validAtts, invalidAtts := proposerAtts(atts).split(ctx, state)
+	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-
-	return validAtts, nil
+	return validAtts.sortByProfitability().limitToMaxAttestations(), nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
