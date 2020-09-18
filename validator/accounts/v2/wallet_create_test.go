@@ -218,7 +218,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 }
 
 // TestCreateWallet_WalletAlreadyExists checks for expected error if trying to create a wallet when there is one already.
-func TestCreateWallet_IfExistingWallet(t *testing.T) {
+func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
