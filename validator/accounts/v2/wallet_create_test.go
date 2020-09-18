@@ -243,7 +243,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		keymanagerKind:     v2keymanager.Direct,
 	})
 
-	// We attempt to create another wallet of different type at the same location.  We don't expect an error.
+	// We attempt to create another wallet of different type at the same location. We don't expect an error.
 	_, err = CreateAndSaveWalletCli(cliCtx)
 	require.Equal(t, nil, err,
 		"Creating a wallet of a different type at an existing wallet location should not return a error")
