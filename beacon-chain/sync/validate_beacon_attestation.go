@@ -123,7 +123,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 		// Verify number of aggregation bits matches the committee size.
 		if err := helpers.VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
-			fmt.Println(err)
 			return pubsub.ValidationReject
 		}
 
