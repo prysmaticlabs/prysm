@@ -102,7 +102,6 @@ go_test(
     name = "go_mainnet_test",
     size = "small",
     srcs = [
-        "ssz_static_mainnet_test.go",
         "ssz_static_test.go",
     ],
     data = [
