@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
@@ -164,10 +165,12 @@ func (bs *Service) Start() {
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
+			grpcutils.LogGRPCStream,
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
+			grpcutils.LogGRPCRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(bs.ctx, bs.provider, beaconOpts...)
