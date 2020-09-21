@@ -194,3 +194,46 @@ func TestDerivedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, strings.Contains(err.Error(), "no signing key found"), true)
 }
+
+func TestDerivedKeymanager_RefreshWalletPassword(t *testing.T) {
+	password := "secretPassw0rd$1999"
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   password,
+	}
+	dr := &Keymanager{
+		wallet: wallet,
+	}
+	seedCfg, err := initializeWalletSeedFile(wallet.Password(), true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	dr.seedCfg = seedCfg
+	decryptor := keystorev4.New()
+	seed, err := decryptor.Decrypt(dr.seedCfg.Crypto, wallet.Password())
+	require.NoError(t, err)
+	dr.seed = seed
+	require.NoError(t, dr.initializeKeysCachesFromSeed())
+
+	// First, generate some accounts.
+	numAccounts := 2
+	ctx := context.Background()
+	for i := 0; i < numAccounts; i++ {
+		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		require.NoError(t, err)
+	}
+
+	// We attempt to decrypt with the wallet password and expect no error.
+	_, err = decryptor.Decrypt(dr.seedCfg.Crypto, dr.wallet.Password())
+	require.NoError(t, err)
+
+	// We change the wallet password.
+	wallet.WalletPassword = "NewPassw0rdz9**#"
+	// Attempting to decrypt with this new wallet password should fail.
+	_, err = decryptor.Decrypt(dr.seedCfg.Crypto, dr.wallet.Password())
+	require.ErrorContains(t, "invalid checksum", err)
+
+	// Call the refresh wallet password method, then attempting to decrypt should work.
+	require.NoError(t, dr.RefreshWalletPassword(ctx))
+	_, err = decryptor.Decrypt(dr.seedCfg.Crypto, dr.wallet.Password())
+	require.NoError(t, err)
+}
