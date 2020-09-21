@@ -75,7 +75,10 @@ func NewInitialSync(ctx context.Context, cfg *Config) *Service {
 
 // Start the initial sync service.
 func (s *Service) Start() {
-	genesis := s.waitForStateInitialization()
+	genesis, err := s.waitForStateInitialization()
+	if err != nil {
+		return
+	}
 
 	if flags.Get().DisableSync {
 		s.synced = true
@@ -201,40 +204,35 @@ func (s *Service) waitForMinimumPeers() {
 
 // waitForStateInitialization makes sure that beacon node is ready to be accessed: it is either
 // already properly configured or system waits up until state initialized event is triggered.
-func (s *Service) waitForStateInitialization() time.Time {
-	var genesis time.Time
+func (s *Service) waitForStateInitialization() (time.Time, error) {
 	headState, err := s.chain.HeadState(s.ctx)
-	if headState == nil || err != nil {
-		// Wait for state to be initialized.
-		log.Info("Waiting for state to be initialized")
-		stateChannel := make(chan *feed.Event, 1)
-		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-		genesisSet := false
-	loop:
-		for !genesisSet {
-			select {
-			case event := <-stateChannel:
-				if event.Type == statefeed.Initialized {
-					data, ok := event.Data.(*statefeed.InitializedData)
-					if !ok {
-						log.Error("Event feed data is not type *statefeed.InitializedData")
-						continue
-					}
-					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-					genesis = data.StartTime
-					genesisSet = true
-				}
-			case <-s.ctx.Done():
-				log.Debug("Context closed, exiting goroutine")
-				break loop
-			case err := <-stateSub.Err():
-				log.WithError(err).Error("Subscription to state notifier failed")
-				break loop
-			}
-		}
-		stateSub.Unsubscribe()
-	} else {
-		genesis = time.Unix(int64(headState.GenesisTime()), 0)
+	if err == nil && headState != nil {
+		return time.Unix(int64(headState.GenesisTime()), 0), nil
 	}
-	return genesis
+
+	// Wait for state to be initialized.
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	log.Info("Waiting for state to be initialized")
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Initialized {
+				data, ok := event.Data.(*statefeed.InitializedData)
+				if !ok {
+					log.Error("Event feed data is not type *statefeed.InitializedData")
+					continue
+				}
+				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+				return data.StartTime, nil
+			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return time.Time{}, errors.New("context closed")
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Subscription to state notifier failed")
+			return time.Time{}, err
+		}
+	}
 }

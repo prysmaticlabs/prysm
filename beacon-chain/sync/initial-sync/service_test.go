@@ -79,17 +79,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		expectedGenesisTime := time.Unix(25000, 0)
 		var receivedGenesisTime time.Time
 		require.NoError(t, mc.State.SetGenesisTime(uint64(expectedGenesisTime.Unix())))
-
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			receivedGenesisTime = s.waitForStateInitialization()
-			wg.Done()
-		}()
-
-		if testutil.WaitTimeout(wg, time.Second*2) {
-			t.Fatalf("Test should have exited by now, timed out")
-		}
+		receivedGenesisTime, err = s.waitForStateInitialization()
+		assert.NoError(t, err)
 		assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
 		assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
 	})
@@ -103,7 +94,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			s.waitForStateInitialization()
+			_, err := s.waitForStateInitialization()
+			assert.ErrorContains(t, "context closed", err)
 			wg.Done()
 		}()
 		go func() {
@@ -131,7 +123,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			receivedGenesisTime = s.waitForStateInitialization()
+			receivedGenesisTime, err = s.waitForStateInitialization()
+			assert.NoError(t, err)
 			wg.Done()
 		}()
 		go func() {
