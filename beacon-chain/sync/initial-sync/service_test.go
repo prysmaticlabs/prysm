@@ -126,19 +126,26 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		defer cancel()
 		s := newService(ctx, &mock.ChainService{})
 
-		genesisTime := time.Unix(358544700, 0)
+		expectedGenesisTime := time.Unix(358544700, 0)
+		var receivedGenesisTime time.Time
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			assert.Equal(t, genesisTime, s.waitForStateInitialization())
+			receivedGenesisTime = s.waitForStateInitialization()
 			wg.Done()
 		}()
 		go func() {
 			time.AfterFunc(500*time.Millisecond, func() {
+				// Send invalid event at first.
+				s.stateNotifier.StateFeed().Send(&feed.Event{
+					Type: statefeed.Initialized,
+					Data: &statefeed.BlockProcessedData{},
+				})
+				// Send valid event.
 				s.stateNotifier.StateFeed().Send(&feed.Event{
 					Type: statefeed.Initialized,
 					Data: &statefeed.InitializedData{
-						StartTime:             genesisTime,
+						StartTime:             expectedGenesisTime,
 						GenesisValidatorsRoot: make([]byte, 32),
 					},
 				})
@@ -148,6 +155,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		if testutil.WaitTimeout(wg, time.Second*2) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
+		assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
+		assert.LogsContain(t, hook, "Event feed data is not type *statefeed.InitializedData")
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
 		assert.LogsContain(t, hook, "Received state initialized event")
 		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
