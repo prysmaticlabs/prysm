@@ -118,3 +118,99 @@ func TestServer_WalletConfig(t *testing.T) {
 		WalletPath: localWalletDir,
 	})
 }
+
+func TestServer_ChangePassword_Preconditions(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	ss := &Server{}
+	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		Password: "",
+	})
+	assert.ErrorContains(t, "No wallet found", err)
+	// We attempt to create the wallet.
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	ss.wallet = w
+	ss.walletInitialized = true
+	ss.keymanager = km
+	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		Password: "",
+	})
+	assert.ErrorContains(t, "cannot be empty", err)
+	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		Password:             "abc",
+		PasswordConfirmation: "def",
+	})
+	assert.ErrorContains(t, "does not match", err)
+}
+
+func TestServer_ChangePassword_DirectKeymanager(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	// We attempt to create the wallet.
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	ss := &Server{}
+	ss.wallet = w
+	ss.walletInitialized = true
+	ss.keymanager = km
+	newPassword := "NewPassw0rdz%%%%pass"
+	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		Password:             newPassword,
+		PasswordConfirmation: newPassword,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, w.Password(), newPassword)
+}
+
+func TestServer_ChangePassword_DerivedKeymanager(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	// We attempt to create the wallet.
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	ss := &Server{}
+	ss.wallet = w
+	ss.walletInitialized = true
+	ss.keymanager = km
+	newPassword := "NewPassw0rdz%%%%pass"
+	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		Password:             newPassword,
+		PasswordConfirmation: newPassword,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, w.Password(), newPassword)
+}
