@@ -8,6 +8,8 @@ package beaconclient
 import (
 	"context"
 
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -165,11 +167,13 @@ func (bs *Service) Start() {
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
+			grpc_retry.StreamClientInterceptor(),
 			grpcutils.LogGRPCStream,
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
+			grpc_retry.UnaryClientInterceptor(),
 			grpcutils.LogGRPCRequests,
 		)),
 	}
