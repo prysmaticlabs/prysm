@@ -229,3 +229,55 @@ func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	_, err := dr.Sign(context.Background(), req)
 	assert.ErrorContains(t, "no signing key found in keys cache", err)
 }
+
+func TestDirectKeymanager_RefreshWalletPassword(t *testing.T) {
+	password := "secretPassw0rd$1999"
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   password,
+	}
+	dr := &Keymanager{
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
+	}
+
+	ctx := context.Background()
+	numAccounts := 5
+	for i := 0; i < numAccounts; i++ {
+		_, err := dr.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+
+	var encodedKeystore []byte
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	keystoreFile := &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+
+	// We attempt to decrypt with the wallet password and expect no error.
+	decryptor := keystorev4.New()
+	_, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
+	require.NoError(t, err)
+
+	// We change the wallet password.
+	wallet.WalletPassword = "NewPassw0rdz9**#"
+	// Attempting to decrypt with this new wallet password should fail.
+	_, err = decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
+	require.ErrorContains(t, "invalid checksum", err)
+
+	// Call the refresh wallet password method, then attempting to decrypt should work.
+	require.NoError(t, dr.RefreshWalletPassword(ctx))
+	for k, v := range wallet.Files[AccountsPath] {
+		if strings.Contains(k, "keystore") {
+			encodedKeystore = v
+		}
+	}
+	keystoreFile = &v2keymanager.Keystore{}
+	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+	_, err = decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
+	require.NoError(t, err)
+}
