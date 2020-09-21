@@ -205,8 +205,8 @@ func (s *Service) waitForStateInitialization() time.Time {
 	var genesis time.Time
 	headState, err := s.chain.HeadState(s.ctx)
 	if headState == nil || err != nil {
-		log.Info("Waiting for state to be initialized")
 		// Wait for state to be initialized.
+		log.Info("Waiting for state to be initialized")
 		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 		genesisSet := false
