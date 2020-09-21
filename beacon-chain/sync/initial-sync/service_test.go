@@ -10,7 +10,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,19 +40,9 @@ func TestService_InitStartStop(t *testing.T) {
 
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
-
-	// Setup database.
-	beaconDB, _ := dbtest.SetupDB(t)
-	genesisBlk := testutil.NewBeaconBlock()
-	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
-	require.NoError(t, err)
-
 	newService := func(ctx context.Context, mc *mock.ChainService) *Service {
 		s := NewInitialSync(ctx, &Config{
 			P2P:           p2pt.NewTestP2P(t),
-			DB:            beaconDB,
 			Chain:         mc,
 			StateNotifier: mc.StateNotifier(),
 		})
@@ -68,8 +57,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 
 		mc := &mock.ChainService{
 			State: testutil.NewBeaconState(),
-			Root:  genesisBlkRoot[:],
-			DB:    beaconDB,
 			FinalizedCheckPoint: &eth.Checkpoint{
 				Epoch: 0,
 			},
@@ -79,7 +66,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		expectedGenesisTime := time.Unix(25000, 0)
 		var receivedGenesisTime time.Time
 		require.NoError(t, mc.State.SetGenesisTime(uint64(expectedGenesisTime.Unix())))
-		receivedGenesisTime, err = s.waitForStateInitialization()
+		receivedGenesisTime, err := s.waitForStateInitialization()
 		assert.NoError(t, err)
 		assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
 		assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
@@ -123,6 +110,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
+			var err error
 			receivedGenesisTime, err = s.waitForStateInitialization()
 			assert.NoError(t, err)
 			wg.Done()
