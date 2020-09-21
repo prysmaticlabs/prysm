@@ -6,14 +6,13 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (

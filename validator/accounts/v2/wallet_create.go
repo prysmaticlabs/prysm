@@ -7,16 +7,19 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
@@ -51,7 +54,27 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New("a wallet of this type already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
-	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
+	// Open the validator database.
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	valDB, err := kv.NewKVStore(dataDir, nil /* no public keys */)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize db")
+	}
+	// Salt and hash the password using the bcrypt algorithm
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create wallet with keymanager")
+	}
+	password := createWalletConfig.WalletCfg.WalletPassword
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate hashed password")
+	}
+	// We store the hashed password to disk.
+	if err := valDB.SaveHashedPasswordForAPI(cliCtx.Context, hashedPassword); err != nil {
+		return nil, errors.Wrap(err, "could not save hashed password to database")
+	}
+	return w, nil
 }
 
 // CreateWalletWithKeymanager specified by configuration options.
