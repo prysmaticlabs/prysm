@@ -26,69 +26,91 @@ func TestService_Constants(t *testing.T) {
 
 func TestService_InitStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
-	_, p2p, db := initializeTestServices(t, []uint64{}, []*peerData{})
-
-	t.Run("head is not ready", func(t *testing.T) {
-		defer hook.Reset()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		mc := &mock.ChainService{}
-		s := NewInitialSync(ctx, &Config{
-			Chain:         mc,
-			StateNotifier: mc.StateNotifier(),
-		})
-
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			s.Start()
-			wg.Done()
-		}()
-		go func() {
-			// Allow to exit from test (on no head loop waiting for head is started)
-			time.AfterFunc(500*time.Millisecond, func() {
-				cancel()
-			})
-		}()
-		if testutil.WaitTimeout(wg, time.Second*2) {
-			t.Fatalf("Test should have exited by now, timed out")
-		}
-		assert.NotNil(t, s)
-		assert.LogsContain(t, hook, "Waiting for state to be initialized")
-	})
-
-	t.Run("future genesis", func(t *testing.T) {
-		defer hook.Reset()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		st := testutil.NewBeaconState()
-		// Set to future time (genesis time hasn't arrived yet).
-		require.NoError(t, st.SetGenesisTime(uint64(time.Unix(4113849600, 0).Unix())))
-		mc := &mock.ChainService{
-			State: st,
-			FinalizedCheckPoint: &eth.Checkpoint{
-				Epoch: 0,
+	tests := []struct {
+		name         string
+		assert       func()
+		chainService func() *mock.ChainService
+	}{
+		{
+			name: "head is not ready",
+			assert: func() {
+				assert.LogsContain(t, hook, "Waiting for state to be initialized")
 			},
-		}
-		s := NewInitialSync(ctx, &Config{
-			P2P:           p2p,
-			DB:            db,
-			Chain:         mc,
-			StateNotifier: mc.StateNotifier(),
-		})
+		},
+		{
+			name: "future genesis",
+			chainService: func() *mock.ChainService {
+				// Set to future time (genesis time hasn't arrived yet).
+				st := testutil.NewBeaconState()
+				require.NoError(t, st.SetGenesisTime(uint64(time.Unix(4113849600, 0).Unix())))
+				return &mock.ChainService{
+					State: st,
+					FinalizedCheckPoint: &eth.Checkpoint{
+						Epoch: 0,
+					},
+				}
+			},
+			assert: func() {
+				assert.LogsContain(t, hook, "Genesis time has not arrived - not syncing")
+				assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
+			},
+		},
+		{
+			name: "current epoch",
+			chainService: func() *mock.ChainService {
+				// Set to nearby slot.
+				st := testutil.NewBeaconState()
+				require.NoError(t, st.SetGenesisTime(uint64(time.Now().Add(-5*time.Minute).Unix())))
+				return &mock.ChainService{
+					State: st,
+					FinalizedCheckPoint: &eth.Checkpoint{
+						Epoch: 0,
+					},
+				}
+			},
+			assert: func() {
+				assert.LogsContain(t, hook, "Chain started within the last epoch - not syncing")
+				assert.LogsDoNotContain(t, hook, "Genesis time has not arrived - not syncing")
+				assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
+			},
+		},
+	}
 
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			s.Start()
-			wg.Done()
-		}()
-		if testutil.WaitTimeout(wg, time.Second*2) {
-			t.Fatalf("Test should have exited by now, timed out")
-		}
-		assert.NotNil(t, s)
-		assert.LogsContain(t, hook, "Genesis time has not arrived - not syncing")
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer hook.Reset()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			mc := &mock.ChainService{}
+			// Allow overriding with customized chain service.
+			if tt.chainService != nil {
+				mc = tt.chainService()
+			}
+			s := NewInitialSync(ctx, &Config{
+				Chain:         mc,
+				StateNotifier: mc.StateNotifier(),
+			})
+			assert.NotNil(t, s)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			go func() {
+				s.Start()
+				wg.Done()
+			}()
+			go func() {
+				// Allow to exit from test (on no head loop waiting for head is started).
+				// In most tests, this is redundant, as Start() already exited.
+				time.AfterFunc(500*time.Millisecond, func() {
+					cancel()
+				})
+			}()
+			if testutil.WaitTimeout(wg, time.Second*2) {
+				t.Fatalf("Test should have exited by now, timed out")
+			}
+			tt.assert()
+		})
+	}
 }
 
 func TestService_waitForStateInitialization(t *testing.T) {
