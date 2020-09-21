@@ -1,4 +1,4 @@
-package v2
+package wallet_test
 
 import (
 	"crypto/rand"
@@ -16,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
@@ -23,13 +25,8 @@ import (
 )
 
 const (
-	walletDirName    = "wallet"
-	passwordDirName  = "walletpasswords"
-	exportDirName    = "export"
 	passwordFileName = "password.txt"
 	password         = "OhWOWthisisatest42!$"
-	mnemonicFileName = "mnemonic.txt"
-	mnemonic         = "garage car helmet trade salmon embrace market giant movie wet same champion dawn chair shield drill amazing panther accident puzzle garden mosquito kind arena"
 )
 
 func init() {
@@ -117,15 +114,13 @@ func Test_IsEmptyWallet_RandomFiles(t *testing.T) {
 	path := testutil.TempDir()
 	walletDir := filepath.Join(path, "test")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	got, err := isEmptyWallet(path)
-	require.NoError(t, err)
-	assert.Equal(t, true, got)
+	err := wallet.Exists(path)
+	require.ErrorContains(t, "no wallet found at path", err)
 
 	walletDir = filepath.Join(path, "direct")
 	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	got, err = isEmptyWallet(path)
+	err = wallet.Exists(path)
 	require.NoError(t, err)
-	assert.Equal(t, false, got)
 	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
 }
 
@@ -142,28 +137,29 @@ func Test_LockUnlockFile(t *testing.T) {
 	})
 
 	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCli(cliCtx)
+	_, err := v2.CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	wallet, err := OpenWallet(cliCtx.Context, &WalletConfig{
-		WalletDir: walletDir,
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+		WalletDir:      walletDir,
+		WalletPassword: password,
 	})
-	defer unlock(t, wallet)
-	_, err = wallet.InitializeKeymanager(cliCtx.Context, true)
+	defer unlock(t, w)
+	_, err = w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	err = wallet.LockWalletConfigFile(cliCtx.Context)
+	err = w.LockWalletConfigFile(cliCtx.Context)
 	assert.NoError(t, err)
-	err = wallet.LockWalletConfigFile(cliCtx.Context)
+	err = w.LockWalletConfigFile(cliCtx.Context)
 	assert.ErrorContains(t, "failed to lock wallet config file", err)
-	unlock(t, wallet)
-	err = wallet.LockWalletConfigFile(cliCtx.Context)
+	unlock(t, w)
+	err = w.LockWalletConfigFile(cliCtx.Context)
 	assert.NoError(t, err)
 
 }
 
-func unlock(tb assertions.AssertionTestingTB, wallet *Wallet) {
+func unlock(tb assertions.AssertionTestingTB, wallet *wallet.Wallet) {
 	err := wallet.UnlockWalletConfigFile()
 	require.NoError(tb, err)
 }

@@ -1,4 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_repository", "maybe")  # gazelle:keep
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # Prysm's third party / external dependencies.
@@ -2570,8 +2571,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:ncbkJHLhmQbnJy6AAIsotQtdo5psOlDWdEdvaaqR0j8=",
-        version = "v0.0.0-20200827165051-58ccb36e36b9",
+        sum = "h1:mUAxIu2Zh+9GK+RB1Sc+T9uSveQu32SFO+d9/rOd05M=",
+        version = "v0.0.0-20200909190233-a9190508298e",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2720,8 +2721,9 @@ def prysm_deps():
     go_repository(
         name = "org_golang_google_grpc",
         importpath = "google.golang.org/grpc",
-        sum = "h1:EC2SB8S04d2r73uptxphDSUG+kTKVgjRPF+N3xpxRB4=",
-        version = "v1.29.1",
+        sum = "h1:M5a8xTlYTxwMn5ZFkwhRabsygDY5G8TYLyQDBxJNAxE=",
+        version = "v1.30.0",
+        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "org_golang_x_crypto",
@@ -2820,12 +2822,6 @@ def prysm_deps():
         importpath = "k8s.io/api",
         sum = "h1:2AJaUQdgUZLoDZHrun21PW2Nx9+ll6cUzvn3IKhSIn0=",
         version = "v0.18.3",
-    )
-    go_repository(
-        name = "com_github_shyiko_kubesec",
-        importpath = "github.com/shyiko/kubesec",
-        sum = "h1:au/8ClCUc9HTpuGePltbhd98DZcsqZEyG9DoFILieR4=",
-        version = "v0.0.0-20190816030733-7ce23ac7239c",
     )
     go_repository(
         name = "in_gopkg_confluentinc_confluent_kafka_go_v1",
@@ -3435,6 +3431,15 @@ def prysm_deps():
         importpath = "github.com/dustinkirkland/golang-petname",
         sum = "h1:90Ly+6UfUypEF6vvvW5rQIv9opIL8CbmW9FT20LDQoY=",
         version = "v0.0.0-20191129215211-8e5a1ed0cff0",
+    )
+    http_archive(
+        name = "com_github_supranational_blst",
+        urls = [
+            "https://github.com/supranational/blst/archive/d75dab4fb87df7fc753d348b17be671c69b625f5.tar.gz",
+        ],
+        strip_prefix = "blst-d75dab4fb87df7fc753d348b17be671c69b625f5",
+        build_file = "//third_party:blst/blst.BUILD",
+        sha256 = "c541403e73fb0553a55d7ebfef6db695f48f18855fff1a87c7fd08f69827da51",
     )
     go_repository(
         name = "com_github_nbutton23_zxcvbn_go",

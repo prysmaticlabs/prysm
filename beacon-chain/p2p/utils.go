@@ -150,7 +150,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.
 func ipAddr() net.IP {
-	ip, err := iputils.ExternalIPv4()
+	ip, err := iputils.ExternalIP()
 	if err != nil {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}
@@ -160,7 +160,7 @@ func ipAddr() net.IP {
 // Attempt to dial an address to verify its connectivity
 func verifyConnectivity(addr string, port uint, protocol string) {
 	if addr != "" {
-		a := fmt.Sprintf("%s:%d", addr, port)
+		a := net.JoinHostPort(addr, fmt.Sprintf("%d", port))
 		fields := logrus.Fields{
 			"protocol": protocol,
 			"address":  a,

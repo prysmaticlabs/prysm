@@ -250,7 +250,7 @@ func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64,
 		randomByte := hashFunc(b)[i%32]
 		v, err := bState.ValidatorAtIndexReadOnly(candidateIndex)
 		if err != nil {
-			return 0, nil
+			return 0, err
 		}
 		effectiveBal := v.EffectiveBalance()
 

@@ -37,6 +37,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/gofuzz v1.1.0
 	github.com/google/uuid v1.1.1
+	github.com/gorilla/websocket v1.4.2
 	github.com/graph-gophers/graphql-go v0.0.0-20200309224638-dae41bde9ef9 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -88,7 +89,7 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20200827165051-58ccb36e36b9
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20200909190233-a9190508298e
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
@@ -96,6 +97,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
+	github.com/supranational/blst v0.1.2-alpha.1.0.20200828152217-d75dab4fb87d
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/eth2-signer-api v1.3.0

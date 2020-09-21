@@ -987,8 +987,8 @@ github.com/protolambda/zssz v0.1.5 h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1oue
 github.com/protolambda/zssz v0.1.5/go.mod h1:a4iwOX5FE7/JkKA+J/PH0Mjo9oXftN6P8NZyL28gpag=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200626171358-a933315235ec h1:9JrPtwqCvV38DXYaHbB855KUIHYMwjJBE88lL8lMu8Q=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200626171358-a933315235ec/go.mod h1:oP8FC5+TbICUyftkTWs+8JryntjIJLJvWvApK3z2AYw=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200827165051-58ccb36e36b9 h1:ncbkJHLhmQbnJy6AAIsotQtdo5psOlDWdEdvaaqR0j8=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200827165051-58ccb36e36b9/go.mod h1:k7b2dxy6RppCG6kmOJkNOXzRpEoTdsPygc2aQhsUsZk=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200909190233-a9190508298e h1:mUAxIu2Zh+9GK+RB1Sc+T9uSveQu32SFO+d9/rOd05M=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200909190233-a9190508298e/go.mod h1:k7b2dxy6RppCG6kmOJkNOXzRpEoTdsPygc2aQhsUsZk=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20191017011753-53b773adde52/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669 h1:cX6YRZnZ9sgMqM5U14llxUiXVNJ3u07Res1IIjTOgtI=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
@@ -1097,6 +1097,8 @@ github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5
 github.com/stretchr/testify v1.6.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
+github.com/supranational/blst v0.1.2-alpha.1.0.20200828152217-d75dab4fb87d h1:+SGrEOwpPjlaMcSDLI5p/nLCiEZegXK8aKoELNtCcZE=
+github.com/supranational/blst v0.1.2-alpha.1.0.20200828152217-d75dab4fb87d/go.mod h1:jZJtfjgudtNl4en1tzwPIV3KjUnQUvG3/j+w+fVonLw=
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d h1:gZZadD8H+fF+n9CmNhYL1Y0dJB+kLOmKd7FbPJLeGHs=
 github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d/go.mod h1:9OrXJhf154huy1nPWmuSrkgjPUtUNhA+Zmy+6AESzuA=

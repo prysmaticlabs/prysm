@@ -50,7 +50,7 @@ func TestCreateListener(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		cfg:                   &Config{UDPPort: uint(port)},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
@@ -125,7 +125,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	_, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 	node, err := s.createLocalNode(pkey, addr, 0, 0)
 	require.NoError(t, err)
@@ -142,7 +142,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 			UDPPort: 0,
 		},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: []byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 	listener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
