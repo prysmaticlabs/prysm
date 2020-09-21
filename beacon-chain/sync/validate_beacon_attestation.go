@@ -68,6 +68,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+	if helpers.SlotToEpoch(att.Data.Slot) != att.Data.Target.Epoch {
+		log.Error("rejected1")
+		return pubsub.ValidationReject
+	}
 
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
@@ -89,6 +93,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
 		return pubsub.ValidationIgnore
+	}
+
+	if err := s.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
+		log.Error("rejected2")
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
 	}
 
 	// The attestation's committee index (attestation.data.index) is for the correct subnet.
