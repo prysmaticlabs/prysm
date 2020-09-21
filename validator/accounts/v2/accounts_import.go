@@ -14,20 +14,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var derivationPathRegex = regexp.MustCompile("m_12381_3600_([0-9]+)_([0-9]+)_([0-9]+)")
@@ -93,19 +92,14 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
-		dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-		valDB, err := kv.NewKVStore(dataDir, nil /* no public keys */)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize db")
-		}
 		password := cfg.WalletCfg.WalletPassword
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not generate hashed password")
 		}
 		// We store the hashed password to disk.
-		if err := valDB.SaveHashedPasswordForAPI(cliCtx.Context, hashedPassword); err != nil {
-			return nil, errors.Wrap(err, "could not save hashed password to database")
+		if err := w.SaveHashedPassword(cliCtx.Context, hashedPassword); err != nil {
+			return nil, err
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created new wallet",

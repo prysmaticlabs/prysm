@@ -15,11 +15,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -66,17 +64,13 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	valDB, err := kv.NewKVStore(dataDir, nil /* no public keys */)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize db")
-	}
-	if _, err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
+	w, err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
 		Mnemonic:       mnemonic,
 		NumAccounts:    numAccounts,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 	password := walletPassword
@@ -85,8 +79,8 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not generate hashed password")
 	}
 	// We store the hashed password to disk.
-	if err := valDB.SaveHashedPasswordForAPI(cliCtx.Context, hashedPassword); err != nil {
-		return errors.Wrap(err, "could not save hashed password to database")
+	if err := w.SaveHashedPassword(cliCtx.Context, hashedPassword); err != nil {
+		return err
 	}
 	log.Infof(
 		"Successfully recovered HD wallet and saved configuration to disk. " +

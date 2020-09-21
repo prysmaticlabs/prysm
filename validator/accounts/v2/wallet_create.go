@@ -7,12 +7,10 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -55,11 +53,6 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 			" alternative location for the new wallet or remove the current wallet")
 	}
 	// Open the validator database.
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	valDB, err := kv.NewKVStore(dataDir, nil /* no public keys */)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize db")
-	}
 	// Salt and hash the password using the bcrypt algorithm
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 	if err != nil {
@@ -71,7 +64,7 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.Wrap(err, "could not generate hashed password")
 	}
 	// We store the hashed password to disk.
-	if err := valDB.SaveHashedPasswordForAPI(cliCtx.Context, hashedPassword); err != nil {
+	if err := w.SaveHashedPassword(cliCtx.Context, hashedPassword); err != nil {
 		return nil, errors.Wrap(err, "could not save hashed password to database")
 	}
 	return w, nil

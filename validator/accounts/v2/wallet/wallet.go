@@ -11,21 +11,20 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var log = logrus.WithField("prefix", "wallet")
@@ -33,6 +32,8 @@ var log = logrus.WithField("prefix", "wallet")
 const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
+	// HashedPasswordFileName for the wallet.
+	HashedPasswordFileName = "hash"
 	// DirectoryPermissions for directories created under the wallet path.
 	DirectoryPermissions = os.ModePerm
 	// NewWalletPasswordPromptText for wallet creation.
@@ -139,13 +140,11 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		false, /* Do not confirm password */
 		ValidateExistingPass,
 	)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	valDB, err := kv.NewKVStore(dataDir, nil /* no public keys */)
+	hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(walletDir, HashedPasswordFileName))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize db")
+		return nil, err
 	}
-	hash, err := valDB.HashedPasswordForAPI(cliCtx.Context)
-	if err := bcrypt.CompareHashAndPassword(hash, []byte(walletPassword)); err != nil {
+	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(walletPassword)); err != nil {
 		return nil, errors.Wrap(err, "wrong password for wallet")
 	}
 	// Compare the wallet password here.
@@ -385,6 +384,16 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 		return errors.Wrapf(err, "could not write %s", seedFilePath)
 	}
 	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
+	return nil
+}
+
+// SaveHashedPassword to disk for the wallet.
+func (w *Wallet) SaveHashedPassword(ctx context.Context, hashedPassword []byte) error {
+	hashFilePath := filepath.Join(w.walletDir, HashedPasswordFileName)
+	// Write the config file to disk.
+	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return errors.Wrap(err, "could not write hashed password for wallet to disk")
+	}
 	return nil
 }
 
