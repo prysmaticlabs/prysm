@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -79,15 +80,15 @@ func TestCreateDepositConfig(t *testing.T) {
 		walletPasswordFile: passwordFilePath,
 		skipDepositConfirm: true,
 	})
-	wallet, err := CreateAndSaveWalletCli(cliCtx)
+	w, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)
 
 	err = CreateAccount(cliCtx.Context, &CreateAccountConfig{
-		Wallet:      wallet,
+		Wallet:      w,
 		NumAccounts: 3,
 	})
 	require.NoError(t, err)
-	keymanager, err := wallet.InitializeKeymanager(
+	keymanager, err := w.InitializeKeymanager(
 		cliCtx.Context,
 		true, /* skip mnemonic confirm */
 	)
@@ -179,14 +180,14 @@ func TestCreateDepositConfig(t *testing.T) {
 // createDepositConfigHelper returns a SendDepositConfig when given a particular wallet configuration.
 func createDepositConfigHelper(t *testing.T, config *depositTestWalletConfig) *derived.SendDepositConfig {
 	cliCtx := setupWalletCtxforDeposits(t, config)
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		err := errors.New("could not open wallet")
 		require.NoError(t, err)
 		return nil, err
 	})
 	require.NoError(t, err)
 
-	keymanager, err := wallet.InitializeKeymanager(
+	keymanager, err := w.InitializeKeymanager(
 		cliCtx.Context,
 		true, /* skip mnemonic confirm */
 	)

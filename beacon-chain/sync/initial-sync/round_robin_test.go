@@ -8,20 +8,12 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
-
-func TestConstants(t *testing.T) {
-	if params.BeaconConfig().MaxPeersToSync*flags.Get().BlockBatchLimit > 1000 {
-		t.Fatal("rpc rejects requests over 1000 range slots")
-	}
-}
 
 func TestService_roundRobinSync(t *testing.T) {
 	tests := []struct {

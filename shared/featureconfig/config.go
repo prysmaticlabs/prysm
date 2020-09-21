@@ -42,6 +42,7 @@ type Flags struct {
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
+	EnableBlst                                 bool // Enables new BLS library from supranational.
 	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
@@ -270,6 +271,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableCheckPtInfoCache.Name) {
 		log.Warn("Disabling advanced check point info cache")
 		cfg.UseCheckPointInfoCache = false
+	}
+	if ctx.Bool(enableBlst.Name) {
+		log.Warn("Enabling new BLS library blst")
+		cfg.EnableBlst = true
 	}
 	Init(cfg)
 }

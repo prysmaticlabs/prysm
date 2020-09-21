@@ -26,14 +26,16 @@ var deltaFiles = []string{"source_deltas.yaml", "target_deltas.yaml", "head_delt
 
 func runPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
-	testPath := "rewards/core/pyspec_tests"
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, testPath)
-	for _, folder := range testFolders {
-		helpers.ClearCache()
-		t.Run(folder.Name(), func(t *testing.T) {
-			folderPath := path.Join(testsFolderPath, folder.Name())
-			runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
-		})
+	testPaths := []string{"rewards/basic/pyspec_tests", "rewards/leak/pyspec_tests", "rewards/random/pyspec_tests"}
+	for _, testPath := range testPaths {
+		testFolders, testsFolderPath := testutil.TestFolders(t, config, testPath)
+		for _, folder := range testFolders {
+			helpers.ClearCache()
+			t.Run(folder.Name(), func(t *testing.T) {
+				folderPath := path.Join(testsFolderPath, folder.Name())
+				runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
+			})
+		}
 	}
 }
 
