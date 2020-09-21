@@ -78,6 +78,10 @@ func (p *PublicKey) Marshal() []byte {
 	return p.p.Compress()
 }
 
+func (p *PublicKey) Equals(p2 iface.PublicKey) bool {
+	return p.p.Equals(p2.(*PublicKey).p)
+}
+
 // Copy the public key to a new pointer reference.
 func (p *PublicKey) Copy() iface.PublicKey {
 	np := *p.p

@@ -17,6 +17,7 @@ type PublicKey interface {
 	Marshal() []byte
 	Copy() PublicKey
 	Aggregate(p2 PublicKey) PublicKey
+	Equals(p2 PublicKey) bool
 }
 
 // Signature represents a BLS signature.

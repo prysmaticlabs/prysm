@@ -3,6 +3,7 @@
 package blst
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/sirupsen/logrus"
 	blst "github.com/supranational/blst/bindings/go"
 )
 
@@ -168,20 +170,52 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.Pu
 	if len(sigs) == 0 || len(pubKeys) == 0 {
 		return false, nil
 	}
-	rawSigs := new(blstSignature).BatchUncompress(sigs)
-
 	length := len(sigs)
 	if length != len(pubKeys) || length != len(msgs) {
 		return false, errors.Errorf("provided signatures, pubkeys and messages have differing lengths. S: %d, P: %d,M %d",
 			length, len(pubKeys), len(msgs))
 	}
-	mulP1Aff := make([]*blstPublicKey, length)
-	rawMsgs := make([]blst.Message, length)
+	var err error
+	sigs, msgs, pubKeys, err = removeDuplicates(sigs, msgs, pubKeys)
+	if err != nil {
+		return false, err
+	}
+	rawSigs := new(blstSignature).BatchUncompress(sigs)
+
+	oldLength := length
+	length = len(rawSigs)
+	mulP1Aff := make([]*blstPublicKey, 0, length)
+	rawMsgs := make([]blst.Message, 0, length)
+	mulP2Aff := make([]*blstSignature, 0, length)
+	msgMap := make(map[[32]byte]int)
+	repeatedSigs := 0
 
 	for i := 0; i < length; i++ {
-		mulP1Aff[i] = pubKeys[i].(*PublicKey).p
-		rawMsgs[i] = msgs[i][:]
+		if indx, ok := msgMap[msgs[i]]; ok {
+			repeatedSigs++
+			npKey := *pubKeys[i].(*PublicKey).p
+			nSig := *rawSigs[i]
+
+			if mulP1Aff[indx].Equals(&npKey) && mulP2Aff[indx].Equals(&nSig) {
+				continue
+			}
+
+			af := new(blstAggregatePublicKey).Aggregate([]*blstPublicKey{mulP1Aff[indx], &npKey}).ToAffine()
+			mulP1Aff[indx] = af
+			as := new(blstAggregateSignature).Aggregate([]*blstSignature{mulP2Aff[indx], &nSig}).ToAffine()
+			mulP2Aff[indx] = as
+			continue
+		}
+		addedIdx := len(mulP1Aff)
+		npKey := *pubKeys[i].(*PublicKey).p
+		mulP1Aff = append(mulP1Aff, &npKey)
+		nSig := *rawSigs[i]
+		mulP2Aff = append(mulP2Aff, &nSig)
+		rawMsgs = append(rawMsgs, msgs[i][:])
+		msgMap[msgs[i]] = addedIdx
 	}
+
+	logrus.Errorf("number of repeated %d with total %d", repeatedSigs, oldLength)
 	// Secure source of RNG
 	randGen := rand.NewGenerator()
 
@@ -191,7 +225,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.Pu
 		scalar.FromBEndian(rbytes[:])
 	}
 	dummySig := new(blstSignature)
-	return dummySig.MultipleAggregateVerify(rawSigs, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
+	return dummySig.MultipleAggregateVerify(mulP2Aff, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
 }
 
 // Marshal a signature into a LittleEndian byte slice.
@@ -213,4 +247,41 @@ func (s *Signature) Copy() iface.Signature {
 // are valid from the message provided.
 func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
 	return new(blstSignature).VerifyCompressed(signature, pub, msg, dst)
+}
+
+func removeDuplicates(sigs [][]byte, msgs [][32]byte, pubKeys []iface.PublicKey) ([][]byte,
+	[][32]byte, []iface.PublicKey, error) {
+	length := len(sigs)
+	newPubKeys := make([]iface.PublicKey, 0, length)
+	newSigs := make([][]byte, 0, len(sigs))
+	newMsgs := make([][32]byte, 0, len(sigs))
+	msgMap := make(map[[32]byte]int)
+
+	for i := 0; i < length; i++ {
+		if indx, ok := msgMap[msgs[i]]; ok {
+			pubkeyEqual := newPubKeys[indx].Equals(pubKeys[i])
+			signatureEqual := bytes.Equal(newSigs[indx], sigs[i])
+
+			// If either pubkey/signature matches but the corresponding signature/pubkey
+			// doesn't we mark the batch as false.
+			if (pubkeyEqual && !signatureEqual) || (!pubkeyEqual && signatureEqual) {
+				return nil, nil, nil, errors.New("invalid signature and pubkey pair provided")
+			}
+			// No need to create another pairing as both the
+			// pubkey and signature match.
+			if pubkeyEqual && signatureEqual {
+				continue
+			}
+			newPubKeys = append(newPubKeys, pubKeys[i])
+			newSigs = append(newSigs, sigs[i])
+			newMsgs = append(newMsgs, msgs[i])
+			continue
+		}
+		addedIdx := len(newPubKeys)
+		newPubKeys = append(newPubKeys, pubKeys[i])
+		newSigs = append(newSigs, sigs[i])
+		newMsgs = append(newMsgs, msgs[i])
+		msgMap[msgs[i]] = addedIdx
+	}
+	return newSigs, newMsgs, newPubKeys, nil
 }

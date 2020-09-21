@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -21,6 +22,25 @@ func TestMarshalUnmarshal(t *testing.T) {
 	pk2, err := blst.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	assert.DeepEqual(t, pk.Marshal(), pk2.Marshal(), "Keys not equal")
+}
+
+func TestMultipleSignatureVerificationRepeatedMessages(t *testing.T) {
+	pubkeys := make([]iface.PublicKey, 0, 4)
+	sigs := make([][]byte, 0, 4)
+	var msgs [][32]byte
+	for i := 0; i < 4; i++ {
+		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i % 2)}
+		//t.Errorf("msg: %s", string(msg[:]))
+		priv := blst.RandKey()
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:]).Marshal()
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
+		msgs = append(msgs, msg)
+	}
+	verify, err := blst.VerifyMultipleSignatures(append(sigs, sigs...), append(msgs, msgs...), append(pubkeys, pubkeys...))
+	assert.NoError(t, err, "Signature did not verify")
+	assert.Equal(t, true, verify, "Signature did not verify")
 }
 
 func TestSecretKeyFromBytes(t *testing.T) {
