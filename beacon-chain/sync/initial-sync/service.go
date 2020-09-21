@@ -86,7 +86,7 @@ func (s *Service) Start() {
 	}
 	if genesis.After(roughtime.Now()) {
 		s.markSynced(genesis)
-		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
+		log.WithField("genesisTime", genesis).Info("Genesis time has not arrived - not syncing")
 		return
 	}
 	currentSlot := helpers.SlotsSince(genesis)

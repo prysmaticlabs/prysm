@@ -25,16 +25,70 @@ func TestService_Constants(t *testing.T) {
 }
 
 func TestService_InitStartStop(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	hook := logTest.NewGlobal()
+	_, p2p, db := initializeTestServices(t, []uint64{}, []*peerData{})
 
-	mc, p2p, db := initializeTestServices(t, []uint64{}, []*peerData{})
-	s := NewInitialSync(ctx, &Config{
-		P2P:   p2p,
-		DB:    db,
-		Chain: mc,
+	t.Run("head is not ready", func(t *testing.T) {
+		defer hook.Reset()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		mc := &mock.ChainService{}
+		s := NewInitialSync(ctx, &Config{
+			Chain:         mc,
+			StateNotifier: mc.StateNotifier(),
+		})
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			s.Start()
+			wg.Done()
+		}()
+		go func() {
+			// Allow to exit from test (on no head loop waiting for head is started)
+			time.AfterFunc(500*time.Millisecond, func() {
+				cancel()
+			})
+		}()
+		if testutil.WaitTimeout(wg, time.Second*2) {
+			t.Fatalf("Test should have exited by now, timed out")
+		}
+		assert.NotNil(t, s)
+		assert.LogsContain(t, hook, "Waiting for state to be initialized")
 	})
-	assert.NotNil(t, s)
+
+	t.Run("future genesis", func(t *testing.T) {
+		defer hook.Reset()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		st := testutil.NewBeaconState()
+		// Set to future time (genesis time hasn't arrived yet).
+		require.NoError(t, st.SetGenesisTime(uint64(time.Unix(4113849600, 0).Unix())))
+		mc := &mock.ChainService{
+			State: st,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
+		}
+		s := NewInitialSync(ctx, &Config{
+			P2P:           p2p,
+			DB:            db,
+			Chain:         mc,
+			StateNotifier: mc.StateNotifier(),
+		})
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			s.Start()
+			wg.Done()
+		}()
+		if testutil.WaitTimeout(wg, time.Second*2) {
+			t.Fatalf("Test should have exited by now, timed out")
+		}
+		assert.NotNil(t, s)
+		assert.LogsContain(t, hook, "Genesis time has not arrived - not syncing")
+	})
 }
 
 func TestService_waitForStateInitialization(t *testing.T) {
