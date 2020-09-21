@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -42,7 +41,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
 	newService := func(ctx context.Context, mc *mock.ChainService) *Service {
 		s := NewInitialSync(ctx, &Config{
-			P2P:           p2pt.NewTestP2P(t),
 			Chain:         mc,
 			StateNotifier: mc.StateNotifier(),
 		})
