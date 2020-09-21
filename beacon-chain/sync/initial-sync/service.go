@@ -79,13 +79,11 @@ func (s *Service) Start() {
 	if err != nil {
 		return
 	}
-
 	if flags.Get().DisableSync {
 		s.markSynced(genesis)
 		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
 		return
 	}
-
 	if genesis.After(roughtime.Now()) {
 		s.markSynced(genesis)
 		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
@@ -110,13 +108,7 @@ func (s *Service) Start() {
 		panic(err)
 	}
 	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
-	s.synced = true
-	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: genesis,
-		},
-	})
+	s.markSynced(genesis)
 }
 
 // Stop initial sync.
