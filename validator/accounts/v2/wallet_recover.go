@@ -10,15 +10,19 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 )
 
 const phraseWordCount = 24
@@ -62,6 +66,11 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	valDB, err := kv.NewKVStore(dataDir, nil /* no public keys */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize db")
+	}
 	if _, err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
@@ -69,6 +78,15 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 		NumAccounts:    numAccounts,
 	}); err != nil {
 		return err
+	}
+	password := walletPassword
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
+	if err != nil {
+		return errors.Wrap(err, "could not generate hashed password")
+	}
+	// We store the hashed password to disk.
+	if err := valDB.SaveHashedPasswordForAPI(cliCtx.Context, hashedPassword); err != nil {
+		return errors.Wrap(err, "could not save hashed password to database")
 	}
 	log.Infof(
 		"Successfully recovered HD wallet and saved configuration to disk. " +

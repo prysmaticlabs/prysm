@@ -11,11 +11,13 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -23,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var log = logrus.WithField("prefix", "wallet")
@@ -136,6 +139,16 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		false, /* Do not confirm password */
 		ValidateExistingPass,
 	)
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	valDB, err := kv.NewKVStore(dataDir, nil /* no public keys */)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize db")
+	}
+	hash, err := valDB.HashedPasswordForAPI(cliCtx.Context)
+	if err := bcrypt.CompareHashAndPassword(hash, []byte(walletPassword)); err != nil {
+		return nil, errors.Wrap(err, "wrong password for wallet")
+	}
+	// Compare the wallet password here.
 	return OpenWallet(cliCtx.Context, &Config{
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
