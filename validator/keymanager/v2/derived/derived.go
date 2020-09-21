@@ -403,6 +403,32 @@ func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error)
 	return tx.Data(), nil
 }
 
+// RefreshWalletPassword encrypts the seed config with the wallet password and
+// writes it to disk, such as when the wallet password was modified by the user.
+func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
+	encryptor := keystorev4.New()
+	encryptedFields, err := encryptor.Encrypt(dr.seed, dr.wallet.Password())
+	if err != nil {
+		return err
+	}
+	newConfig := &SeedConfig{
+		Crypto:      encryptedFields,
+		ID:          dr.seedCfg.ID,
+		NextAccount: dr.seedCfg.NextAccount,
+		Version:     dr.seedCfg.Version,
+		Name:        dr.seedCfg.Name,
+	}
+	dr.seedCfg = newConfig
+	encodedSeedFile, err := marshalEncryptedSeedFile(newConfig)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
+	}
+	if err = dr.wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
+		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+	}
+	return nil
+}
+
 // Append the public and the secret key for the provided secret key to their respective caches
 func (dr *Keymanager) appendKeysToCaches(secretKey bls.SecretKey) error {
 	publicKey := bytesutil.ToBytes48(secretKey.PublicKey().Marshal())

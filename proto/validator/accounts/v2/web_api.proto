@@ -27,6 +27,12 @@ service Wallet {
             get: "/v2/validator/mnemonic/generate"
         };
     }
+    rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/password/edit",
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
@@ -173,4 +179,9 @@ message NodeConnectionResponse {
     uint64 genesis_time = 4;
     // Address of the validator deposit contract in the eth1 chain.
     bytes deposit_contract_address = 5;
+}
+
+message ChangePasswordRequest {
+    string password = 1;
+    string password_confirmation = 2;
 }

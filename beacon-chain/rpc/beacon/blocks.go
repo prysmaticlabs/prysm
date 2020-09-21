@@ -333,8 +333,10 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *ptypes.E
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 	valCount := uint64(hs.NumValidators())
-	fEpoch := hs.FinalizedCheckpointEpoch()
-	wsEpoch := helpers.WeakSubjectivityCheckptEpoch(valCount, fEpoch)
+	wsEpoch, err := helpers.WeakSubjectivityCheckptEpoch(valCount)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
+	}
 	wsSlot, err := helpers.StartSlot(wsEpoch)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
@@ -346,11 +348,11 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *ptypes.E
 	}
 	stateRoot, err := wsState.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state")
+		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state root")
 	}
 	blkRoot, err := wsState.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state")
+		return nil, status.Error(codes.Internal, "Could not get weak subjectivity block root")
 	}
 
 	return &ethpb.WeakSubjectivityCheckpoint{
