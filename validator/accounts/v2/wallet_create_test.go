@@ -120,6 +120,24 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	return walletDir, passwordsDir, passwordFilePath
 }
 
+func TestCreateWallet_AlreadyExists(t *testing.T) {
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     v2keymanager.Direct,
+		walletPasswordFile: walletPasswordFile,
+	})
+
+	// We attempt to create the wallet.
+	_, err := CreateAndSaveWalletCli(cliCtx)
+	require.NoError(t, err)
+
+	// We attempt to create the wallet again in the same directory.
+	_, err = CreateAndSaveWalletCli(cliCtx)
+	assert.ErrorContains(t, "wallet already exists at this location", err)
+}
+
 func TestCreateOrOpenWallet(t *testing.T) {
 	hook := logTest.NewGlobal()
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
