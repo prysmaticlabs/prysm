@@ -36,7 +36,7 @@ const (
 	Direct
 	// Remote keymanager capable of remote-signing data through RPC requests.
 	Remote
-	// Remote keymanager capable of remote-signing data through HTTP requests.
+	// RemoteHTTP keymanager capable of remote-signing data through HTTP requests.
 	RemoteHTTP
 )
 

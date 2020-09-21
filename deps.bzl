@@ -84,8 +84,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_bloxapp_key_vault",
         importpath = "github.com/bloxapp/key-vault",
-        sum = "h1:L9odX4moAsgPO6rIJjHxxuypooQQD0KXYDnujSflyIM=",
-        version = "v0.1.3",
+        sum = "h1:QYtYNtMBheCRhWxtHEhPchQ4f3nbKFW+aueZrtk9x0U=",
+        version = "v0.1.4",
     )
     go_repository(
         name = "com_github_aead_siphash",
@@ -2726,10 +2726,10 @@ def prysm_deps():
     )
     go_repository(
         name = "org_golang_google_grpc",
-        importpath = "google.golang.org/grpc",
-        sum = "h1:M5a8xTlYTxwMn5ZFkwhRabsygDY5G8TYLyQDBxJNAxE=",
-        version = "v1.30.0",
         build_file_proto_mode = "disable_global",
+        importpath = "google.golang.org/grpc",
+        sum = "h1:EC2SB8S04d2r73uptxphDSUG+kTKVgjRPF+N3xpxRB4=",
+        version = "v1.29.1",
     )
     go_repository(
         name = "org_golang_x_crypto",
