@@ -81,38 +81,20 @@ func (s *Service) Start() {
 	}
 
 	if flags.Get().DisableSync {
-		s.synced = true
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: genesis,
-			},
-		})
+		s.markSynced(genesis)
 		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
 		return
 	}
 
 	if genesis.After(roughtime.Now()) {
-		s.synced = true
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: genesis,
-			},
-		})
+		s.markSynced(genesis)
 		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
 		return
 	}
 	currentSlot := helpers.SlotsSince(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
-		s.synced = true
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: genesis,
-			},
-		})
+		s.markSynced(genesis)
 		return
 	}
 	s.chainStarted = true
@@ -120,13 +102,7 @@ func (s *Service) Start() {
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
-		s.synced = true
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: genesis,
-			},
-		})
+		s.markSynced(genesis)
 		return
 	}
 	s.waitForMinimumPeers()
@@ -238,4 +214,15 @@ func (s *Service) waitForStateInitialization() (time.Time, error) {
 			return time.Time{}, err
 		}
 	}
+}
+
+// markSynced marks node as synced and notifies feed listeners.
+func (s *Service) markSynced(genesis time.Time) {
+	s.synced = true
+	s.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Synced,
+		Data: &statefeed.SyncedData{
+			StartTime: genesis,
+		},
+	})
 }
