@@ -8,9 +8,8 @@ package beaconclient
 import (
 	"context"
 
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
