@@ -203,7 +203,6 @@ func (s *Service) waitForMinimumPeers() {
 // already properly configured or system waits up until state initialized event is triggered.
 func (s *Service) waitForStateInitialization() time.Time {
 	var genesis time.Time
-
 	headState, err := s.chain.HeadState(s.ctx)
 	if headState == nil || err != nil {
 		log.Info("Waiting for state to be initialized")
