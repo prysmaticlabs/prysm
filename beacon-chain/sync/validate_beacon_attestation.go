@@ -69,7 +69,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 	if helpers.SlotToEpoch(att.Data.Slot) != att.Data.Target.Epoch {
-		log.Error("rejected1")
 		return pubsub.ValidationReject
 	}
 
@@ -96,7 +95,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	if err := s.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
-		log.Error("rejected2")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
