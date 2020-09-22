@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestPeerScorer_BlockProvider_Score(t *testing.T) {
@@ -54,7 +54,7 @@ func TestPeerScorer_BlockProvider_Score(t *testing.T) {
 				batchWeight := scorer.Params().ProcessedBatchWeight
 				scorer.IncrementProcessedBlocks("peer1", batchSize*3)
 				assert.Equal(t, roundScore(batchWeight*3), scorer.Score("peer1"), "Unexpected score")
-				scorer.Touch("peer1", roughtime.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
+				scorer.Touch("peer1", timeutils.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
 			},
 			check: func(scorer *peers.BlockProviderScorer) {
 				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")

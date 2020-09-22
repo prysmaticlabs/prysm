@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -84,7 +84,7 @@ func (s *Service) Start() {
 		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
 		return
 	}
-	if genesis.After(roughtime.Now()) {
+	if genesis.After(timeutils.Now()) {
 		s.markSynced(genesis)
 		log.WithField("genesisTime", genesis).Info("Genesis time has not arrived - not syncing")
 		return
