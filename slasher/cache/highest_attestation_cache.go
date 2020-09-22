@@ -2,21 +2,12 @@ package cache
 
 import (
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 )
 
 var (
 	// validatorsCacheSize defines the max number of validators public keys the cache can hold.
-	highestAttCacheSize = 300000
-	//// Metrics for the validator cache.
-	//validatorsCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-	//	Name: "validators_cache_hit",
-	//	Help: "The total number of cache hits on the validators cache.",
-	//})
-	//validatorsCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-	//	Name: "validators_cache_miss",
-	//	Help: "The total number of cache misses on the validators cache.",
-	//})
+	highestAttCacheSize = 100000
 )
 
 // PublicKeyCache is used to store the public keys needed for signature verification.
@@ -37,11 +28,11 @@ func NewHighestAttestationCache(size int, onEvicted func(key interface{}, value 
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.
-func (c *HighestAttestationCache) Get(validatorIdx uint64) (*types.HighestAttestation, bool) {
+func (c *HighestAttestationCache) Get(validatorIdx uint64) (*slashpb.HighestAttestation, bool) {
 	item, exists := c.cache.Get(validatorIdx)
 	if exists && item != nil {
 		//validatorsCacheHit.Inc()
-		return item.(*types.HighestAttestation), true
+		return item.(*slashpb.HighestAttestation), true
 	}
 
 	//validatorsCacheMiss.Inc()
@@ -49,7 +40,7 @@ func (c *HighestAttestationCache) Get(validatorIdx uint64) (*types.HighestAttest
 }
 
 // Set the response in the cache.
-func (c *HighestAttestationCache) Set(validatorIdx uint64, highest *types.HighestAttestation) {
+func (c *HighestAttestationCache) Set(validatorIdx uint64, highest *slashpb.HighestAttestation) {
 	_ = c.cache.Add(validatorIdx, highest)
 }
 

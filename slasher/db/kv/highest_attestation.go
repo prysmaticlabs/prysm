@@ -4,8 +4,8 @@ import (
 	"context"
 	json "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -19,7 +19,7 @@ func persistHighestAttestationCacheOnEviction(db *Store) func(key interface{}, v
 	return func(key interface{}, value interface{}) {
 		log.Tracef("Evicting highest attestation for validator: %d", key.(uint64))
 		err := db.update(func(tx *bolt.Tx) error {
-			enc, err := json.Marshal(value.(*types.HighestAttestation))
+			enc, err := json.Marshal(value.(*slashpb.HighestAttestation))
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal")
 			}
@@ -43,7 +43,7 @@ func (db *Store) EnableHighestAttestationCache(enable bool) {
 	db.highestAttCacheEnabled = enable
 }
 
-func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*types.HighestAttestation, error) {
+func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
 	defer span.End()
 
@@ -52,11 +52,10 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*t
 		if ok {
 			return h, nil
 		}
-		return nil, nil // default
 	}
 
 	key := highestAttkey(validatorID)
-	highestAtt := &types.HighestAttestation{HighestSourceEpoch: 0,HighestTargetEpoch:0} // default
+	var highestAtt *slashpb.HighestAttestation
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(highestAttestationBucket)
 		if enc := b.Get(key); enc != nil {
@@ -70,7 +69,7 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*t
 	return highestAtt, err
 }
 
-func (db *Store) SaveHighestAttestation(ctx context.Context, validatorID uint64, highest *types.HighestAttestation) error {
+func (db *Store) SaveHighestAttestation(ctx context.Context, validatorID uint64, highest *slashpb.HighestAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SavePubKey")
 	defer span.End()
 

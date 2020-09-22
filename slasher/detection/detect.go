@@ -3,6 +3,7 @@ package detection
 import (
 	"bytes"
 	"context"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -231,7 +232,7 @@ func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Inde
 		}
 		//createDefault := false
 		if h == nil { // create default
-			h = &types.HighestAttestation{HighestSourceEpoch: 0,HighestTargetEpoch:0}
+			h = &slashpb.HighestAttestation{HighestSourceEpoch: 0,HighestTargetEpoch:0}
 			//createDefault = true
 		}
 		update := false
