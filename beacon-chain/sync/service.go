@@ -253,6 +253,7 @@ func (s *Service) registerHandlers() {
 					stateSub.Unsubscribe()
 					time.Sleep(timeutils.Until(data.StartTime))
 				}
+				log.WithField("starttime", data.StartTime).Debug("Chain started in sync service")
 				s.chainStarted = true
 			}
 		case <-s.ctx.Done():
