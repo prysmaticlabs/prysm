@@ -91,6 +91,9 @@ func DefaultAndValidatePrompt(promptText string, defaultValue string, validateFu
 		if ok := scanner.Scan(); ok {
 			item := scanner.Text()
 			response = strings.TrimRight(item, "\r\n")
+			if response == "" {
+				return defaultValue, nil
+			}
 			if err := validateFunc(response); err != nil {
 				fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
 			} else {
