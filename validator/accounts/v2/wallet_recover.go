@@ -10,17 +10,16 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/tyler-smith/go-bip39"
-	"github.com/tyler-smith/go-bip39/wordlists"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const phraseWordCount = 24
