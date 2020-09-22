@@ -46,7 +46,8 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 		if err != nil {
 			if e, ok := status.FromError(err); ok {
 				switch e.Code() {
-				case codes.Canceled, codes.Internal:
+				case codes.Canceled, codes.Internal, codes.Unavailable:
+					log.WithError(err).Infof("Trying to restart connection. rpc status: %v", e.Code())
 					err = bs.restartBeaconConnection(ctx)
 					if err != nil {
 						log.WithError(err).Error("Could not restart beacon connection")
@@ -114,7 +115,8 @@ func (bs *Service) ReceiveAttestations(ctx context.Context) {
 		if err != nil {
 			if e, ok := status.FromError(err); ok {
 				switch e.Code() {
-				case codes.Canceled, codes.Internal:
+				case codes.Canceled, codes.Internal, codes.Unavailable:
+					log.WithError(err).Infof("Trying to restart connection. rpc status: %v", e.Code())
 					err = bs.restartBeaconConnection(ctx)
 					if err != nil {
 						log.WithError(err).Error("Could not restart beacon connection")
