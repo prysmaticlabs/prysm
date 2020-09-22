@@ -257,6 +257,7 @@ func TestService_markSynced(t *testing.T) {
 	require.NotNil(t, s)
 	assert.Equal(t, false, s.chainStarted)
 	assert.Equal(t, false, s.synced)
+	assert.Equal(t, true, s.Syncing())
 	assert.NoError(t, s.Status())
 	s.chainStarted = true
 	assert.ErrorContains(t, "syncing", s.Status())
@@ -288,5 +289,5 @@ func TestService_markSynced(t *testing.T) {
 		t.Fatalf("Test should have exited by now, timed out")
 	}
 	assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
-	assert.Equal(t, true, s.synced)
+	assert.Equal(t, false, s.Syncing())
 }
