@@ -169,10 +169,6 @@ var (
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
 	}
-	enableRoughtime = &cli.BoolFlag{
-		Name:  "enable-roughtime",
-		Usage: "Enables periodic roughtime syncs.",
-	}
 	disableCheckPtInfoCache = &cli.BoolFlag{
 		Name:  "disable-check-point-cache",
 		Usage: "Disables check point info caching",
@@ -566,6 +562,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableRoughtime = &cli.BoolFlag{
+		Name:   "enable-roughtime",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -644,6 +645,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableFinalizedDepositsCache,
 	deprecatedCheckptInfoCache,
 	deprecatedBatchBlockVerify,
+	deprecatedEnableRoughtime,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -703,7 +705,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
-	enableRoughtime,
 	disableCheckPtInfoCache,
 }...)
 
