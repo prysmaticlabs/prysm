@@ -2,18 +2,22 @@ package rpc
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -26,11 +30,7 @@ var (
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	// First, we check if the validator already has a password. In this case,
 	// the user should NOT be able to signup and the function will return an error.
-	existingPassword, err := s.valDB.HashedPasswordForAPI(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from database")
-	}
-	if len(existingPassword) != 0 {
+	if fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)) {
 		return nil, status.Error(codes.PermissionDenied, "Validator already has a password set, cannot signup")
 	}
 	// We check the strength of the password to ensure it is high-entropy,
@@ -38,32 +38,26 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Could not validate password input")
 	}
-	// Salt and hash the password using the bcrypt algorithm
-	// The second argument is the cost of hashing, which we arbitrarily set as 8
-	// (this value can be more or less, depending on the computing power you wish to utilize)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), hashCost)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not generate hashed password")
+		return nil, errors.Wrap(err, "could not generate hashed password")
 	}
-	// We store the hashed password to disk.
-	if err := s.valDB.SaveHashedPasswordForAPI(ctx, hashedPassword); err != nil {
-		return nil, status.Error(codes.Internal, "Could not save hashed password to database")
+	hashFilePath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	// Write the config file to disk.
+	if err := os.MkdirAll(defaultWalletPath, os.ModePerm); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := s.initializeWallet(ctx, &wallet.Config{
-		WalletDir:      defaultWalletPath,
-		WalletPassword: req.Password,
-	}); err != nil {
-		return nil, status.Error(codes.Internal, "Could not initialize wallet")
+	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return nil, status.Errorf(codes.Internal, "could not write hashed password for wallet to disk: %v", err)
 	}
 	return s.sendAuthResponse()
 }
 
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-	// We retrieve the hashed password for the validator API from disk.
-	hashedPassword, err := s.valDB.HashedPasswordForAPI(ctx)
+	hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName))
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from database")
+		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
 	}
 	// Compare the stored hashed password, with the hashed version of the password that was received.
 	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
@@ -118,20 +112,21 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 	// We fire an event with the opened wallet over
 	// a global feed signifying wallet initialization.
-	wallet, err := wallet.OpenWallet(ctx, &wallet.Config{
+	w, err := wallet.OpenWallet(ctx, &wallet.Config{
 		WalletDir:      cfg.WalletDir,
 		WalletPassword: cfg.WalletPassword,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
+
 	s.walletInitialized = true
-	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	s.keymanager = keymanager
-	s.wallet = wallet
-	s.walletInitializedFeed.Send(wallet)
+	s.keymanager = km
+	s.wallet = w
+	s.walletInitializedFeed.Send(w)
 	return nil
 }
