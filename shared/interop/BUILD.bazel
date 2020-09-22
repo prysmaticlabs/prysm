@@ -17,7 +17,7 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/roughtime:go_default_library",
+        "//shared/timeutils:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",

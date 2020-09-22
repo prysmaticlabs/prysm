@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // pruneAttsPool prunes attestations pool on every slot interval.
@@ -68,6 +68,6 @@ func (s *Service) pruneExpiredAtts() {
 func (s *Service) expired(slot uint64) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
 	expirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(roughtime.Now().Unix())
+	currentTime := uint64(timeutils.Now().Unix())
 	return currentTime >= expirationTime
 }

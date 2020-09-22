@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestSlotsSinceGenesis(t *testing.T) {
@@ -20,14 +20,14 @@ func TestSlotsSinceGenesis(t *testing.T) {
 		{
 			name: "pre-genesis",
 			args: args{
-				genesis: roughtime.Now().Add(1 * time.Hour), // 1 hour in the future
+				genesis: timeutils.Now().Add(1 * time.Hour), // 1 hour in the future
 			},
 			want: 0,
 		},
 		{
 			name: "post-genesis",
 			args: args{
-				genesis: roughtime.Now().Add(-5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesis: timeutils.Now().Add(-5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 			want: 5,
 		},

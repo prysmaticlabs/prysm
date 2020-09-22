@@ -1,5 +1,5 @@
-// Package roughtime is a soon to be deprecated wrapper for the local clock time.
-package roughtime
+// Package timeutils is a wrapper around the go standard time library.
+package timeutils
 
 import (
 	"time"

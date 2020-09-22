@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // SlotStartTime returns the start time in terms of its unix epoch
@@ -18,10 +18,10 @@ func SlotStartTime(genesis uint64, slot uint64) time.Time {
 // SlotsSinceGenesis returns the number of slots since
 // the provided genesis time.
 func SlotsSinceGenesis(genesis time.Time) uint64 {
-	if genesis.After(roughtime.Now()) { // Genesis has not occurred yet.
+	if genesis.After(timeutils.Now()) { // Genesis has not occurred yet.
 		return 0
 	}
-	return uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
+	return uint64(timeutils.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }
 
 // EpochsSinceGenesis returns the number of slots since

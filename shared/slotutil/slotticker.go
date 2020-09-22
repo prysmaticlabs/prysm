@@ -4,7 +4,7 @@ package slotutil
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // The Ticker interface defines a type which can expose a
@@ -47,7 +47,7 @@ func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime, secondsPerSlot, roughtime.Since, roughtime.Until, time.After)
+	ticker.start(genesisTime, secondsPerSlot, timeutils.Since, timeutils.Until, time.After)
 	return ticker
 }
 
@@ -64,7 +64,7 @@ func GetSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, second
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime.Add(offset), secondsPerSlot, roughtime.Since, roughtime.Until, time.After)
+	ticker.start(genesisTime.Add(offset), secondsPerSlot, timeutils.Since, timeutils.Until, time.After)
 	return ticker
 }
 
