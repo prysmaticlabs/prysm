@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 const (
@@ -78,7 +78,7 @@ func (smm *stateMachineManager) addStateMachine(start uint64) *stateMachine {
 		start:   start,
 		state:   stateNew,
 		blocks:  []*eth.SignedBeaconBlock{},
-		updated: roughtime.Now(),
+		updated: timeutils.Now(),
 	}
 	smm.recalculateMachineAttribs()
 	return smm.machines[start]
@@ -157,7 +157,7 @@ func (m *stateMachine) setState(name stateID) {
 		return
 	}
 	m.state = name
-	m.updated = roughtime.Now()
+	m.updated = timeutils.Now()
 }
 
 // trigger invokes the event handler on a given state machine.

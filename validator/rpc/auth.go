@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -89,7 +89,7 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 func (s *Server) createTokenString() (string, uint64, error) {
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
-	expirationTime := roughtime.Now().Add(tokenExpiryLength)
+	expirationTime := timeutils.Now().Add(tokenExpiryLength)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expirationTime.Unix(),
 	})

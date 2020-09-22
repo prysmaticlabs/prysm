@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"go.opencensus.io/trace"
 )
 
@@ -74,7 +74,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		if err != nil {
 			return nil, err
 		}
-		if err := s.verifyAttTargetEpoch(ctx, uint64(s.genesisTime.Unix()), uint64(roughtime.Now().Unix()), tgt); err != nil {
+		if err := s.verifyAttTargetEpoch(ctx, uint64(s.genesisTime.Unix()), uint64(timeutils.Now().Unix()), tgt); err != nil {
 			return nil, err
 		}
 		if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
@@ -126,7 +126,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	genesisTime := baseState.GenesisTime()
 
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(roughtime.Now().Unix()), tgt); err != nil {
+	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(timeutils.Now().Unix()), tgt); err != nil {
 		return nil, err
 	}
 
