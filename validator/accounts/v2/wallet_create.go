@@ -51,8 +51,6 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New("a wallet of this type already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
-	// Open the validator database.
-	// Salt and hash the password using the bcrypt algorithm
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create wallet with keymanager")
