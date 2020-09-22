@@ -80,7 +80,7 @@ func (p *passwordReader) passwordReaderFunc(file *os.File) ([]byte, error) {
 func Test_KeysConsistency_Direct(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 
-	//Specify the 'initial'/correct password locally to this file for convenience.
+	// Specify the 'initial'/correct password locally to this file for convenience.
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
 
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
@@ -106,7 +106,10 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 
 	// Now we change the password to "SecoNDxyzPass__9!@#"
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("SecoNDxyzPass__9!@#"), os.ModePerm))
-	// OpenWalletOrElseCli() doesn't really 'challenge' the wrong password
+	w, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
+	require.ErrorContains(t, "wrong password for wallet", err)
+
+	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
 	w, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.NoError(t, err)
 
