@@ -39,11 +39,11 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	}
 
 	dir := createWalletConfig.WalletCfg.WalletDir
-	ok, err := fileutil.HasDir(dir)
+	dirExists, err := fileutil.HasDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	if ok {
+	if dirExists {
 		return nil, errors.New("a wallet already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
