@@ -24,11 +24,11 @@ import (
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -1041,29 +1041,29 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
 					peerID:   "a",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 			},
 		},
@@ -1073,25 +1073,25 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: roughtime.Now().Add(-peerLockMaxAge),
+					accessed: timeutils.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "c",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
 					peerID:   "a",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: roughtime.Now(),
+					accessed: timeutils.Now(),
 				},
 			},
 		},
@@ -1101,15 +1101,15 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: roughtime.Now().Add(-peerLockMaxAge),
+					accessed: timeutils.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "b",
-					accessed: roughtime.Now().Add(-peerLockMaxAge),
+					accessed: timeutils.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "c",
-					accessed: roughtime.Now().Add(-peerLockMaxAge),
+					accessed: timeutils.Now().Add(-peerLockMaxAge),
 				},
 			},
 			peersOut: []peerData{},

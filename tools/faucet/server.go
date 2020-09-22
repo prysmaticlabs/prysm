@@ -18,7 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/prestonvanloon/go-recaptcha"
 	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -98,7 +98,7 @@ func (s *faucetServer) verifyRecaptcha(peer string, req *faucetpb.FundingRequest
 	if rr.Score < s.minScore {
 		return fmt.Errorf("recaptcha score too low (%f)", rr.Score)
 	}
-	if roughtime.Now().After(rr.ChallengeTS.Add(2 * time.Minute)) {
+	if timeutils.Now().After(rr.ChallengeTS.Add(2 * time.Minute)) {
 		return errors.New("captcha challenge too old")
 	}
 	if rr.Action != req.WalletAddress {

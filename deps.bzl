@@ -1890,13 +1890,6 @@ def prysm_deps():
         version = "v2.2.0",
     )
     go_repository(
-        name = "com_googlesource_roughtime_roughtime_git",
-        build_file_generation = "on",
-        importpath = "roughtime.googlesource.com/roughtime.git",
-        sum = "h1:Cmz+zn5wHFlBz3sPMsCzjmsn4zKLMMRRxhqnlKQ/zfI=",
-        version = "v0.0.0-20190418172256-51f6971f5f06",
-    )
-    go_repository(
         name = "com_github_multiformats_go_base36",
         importpath = "github.com/multiformats/go-base36",
         sum = "h1:JR6TyF7JjGd3m6FbLU2cOxhC0Li8z8dLNGQ89tUg4F4=",
