@@ -318,7 +318,7 @@ func TestService_Resync(t *testing.T) {
 			wantedErr: "could not retrieve head state",
 		},
 		{
-			name: "sync",
+			name: "resync ok",
 			chainService: func() *mock.ChainService {
 				st := testutil.NewBeaconState()
 				futureSlot := uint64(160)
