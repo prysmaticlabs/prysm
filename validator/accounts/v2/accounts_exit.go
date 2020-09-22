@@ -18,8 +18,6 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type performExitCfg struct {
@@ -71,11 +69,6 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	}
 
 	return nil
-}
-
-// ExitAccountsUnimplemented is a stub for ExitAccounts until the latter is fully implemented.
-func ExitAccountsUnimplemented(cliCtx *cli.Context, r io.Reader) error {
-	return status.Errorf(codes.Unimplemented, "method ExitAccounts not implemented")
 }
 
 func prepareWallet(cliCtx *cli.Context) ([][48]byte, v2.IKeymanager, error) {
