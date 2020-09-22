@@ -51,7 +51,15 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New("a wallet of this type already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
-	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create wallet with keymanager")
+	}
+	// We store the hashed password to disk.
+	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
+		return nil, errors.Wrap(err, "could not save hashed password to database")
+	}
+	return w, nil
 }
 
 // CreateWalletWithKeymanager specified by configuration options.
