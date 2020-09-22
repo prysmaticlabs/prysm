@@ -113,7 +113,7 @@ func TestService_InitStartStop(t *testing.T) {
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
-			s := NewInitialSync(ctx, &Config{
+			s := New(ctx, &Config{
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: mc.StateNotifier(),
@@ -144,7 +144,7 @@ func TestService_InitStartStop(t *testing.T) {
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
 	newService := func(ctx context.Context, mc *mock.ChainService) *Service {
-		s := NewInitialSync(ctx, &Config{
+		s := New(ctx, &Config{
 			Chain:         mc,
 			StateNotifier: mc.StateNotifier(),
 		})
@@ -244,4 +244,49 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		assert.LogsContain(t, hook, "Received state initialized event")
 		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
 	})
+}
+
+func TestService_markSynced(t *testing.T) {
+	mc := &mock.ChainService{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s := New(ctx, &Config{
+		Chain:         mc,
+		StateNotifier: mc.StateNotifier(),
+	})
+	require.NotNil(t, s)
+	assert.Equal(t, false, s.chainStarted)
+	assert.Equal(t, false, s.synced)
+	assert.NoError(t, s.Status())
+	s.chainStarted = true
+	assert.ErrorContains(t, "syncing", s.Status())
+
+	expectedGenesisTime := time.Unix(358544700, 0)
+	var receivedGenesisTime time.Time
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Synced {
+				data, ok := event.Data.(*statefeed.SyncedData)
+				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
+				receivedGenesisTime = data.StartTime
+			}
+		case <-s.ctx.Done():
+		}
+		wg.Done()
+	}()
+	s.markSynced(expectedGenesisTime)
+
+	if testutil.WaitTimeout(wg, time.Second*2) {
+		t.Fatalf("Test should have exited by now, timed out")
+	}
+	assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
+	assert.Equal(t, true, s.synced)
 }
