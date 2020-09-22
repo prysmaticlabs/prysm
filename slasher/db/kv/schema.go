@@ -16,7 +16,7 @@ var (
 	// Slasher-related buckets.
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
 	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
-	HighestAttestationBucket          = []byte("historic-block-headers-bucket")
+	highestAttestationBucket          = []byte("historic-block-headers-bucket")
 	slashingBucket                    = []byte("slashing-bucket")
 	chainDataBucket                   = []byte("chain-data-bucket")
 	compressedIdxAttsBucket           = []byte("compressed-idx-atts-bucket")

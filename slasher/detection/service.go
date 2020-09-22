@@ -197,7 +197,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			}
 			ds.submitAttesterSlashings(ctx, slashings)
 
-			// update highest attestation
+			//update highest attestation
 			if err := ds.UpdateHighestAttestation(ctx, att); err != nil {
 				log.WithError(err).Errorf("could not update highest attestation")
 			}
@@ -218,6 +218,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				log.Infof("Continuing historical detection from epoch %d to %d", epoch, currentChainHead.HeadEpoch)
 			}
 		}
+		log.Printf("finished epoch %d", epoch)
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", storedEpoch)
 }

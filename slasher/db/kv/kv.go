@@ -32,6 +32,7 @@ type Store struct {
 type Config struct {
 	// SpanCacheSize determines the span map cache size.
 	SpanCacheSize int
+	HighestAttestationCacheSize int
 }
 
 // Close closes the underlying boltdb database.
@@ -110,7 +111,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		return nil, errors.Wrap(err, "could not create new flat cache")
 	}
 	kv.flatSpanCache = flatSpanCache
-	highestAttCache, err := cache.NewHighestAttestationCache(cfg.SpanCacheSize, persistHighestAttestationCacheOnEviction(kv))
+	highestAttCache, err := cache.NewHighestAttestationCache(cfg.HighestAttestationCacheSize, persistHighestAttestationCacheOnEviction(kv))
 	kv.highestAttestationCache = highestAttCache
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
@@ -126,7 +127,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 			validatorsMinMaxSpanBucketNew,
 			slashingBucket,
 			chainDataBucket,
-			HighestAttestationBucket,
+			highestAttestationBucket,
 		)
 	}); err != nil {
 		return nil, err
