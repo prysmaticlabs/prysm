@@ -3,7 +3,6 @@ package v2
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -40,15 +39,12 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	}
 
 	dir := createWalletConfig.WalletCfg.WalletDir
-	kmKind := createWalletConfig.WalletCfg.KeymanagerKind
-	accountsPath := filepath.Join(dir, kmKind.String())
-	ok, err := fileutil.HasDir(accountsPath)
+	dirExists, err := fileutil.HasDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	// This wallet type already exists
-	if ok {
-		return nil, errors.New("a wallet of this type already exists at this location. Please input an" +
+	if dirExists {
+		return nil, errors.New("a wallet already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)

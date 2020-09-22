@@ -103,11 +103,11 @@ func NewWallet(cfg *Config) *Wallet {
 // Exists check if a wallet at the specified directory
 // exists and has valid information in it.
 func Exists(walletDir string) error {
-	ok, err := fileutil.HasDir(walletDir)
+	dirExists, err := fileutil.HasDir(walletDir)
 	if err != nil {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
-	if ok {
+	if dirExists {
 		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
 			return errors.Wrap(err, "could not check if wallet has files")
