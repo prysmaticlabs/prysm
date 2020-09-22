@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 var (
@@ -27,7 +27,7 @@ func main() {
 	}
 	if *genesisTime == 0 {
 		log.Print("No --genesis-time specified, defaulting to now")
-		beaconState.GenesisTime = uint64(roughtime.Now().Unix())
+		beaconState.GenesisTime = uint64(timeutils.Now().Unix())
 	} else {
 		beaconState.GenesisTime = *genesisTime
 	}

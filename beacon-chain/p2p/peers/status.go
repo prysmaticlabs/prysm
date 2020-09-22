@@ -35,7 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // PeerConnectionState is the state of the connection.
@@ -166,7 +166,7 @@ func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
 
 	peerData := p.fetch(pid)
 	peerData.chainState = chainState
-	peerData.chainStateLastUpdated = roughtime.Now()
+	peerData.chainStateLastUpdated = timeutils.Now()
 }
 
 // ChainState gets the chain state of the given remote peer.
@@ -279,7 +279,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	if peerData, ok := p.store.peers[pid]; ok {
 		return peerData.chainStateLastUpdated, nil
 	}
-	return roughtime.Now(), ErrPeerUnknown
+	return timeutils.Now(), ErrPeerUnknown
 }
 
 // IsBad states if the peer is to be considered bad.

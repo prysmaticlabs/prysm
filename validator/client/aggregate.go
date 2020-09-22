@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"go.opencensus.io/trace"
 )
 
@@ -153,7 +153,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	time.Sleep(roughtime.Until(finalTime))
+	time.Sleep(timeutils.Until(finalTime))
 }
 
 // This returns the signature of validator signing over aggregate and
