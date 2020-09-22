@@ -11,7 +11,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 var (
@@ -239,7 +239,7 @@ func captureSentTimeMetric(genesisTime uint64, currentSlot uint64) error {
 	if err != nil {
 		return err
 	}
-	diffMs := roughtime.Now().Sub(startTime) / time.Millisecond
+	diffMs := timeutils.Now().Sub(startTime) / time.Millisecond
 	sentBlockPropagationHistogram.Observe(float64(diffMs))
 
 	return nil
