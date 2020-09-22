@@ -59,6 +59,13 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
+		if err := s.initializeWallet(ctx, &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: req.WalletPassword,
+		}); err != nil {
+			return nil, err
+		}
 		return &pb.WalletResponse{
 			WalletPath: defaultWalletPath,
 		}, nil
@@ -76,6 +83,13 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			NumAccounts:    int64(req.NumAccounts),
 		})
 		if err != nil {
+			return nil, err
+		}
+		if err := s.initializeWallet(ctx, &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: req.WalletPassword,
+		}); err != nil {
 			return nil, err
 		}
 		return &pb.WalletResponse{
