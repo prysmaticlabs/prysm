@@ -24,10 +24,10 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
@@ -673,7 +673,7 @@ func TestShouldResync(t *testing.T) {
 			name: "genesis epoch should not resync when syncing is true",
 			args: args{
 				headSlot: uint64(31),
-				genesis:  roughtime.Now(),
+				genesis:  timeutils.Now(),
 				syncing:  true,
 			},
 			want: false,
@@ -682,7 +682,7 @@ func TestShouldResync(t *testing.T) {
 			name: "genesis epoch should not resync when syncing is false",
 			args: args{
 				headSlot: uint64(31),
-				genesis:  roughtime.Now(),
+				genesis:  timeutils.Now(),
 				syncing:  false,
 			},
 			want: false,
@@ -691,7 +691,7 @@ func TestShouldResync(t *testing.T) {
 			name: "two epochs behind, resync ok",
 			args: args{
 				headSlot: uint64(31),
-				genesis:  roughtime.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesis:  timeutils.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 				syncing:  false,
 			},
 			want: true,
@@ -700,7 +700,7 @@ func TestShouldResync(t *testing.T) {
 			name: "two epochs behind, already syncing",
 			args: args{
 				headSlot: uint64(31),
-				genesis:  roughtime.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesis:  timeutils.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 				syncing:  true,
 			},
 			want: false,

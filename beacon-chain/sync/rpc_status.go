@@ -18,9 +18,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,7 +53,7 @@ func (s *Service) maintainPeerStatuses() {
 					// Peer has vanished; nothing to do.
 					return
 				}
-				if roughtime.Now().After(lastUpdated.Add(interval)) {
+				if timeutils.Now().After(lastUpdated.Add(interval)) {
 					if err := s.reValidatePeer(s.ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Debug("Failed to revalidate peer")
 						s.p2p.Peers().Scorers().BadResponsesScorer().Increment(id)
