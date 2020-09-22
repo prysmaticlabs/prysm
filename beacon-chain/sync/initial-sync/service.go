@@ -133,22 +133,21 @@ func (s *Service) Syncing() bool {
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
 func (s *Service) Resync() error {
-	// set it to false since we are syncing again
+	headState, err := s.chain.HeadState(s.ctx)
+	if err != nil || headState == nil {
+		return errors.Errorf("could not retrieve head state: %v", err)
+	}
+
+	// Set it to false since we are syncing again.
 	s.synced = false
 	defer func() { s.synced = true }() // Reset it at the end of the method.
-	headState, err := s.chain.HeadState(s.ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state")
-	}
 	genesis := time.Unix(int64(headState.GenesisTime()), 0)
 
 	s.waitForMinimumPeers()
-	err = s.roundRobinSync(genesis)
-	if err != nil {
+	if err = s.roundRobinSync(genesis); err != nil {
 		log = log.WithError(err)
 	}
 	log.WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
-
 	return nil
 }
 

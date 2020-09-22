@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -290,4 +291,80 @@ func TestService_markSynced(t *testing.T) {
 	}
 	assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
 	assert.Equal(t, false, s.Syncing())
+}
+
+func TestService_Resync(t *testing.T) {
+	p := p2pt.NewTestP2P(t)
+	connectPeers(t, p, []*peerData{
+		{blocks: makeSequence(1, 160), finalizedEpoch: 5, headSlot: 160},
+	}, p.Peers())
+	cache.initializeRootCache(makeSequence(1, 160), t)
+	beaconDB, _ := dbtest.SetupDB(t)
+	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
+	require.NoError(t, err)
+	cache.RLock()
+	genesisRoot := cache.rootCache[0]
+	cache.RUnlock()
+
+	hook := logTest.NewGlobal()
+	tests := []struct {
+		name         string
+		assert       func(s *Service)
+		chainService func() *mock.ChainService
+		wantedErr    string
+	}{
+		{
+			name:      "no head state",
+			wantedErr: "could not retrieve head state",
+		},
+		{
+			name: "sync",
+			chainService: func() *mock.ChainService {
+				st := testutil.NewBeaconState()
+				futureSlot := uint64(160)
+				require.NoError(t, st.SetGenesisTime(uint64(makeGenesisTime(futureSlot).Unix())))
+				return &mock.ChainService{
+					State: st,
+					Root:  genesisRoot[:],
+					DB:    beaconDB,
+					FinalizedCheckPoint: &eth.Checkpoint{
+						Epoch: helpers.SlotToEpoch(futureSlot),
+					},
+				}
+			},
+			assert: func(s *Service) {
+				assert.LogsContain(t, hook, "Resync attempt complete")
+				assert.Equal(t, uint64(160), s.chain.HeadSlot())
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer hook.Reset()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			mc := &mock.ChainService{}
+			// Allow overriding with customized chain service.
+			if tt.chainService != nil {
+				mc = tt.chainService()
+			}
+			s := New(ctx, &Config{
+				DB:            beaconDB,
+				P2P:           p,
+				Chain:         mc,
+				StateNotifier: mc.StateNotifier(),
+			})
+			assert.NotNil(t, s)
+			assert.Equal(t, uint64(0), s.chain.HeadSlot())
+			err := s.Resync()
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			if tt.assert != nil {
+				tt.assert(s)
+			}
+		})
+	}
 }
