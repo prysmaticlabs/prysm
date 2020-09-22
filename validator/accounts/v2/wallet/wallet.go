@@ -406,12 +406,6 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 	return nil
 }
 
-// HashedPassword retrieves the password hash from disk.
-func (w *Wallet) HashedPassword(ctx context.Context) ([]byte, error) {
-	hashFilePath := filepath.Join(w.walletDir, HashedPasswordFileName)
-	return fileutil.ReadFileAsBytes(hashFilePath)
-}
-
 // SaveHashedPassword to disk for the wallet.
 func (w *Wallet) SaveHashedPassword(ctx context.Context, hashedPassword []byte) error {
 	hashFilePath := filepath.Join(w.walletDir, HashedPasswordFileName)

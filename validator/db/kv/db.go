@@ -77,7 +77,6 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 			tx,
 			historicProposalsBucket,
 			historicAttestationsBucket,
-			validatorAPIBucket,
 			newhistoricProposalsBucket,
 		)
 	}); err != nil {
