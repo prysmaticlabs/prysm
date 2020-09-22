@@ -158,10 +158,12 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 	promptDescription := "Withdrawing funds is not possible in Phase 0 of the system. " +
 		"Please navigate to the following website and make sure you understand the current implications " +
 		"of a voluntary exit before making the final decision:"
-	promptURL := au.Blue("https://docs.prylabs.network/docs/faq/#can-i-get-back-my-testnet-eth-how-can-i-withdraw-my-validator-gains")
-	promptQuestion := "Do you still want to continue with the voluntary exit? Y/N"
+	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/nondeterministic/exiting-a-validator/#withdrawal-delay-warning")
+	promptQuestion := "If you still want to continue with the voluntary exit, please input the passphrase from the above URL"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
-	resp, err := promptutil.ValidatePrompt(r, promptText, promptutil.ValidateYesOrNo)
+	resp, err := promptutil.ValidatePrompt(r, promptText, func(input string) error {
+		return promptutil.ValidatePhrase(input, "Bye bye Eth2 :-(")
+	})
 	if err != nil {
 		return nil, nil, err
 	}
