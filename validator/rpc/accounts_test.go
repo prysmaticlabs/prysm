@@ -11,7 +11,7 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 )
 
 func TestServer_CreateAccount(t *testing.T) {
@@ -23,7 +23,7 @@ func TestServer_CreateAccount(t *testing.T) {
 	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: v2keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -50,7 +50,7 @@ func TestServer_ListAccounts(t *testing.T) {
 	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: v2keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -66,7 +66,7 @@ func TestServer_ListAccounts(t *testing.T) {
 	numAccounts := 5
 	keys := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		key, err := km.(*direct.Keymanager).CreateAccount(ctx)
+		key, err := km.(*derived.Keymanager).CreateAccount(ctx, false /* log account info */)
 		require.NoError(t, err)
 		keys[i] = key
 	}
