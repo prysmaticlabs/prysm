@@ -96,6 +96,25 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			want:                      true,
 		},
 		{
+			name: "bad target epoch",
+			msg: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0b101},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: validBlockRoot[:],
+					CommitteeIndex:  0,
+					Slot:            1,
+					Target: &ethpb.Checkpoint{
+						Epoch: 10,
+						Root:  validBlockRoot[:],
+					},
+					Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				},
+			},
+			topic:                     fmt.Sprintf("/eth2/%x/beacon_attestation_1", digest),
+			validAttestationSignature: true,
+			want:                      false,
+		},
+		{
 			name: "already seen",
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b101},
@@ -318,6 +337,25 @@ func TestService_validateCommitteeIndexBeaconAttestationUseCheckptCache(t *testi
 			topic:                     fmt.Sprintf("/eth2/%x/beacon_attestation_1", digest),
 			validAttestationSignature: true,
 			want:                      true,
+		},
+		{
+			name: "bad target epoch",
+			msg: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0b101},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: validBlockRoot[:],
+					CommitteeIndex:  0,
+					Slot:            1,
+					Target: &ethpb.Checkpoint{
+						Epoch: 10,
+						Root:  validBlockRoot[:],
+					},
+					Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				},
+			},
+			topic:                     fmt.Sprintf("/eth2/%x/beacon_attestation_1", digest),
+			validAttestationSignature: true,
+			want:                      false,
 		},
 		{
 			name: "already seen",
