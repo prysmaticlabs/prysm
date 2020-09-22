@@ -27,7 +27,7 @@ func setupWalletDir(t testing.TB) string {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
-	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
+	require.NoError(t, os.MkdirAll(walletDir, os.ModePerm))
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
 	})
@@ -41,7 +41,7 @@ func TestServer_Signup_PasswordAlreadyExists(t *testing.T) {
 		valDB: valDB,
 	}
 
-	// Save a hash password pre-emptively to the database.
+	// Save a hash password preemptively to the database.
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	hashedPassword := []byte("2093402934902839489238492")

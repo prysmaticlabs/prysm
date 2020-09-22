@@ -232,6 +232,13 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
 		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
+			keys, err := keymanager.FetchValidatingPublicKeys(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if keys == nil || len(keys) == 0 {
+				return nil, errors.New("please recreate your wallet with wallet-v2 create")
+			}
 			if err := w.SaveHashedPassword(ctx); err != nil {
 				return nil, errors.Wrap(err, "could not save hashed password to disk")
 			}
