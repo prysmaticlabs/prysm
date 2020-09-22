@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var derivationPathRegex = regexp.MustCompile("m_12381_3600_([0-9]+)_([0-9]+)_([0-9]+)")
@@ -91,13 +90,8 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
-		password := cfg.WalletCfg.WalletPassword
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not generate hashed password")
-		}
 		// We store the hashed password to disk.
-		if err := w.SaveHashedPassword(cliCtx.Context, hashedPassword); err != nil {
+		if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
 			return nil, err
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(

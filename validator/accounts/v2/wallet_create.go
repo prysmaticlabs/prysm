@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
@@ -58,13 +57,8 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create wallet with keymanager")
 	}
-	password := createWalletConfig.WalletCfg.WalletPassword
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate hashed password")
-	}
 	// We store the hashed password to disk.
-	if err := w.SaveHashedPassword(cliCtx.Context, hashedPassword); err != nil {
+	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
 		return nil, errors.Wrap(err, "could not save hashed password to database")
 	}
 	return w, nil

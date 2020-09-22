@@ -27,11 +27,7 @@ var (
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	// First, we check if the validator already has a password. In this case,
 	// the user should NOT be able to signup and the function will return an error.
-	existingPassword, err := s.valDB.HashedPasswordForAPI(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from database")
-	}
-	if len(existingPassword) != 0 {
+	if fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)) {
 		return nil, status.Error(codes.PermissionDenied, "Validator already has a password set, cannot signup")
 	}
 	// We check the strength of the password to ensure it is high-entropy,
@@ -45,14 +41,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	}); err != nil {
 		return nil, status.Error(codes.Internal, "Could not initialize wallet")
 	}
-	// Salt and hash the password using the bcrypt algorithm
-	// The second argument is the cost of hashing, which we arbitrarily set as 8
-	// (this value can be more or less, depending on the computing power you wish to utilize)
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), hashCost)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not generate hashed password")
-	}
-	if err := s.wallet.SaveHashedPassword(ctx, hashedPassword); err != nil {
+	if err := s.wallet.SaveHashedPassword(ctx); err != nil {
 		return nil, err
 	}
 	return s.sendAuthResponse()

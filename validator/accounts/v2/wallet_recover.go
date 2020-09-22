@@ -19,7 +19,6 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const phraseWordCount = 24
@@ -72,13 +71,8 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	password := walletPassword
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 8)
-	if err != nil {
-		return errors.Wrap(err, "could not generate hashed password")
-	}
 	// We store the hashed password to disk.
-	if err := w.SaveHashedPassword(cliCtx.Context, hashedPassword); err != nil {
+	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
 		return err
 	}
 	log.Infof(

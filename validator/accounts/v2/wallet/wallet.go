@@ -41,6 +41,7 @@ const (
 	WalletPasswordPromptText = "Wallet password"
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"
+	hashCost                  = 8
 )
 
 var (
@@ -231,11 +232,7 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
 		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(w.Password()), 8)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not generate hashed password")
-			}
-			if err := w.SaveHashedPassword(ctx, hashedPassword); err != nil {
+			if err := w.SaveHashedPassword(ctx); err != nil {
 				return nil, errors.Wrap(err, "could not save hashed password to disk")
 			}
 		}
@@ -253,11 +250,7 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
 		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(w.Password()), 8)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not generate hashed password")
-			}
-			if err := w.SaveHashedPassword(ctx, hashedPassword); err != nil {
+			if err := w.SaveHashedPassword(ctx); err != nil {
 				return nil, errors.Wrap(err, "could not save hashed password to disk")
 			}
 		}
@@ -407,7 +400,11 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 }
 
 // SaveHashedPassword to disk for the wallet.
-func (w *Wallet) SaveHashedPassword(ctx context.Context, hashedPassword []byte) error {
+func (w *Wallet) SaveHashedPassword(ctx context.Context) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(w.walletPassword), hashCost)
+	if err != nil {
+		return errors.Wrap(err, "could not generate hashed password")
+	}
 	hashFilePath := filepath.Join(w.walletDir, HashedPasswordFileName)
 	// Write the config file to disk.
 	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
