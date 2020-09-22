@@ -3,6 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["roughtime.go"],
-    importpath = "github.com/prysmaticlabs/prysm/shared/roughtime",
+    importpath = "github.com/prysmaticlabs/prysm/shared/timeutils",
     visibility = ["//visibility:public"],
 )

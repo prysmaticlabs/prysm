@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 const (
@@ -160,7 +160,7 @@ func (s *BlockProviderScorer) touch(pid peer.ID, t ...time.Time) {
 	if len(t) == 1 {
 		s.store.peers[pid].blockProviderUpdated = t[0]
 	} else {
-		s.store.peers[pid].blockProviderUpdated = roughtime.Now()
+		s.store.peers[pid].blockProviderUpdated = timeutils.Now()
 	}
 }
 

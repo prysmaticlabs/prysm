@@ -14,8 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -153,7 +153,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 // This verifies the epoch of input checkpoint is within current epoch and previous epoch
 // with respect to current time. Returns true if it's within, false if it's not.
 func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
-	now := uint64(roughtime.Now().Unix())
+	now := uint64(timeutils.Now().Unix())
 	genesisTime := uint64(s.genesisTime.Unix())
 	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
