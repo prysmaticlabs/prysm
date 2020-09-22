@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"io/ioutil"
 	"path/filepath"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -35,14 +37,14 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Could not validate password input")
 	}
-	if err := s.initializeWallet(ctx, &wallet.Config{
-		WalletDir:      defaultWalletPath,
-		WalletPassword: req.Password,
-	}); err != nil {
-		return nil, status.Error(codes.Internal, "Could not initialize wallet")
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), hashCost)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate hashed password")
 	}
-	if err := s.wallet.SaveHashedPassword(ctx); err != nil {
-		return nil, err
+	hashFilePath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	// Write the config file to disk.
+	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return nil, errors.Wrap(err, "could not write hashed password for wallet to disk")
 	}
 	return s.sendAuthResponse()
 }
@@ -113,6 +115,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
+
 	s.walletInitialized = true
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {

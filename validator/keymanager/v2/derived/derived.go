@@ -67,7 +67,6 @@ type SetupConfig struct {
 	Opts                *KeymanagerOpts
 	Wallet              iface.Wallet
 	SkipMnemonicConfirm bool
-	WalletPassword      string
 	Mnemonic            string
 }
 
@@ -99,9 +98,8 @@ func NewKeymanager(
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
-	cfg.WalletPassword = cfg.Wallet.Password()
 	if !fileutil.FileExists(filepath.Join(cfg.Wallet.AccountsDir(), EncryptedSeedFileName)) {
-		seedConfig, err := initializeWalletSeedFile(cfg.WalletPassword, cfg.SkipMnemonicConfirm)
+		seedConfig, err := initializeWalletSeedFile(cfg.Wallet.Password(), cfg.SkipMnemonicConfirm)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 		}
@@ -132,7 +130,7 @@ func NewKeymanager(
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.WalletPassword)
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.Wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
@@ -162,7 +160,7 @@ func KeymanagerForPhrase(
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
-	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.WalletPassword)
+	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.Wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 	}
@@ -174,7 +172,7 @@ func KeymanagerForPhrase(
 		return nil, errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.WalletPassword)
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.Wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}

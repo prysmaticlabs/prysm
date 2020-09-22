@@ -67,23 +67,13 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	// We attempt to create the wallet.
-	_, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
 
 	ss := &Server{
 		valDB:                 valDB,
 		walletInitializedFeed: new(event.Feed),
 	}
 	weakPass := "password"
-	_, err = ss.Signup(ctx, &pb.AuthRequest{
+	_, err := ss.Signup(ctx, &pb.AuthRequest{
 		Password: weakPass,
 	})
 	require.ErrorContains(t, "Could not validate password input", err)
@@ -97,6 +87,17 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	// Assert we stored the hashed password.
 	passwordHashExists := fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName))
 	assert.Equal(t, true, passwordHashExists)
+
+	// We attempt to create the wallet.
+	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
 
 	// We assert we are able to login.
 	_, err = ss.Login(ctx, &pb.AuthRequest{
