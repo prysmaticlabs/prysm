@@ -58,7 +58,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	require.NoError(t, err)
 	t.Run("chain started", func(t *testing.T) {
-		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"), "Chain did not start")
+		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started in sync service"), "Chain did not start")
 	})
 
 	// Failing early in case chain doesn't start.
