@@ -2,11 +2,13 @@ package rpc
 
 import (
 	"context"
+	"path/filepath"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -37,6 +39,12 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Could not validate password input")
 	}
+	if err := s.initializeWallet(ctx, &wallet.Config{
+		WalletDir:      defaultWalletPath,
+		WalletPassword: req.Password,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "Could not initialize wallet")
+	}
 	// Salt and hash the password using the bcrypt algorithm
 	// The second argument is the cost of hashing, which we arbitrarily set as 8
 	// (this value can be more or less, depending on the computing power you wish to utilize)
@@ -44,25 +52,17 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not generate hashed password")
 	}
-	// We store the hashed password to disk.
-	if err := s.valDB.SaveHashedPasswordForAPI(ctx, hashedPassword); err != nil {
-		return nil, status.Error(codes.Internal, "Could not save hashed password to database")
-	}
-	if err := s.initializeWallet(ctx, &wallet.Config{
-		WalletDir:      defaultWalletPath,
-		WalletPassword: req.Password,
-	}); err != nil {
-		return nil, status.Error(codes.Internal, "Could not initialize wallet")
+	if err := s.wallet.SaveHashedPassword(ctx, hashedPassword); err != nil {
+		return nil, err
 	}
 	return s.sendAuthResponse()
 }
 
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-	// We retrieve the hashed password for the validator API from disk.
-	hashedPassword, err := s.valDB.HashedPasswordForAPI(ctx)
+	hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName))
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from database")
+		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
 	}
 	// Compare the stored hashed password, with the hashed version of the password that was received.
 	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
@@ -117,7 +117,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 	// We fire an event with the opened wallet over
 	// a global feed signifying wallet initialization.
-	wallet, err := wallet.OpenWallet(ctx, &wallet.Config{
+	w, err := wallet.OpenWallet(ctx, &wallet.Config{
 		WalletDir:      cfg.WalletDir,
 		WalletPassword: cfg.WalletPassword,
 	})
@@ -125,12 +125,12 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 		return errors.Wrap(err, "could not open wallet")
 	}
 	s.walletInitialized = true
-	keymanager, err := wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	s.keymanager = keymanager
-	s.wallet = wallet
-	s.walletInitializedFeed.Send(wallet)
+	s.keymanager = km
+	s.wallet = w
+	s.walletInitializedFeed.Send(w)
 	return nil
 }
