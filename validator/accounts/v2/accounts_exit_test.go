@@ -88,7 +88,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
-	stdin.Write([]byte("Bye bye Eth2 :-("))
+	stdin.Write([]byte("Exit my validator"))
 	rawPubKeys, formattedPubKeys, err := interact(cliCtx, &stdin, validatingPublicKeys)
 	require.NoError(t, err)
 	require.NotNil(t, rawPubKeys)

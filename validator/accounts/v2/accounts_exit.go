@@ -155,7 +155,7 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 	promptQuestion := "If you still want to continue with the voluntary exit, please input the passphrase from the above URL"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
 	resp, err := promptutil.ValidatePrompt(r, promptText, func(input string) error {
-		return promptutil.ValidatePhrase(input, "Bye bye Eth2 :-(")
+		return promptutil.ValidatePhrase(input, "Exit my validator")
 	})
 	if err != nil {
 		return nil, nil, err
