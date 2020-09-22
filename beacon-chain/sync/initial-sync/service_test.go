@@ -10,7 +10,9 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -56,7 +58,7 @@ func TestService_InitStartStop(t *testing.T) {
 			},
 		},
 		{
-			name: "current epoch",
+			name: "zeroth epoch",
 			chainService: func() *mock.ChainService {
 				// Set to nearby slot.
 				st := testutil.NewBeaconState()
@@ -74,8 +76,33 @@ func TestService_InitStartStop(t *testing.T) {
 				assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
 			},
 		},
+		{
+			name: "already synced",
+			chainService: func() *mock.ChainService {
+				// Set to some future slot, and then make sure that current head matches it.
+				st := testutil.NewBeaconState()
+				futureSlot := uint64(27354)
+				require.NoError(t, st.SetGenesisTime(uint64(makeGenesisTime(futureSlot).Unix())))
+				require.NoError(t, st.SetSlot(futureSlot))
+				return &mock.ChainService{
+					State: st,
+					FinalizedCheckPoint: &eth.Checkpoint{
+						Epoch: helpers.SlotToEpoch(futureSlot),
+					},
+				}
+			},
+			assert: func() {
+				assert.LogsContain(t, hook, "Starting initial chain sync...")
+				assert.LogsContain(t, hook, "Already synced to the current chain head")
+				assert.LogsDoNotContain(t, hook, "Chain started within the last epoch - not syncing")
+				assert.LogsDoNotContain(t, hook, "Genesis time has not arrived - not syncing")
+				assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
+			},
+		},
 	}
 
+	p := p2pt.NewTestP2P(t)
+	connectPeers(t, p, []*peerData{}, p.Peers())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer hook.Reset()
@@ -87,6 +114,7 @@ func TestService_InitStartStop(t *testing.T) {
 				mc = tt.chainService()
 			}
 			s := NewInitialSync(ctx, &Config{
+				P2P:           p,
 				Chain:         mc,
 				StateNotifier: mc.StateNotifier(),
 			})
