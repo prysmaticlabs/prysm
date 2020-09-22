@@ -3607,6 +3607,12 @@ def prysm_deps():
         version = "v0.0.0-20180321022601-755488143dae",
     )
     go_repository(
+        name = "com_github_cloudflare_cloudflare_go",
+        importpath = "github.com/cloudflare/cloudflare-go",
+        sum = "h1:J82+/8rub3qSy0HxEnoYD8cs+HDlHWYrqYXe2Vqxluk=",
+        version = "v0.10.2-0.20190916151808-a80f83b9add9",
+    )
+    go_repository(
         name = "com_github_dvyukov_go_fuzz",
         importpath = "github.com/dvyukov/go-fuzz",
         sum = "h1:NgO45/5mBLRVfiXerEFzH6ikcZ7DNRPS639xFg3ENzU=",
