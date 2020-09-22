@@ -17,6 +17,8 @@ const (
 	minPasswordScore = 2
 )
 
+const incorrectPhrase = "input does not match wanted phrase"
+
 // NotEmpty is a validation function to make sure the input given isn't empty and is valid unicode.
 func NotEmpty(input string) error {
 	if input == "" {
@@ -108,6 +110,15 @@ func ValidatePasswordInput(input string) error {
 		return errors.New(
 			"password is too easy to guess, try a stronger password",
 		)
+	}
+	return nil
+}
+
+// ValidatePhrase checks whether the user input is equal to the wanted phrase. The verification is case sensitive.
+func ValidatePhrase(input string, wantedPhrase string) error {
+	trimmedInput := strings.Join(strings.Fields(strings.TrimSpace(input)), " ")
+	if trimmedInput != wantedPhrase {
+		return errors.New(incorrectPhrase)
 	}
 	return nil
 }
