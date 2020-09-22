@@ -2,9 +2,9 @@ package kv
 
 import (
 	"context"
-	"fmt"
 	json "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
@@ -24,7 +24,7 @@ func persistHighestAttestationCacheOnEviction(db *Store) func(key interface{}, v
 				return errors.Wrap(err, "failed to marshal")
 			}
 
-			dbKey := []byte(fmt.Sprintf("%d", key.(uint64)))
+			dbKey := highestAttkey(key.(uint64))
 
 			bucket := tx.Bucket(highestAttestationBucket)
 			if err := bucket.Put(dbKey, enc); err != nil {
@@ -55,7 +55,7 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*t
 		return nil, nil // default
 	}
 
-	key := []byte(fmt.Sprintf("%d", validatorID))
+	key := highestAttkey(validatorID)
 	highestAtt := &types.HighestAttestation{HighestSourceEpoch: 0,HighestTargetEpoch:0} // default
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(highestAttestationBucket)
@@ -84,7 +84,7 @@ func (db *Store) SaveHighestAttestation(ctx context.Context, validatorID uint64,
 		return errors.Wrap(err, "failed to marshal")
 	}
 
-	key := []byte(fmt.Sprintf("%d", validatorID))
+	key := highestAttkey(validatorID)
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestAttestationBucket)
 		if err := bucket.Put(key, enc); err != nil {
@@ -97,4 +97,8 @@ func (db *Store) SaveHighestAttestation(ctx context.Context, validatorID uint64,
 	}
 
 	return nil
+}
+
+func highestAttkey(validatorId uint64) []byte {
+	return bytesutil.Uint64ToBytesBigEndian(validatorId)
 }

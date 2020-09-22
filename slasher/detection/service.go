@@ -218,7 +218,6 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				log.Infof("Continuing historical detection from epoch %d to %d", epoch, currentChainHead.HeadEpoch)
 			}
 		}
-		log.Printf("finished epoch %d", epoch)
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", storedEpoch)
 }
