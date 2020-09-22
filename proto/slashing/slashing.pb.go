@@ -6,10 +6,6 @@ package ethereum_slashing
 import (
 	context "context"
 	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +13,9 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	io "io"
+	math "math"
+	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -30,6 +29,171 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+type HighestAttestationRequest struct {
+	Epoch                uint64   `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	ValidatorIds         []uint64 `protobuf:"varint,2,rep,packed,name=validator_ids,json=validatorIds,proto3" json:"validator_ids,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *HighestAttestationRequest) Reset()         { *m = HighestAttestationRequest{} }
+func (m *HighestAttestationRequest) String() string { return proto.CompactTextString(m) }
+func (*HighestAttestationRequest) ProtoMessage()    {}
+func (*HighestAttestationRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_da7e95107d0081b4, []int{0}
+}
+func (m *HighestAttestationRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HighestAttestationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HighestAttestationRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HighestAttestationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HighestAttestationRequest.Merge(m, src)
+}
+func (m *HighestAttestationRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *HighestAttestationRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_HighestAttestationRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HighestAttestationRequest proto.InternalMessageInfo
+
+func (m *HighestAttestationRequest) GetEpoch() uint64 {
+	if m != nil {
+		return m.Epoch
+	}
+	return 0
+}
+
+func (m *HighestAttestationRequest) GetValidatorIds() []uint64 {
+	if m != nil {
+		return m.ValidatorIds
+	}
+	return nil
+}
+
+type HighestAttestationResponse struct {
+	Attestations         []*HighestAttestation `protobuf:"bytes,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *HighestAttestationResponse) Reset()         { *m = HighestAttestationResponse{} }
+func (m *HighestAttestationResponse) String() string { return proto.CompactTextString(m) }
+func (*HighestAttestationResponse) ProtoMessage()    {}
+func (*HighestAttestationResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_da7e95107d0081b4, []int{1}
+}
+func (m *HighestAttestationResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HighestAttestationResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HighestAttestationResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HighestAttestationResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HighestAttestationResponse.Merge(m, src)
+}
+func (m *HighestAttestationResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *HighestAttestationResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_HighestAttestationResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HighestAttestationResponse proto.InternalMessageInfo
+
+func (m *HighestAttestationResponse) GetAttestations() []*HighestAttestation {
+	if m != nil {
+		return m.Attestations
+	}
+	return nil
+}
+
+type HighestAttestation struct {
+	ValidatorId          uint64   `protobuf:"varint,1,opt,name=validator_id,json=validatorId,proto3" json:"validator_id,omitempty"`
+	HighestSourceEpoch   uint64   `protobuf:"varint,2,opt,name=highest_source_epoch,json=highestSourceEpoch,proto3" json:"highest_source_epoch,omitempty"`
+	HighestTargetEpoch   uint64   `protobuf:"varint,3,opt,name=highest_target_epoch,json=highestTargetEpoch,proto3" json:"highest_target_epoch,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *HighestAttestation) Reset()         { *m = HighestAttestation{} }
+func (m *HighestAttestation) String() string { return proto.CompactTextString(m) }
+func (*HighestAttestation) ProtoMessage()    {}
+func (*HighestAttestation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_da7e95107d0081b4, []int{2}
+}
+func (m *HighestAttestation) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HighestAttestation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HighestAttestation.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HighestAttestation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HighestAttestation.Merge(m, src)
+}
+func (m *HighestAttestation) XXX_Size() int {
+	return m.Size()
+}
+func (m *HighestAttestation) XXX_DiscardUnknown() {
+	xxx_messageInfo_HighestAttestation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HighestAttestation proto.InternalMessageInfo
+
+func (m *HighestAttestation) GetValidatorId() uint64 {
+	if m != nil {
+		return m.ValidatorId
+	}
+	return 0
+}
+
+func (m *HighestAttestation) GetHighestSourceEpoch() uint64 {
+	if m != nil {
+		return m.HighestSourceEpoch
+	}
+	return 0
+}
+
+func (m *HighestAttestation) GetHighestTargetEpoch() uint64 {
+	if m != nil {
+		return m.HighestTargetEpoch
+	}
+	return 0
+}
+
 type ProposerSlashingResponse struct {
 	ProposerSlashing     []*v1alpha1.ProposerSlashing `protobuf:"bytes,1,rep,name=proposer_slashing,json=proposerSlashing,proto3" json:"proposer_slashing,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
@@ -41,7 +205,7 @@ func (m *ProposerSlashingResponse) Reset()         { *m = ProposerSlashingRespon
 func (m *ProposerSlashingResponse) String() string { return proto.CompactTextString(m) }
 func (*ProposerSlashingResponse) ProtoMessage()    {}
 func (*ProposerSlashingResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{0}
+	return fileDescriptor_da7e95107d0081b4, []int{3}
 }
 func (m *ProposerSlashingResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -88,7 +252,7 @@ func (m *Slashable) Reset()         { *m = Slashable{} }
 func (m *Slashable) String() string { return proto.CompactTextString(m) }
 func (*Slashable) ProtoMessage()    {}
 func (*Slashable) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{1}
+	return fileDescriptor_da7e95107d0081b4, []int{4}
 }
 func (m *Slashable) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -135,7 +299,7 @@ func (m *AttesterSlashingResponse) Reset()         { *m = AttesterSlashingRespon
 func (m *AttesterSlashingResponse) String() string { return proto.CompactTextString(m) }
 func (*AttesterSlashingResponse) ProtoMessage()    {}
 func (*AttesterSlashingResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{2}
+	return fileDescriptor_da7e95107d0081b4, []int{5}
 }
 func (m *AttesterSlashingResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -183,7 +347,7 @@ func (m *ProposalHistory) Reset()         { *m = ProposalHistory{} }
 func (m *ProposalHistory) String() string { return proto.CompactTextString(m) }
 func (*ProposalHistory) ProtoMessage()    {}
 func (*ProposalHistory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{3}
+	return fileDescriptor_da7e95107d0081b4, []int{6}
 }
 func (m *ProposalHistory) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -238,7 +402,7 @@ func (m *AttestationHistory) Reset()         { *m = AttestationHistory{} }
 func (m *AttestationHistory) String() string { return proto.CompactTextString(m) }
 func (*AttestationHistory) ProtoMessage()    {}
 func (*AttestationHistory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{4}
+	return fileDescriptor_da7e95107d0081b4, []int{7}
 }
 func (m *AttestationHistory) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -282,6 +446,9 @@ func (m *AttestationHistory) GetLatestEpochWritten() uint64 {
 }
 
 func init() {
+	proto.RegisterType((*HighestAttestationRequest)(nil), "ethereum.slashing.HighestAttestationRequest")
+	proto.RegisterType((*HighestAttestationResponse)(nil), "ethereum.slashing.HighestAttestationResponse")
+	proto.RegisterType((*HighestAttestation)(nil), "ethereum.slashing.HighestAttestation")
 	proto.RegisterType((*ProposerSlashingResponse)(nil), "ethereum.slashing.ProposerSlashingResponse")
 	proto.RegisterType((*Slashable)(nil), "ethereum.slashing.Slashable")
 	proto.RegisterType((*AttesterSlashingResponse)(nil), "ethereum.slashing.AttesterSlashingResponse")
@@ -293,41 +460,49 @@ func init() {
 func init() { proto.RegisterFile("proto/slashing/slashing.proto", fileDescriptor_da7e95107d0081b4) }
 
 var fileDescriptor_da7e95107d0081b4 = []byte{
-	// 537 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xcd, 0x6e, 0xd3, 0x40,
-	0x10, 0x96, 0xdb, 0xf2, 0x93, 0xa5, 0x82, 0x74, 0xa9, 0x50, 0x14, 0x95, 0x34, 0xca, 0x85, 0x54,
-	0xd0, 0x75, 0x5b, 0x2e, 0xc0, 0xad, 0x96, 0x2a, 0xb5, 0x17, 0x40, 0x4e, 0x10, 0x47, 0x6b, 0x6d,
-	0x4f, 0xed, 0x55, 0x1d, 0xef, 0x6a, 0x77, 0x52, 0xc8, 0x7b, 0xf0, 0x36, 0xbc, 0x00, 0x47, 0x9e,
-	0x00, 0xa1, 0x3c, 0x00, 0x0f, 0xc0, 0x09, 0x79, 0x9d, 0xa4, 0x21, 0xb1, 0x11, 0xbd, 0xcd, 0xce,
-	0xec, 0x7e, 0x3f, 0xe3, 0x19, 0x93, 0xa7, 0x4a, 0x4b, 0x94, 0xae, 0xc9, 0xb8, 0x49, 0x45, 0x9e,
-	0x2c, 0x02, 0x66, 0xf3, 0x74, 0x07, 0x30, 0x05, 0x0d, 0xe3, 0x11, 0x9b, 0x17, 0xda, 0xfb, 0x80,
-	0xa9, 0x7b, 0x7d, 0xcc, 0x33, 0x95, 0xf2, 0x63, 0x37, 0x04, 0x1e, 0xc9, 0x3c, 0x08, 0x33, 0x19,
-	0x5d, 0x95, 0x6f, 0xda, 0x87, 0x89, 0xc0, 0x74, 0x1c, 0xb2, 0x48, 0x8e, 0xdc, 0x44, 0x26, 0xd2,
-	0xb5, 0xe9, 0x70, 0x7c, 0x69, 0x4f, 0x25, 0x5f, 0x11, 0x95, 0xd7, 0x7b, 0x8a, 0xb4, 0xde, 0x6b,
-	0xa9, 0xa4, 0x01, 0x3d, 0x98, 0x71, 0xf8, 0x60, 0x94, 0xcc, 0x0d, 0xd0, 0x21, 0xd9, 0x51, 0xb3,
-	0x5a, 0x30, 0x17, 0xd0, 0x72, 0xba, 0x9b, 0xfd, 0x07, 0x27, 0xcf, 0xd8, 0x42, 0x1a, 0x60, 0xca,
-	0xe6, 0x82, 0xd8, 0x1a, 0x56, 0x53, 0xad, 0x64, 0x7a, 0x07, 0xa4, 0x61, 0x63, 0x1e, 0x66, 0x40,
-	0xf7, 0x48, 0xc3, 0xcc, 0x0f, 0x2d, 0xa7, 0xeb, 0xf4, 0xef, 0xfb, 0x37, 0x89, 0x42, 0xdc, 0x29,
-	0x22, 0x18, 0xac, 0x16, 0xc7, 0x67, 0xb5, 0xff, 0x15, 0xb7, 0x86, 0xd5, 0xe4, 0x2b, 0x99, 0xde,
-	0x17, 0x87, 0x3c, 0x2a, 0x3d, 0xf0, 0xec, 0x5c, 0x18, 0x94, 0x7a, 0x42, 0xdf, 0x11, 0x02, 0x4a,
-	0x46, 0x69, 0x10, 0x0a, 0x34, 0x56, 0xe4, 0xb6, 0x77, 0xf4, 0xfb, 0xc7, 0xfe, 0x8b, 0xa5, 0x4e,
-	0x2b, 0x3d, 0x31, 0x23, 0x8e, 0x22, 0xca, 0x78, 0x68, 0xdc, 0x44, 0x1e, 0x86, 0x02, 0x2f, 0x05,
-	0x64, 0x31, 0xf3, 0x04, 0x66, 0xc2, 0xa0, 0xdf, 0xb0, 0x18, 0x9e, 0x40, 0x43, 0x8f, 0xc8, 0x6e,
-	0xc6, 0x0b, 0xe2, 0xa0, 0xc4, 0xfd, 0xa4, 0x05, 0x22, 0xe4, 0xad, 0x8d, 0xae, 0xd3, 0xdf, 0xf2,
-	0x69, 0x59, 0x3b, 0x2b, 0x4a, 0x1f, 0xcb, 0x4a, 0xef, 0x97, 0x43, 0x68, 0xa9, 0x9e, 0xa3, 0x90,
-	0xf9, 0x5c, 0x59, 0x44, 0x9a, 0xc8, 0x75, 0x02, 0x18, 0xa0, 0x0c, 0x8c, 0x1c, 0xeb, 0x08, 0x66,
-	0x2d, 0x78, 0xcd, 0xd6, 0x46, 0x87, 0xad, 0x03, 0xb0, 0xa1, 0x7d, 0x3d, 0x94, 0x03, 0xfb, 0xf6,
-	0x2c, 0x47, 0x3d, 0xf1, 0x1f, 0xe2, 0x5f, 0xc9, 0xdb, 0xab, 0x6d, 0x9f, 0x92, 0xc7, 0x15, 0xc0,
-	0xb4, 0x49, 0x36, 0xaf, 0x60, 0x62, 0x1b, 0xb8, 0xe5, 0x17, 0x21, 0xdd, 0x25, 0x77, 0xae, 0x79,
-	0x36, 0x86, 0x19, 0x56, 0x79, 0x78, 0xb3, 0xf1, 0xca, 0x39, 0xf9, 0xba, 0x49, 0xee, 0xd9, 0x8f,
-	0x02, 0x9a, 0x2a, 0xf2, 0xe4, 0xc2, 0x2c, 0x46, 0x66, 0xc9, 0x05, 0x3d, 0xa8, 0xf9, 0xd0, 0x17,
-	0x79, 0x0c, 0x9f, 0x21, 0x5e, 0xba, 0xda, 0x7e, 0x5e, 0xdb, 0x90, 0x8a, 0xd9, 0x92, 0xa4, 0xb9,
-	0xc4, 0xe8, 0x15, 0xdb, 0x45, 0x59, 0x0d, 0xd7, 0x40, 0x24, 0x39, 0xc4, 0x9e, 0x5d, 0x44, 0x7b,
-	0xf3, 0x1c, 0x78, 0x0c, 0xba, 0x92, 0xb0, 0x76, 0xd3, 0x04, 0xe9, 0x54, 0x5b, 0x7c, 0x2b, 0x3f,
-	0xa8, 0x98, 0x23, 0xdc, 0xc6, 0xea, 0x5e, 0x05, 0xf3, 0xcd, 0xc6, 0x85, 0xa4, 0xb5, 0xea, 0x6d,
-	0x41, 0xd2, 0xaf, 0x21, 0x59, 0x77, 0xf7, 0x4f, 0x0e, 0x6f, 0xfb, 0xdb, 0xb4, 0xe3, 0x7c, 0x9f,
-	0x76, 0x9c, 0x9f, 0xd3, 0x8e, 0x13, 0xde, 0xb5, 0x7f, 0x9a, 0x97, 0x7f, 0x02, 0x00, 0x00, 0xff,
-	0xff, 0x2a, 0xff, 0x62, 0x56, 0xed, 0x04, 0x00, 0x00,
+	// 670 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x55, 0x4d, 0x6e, 0xd3, 0x40,
+	0x14, 0x96, 0x9b, 0xf2, 0xd3, 0x69, 0x80, 0x74, 0x5a, 0xa1, 0x10, 0x95, 0xb4, 0x18, 0x21, 0x52,
+	0xd1, 0x3a, 0x6d, 0xd9, 0x00, 0xbb, 0x46, 0x42, 0x6a, 0x36, 0x80, 0xd2, 0x02, 0x4b, 0x6b, 0x6c,
+	0xbf, 0xda, 0xa3, 0xba, 0x1e, 0x33, 0xf3, 0x52, 0xc8, 0x3d, 0xd8, 0x71, 0x08, 0xae, 0xc1, 0x92,
+	0x13, 0x20, 0xd4, 0x03, 0x70, 0x00, 0x56, 0xc8, 0x33, 0x4e, 0xe2, 0xd6, 0x0e, 0x4a, 0x77, 0x33,
+	0xef, 0xff, 0x7b, 0xef, 0x9b, 0x37, 0xe4, 0x61, 0x2a, 0x05, 0x8a, 0xae, 0x8a, 0x99, 0x8a, 0x78,
+	0x12, 0x4e, 0x0e, 0x8e, 0x96, 0xd3, 0x15, 0xc0, 0x08, 0x24, 0x0c, 0xcf, 0x9c, 0xb1, 0xa2, 0xb5,
+	0x01, 0x18, 0x75, 0xcf, 0xf7, 0x58, 0x9c, 0x46, 0x6c, 0xaf, 0xeb, 0x01, 0xf3, 0x45, 0xe2, 0x7a,
+	0xb1, 0xf0, 0x4f, 0x8d, 0x4f, 0x6b, 0x27, 0xe4, 0x18, 0x0d, 0x3d, 0xc7, 0x17, 0x67, 0xdd, 0x50,
+	0x84, 0xa2, 0xab, 0xc5, 0xde, 0xf0, 0x44, 0xdf, 0x4c, 0xbe, 0xec, 0x64, 0xcc, 0xed, 0x0f, 0xe4,
+	0xc1, 0x21, 0x0f, 0x23, 0x50, 0x78, 0x80, 0x08, 0x0a, 0x19, 0x72, 0x91, 0x0c, 0xe0, 0xd3, 0x10,
+	0x14, 0xd2, 0x35, 0x72, 0x03, 0x52, 0xe1, 0x47, 0x4d, 0x6b, 0xd3, 0xea, 0x2c, 0x0e, 0xcc, 0x85,
+	0x3e, 0x26, 0x77, 0xce, 0x59, 0xcc, 0x03, 0x86, 0x42, 0xba, 0x3c, 0x50, 0xcd, 0x85, 0xcd, 0x5a,
+	0x67, 0x71, 0x50, 0x9f, 0x08, 0xfb, 0x81, 0xb2, 0x43, 0xd2, 0xaa, 0x8a, 0xab, 0x52, 0x91, 0x28,
+	0xa0, 0x7d, 0x52, 0x67, 0x53, 0xb1, 0x6a, 0x5a, 0x9b, 0xb5, 0xce, 0xf2, 0xfe, 0x13, 0xa7, 0x84,
+	0xd7, 0xa9, 0x08, 0x72, 0xc9, 0xd5, 0xfe, 0x66, 0x11, 0x5a, 0x36, 0xa2, 0x8f, 0x48, 0xbd, 0x58,
+	0x64, 0x8e, 0x60, 0xb9, 0x50, 0x23, 0xdd, 0x25, 0x6b, 0x91, 0x71, 0x74, 0x95, 0x18, 0x4a, 0x1f,
+	0x5c, 0x03, 0x76, 0x41, 0x9b, 0xd2, 0x5c, 0x77, 0xa4, 0x55, 0xaf, 0x35, 0xf2, 0x82, 0x07, 0x32,
+	0x19, 0x02, 0xe6, 0x1e, 0xb5, 0x4b, 0x1e, 0xc7, 0x5a, 0xa5, 0x3d, 0xec, 0x94, 0x34, 0xdf, 0x49,
+	0x91, 0x0a, 0x05, 0xf2, 0x28, 0x87, 0x34, 0x69, 0xc2, 0x31, 0x59, 0x49, 0x73, 0x9d, 0x3b, 0xc6,
+	0x9b, 0x77, 0xe2, 0xe9, 0xb4, 0x13, 0x80, 0x91, 0x33, 0x9e, 0xb7, 0x53, 0x8a, 0xd5, 0x48, 0xaf,
+	0x48, 0xec, 0x2d, 0xb2, 0xa4, 0xcf, 0xcc, 0x8b, 0x81, 0xae, 0x93, 0x25, 0x35, 0xbe, 0xe8, 0x16,
+	0xdc, 0x1e, 0x4c, 0x05, 0x59, 0x71, 0xa6, 0x65, 0xd5, 0xc5, 0xb1, 0x5c, 0x37, 0x6f, 0x71, 0xa5,
+	0x58, 0x0d, 0x76, 0x45, 0x62, 0x7f, 0xb5, 0xc8, 0x3d, 0x83, 0x81, 0xc5, 0x87, 0x5c, 0xa1, 0x90,
+	0x23, 0xfa, 0x96, 0x10, 0xdd, 0x45, 0xd7, 0xe3, 0xa8, 0x74, 0x91, 0xf5, 0xde, 0xee, 0xdf, 0x5f,
+	0x1b, 0xdb, 0x05, 0x22, 0xa7, 0x72, 0xa4, 0xce, 0x18, 0x72, 0x3f, 0x66, 0x9e, 0xea, 0x86, 0x62,
+	0xc7, 0xe3, 0x78, 0xc2, 0x21, 0x0e, 0x9c, 0x1e, 0xc7, 0x98, 0x2b, 0x1c, 0x2c, 0xe9, 0x18, 0x3d,
+	0x8e, 0x2a, 0x9b, 0x52, 0xcc, 0xb2, 0xc4, 0x66, 0x3a, 0xee, 0x67, 0xc9, 0x11, 0x21, 0x19, 0xcf,
+	0xd5, 0xe8, 0xf4, 0x78, 0x3e, 0x1a, 0x8d, 0xfd, 0xc7, 0x22, 0xb4, 0x40, 0x9e, 0x71, 0x65, 0x3e,
+	0x69, 0xe4, 0x63, 0x46, 0x91, 0x53, 0x24, 0x6f, 0xc1, 0xcb, 0x0a, 0xa6, 0x96, 0x03, 0x38, 0x86,
+	0x09, 0xc7, 0x22, 0xe7, 0x50, 0x82, 0x72, 0x34, 0xb8, 0x8b, 0x97, 0x84, 0xd7, 0xaf, 0xb6, 0x75,
+	0x40, 0x56, 0x2b, 0x02, 0xd3, 0x06, 0xa9, 0x9d, 0xc2, 0x28, 0x27, 0x7a, 0x76, 0xcc, 0x9e, 0xef,
+	0x39, 0x8b, 0x87, 0x90, 0xc7, 0x32, 0x97, 0x57, 0x0b, 0x2f, 0xac, 0xfd, 0xef, 0x8b, 0xe4, 0x96,
+	0x1e, 0x0a, 0x48, 0x9a, 0x92, 0xfb, 0x7d, 0x35, 0xa1, 0x4c, 0xf1, 0x0d, 0x6d, 0xcd, 0x18, 0x74,
+	0x3f, 0x09, 0xe0, 0x0b, 0x04, 0x05, 0xd3, 0xd6, 0xb3, 0x99, 0x0d, 0xa9, 0xe0, 0x96, 0x20, 0x8d,
+	0x42, 0xc6, 0x5e, 0xb6, 0xbc, 0xa8, 0x33, 0x23, 0xd7, 0x11, 0x0f, 0x13, 0x08, 0x7a, 0x7a, 0xcf,
+	0x69, 0xcb, 0x43, 0x60, 0x01, 0xc8, 0xca, 0x84, 0x33, 0x5f, 0x1a, 0x27, 0xed, 0x6a, 0x88, 0x6f,
+	0xc4, 0xfb, 0x34, 0x60, 0x08, 0xd7, 0x81, 0xba, 0x5e, 0x91, 0x79, 0xfa, 0xe2, 0x3c, 0xd2, 0xbc,
+	0x8a, 0x6d, 0x92, 0xa4, 0x33, 0x23, 0x49, 0x19, 0xdd, 0xff, 0x73, 0x48, 0xb2, 0x5a, 0xde, 0x78,
+	0x8a, 0x6e, 0xcf, 0xb7, 0x3e, 0xcd, 0x6e, 0x6f, 0xed, 0xcc, 0x69, 0x6d, 0x5a, 0xd8, 0xab, 0xff,
+	0xb8, 0x68, 0x5b, 0x3f, 0x2f, 0xda, 0xd6, 0xef, 0x8b, 0xb6, 0xe5, 0xdd, 0xd4, 0x9f, 0xc7, 0xf3,
+	0x7f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x24, 0xf6, 0x4b, 0x68, 0xc0, 0x06, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -346,6 +521,7 @@ type SlasherClient interface {
 	IsSlashableBlock(ctx context.Context, in *v1alpha1.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*ProposerSlashingResponse, error)
 	IsSlashableAttestationNoUpdate(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*Slashable, error)
 	IsSlashableBlockNoUpdate(ctx context.Context, in *v1alpha1.BeaconBlockHeader, opts ...grpc.CallOption) (*Slashable, error)
+	HighestAttestations(ctx context.Context, in *HighestAttestationRequest, opts ...grpc.CallOption) (*HighestAttestationResponse, error)
 }
 
 type slasherClient struct {
@@ -392,12 +568,22 @@ func (c *slasherClient) IsSlashableBlockNoUpdate(ctx context.Context, in *v1alph
 	return out, nil
 }
 
+func (c *slasherClient) HighestAttestations(ctx context.Context, in *HighestAttestationRequest, opts ...grpc.CallOption) (*HighestAttestationResponse, error) {
+	out := new(HighestAttestationResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/HighestAttestations", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SlasherServer is the server API for Slasher service.
 type SlasherServer interface {
 	IsSlashableAttestation(context.Context, *v1alpha1.IndexedAttestation) (*AttesterSlashingResponse, error)
 	IsSlashableBlock(context.Context, *v1alpha1.SignedBeaconBlockHeader) (*ProposerSlashingResponse, error)
 	IsSlashableAttestationNoUpdate(context.Context, *v1alpha1.IndexedAttestation) (*Slashable, error)
 	IsSlashableBlockNoUpdate(context.Context, *v1alpha1.BeaconBlockHeader) (*Slashable, error)
+	HighestAttestations(context.Context, *HighestAttestationRequest) (*HighestAttestationResponse, error)
 }
 
 // UnimplementedSlasherServer can be embedded to have forward compatible implementations.
@@ -415,6 +601,9 @@ func (*UnimplementedSlasherServer) IsSlashableAttestationNoUpdate(ctx context.Co
 }
 func (*UnimplementedSlasherServer) IsSlashableBlockNoUpdate(ctx context.Context, req *v1alpha1.BeaconBlockHeader) (*Slashable, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableBlockNoUpdate not implemented")
+}
+func (*UnimplementedSlasherServer) HighestAttestations(ctx context.Context, req *HighestAttestationRequest) (*HighestAttestationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HighestAttestations not implemented")
 }
 
 func RegisterSlasherServer(s *grpc.Server, srv SlasherServer) {
@@ -493,6 +682,24 @@ func _Slasher_IsSlashableBlockNoUpdate_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Slasher_HighestAttestations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HighestAttestationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SlasherServer).HighestAttestations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.slashing.Slasher/HighestAttestations",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SlasherServer).HighestAttestations(ctx, req.(*HighestAttestationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Slasher_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.slashing.Slasher",
 	HandlerType: (*SlasherServer)(nil),
@@ -513,9 +720,146 @@ var _Slasher_serviceDesc = grpc.ServiceDesc{
 			MethodName: "IsSlashableBlockNoUpdate",
 			Handler:    _Slasher_IsSlashableBlockNoUpdate_Handler,
 		},
+		{
+			MethodName: "HighestAttestations",
+			Handler:    _Slasher_HighestAttestations_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/slashing/slashing.proto",
+}
+
+func (m *HighestAttestationRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HighestAttestationRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HighestAttestationRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.ValidatorIds) > 0 {
+		dAtA2 := make([]byte, len(m.ValidatorIds)*10)
+		var j1 int
+		for _, num := range m.ValidatorIds {
+			for num >= 1<<7 {
+				dAtA2[j1] = uint8(uint64(num)&0x7f | 0x80)
+				num >>= 7
+				j1++
+			}
+			dAtA2[j1] = uint8(num)
+			j1++
+		}
+		i -= j1
+		copy(dAtA[i:], dAtA2[:j1])
+		i = encodeVarintSlashing(dAtA, i, uint64(j1))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Epoch != 0 {
+		i = encodeVarintSlashing(dAtA, i, uint64(m.Epoch))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *HighestAttestationResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HighestAttestationResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HighestAttestationResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Attestations) > 0 {
+		for iNdEx := len(m.Attestations) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Attestations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintSlashing(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *HighestAttestation) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HighestAttestation) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HighestAttestation) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.HighestTargetEpoch != 0 {
+		i = encodeVarintSlashing(dAtA, i, uint64(m.HighestTargetEpoch))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.HighestSourceEpoch != 0 {
+		i = encodeVarintSlashing(dAtA, i, uint64(m.HighestSourceEpoch))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.ValidatorId != 0 {
+		i = encodeVarintSlashing(dAtA, i, uint64(m.ValidatorId))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *ProposerSlashingResponse) Marshal() (dAtA []byte, err error) {
@@ -734,6 +1078,67 @@ func encodeVarintSlashing(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
+func (m *HighestAttestationRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Epoch != 0 {
+		n += 1 + sovSlashing(uint64(m.Epoch))
+	}
+	if len(m.ValidatorIds) > 0 {
+		l = 0
+		for _, e := range m.ValidatorIds {
+			l += sovSlashing(uint64(e))
+		}
+		n += 1 + sovSlashing(uint64(l)) + l
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *HighestAttestationResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Attestations) > 0 {
+		for _, e := range m.Attestations {
+			l = e.Size()
+			n += 1 + l + sovSlashing(uint64(l))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *HighestAttestation) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ValidatorId != 0 {
+		n += 1 + sovSlashing(uint64(m.ValidatorId))
+	}
+	if m.HighestSourceEpoch != 0 {
+		n += 1 + sovSlashing(uint64(m.HighestSourceEpoch))
+	}
+	if m.HighestTargetEpoch != 0 {
+		n += 1 + sovSlashing(uint64(m.HighestTargetEpoch))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *ProposerSlashingResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -832,6 +1237,354 @@ func sovSlashing(x uint64) (n int) {
 }
 func sozSlashing(x uint64) (n int) {
 	return sovSlashing(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *HighestAttestationRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlashing
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HighestAttestationRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HighestAttestationRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Epoch", wireType)
+			}
+			m.Epoch = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlashing
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Epoch |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType == 0 {
+				var v uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowSlashing
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					v |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				m.ValidatorIds = append(m.ValidatorIds, v)
+			} else if wireType == 2 {
+				var packedLen int
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowSlashing
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					packedLen |= int(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				if packedLen < 0 {
+					return ErrInvalidLengthSlashing
+				}
+				postIndex := iNdEx + packedLen
+				if postIndex < 0 {
+					return ErrInvalidLengthSlashing
+				}
+				if postIndex > l {
+					return io.ErrUnexpectedEOF
+				}
+				var elementCount int
+				var count int
+				for _, integer := range dAtA[iNdEx:postIndex] {
+					if integer < 128 {
+						count++
+					}
+				}
+				elementCount = count
+				if elementCount != 0 && len(m.ValidatorIds) == 0 {
+					m.ValidatorIds = make([]uint64, 0, elementCount)
+				}
+				for iNdEx < postIndex {
+					var v uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowSlashing
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						v |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					m.ValidatorIds = append(m.ValidatorIds, v)
+				}
+			} else {
+				return fmt.Errorf("proto: wrong wireType = %d for field ValidatorIds", wireType)
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlashing(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *HighestAttestationResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlashing
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HighestAttestationResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HighestAttestationResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Attestations", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlashing
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Attestations = append(m.Attestations, &HighestAttestation{})
+			if err := m.Attestations[len(m.Attestations)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlashing(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *HighestAttestation) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlashing
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HighestAttestation: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HighestAttestation: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ValidatorId", wireType)
+			}
+			m.ValidatorId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlashing
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ValidatorId |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HighestSourceEpoch", wireType)
+			}
+			m.HighestSourceEpoch = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlashing
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.HighestSourceEpoch |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HighestTargetEpoch", wireType)
+			}
+			m.HighestTargetEpoch = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlashing
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.HighestTargetEpoch |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlashing(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthSlashing
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *ProposerSlashingResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
