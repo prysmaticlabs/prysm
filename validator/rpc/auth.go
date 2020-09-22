@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -43,8 +44,11 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	}
 	hashFilePath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
 	// Write the config file to disk.
+	if err := os.MkdirAll(defaultWalletPath, os.ModePerm); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
-		return nil, errors.Wrap(err, "could not write hashed password for wallet to disk")
+		return nil, status.Errorf(codes.Internal, "could not write hashed password for wallet to disk: %v", err)
 	}
 	return s.sendAuthResponse()
 }
