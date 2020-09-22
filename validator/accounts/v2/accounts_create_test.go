@@ -109,6 +109,10 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	w, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.ErrorContains(t, "wrong password for wallet", err)
 
+	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))
+	w, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
+	require.NoError(t, err)
+
 	/*  The purpose of using a passwordReader object is to store a 'canned' response for when the program
 	asks for more passwords.  As we are about to call CreateAccount() with an incorrect password, we expect the
 	program to ask for more attempts via Stdin.	 This will provide the correct password.*/
