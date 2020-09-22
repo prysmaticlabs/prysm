@@ -1,9 +1,12 @@
 package promptutil
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestValidatePasswordInput(t *testing.T) {
@@ -87,4 +90,68 @@ func TestIsValidUnicode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultAndValidatePrompt(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		def       string
+		want      string
+		wantError bool
+	}{
+		{
+			name:  "number",
+			input: "3",
+			def:   "0",
+			want:  "3",
+		},
+		{
+			name:  "empty return default",
+			input: "",
+			def:   "0",
+			want:  "0",
+		},
+		{
+			name:  "empty return default no zero",
+			input: "",
+			def:   "3",
+			want:  "3",
+		},
+		{
+			name:      "empty return default, no zero",
+			input:     "a",
+			def:       "0",
+			want:      "",
+			wantError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content := []byte(tt.input + "\n")
+			tmpfile, err := ioutil.TempFile("", "content")
+			require.NoError(t, err)
+			defer func() {
+				err := os.Remove(tmpfile.Name())
+				require.NoError(t, err)
+			}()
+
+			_, err = tmpfile.Write(content)
+			require.NoError(t, err)
+
+			_, err = tmpfile.Seek(0, 0)
+			require.NoError(t, err)
+			oldStdin := os.Stdin
+			defer func() { os.Stdin = oldStdin }() // Restore original Stdin
+			os.Stdin = tmpfile
+			got, err := DefaultAndValidatePrompt(tt.name, tt.def, ValidateNumber)
+			if !tt.wantError {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.want, got)
+			err = tmpfile.Close()
+			require.NoError(t, err)
+		})
+	}
+
 }
