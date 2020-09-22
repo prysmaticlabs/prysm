@@ -121,7 +121,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 		},
 		{
-			Name:        "voluntary-exit",
+			Name:        "exit",
 			Description: "Performs a voluntary exit on selected accounts",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
