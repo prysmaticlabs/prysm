@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -24,7 +24,7 @@ func TestCountdownToGenesis(t *testing.T) {
 		genesisReached := "Chain genesis time reached"
 		CountdownToGenesis(
 			context.Background(),
-			roughtime.Now().Add(2*time.Second),
+			timeutils.Now().Add(2*time.Second),
 			params.BeaconConfig().MinGenesisActiveValidatorCount,
 		)
 		require.LogsContain(t, hook, firstStringResult)
@@ -41,7 +41,7 @@ func TestCountdownToGenesis(t *testing.T) {
 		}()
 		CountdownToGenesis(
 			ctx,
-			roughtime.Now().Add(5*time.Second),
+			timeutils.Now().Add(5*time.Second),
 			params.BeaconConfig().MinGenesisActiveValidatorCount,
 		)
 		require.LogsContain(t, hook, "4s until chain genesis")

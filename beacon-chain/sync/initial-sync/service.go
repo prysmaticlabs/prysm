@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -92,7 +92,7 @@ func (s *Service) Start() {
 		return
 	}
 
-	if genesis.After(roughtime.Now()) {
+	if genesis.After(timeutils.Now()) {
 		s.synced = true
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Synced,

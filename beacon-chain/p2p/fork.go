@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -87,7 +87,7 @@ func addForkEntry(
 	}
 	currentSlot := helpers.SlotsSince(genesisTime)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
-	if roughtime.Now().Before(genesisTime) {
+	if timeutils.Now().Before(genesisTime) {
 		currentSlot, currentEpoch = 0, 0
 	}
 	fork, err := p2putils.Fork(currentEpoch)
