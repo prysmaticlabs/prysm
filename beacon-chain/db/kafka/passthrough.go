@@ -247,11 +247,6 @@ func (e Exporter) LastArchivedSlot(ctx context.Context) (uint64, error) {
 	return e.db.LastArchivedSlot(ctx)
 }
 
-// HistoricalStatesDeleted -- passthrough
-func (e Exporter) HistoricalStatesDeleted(ctx context.Context) error {
-	return e.db.HistoricalStatesDeleted(ctx)
-}
-
 // RunMigrations -- passthrough
 func (e Exporter) RunMigrations(ctx context.Context) error {
 	return e.db.RunMigrations(ctx)
