@@ -32,14 +32,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	typeInfo := types.Info{Types: make(map[ast.Expr]types.TypeAndValue)}
-	_, err := (&types.Config{}).Check(pass.Pkg.Path(), pass.Fset, pass.Files, &typeInfo)
-	if err != nil {
-		return nil, err
-	}
 
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		sliceExpr, ok := node.(*ast.SliceExpr)
 		if !ok {
+			return
+		}
+
+		if err := types.CheckExpr(pass.Fset, pass.Pkg, sliceExpr.X.Pos(), sliceExpr.X, &typeInfo); err != nil {
 			return
 		}
 
