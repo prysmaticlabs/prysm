@@ -31,7 +31,7 @@ func TestService_InitStartStop(t *testing.T) {
 	defer cancel()
 
 	mc, p2p, db := initializeTestServices(t, []uint64{}, []*peerData{})
-	s := NewInitialSync(ctx, &Config{
+	s := NewService(ctx, &Config{
 		P2P:   p2p,
 		DB:    db,
 		Chain: mc,
@@ -51,7 +51,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 	require.NoError(t, err)
 
 	newService := func(ctx context.Context, mc *mock.ChainService) *Service {
-		s := NewInitialSync(ctx, &Config{
+		s := NewService(ctx, &Config{
 			P2P:           p2pt.NewTestP2P(t),
 			DB:            beaconDB,
 			Chain:         mc,

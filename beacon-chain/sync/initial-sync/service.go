@@ -58,9 +58,9 @@ type Service struct {
 	lastProcessedSlot uint64
 }
 
-// NewInitialSync configures the initial sync service responsible for bringing the node up to the
+// NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewInitialSync(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:           ctx,

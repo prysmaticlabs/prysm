@@ -546,7 +546,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
-	is := initialsync.NewInitialSync(b.ctx, &initialsync.Config{
+	is := initialsync.NewService(b.ctx, &initialsync.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(),
