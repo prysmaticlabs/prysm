@@ -20,7 +20,7 @@ import (
 func TestStoreAndGetKey(t *testing.T) {
 	tempDir, teardown := setupTempKeystoreDir(t)
 	defer teardown()
-	ks := &Store{
+	ks := &Keystore{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
@@ -38,7 +38,7 @@ func TestStoreAndGetKey(t *testing.T) {
 func TestStoreAndGetKeys(t *testing.T) {
 	tempDir, teardown := setupTempKeystoreDir(t)
 	defer teardown()
-	ks := &Store{
+	ks := &Keystore{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
@@ -84,7 +84,7 @@ func TestEncryptDecryptKey(t *testing.T) {
 func TestGetSymlinkedKeys(t *testing.T) {
 	tempDir, teardown := setupTempKeystoreDir(t)
 	defer teardown()
-	ks := &Store{
+	ks := &Keystore{
 		scryptN: LightScryptN,
 		scryptP: LightScryptP,
 	}

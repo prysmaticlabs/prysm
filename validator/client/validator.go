@@ -298,7 +298,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 	var validatorActivated bool
 	for _, status := range validatorStatuses {
 		fields := logrus.Fields{
-			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
+			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
 			"status": status.Status.Status.String(),
 		}
 		if status.Index != nonexistentIndex {

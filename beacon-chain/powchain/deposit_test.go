@@ -154,7 +154,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
-	deposits[0].Data.Signature = sig.Marshal()[:]
+	deposits[0].Data.Signature = sig.Marshal()
 
 	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
