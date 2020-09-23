@@ -61,7 +61,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
 			depositData := &ethpb.Deposit_Data{
-				PublicKey:             publicKeys[i].Marshal()[:],
+				PublicKey:             publicKeys[i].Marshal(),
 				Amount:                params.BeaconConfig().MaxEffectiveBalance,
 				WithdrawalCredentials: withdrawalCreds[:],
 			}

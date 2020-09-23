@@ -28,8 +28,8 @@ func TestBlockSignature(t *testing.T) {
 	signature, err := BlockSignature(beaconState, block.Block, privKeys)
 	assert.NoError(t, err)
 
-	if !bytes.Equal(blockSig[:], signature.Marshal()) {
-		t.Errorf("Expected block signatures to be equal, received %#x != %#x", blockSig[:], signature.Marshal())
+	if !bytes.Equal(blockSig, signature.Marshal()) {
+		t.Errorf("Expected block signatures to be equal, received %#x != %#x", blockSig, signature.Marshal())
 	}
 }
 
@@ -48,7 +48,7 @@ func TestRandaoReveal(t *testing.T) {
 	epochSignature, err := helpers.ComputeDomainAndSign(beaconState, epoch, epoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	if !bytes.Equal(randaoReveal[:], epochSignature[:]) {
-		t.Errorf("Expected randao reveals to be equal, received %#x != %#x", randaoReveal[:], epochSignature[:])
+	if !bytes.Equal(randaoReveal, epochSignature) {
+		t.Errorf("Expected randao reveals to be equal, received %#x != %#x", randaoReveal, epochSignature)
 	}
 }
