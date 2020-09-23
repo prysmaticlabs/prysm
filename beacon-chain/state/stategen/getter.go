@@ -2,7 +2,6 @@ package stategen
 
 import (
 	"context"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -220,7 +219,18 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 		return nil, err
 	}
 
-	return s.ReplayBlocks(ctx, startState, replayBlks, slot)
+	// If there's no blocks to replay, a node doesn't need to recalculate the start state.
+	// A node can simply advance the slots on the last saved state.
+	if len(replayBlks) == 0 {
+		return s.ReplayBlocks(ctx, startState, replayBlks, slot)
+	}
+
+	pRoot := bytesutil.ToBytes32(replayBlks[0].Block.ParentRoot)
+	replayStartState, err := s.loadStateByRoot(ctx, pRoot)
+	if err != nil {
+		return nil, err
+	}
+	return s.ReplayBlocks(ctx, replayStartState, replayBlks, slot)
 }
 
 // This returns the highest available ancestor state of the input block root.
