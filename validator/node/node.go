@@ -303,7 +303,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
-	service := prometheus.NewPrometheusService(
+	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)

@@ -651,7 +651,7 @@ func (b *BeaconNode) registerPrometheusService() error {
 
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
-	service := prometheus.NewPrometheusService(
+	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
