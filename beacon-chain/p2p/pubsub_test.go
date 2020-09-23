@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"sync"
 	"testing"
@@ -34,6 +33,6 @@ func TestMessageIDFunction_HashesCorrectly(t *testing.T) {
 	msg := [32]byte{'J', 'U', 'N', 'K'}
 	pMsg := &pubsubpb.Message{Data: msg[:]}
 	hashedData := hashutil.Hash(pMsg.Data)
-	msgID := base64.RawURLEncoding.EncodeToString(hashedData[:])
+	msgID := string(hashedData[:8])
 	assert.Equal(t, msgID, msgIDFunction(pMsg), "Got incorrect msg id")
 }

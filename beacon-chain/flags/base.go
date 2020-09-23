@@ -119,6 +119,12 @@ var (
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
 	}
+	// DisableSync disables a node from syncing at start-up. Instead the node enters regular sync
+	// immediately.
+	DisableSync = &cli.BoolFlag{
+		Name:  "disable-sync",
+		Usage: "Starts the beacon node without entering initial sync and instead exits to regular sync immediately.",
+	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
 		Name:  "enable-debug-rpc-endpoints",
@@ -138,5 +144,12 @@ var (
 	NetworkID = &cli.Uint64Flag{
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
+	}
+	// WeakSubjectivityCheckpt defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
+	WeakSubjectivityCheckpt = &cli.StringFlag{
+		Name: "weak-subjectivity-checkpoint",
+		Usage: "Input in `block_root:epoch_number` format. This guarantee that syncing leads to the given Weak Subjectivity Checkpoint being in the canonical chain. " +
+			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
+		Value: "",
 	}
 )

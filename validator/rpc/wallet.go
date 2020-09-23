@@ -10,8 +10,11 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,8 +40,8 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			}
 			keystores[i] = keystore
 		}
-		wallet, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-			WalletCfg: &v2.WalletConfig{
+		w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+			WalletCfg: &wallet.Config{
 				WalletDir:      defaultWalletPath,
 				KeymanagerKind: v2keymanager.Direct,
 				WalletPassword: req.WalletPassword,
@@ -50,9 +53,16 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		// Import the uploaded accounts.
 		if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
-			Wallet:          wallet,
+			Wallet:          w,
 			Keystores:       keystores,
 			AccountPassword: req.KeystoresPassword,
+		}); err != nil {
+			return nil, err
+		}
+		if err := s.initializeWallet(ctx, &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
 		}
@@ -75,6 +85,13 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if err != nil {
 			return nil, err
 		}
+		if err := s.initializeWallet(ctx, &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: req.WalletPassword,
+		}); err != nil {
+			return nil, err
+		}
 		return &pb.WalletResponse{
 			WalletPath: defaultWalletPath,
 		}, nil
@@ -92,8 +109,8 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
-	err := v2.WalletExists(defaultWalletPath)
-	if err != nil && errors.Is(err, v2.ErrNoWalletFound) {
+	err := wallet.Exists(defaultWalletPath)
+	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
@@ -123,4 +140,45 @@ func (s *Server) GenerateMnemonic(ctx context.Context, _ *ptypes.Empty) (*pb.Gen
 	return &pb.GenerateMnemonicResponse{
 		Mnemonic: mnemonic,
 	}, nil
+}
+
+// ChangePassword allows changing a wallet password via the API as
+// an authenticated method.
+func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
+	err := wallet.Exists(defaultWalletPath)
+	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+	}
+	if req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")
+	}
+	if req.Password != req.PasswordConfirmation {
+		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
+	}
+	switch s.wallet.KeymanagerKind() {
+	case v2keymanager.Direct:
+		km, ok := s.keymanager.(*direct.Keymanager)
+		if !ok {
+			return nil, status.Error(codes.FailedPrecondition, "Not a valid direct keymanager")
+		}
+		s.wallet.SetPassword(req.Password)
+		if err := km.RefreshWalletPassword(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
+		}
+	case v2keymanager.Derived:
+		km, ok := s.keymanager.(*derived.Keymanager)
+		if !ok {
+			return nil, status.Error(codes.FailedPrecondition, "Not a valid derived keymanager")
+		}
+		s.wallet.SetPassword(req.Password)
+		if err := km.RefreshWalletPassword(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
+		}
+	case v2keymanager.Remote:
+		return nil, status.Error(codes.Internal, "Cannot change password for remote keymanager")
+	}
+	return &ptypes.Empty{}, nil
 }

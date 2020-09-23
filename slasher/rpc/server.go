@@ -130,6 +130,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		if err := ss.detector.UpdateSpans(ctx, req); err != nil {
 			log.WithError(err).Error("could not update spans")
+			return nil, status.Errorf(codes.Internal, "failed to update spans: %v: %v", req, err)
 		}
 	}
 	return &slashpb.AttesterSlashingResponse{

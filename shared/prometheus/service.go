@@ -14,6 +14,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,6 +43,7 @@ func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry, addi
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/healthz", s.healthzHandler)
 	mux.HandleFunc("/goroutinez", s.goroutinezHandler)
+	mux.HandleFunc("/logs", logutil.NewLogStreamServer().Handler)
 
 	// Register additional handlers.
 	for _, h := range additionalHandlers {

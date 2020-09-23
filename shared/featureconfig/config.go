@@ -42,6 +42,7 @@ type Flags struct {
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
+	EnableBlst                                 bool // Enables new BLS library from supranational.
 	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
@@ -63,7 +64,6 @@ type Flags struct {
 	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnableRoughtime                            bool // EnableRoughtime is an opt-in flag for enabling hourly syncing with roughtime. Default is to not sync.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -237,9 +237,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling new beacon state locks")
 		cfg.NewBeaconStateLocks = false
 	}
-	if ctx.Bool(batchBlockVerify.Name) {
-		log.Warn("Performing batch block verification when syncing.")
-		cfg.BatchBlockVerify = true
+	cfg.BatchBlockVerify = true
+	if ctx.Bool(disableBatchBlockVerify.Name) {
+		log.Warn("Disabling batch block verification when syncing.")
+		cfg.BatchBlockVerify = false
 	}
 	if ctx.Bool(initSyncVerbose.Name) {
 		log.Warn("Logging every processed block during initial syncing.")
@@ -261,13 +262,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling peer scoring in P2P")
 		cfg.EnablePeerScorer = true
 	}
-	if ctx.Bool(enableRoughtime.Name) {
-		log.Warn("Enabling roughtime sync")
-		cfg.EnableRoughtime = true
+	cfg.UseCheckPointInfoCache = true
+	if ctx.Bool(disableCheckPtInfoCache.Name) {
+		log.Warn("Disabling advanced check point info cache")
+		cfg.UseCheckPointInfoCache = false
 	}
-	if ctx.Bool(checkPtInfoCache.Name) {
-		log.Warn("Using advance check point info cache")
-		cfg.UseCheckPointInfoCache = true
+	if ctx.Bool(enableBlst.Name) {
+		log.Warn("Enabling new BLS library blst")
+		cfg.EnableBlst = true
 	}
 	Init(cfg)
 }

@@ -348,6 +348,24 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
+// RefreshWalletPassword re-encrypts the accounts store and stores
+// it to disk using a wallet's password which was recently changed.
+func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
+	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+	if err != nil {
+		return err
+	}
+	// Write the encoded keystore.
+	encoded, err := json.MarshalIndent(newStore, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+		return errors.Wrap(err, "could not write keystore file for accounts")
+	}
+	return nil
+}
+
 func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
@@ -373,6 +391,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not confirm password via prompt")
 		}
+		dr.wallet.SetPassword(password) // Write the correct password to the wallet.
 	} else if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}

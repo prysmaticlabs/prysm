@@ -29,6 +29,15 @@ const (
 	ConfirmPass
 )
 
+// PasswordReaderFunc takes in a *file and returns a password using the terminal package
+func passwordReaderFunc(file *os.File) ([]byte, error) {
+	pass, err := terminal.ReadPassword(int(file.Fd()))
+	return pass, err
+}
+
+// PasswordReader has passwordReaderFunc as the default but can be changed for testing purposes.
+var PasswordReader func(file *os.File) ([]byte, error) = passwordReaderFunc
+
 // ValidatePrompt requests the user for text and expects the user to fulfill the provided validation function.
 func ValidatePrompt(r io.Reader, promptText string, validateFunc func(string) error) (string, error) {
 	var responseValid bool
@@ -82,6 +91,9 @@ func DefaultAndValidatePrompt(promptText string, defaultValue string, validateFu
 		if ok := scanner.Scan(); ok {
 			item := scanner.Text()
 			response = strings.TrimRight(item, "\r\n")
+			if response == "" {
+				return defaultValue, nil
+			}
 			if err := validateFunc(response); err != nil {
 				fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
 			} else {
@@ -101,7 +113,7 @@ func PasswordPrompt(promptText string, validateFunc func(string) error) (string,
 	var response string
 	for !responseValid {
 		fmt.Printf("%s: ", au.Bold(promptText))
-		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+		bytePassword, err := PasswordReader(os.Stdin)
 		if err != nil {
 			return "", err
 		}
@@ -123,7 +135,7 @@ func InputPassword(
 	passwordFileFlag *cli.StringFlag,
 	promptText string,
 	confirmText string,
-	shouldConfirmPassword PasswordConfirm,
+	shouldConfirmPassword bool,
 	passwordValidator func(input string) error,
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
@@ -150,7 +162,7 @@ func InputPassword(
 		if err != nil {
 			return "", fmt.Errorf("could not read password: %v", err)
 		}
-		if shouldConfirmPassword == ConfirmPass {
+		if shouldConfirmPassword {
 			passwordConfirmation, err := PasswordPrompt(confirmText, passwordValidator)
 			if err != nil {
 				return "", fmt.Errorf("could not read password confirmation: %v", err)

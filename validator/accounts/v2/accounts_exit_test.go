@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
@@ -71,7 +72,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
 	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: "Passwordz0320$",
@@ -116,7 +117,7 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 		accountPasswordFile: passwordFilePath,
 	})
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &WalletConfig{
+		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: "Passwordz0320$",
@@ -124,5 +125,5 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 	})
 	require.NoError(t, err)
 	_, _, err = prepareWallet(cliCtx)
-	assert.ErrorContains(t, "wallet is empty, no accounts to perform voluntary exit", err)
+	assert.ErrorContains(t, "please recreate your wallet", err)
 }
