@@ -249,7 +249,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.Se
 		sigs[i] = sig
 	}
 
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	return att, nil
 }
@@ -290,7 +290,7 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 		sigs[i] = sig
 	}
 
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	return att, nil
 }
