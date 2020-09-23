@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["compare_len.go"],
+    srcs = ["slice.go"],
     importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/slicedirect/testdata",
     visibility = ["//visibility:public"],
 )
