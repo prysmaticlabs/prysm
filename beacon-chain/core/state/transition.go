@@ -273,6 +273,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
 		prevStateRoot,
 	); err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
 
@@ -282,6 +283,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	if header.StateRoot == nil || bytes.Equal(header.StateRoot, zeroHash[:]) {
 		header.StateRoot = prevStateRoot[:]
 		if err := state.SetLatestBlockHeader(header); err != nil {
+			traceutil.AnnotateError(span, err)
 			return nil, err
 		}
 	}
@@ -295,8 +297,22 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
 		prevBlockRoot,
 	); err != nil {
+		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
+
+	// Update state fork as defined in the fork version schedule.
+	if f, ok := params.BeaconConfig().ForkVersionSchedule[state.Slot()]; ok {
+		f.PreviousVersion = state.Fork().CurrentVersion
+		if err := state.SetFork(f); err != nil {
+			traceutil.AnnotateError(span, err)
+			return nil, err
+		}
+		span.AddAttributes(trace.BoolAttribute("updatedFork", true))
+	} else {
+		span.AddAttributes(trace.BoolAttribute("updatedFork", false))
+	}
+
 	return state, nil
 }
 

@@ -184,7 +184,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 //    fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
 //    return Domain(domain_type + fork_data_root[:28])
 func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte, genesisValidatorsRoot []byte) ([]byte, error) {
-	if forkVersion == nil {
+	if forkVersion == nil || domainType == params.BeaconConfig().DomainDeposit {
 		forkVersion = params.BeaconConfig().GenesisForkVersion
 	}
 	if genesisValidatorsRoot == nil {

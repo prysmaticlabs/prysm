@@ -46,20 +46,16 @@ func Fork(
 	// We retrieve a list of scheduled forks by epoch.
 	// We loop through the keys in this map to determine the current
 	// fork version based on the requested epoch.
-	retrievedForkVersion := params.BeaconConfig().GenesisForkVersion
-	previousForkVersion := params.BeaconConfig().GenesisForkVersion
 	scheduledForks := params.BeaconConfig().ForkVersionSchedule
-	forkEpoch := uint64(0)
-	for epoch, forkVersion := range scheduledForks {
-		if epoch <= targetEpoch {
-			previousForkVersion = retrievedForkVersion
-			retrievedForkVersion = forkVersion
-			forkEpoch = epoch
+	f := &pb.Fork{
+		Epoch: 0,
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion: params.BeaconConfig().GenesisForkVersion,
+	}
+	for _, fork := range scheduledForks {
+		if fork.Epoch <= targetEpoch && fork.Epoch > f.Epoch {
+			f = fork
 		}
 	}
-	return &pb.Fork{
-		PreviousVersion: previousForkVersion,
-		CurrentVersion:  retrievedForkVersion,
-		Epoch:           forkEpoch,
-	}, nil
+	return f, nil
 }

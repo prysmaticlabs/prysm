@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -952,4 +953,66 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 
 	_, err = state.ProcessSlots(context.Background(), parentState, slot-1)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
+}
+
+func TestProcessSlot(t *testing.T) {
+	bs := testutil.NewBeaconState()
+	require.NoError(t, bs.SetSlot(55*params.BeaconConfig().SlotsPerEpoch))
+
+	tests := []struct {
+		name         string
+		forkSchedule map[uint64]*pb.Fork
+		want         *pb.Fork
+		wantErr      bool
+	}{
+		{
+			name:         "Nil fork schedule",
+			forkSchedule: nil,
+			want:         bs.Fork(),
+		},
+		{
+			name: "fork schedule doesn't apply",
+			forkSchedule: map[uint64]*pb.Fork{
+				10000: {
+					CurrentVersion: []byte("bar"),
+					Epoch:          66,
+				},
+			},
+			want: bs.Fork(),
+		},
+		{
+			name: "fork schedule applies",
+			forkSchedule: map[uint64]*pb.Fork{
+				bs.Slot(): {
+					CurrentVersion: []byte("foo"),
+					Epoch:          66,
+				},
+			},
+			want: &pb.Fork{
+				PreviousVersion: bs.Fork().CurrentVersion,
+				CurrentVersion:  []byte("foo"),
+				Epoch:           66,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := params.BeaconConfig()
+			cfg.ForkVersionSchedule = tt.forkSchedule
+			params.OverrideBeaconConfig(cfg)
+
+			got, err := state.ProcessSlot(context.Background(), bs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ProcessSlot() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got == nil || !reflect.DeepEqual(got.Fork(), tt.want) {
+				var f *pb.Fork
+				if got != nil {
+					f = got.Fork()
+				}
+				t.Errorf("ProcessSlot() got = %v, want %v", f, tt.want)
+			}
+		})
+	}
 }

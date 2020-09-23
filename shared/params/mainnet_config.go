@@ -3,6 +3,7 @@ package params
 import (
 	"time"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -139,7 +140,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	GenesisForkVersion:  []byte{0, 0, 0, 0},
 	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
 	NextForkEpoch:       1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
-	ForkVersionSchedule: map[uint64][]byte{
-		// Any further forks must be specified here by their epoch number.
+	ForkVersionSchedule: map[uint64]*pb.Fork{
+		// Any further forks must be specified here by their slot number.
 	},
 }

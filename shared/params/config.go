@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mohae/deepcopy"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -108,10 +109,10 @@ type BeaconChainConfig struct {
 	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 
 	// Fork-related values.
-	GenesisForkVersion  []byte            `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
-	NextForkVersion     []byte            `yaml:"NEXT_FORK_VERSION"`    // NextForkVersion is used to track the upcoming fork version, if any.
-	NextForkEpoch       uint64            `yaml:"NEXT_FORK_EPOCH"`      // NextForkEpoch is used to track the epoch of the next fork, if any.
-	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
+	GenesisForkVersion  []byte                 `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
+	NextForkVersion     []byte                 `yaml:"NEXT_FORK_VERSION"`    // NextForkVersion is used to track the upcoming fork version, if any.
+	NextForkEpoch       uint64                 `yaml:"NEXT_FORK_EPOCH"`      // NextForkEpoch is used to track the epoch of the next fork, if any.
+	ForkVersionSchedule map[uint64]*p2ppb.Fork `yaml:"FORK_SCHEDULE"`        // Schedule of fork versions by slot number.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
