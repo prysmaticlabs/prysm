@@ -1,3 +1,5 @@
+// Package slicedirect implements a static analyzer to ensure that code does not contain
+// applications of [:] on expressions which are already slices.
 package slicedirect
 
 import (
