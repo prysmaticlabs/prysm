@@ -51,7 +51,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	chain := &mockChain.ChainService{
 		State: beaconState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	vs := &Server{
