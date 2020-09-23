@@ -26,9 +26,10 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
 				flags.NumAccountsFlag,
+				flags.DeprecatedPasswordsDirFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
-				flags.DeprecatedPasswordsDirFlag,
+				featureconfig.SpadinaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -48,6 +49,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.DeletePublicKeysFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -66,6 +68,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.ShowDepositDataFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -90,6 +93,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupPasswordFile,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -110,6 +114,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.ImportPrivateKeyFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -136,6 +141,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.GrpcRetryDelayFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -161,6 +167,9 @@ this command outputs a deposit data string which is required to become a validat
 				flags.DepositPublicKeysFlag,
 				flags.SkipDepositConfirmationFlag,
 				flags.DepositAllAccountsFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)

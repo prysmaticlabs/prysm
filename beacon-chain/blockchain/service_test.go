@@ -101,7 +101,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	cfg := &Config{

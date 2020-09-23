@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var log = logrus.WithField("prefix", "wallet")
@@ -30,6 +31,8 @@ var log = logrus.WithField("prefix", "wallet")
 const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
+	// HashedPasswordFileName for the wallet.
+	HashedPasswordFileName = "hash"
 	// DirectoryPermissions for directories created under the wallet path.
 	DirectoryPermissions = os.ModePerm
 	// NewWalletPasswordPromptText for wallet creation.
@@ -38,6 +41,7 @@ const (
 	WalletPasswordPromptText = "Wallet password"
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"
+	hashCost                  = 8
 )
 
 var (
@@ -85,8 +89,8 @@ type Wallet struct {
 	accountsChangedFeed *event.Feed
 }
 
-// NewWallet creates a struct from config values.
-func NewWallet(cfg *Config) *Wallet {
+// New creates a struct from config values.
+func New(cfg *Config) *Wallet {
 	accountsPath := filepath.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	return &Wallet{
 		walletDir:      cfg.WalletDir,
@@ -99,11 +103,11 @@ func NewWallet(cfg *Config) *Wallet {
 // Exists check if a wallet at the specified directory
 // exists and has valid information in it.
 func Exists(walletDir string) error {
-	ok, err := fileutil.HasDir(walletDir)
+	dirExists, err := fileutil.HasDir(walletDir)
 	if err != nil {
 		return errors.Wrap(err, "could not parse wallet directory")
 	}
-	if ok {
+	if dirExists {
 		isEmptyWallet, err := isEmptyWallet(walletDir)
 		if err != nil {
 			return errors.Wrap(err, "could not check if wallet has files")
@@ -136,6 +140,16 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		false, /* Do not confirm password */
 		ValidateExistingPass,
 	)
+	if fileutil.FileExists(filepath.Join(walletDir, HashedPasswordFileName)) {
+		hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(walletDir, HashedPasswordFileName))
+		if err != nil {
+			return nil, err
+		}
+		// Compare the wallet password here.
+		if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(walletPassword)); err != nil {
+			return nil, errors.Wrap(err, "wrong password for wallet")
+		}
+	}
 	return OpenWallet(cliCtx.Context, &Config{
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
@@ -217,6 +231,18 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
+		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
+			keys, err := keymanager.FetchValidatingPublicKeys(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if keys == nil || len(keys) == 0 {
+				return nil, errors.New("please recreate your wallet with wallet-v2 create")
+			}
+			if err := w.SaveHashedPassword(ctx); err != nil {
+				return nil, errors.Wrap(err, "could not save hashed password to disk")
+			}
+		}
 	case v2keymanager.Derived:
 		opts, err := derived.UnmarshalOptionsFile(configFile)
 		if err != nil {
@@ -229,6 +255,11 @@ func (w *Wallet) InitializeKeymanager(
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
+		}
+		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
+			if err := w.SaveHashedPassword(ctx); err != nil {
+				return nil, errors.Wrap(err, "could not save hashed password to disk")
+			}
 		}
 	case v2keymanager.Remote:
 		opts, err := remote.UnmarshalOptionsFile(configFile)
@@ -372,6 +403,20 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 		return errors.Wrapf(err, "could not write %s", seedFilePath)
 	}
 	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
+	return nil
+}
+
+// SaveHashedPassword to disk for the wallet.
+func (w *Wallet) SaveHashedPassword(ctx context.Context) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(w.walletPassword), hashCost)
+	if err != nil {
+		return errors.Wrap(err, "could not generate hashed password")
+	}
+	hashFilePath := filepath.Join(w.walletDir, HashedPasswordFileName)
+	// Write the config file to disk.
+	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return errors.Wrap(err, "could not write hashed password for wallet to disk")
+	}
 	return nil
 }
 
