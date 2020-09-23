@@ -12,7 +12,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -45,7 +45,7 @@ func init() {
 	if err := p.Connect(info); err != nil {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
-	sync.NewRegularSync(context.Background(), &sync.Config{
+	regularsync.NewService(context.Background(), &regularsync.Config{
 		P2P:          p,
 		DB:           nil,
 		AttPool:      nil,

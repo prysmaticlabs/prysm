@@ -33,7 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -327,7 +327,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 
 	b.db = d
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	if err != nil {
 		return errors.Wrap(err, "could not create deposit cache")
 	}
@@ -516,7 +516,7 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	rs := prysmsync.NewRegularSync(b.ctx, &prysmsync.Config{
+	rs := regularsync.NewService(b.ctx, &regularsync.Config{
 		DB:                  b.db,
 		P2P:                 b.fetchP2P(),
 		Chain:               chainService,
@@ -546,7 +546,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
-	is := initialsync.NewInitialSync(b.ctx, &initialsync.Config{
+	is := initialsync.NewService(b.ctx, &initialsync.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(),
@@ -651,7 +651,7 @@ func (b *BeaconNode) registerPrometheusService() error {
 
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
-	service := prometheus.NewPrometheusService(
+	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
@@ -691,7 +691,7 @@ func (b *BeaconNode) registerInteropServices() error {
 	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 
 	if genesisValidators > 0 || genesisStatePath != "" {
-		svc := interopcoldstart.NewColdStartService(b.ctx, &interopcoldstart.Config{
+		svc := interopcoldstart.NewService(b.ctx, &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,

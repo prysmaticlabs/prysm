@@ -38,7 +38,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	}()
 	validatorKey, err := keystore.NewKey()
 	require.NoError(t, err, "Cannot create new key")
-	ks := keystore.NewKeystore(directory)
+	ks := keystore.New(directory)
 	err = ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, "")
 	require.NoError(t, err, "Unable to store key")
 	require.NoError(t, NewValidatorAccount(directory, "passsword123"), "Should support multiple keys")
@@ -110,7 +110,7 @@ func TestChangePassword_KeyEncryptedWithNewPassword(t *testing.T) {
 
 	validatorKey, err := keystore.NewKey()
 	require.NoError(t, err, "Cannot create new key")
-	ks := keystore.NewKeystore(directory)
+	ks := keystore.New(directory)
 	err = ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, oldPassword)
 	require.NoError(t, err, "Unable to store key")
 
@@ -134,7 +134,7 @@ func TestChangePassword_KeyNotMatchingOldPasswordNotEncryptedWithNewPassword(t *
 
 	validatorKey, err := keystore.NewKey()
 	require.NoError(t, err, "Cannot create new key")
-	ks := keystore.NewKeystore(directory)
+	ks := keystore.New(directory)
 	err = ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, "notmatching")
 	require.NoError(t, err, "Unable to store key")
 

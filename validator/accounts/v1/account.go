@@ -33,7 +33,7 @@ var errFailedToCloseManyDb = errors.New("failed to close one or more databases")
 // DecryptKeysFromKeystore extracts a set of validator private keys from
 // an encrypted keystore directory and a password string.
 func DecryptKeysFromKeystore(directory string, filePrefix string, password string) (map[string]*keystore.Key, error) {
-	ks := keystore.NewKeystore(directory)
+	ks := keystore.New(directory)
 	validatorKeys, err := ks.GetKeys(directory, filePrefix, password, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get private key")
@@ -51,7 +51,7 @@ func VerifyAccountNotExists(directory string, password string) error {
 	validatorKeyFile := params.BeaconConfig().ValidatorPrivkeyFileName
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
-	ks := keystore.NewKeystore(directory)
+	ks := keystore.New(directory)
 	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password, false); err == nil {
 		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
 	}
@@ -72,7 +72,7 @@ func NewValidatorAccount(directory string, password string) error {
 	log.Info(`Thanks, we are generating your keystore now, this could take a while...`)
 	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
-	ks := keystore.NewKeystore(directory)
+	ks := keystore.New(directory)
 	// If the keystore does not exists at the path, we create a new one for the validator.
 	shardWithdrawalKey, err := keystore.NewKey()
 	if err != nil {
@@ -325,7 +325,7 @@ func changePasswordForKeyType(keystorePath string, filePrefix string, oldPasswor
 		return errors.Wrap(err, "failed to decrypt keys")
 	}
 
-	keyStore := keystore.NewKeystore(keystorePath)
+	keyStore := keystore.New(keystorePath)
 	for _, key := range keys {
 		keyFileName := keystorePath + filePrefix + hex.EncodeToString(key.PublicKey.Marshal())[:12]
 		if err := keyStore.StoreKey(keyFileName, key, newPassword); err != nil {
