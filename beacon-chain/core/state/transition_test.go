@@ -955,7 +955,7 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
 }
 
-func TestProcessSlot(t *testing.T) {
+func TestProcessSlot_UpdatesFork(t *testing.T) {
 	bs := testutil.NewBeaconState()
 	require.NoError(t, bs.SetSlot(55*params.BeaconConfig().SlotsPerEpoch))
 
