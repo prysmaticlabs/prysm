@@ -48,6 +48,11 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 		return hInfo.Hash, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("headerCacheHit", false))
+
+	if s.eth1DataFetcher == nil {
+		return 0, errors.New("nil eth1DataFetcher")
+	}
+
 	header, err := s.eth1DataFetcher.HeaderByNumber(ctx, height)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, fmt.Sprintf("could not query header with height %d", height.Uint64()))
@@ -62,6 +67,10 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
+	if s.eth1DataFetcher == nil {
+		return 0, errors.New("nil eth1DataFetcher")
+	}
+
 	header, err := s.eth1DataFetcher.HeaderByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, fmt.Sprintf("could not query block with height %d", height.Uint64()))
