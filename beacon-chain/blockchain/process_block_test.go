@@ -55,7 +55,7 @@ func TestStore_OnBlock(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
 	require.NoError(t, service.beaconDB.SaveState(ctx, st.Copy(), randomParentRoot))
 	randomParentRoot2 := roots[1]
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2[:]}))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2}))
 	require.NoError(t, service.beaconDB.SaveState(ctx, st.Copy(), bytesutil.ToBytes32(randomParentRoot2)))
 
 	tests := []struct {

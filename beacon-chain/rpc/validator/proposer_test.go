@@ -280,7 +280,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
-	req.Block.Body.RandaoReveal = randaoReveal[:]
+	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
@@ -1892,7 +1892,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig
 					}
-					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()
 				}
 				return atts
 			},

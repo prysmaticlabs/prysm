@@ -282,7 +282,7 @@ func signVoluntaryExit(
 	}
 
 	sig, err := signer(ctx, &validatorpb.SignRequest{
-		PublicKey:       pubKey[:],
+		PublicKey:       pubKey,
 		SigningRoot:     exitRoot[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Exit{Exit: exit},

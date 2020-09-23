@@ -185,7 +185,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]

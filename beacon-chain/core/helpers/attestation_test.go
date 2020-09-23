@@ -89,7 +89,7 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			priv := bls.RandKey()
 			pub := priv.PublicKey()
-			sig := priv.Sign(msg[:])
+			sig := priv.Sign(msg)
 			pubkeys = append(pubkeys, pub)
 			att := &ethpb.Attestation{Signature: sig.Marshal()}
 			atts = append(atts, att)

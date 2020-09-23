@@ -73,7 +73,7 @@ func (v *ReadOnlyValidator) PublicKey() [48]byte {
 // read only validator.
 func (v *ReadOnlyValidator) WithdrawalCredentials() []byte {
 	creds := make([]byte, len(v.validator.WithdrawalCredentials))
-	copy(creds[:], v.validator.WithdrawalCredentials)
+	copy(creds, v.validator.WithdrawalCredentials)
 	return creds
 }
 

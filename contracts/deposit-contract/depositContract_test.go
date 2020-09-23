@@ -75,7 +75,7 @@ func TestValidatorRegister_OK(t *testing.T) {
 	for i, log := range logs {
 		_, _, _, _, idx, err := depositcontract.UnpackDepositLogData(log.Data)
 		require.NoError(t, err, "Unable to unpack log data")
-		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx[:])
+		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx)
 	}
 
 	assert.Equal(t, uint64(0), merkleTreeIndex[0], "Deposit event total desposit count miss matched")

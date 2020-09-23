@@ -127,7 +127,7 @@ func NewValidatorAccount(directory string, password string) error {
 ===================================================================
 `, tx.Data())
 	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
-	publicKey := validatorKey.PublicKey.Marshal()[:]
+	publicKey := validatorKey.PublicKey.Marshal()
 	log.Infof("Public key: %#x", publicKey)
 	return nil
 }
