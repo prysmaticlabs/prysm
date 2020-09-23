@@ -79,7 +79,7 @@ func VerifyProposerSlashing(
 	if pIdx != slashing.Header_2.Header.ProposerIndex {
 		return fmt.Errorf("mismatched indices, received %d == %d", slashing.Header_1.Header.ProposerIndex, slashing.Header_2.Header.ProposerIndex)
 	}
-	if proto.Equal(slashing.Header_1, slashing.Header_2) {
+	if proto.Equal(slashing.Header_1.Header, slashing.Header_2.Header) {
 		return errors.New("expected slashing headers to differ")
 	}
 	proposer, err := beaconState.ValidatorAtIndexReadOnly(slashing.Header_1.Header.ProposerIndex)

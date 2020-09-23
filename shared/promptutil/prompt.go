@@ -91,6 +91,9 @@ func DefaultAndValidatePrompt(promptText string, defaultValue string, validateFu
 		if ok := scanner.Scan(); ok {
 			item := scanner.Text()
 			response = strings.TrimRight(item, "\r\n")
+			if response == "" {
+				return defaultValue, nil
+			}
 			if err := validateFunc(response); err != nil {
 				fmt.Printf("Entry not valid: %s\n", au.BrightRed(err))
 			} else {
@@ -132,7 +135,7 @@ func InputPassword(
 	passwordFileFlag *cli.StringFlag,
 	promptText string,
 	confirmText string,
-	shouldConfirmPassword PasswordConfirm,
+	shouldConfirmPassword bool,
 	passwordValidator func(input string) error,
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
@@ -159,7 +162,7 @@ func InputPassword(
 		if err != nil {
 			return "", fmt.Errorf("could not read password: %v", err)
 		}
-		if shouldConfirmPassword == ConfirmPass {
+		if shouldConfirmPassword {
 			passwordConfirmation, err := PasswordPrompt(confirmText, passwordValidator)
 			if err != nil {
 				return "", fmt.Errorf("could not read password confirmation: %v", err)

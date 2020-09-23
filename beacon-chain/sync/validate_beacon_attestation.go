@@ -68,6 +68,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+	if helpers.SlotToEpoch(att.Data.Slot) != att.Data.Target.Epoch {
+		return pubsub.ValidationReject
+	}
 
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
@@ -91,6 +94,11 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
+	if err := s.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
 	// The attestation's committee index (attestation.data.index) is for the correct subnet.
 	digest, err := s.forkDigest()
 	if err != nil {
@@ -105,8 +113,13 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
-		// Is the attestation subnet correct.
+		// Is the attestation committee ID within the expected range.
 		indices := c.ActiveIndices
+		count := helpers.SlotCommitteeCount(uint64(len(indices)))
+		if att.Data.CommitteeIndex > count {
+			return pubsub.ValidationReject
+		}
+		// Is the attestation subnet correct.
 		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
 		if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
 			return pubsub.ValidationReject
@@ -115,6 +128,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
+
+		// Verify number of aggregation bits matches the committee size.
+		if err := helpers.VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
+			return pubsub.ValidationReject
+		}
+
 		// Is the attestation bitfield correct.
 		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
 			return pubsub.ValidationReject
@@ -141,8 +160,13 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	subnet := helpers.ComputeSubnetForAttestation(valCount, att)
 
+	count := helpers.SlotCommitteeCount(valCount)
+	if att.Data.CommitteeIndex > count {
+		return pubsub.ValidationReject
+	}
+
+	subnet := helpers.ComputeSubnetForAttestation(valCount, att)
 	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
 		return pubsub.ValidationReject
 	}
@@ -151,6 +175,11 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
+	}
+
+	// Verify number of aggregation bits matches the committee size.
+	if err := helpers.VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
+		return pubsub.ValidationReject
 	}
 
 	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.

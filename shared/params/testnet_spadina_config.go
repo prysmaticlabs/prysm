@@ -24,7 +24,8 @@ func UseSpadinaConfig() {
 func SpadinaConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
 	cfg.MinGenesisTime = 1601380800
-	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x00}
+	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x02}
+	cfg.NetworkName = "Spadina"
 	cfg.MinGenesisActiveValidatorCount = 1024
 	return cfg
 }

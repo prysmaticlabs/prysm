@@ -67,7 +67,6 @@ type SetupConfig struct {
 	Opts                *KeymanagerOpts
 	Wallet              iface.Wallet
 	SkipMnemonicConfirm bool
-	WalletPassword      string
 	Mnemonic            string
 }
 
@@ -100,7 +99,7 @@ func NewKeymanager(
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
 	if !fileutil.FileExists(filepath.Join(cfg.Wallet.AccountsDir(), EncryptedSeedFileName)) {
-		seedConfig, err := initializeWalletSeedFile(cfg.WalletPassword, cfg.SkipMnemonicConfirm)
+		seedConfig, err := initializeWalletSeedFile(cfg.Wallet.Password(), cfg.SkipMnemonicConfirm)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 		}
@@ -131,7 +130,7 @@ func NewKeymanager(
 		return nil, errors.Wrap(err, "could not unmarshal seed configuration")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.WalletPassword)
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.Wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
@@ -161,7 +160,7 @@ func KeymanagerForPhrase(
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
-	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.WalletPassword)
+	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.Wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 	}
@@ -173,7 +172,7 @@ func KeymanagerForPhrase(
 		return nil, errors.Wrap(err, "could not write encrypted wallet seed config to disk")
 	}
 	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.WalletPassword)
+	seed, err := decryptor.Decrypt(seedConfig.Crypto, cfg.Wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decrypt seed configuration with password")
 	}
@@ -400,6 +399,32 @@ func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error)
 		return nil, errors.Wrap(err, "could not generate deposit transaction data")
 	}
 	return tx.Data(), nil
+}
+
+// RefreshWalletPassword encrypts the seed config with the wallet password and
+// writes it to disk, such as when the wallet password was modified by the user.
+func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
+	encryptor := keystorev4.New()
+	encryptedFields, err := encryptor.Encrypt(dr.seed, dr.wallet.Password())
+	if err != nil {
+		return err
+	}
+	newConfig := &SeedConfig{
+		Crypto:      encryptedFields,
+		ID:          dr.seedCfg.ID,
+		NextAccount: dr.seedCfg.NextAccount,
+		Version:     dr.seedCfg.Version,
+		Name:        dr.seedCfg.Name,
+	}
+	dr.seedCfg = newConfig
+	encodedSeedFile, err := marshalEncryptedSeedFile(newConfig)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal encrypted wallet seed file")
+	}
+	if err = dr.wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
+		return errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+	}
+	return nil
 }
 
 // Append the public and the secret key for the provided secret key to their respective caches

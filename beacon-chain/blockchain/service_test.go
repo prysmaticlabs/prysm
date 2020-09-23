@@ -101,7 +101,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	cfg := &Config{
@@ -301,6 +301,23 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
+}
+
+func TestServiceStop_SaveCachedBlocks(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	db, _ := testDB.SetupDB(t)
+	s := &Service{
+		ctx:            ctx,
+		cancel:         cancel,
+		beaconDB:       db,
+		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
+	}
+	b := testutil.NewBeaconBlock()
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	s.saveInitSyncBlock(r, b)
+	require.NoError(t, s.Stop())
+	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {

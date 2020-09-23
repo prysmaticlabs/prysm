@@ -15,7 +15,8 @@ var (
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
-	spadinaTestnet = &cli.BoolFlag{
+	// SpadinaTestnet flag for the multiclient eth2 devnet.
+	SpadinaTestnet = &cli.BoolFlag{
 		Name:  "spadina",
 		Usage: "This defines the flag through which we can run on the Spadina Multiclient Testnet",
 	}
@@ -168,10 +169,6 @@ var (
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
-	}
-	enableRoughtime = &cli.BoolFlag{
-		Name:  "enable-roughtime",
-		Usage: "Enables periodic roughtime syncs.",
 	}
 	disableCheckPtInfoCache = &cli.BoolFlag{
 		Name:  "disable-check-point-cache",
@@ -566,6 +563,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableRoughtime = &cli.BoolFlag{
+		Name:   "enable-roughtime",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -644,6 +646,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableFinalizedDepositsCache,
 	deprecatedCheckptInfoCache,
 	deprecatedBatchBlockVerify,
+	deprecatedEnableRoughtime,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -654,7 +657,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
-	spadinaTestnet,
+	SpadinaTestnet,
 	disableAccountsV2,
 	enableBlst,
 }...)
@@ -695,7 +698,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
-	spadinaTestnet,
+	SpadinaTestnet,
 	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
@@ -703,7 +706,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
-	enableRoughtime,
 	disableCheckPtInfoCache,
 }...)
 

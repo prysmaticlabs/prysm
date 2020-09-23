@@ -1,19 +1,19 @@
 // +build linux,amd64 linux,arm64
 
-package blst_test
+package blst
 
 import (
 	"bytes"
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/blst"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSignVerify(t *testing.T) {
-	priv := blst.RandKey()
+	priv := RandKey()
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
@@ -26,14 +26,14 @@ func TestAggregateVerify(t *testing.T) {
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := blst.RandKey()
+		priv := RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggSig := blst.Aggregate(sigs)
+	aggSig := Aggregate(sigs)
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 }
 
@@ -42,24 +42,24 @@ func TestFastAggregateVerify(t *testing.T) {
 	sigs := make([]iface.Signature, 0, 100)
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	for i := 0; i < 100; i++ {
-		priv := blst.RandKey()
+		priv := RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 	}
-	aggSig := blst.AggregateSignatures(sigs)
+	aggSig := AggregateSignatures(sigs)
 	assert.Equal(t, true, aggSig.FastAggregateVerify(pubkeys, msg), "Signature did not verify")
 
 }
 
 func TestVerifyCompressed(t *testing.T) {
-	priv := blst.RandKey()
+	priv := RandKey()
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
 	assert.Equal(t, true, sig.Verify(pub, msg), "Non compressed signature did not verify")
-	assert.Equal(t, true, blst.VerifyCompressed(sig.Marshal(), pub.Marshal(), msg), "Compressed signatures and pubkeys did not verify")
+	assert.Equal(t, true, VerifyCompressed(sig.Marshal(), pub.Marshal(), msg), "Compressed signatures and pubkeys did not verify")
 }
 
 func TestMultipleSignatureVerification(t *testing.T) {
@@ -68,14 +68,14 @@ func TestMultipleSignatureVerification(t *testing.T) {
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := blst.RandKey()
+		priv := RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:]).Marshal()
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	verify, err := blst.VerifyMultipleSignatures(sigs, msgs, pubkeys)
+	verify, err := VerifyMultipleSignatures(sigs, msgs, pubkeys)
 	assert.NoError(t, err, "Signature did not verify")
 	assert.Equal(t, true, verify, "Signature did not verify")
 }
@@ -84,7 +84,7 @@ func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	var pubkeys []iface.PublicKey
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
-	aggSig := blst.NewAggregateSignature()
+	aggSig := NewAggregateSignature()
 	assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, msg), "Expected FastAggregateVerify to return false with empty input ")
 }
 
@@ -126,7 +126,7 @@ func TestSignatureFromBytes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := blst.SignatureFromBytes(test.input)
+			res, err := SignatureFromBytes(test.input)
 			if test.err != nil {
 				assert.NotEqual(t, nil, err, "No error returned")
 				assert.ErrorContains(t, test.err.Error(), err, "Unexpected error returned")
@@ -136,4 +136,20 @@ func TestSignatureFromBytes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCopy(t *testing.T) {
+	key, ok := RandKey().(*bls12SecretKey)
+	require.Equal(t, true, ok)
+
+	signatureA := &Signature{s: new(blstSignature).Sign(key.p, []byte("foo"), dst)}
+	signatureB, ok := signatureA.Copy().(*Signature)
+	require.Equal(t, true, ok)
+
+	assert.NotEqual(t, signatureA, signatureB)
+	assert.NotEqual(t, signatureA.s, signatureB.s)
+	assert.DeepEqual(t, signatureA, signatureB)
+
+	signatureA.s.Sign(key.p, []byte("bar"), dst)
+	assert.DeepNotEqual(t, signatureA, signatureB)
 }
