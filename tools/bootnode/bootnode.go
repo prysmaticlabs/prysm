@@ -50,6 +50,7 @@ var (
 	discv5port       = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
 	metricsPort      = flag.Int("metrics-port", 5000, "Port to listen for connections")
 	externalIP       = flag.String("external-ip", "", "External IP for the bootnode")
+	seedNode         = flag.String("seed-node", "", "External node to connect to")
 	disableKad       = flag.Bool("disable-kad", false, "Disables the bootnode from running kademlia dht")
 	log              = logrus.WithField("prefix", "bootnode")
 	discv5PeersCount = promauto.NewGauge(prometheus.GaugeOpts{
@@ -89,6 +90,14 @@ func main() {
 	privKey := extractPrivateKey()
 	cfg := discover.Config{
 		PrivateKey: privKey,
+	}
+	if *seedNode != "" {
+		log.Infof("Adding seed node %s", *seedNode)
+		node, err := enode.Parse(enode.ValidSchemes, *seedNode)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cfg.Bootnodes = []*enode.Node{node}
 	}
 	ipAddr, err := iputils.ExternalIPv4()
 	if err != nil {
