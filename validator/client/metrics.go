@@ -153,7 +153,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 
 	if v.emitAccountMetrics {
 		for _, missingPubKey := range resp.MissingValidators {
-			fmtKey := fmt.Sprintf("%#x", missingPubKey[:])
+			fmtKey := fmt.Sprintf("%#x", missingPubKey)
 			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
 		}
 	}

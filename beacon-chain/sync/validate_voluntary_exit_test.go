@@ -55,7 +55,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 
 	val, err := state.ValidatorAtIndex(0)
 	require.NoError(t, err)
-	val.PublicKey = priv.PublicKey().Marshal()[:]
+	val.PublicKey = priv.PublicKey().Marshal()
 	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
 
 	b := make([]byte, 32)
