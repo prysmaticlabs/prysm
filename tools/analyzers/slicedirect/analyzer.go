@@ -48,7 +48,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		switch x := typeInfo.Types[sliceExpr.X].Type.(type) {
-		case *types.Array, *types.Slice:
+		case *types.Slice:
 			pass.Reportf(sliceExpr.Pos(), "Expression is already a slice.")
 		case *types.Basic:
 			if x.String() == "string" {
