@@ -295,6 +295,80 @@ func TestBlocksQueue_Loop(t *testing.T) {
 	}
 }
 
+func TestBlocksQueue_onScheduleEvent(t *testing.T) {
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
+	})
+
+	t.Run("expired context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		cancel()
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, nil)
+		assert.ErrorContains(t, context.Canceled.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("invalid input state", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		invalidStates := []stateID{stateScheduled, stateDataParsed, stateSkipped, stateSent}
+		for _, state := range invalidStates {
+			t.Run(state.String(), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				handlerFn := queue.onScheduleEvent(ctx)
+				updatedState, err := handlerFn(&stateMachine{
+					state: state,
+				}, nil)
+				assert.ErrorContains(t, errInvalidInitialState.Error(), err)
+				assert.Equal(t, state, updatedState)
+			})
+		}
+	})
+
+	t.Run("slot is too high", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onScheduleEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateNew,
+			start: queue.highestExpectedSlot + 1,
+		}, nil)
+		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
+		assert.Equal(t, stateSkipped, updatedState)
+	})
+}
+
 func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
@@ -443,5 +517,187 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		assert.Equal(t, stateDataParsed, updatedState)
 		assert.Equal(t, response.pid, fsm.pid)
 		assert.DeepEqual(t, response.blocks, fsm.blocks)
+	})
+}
+
+func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
+	})
+
+	t.Run("expired context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onReadyToSendEvent(ctx)
+		cancel()
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateNew,
+		}, nil)
+		assert.ErrorContains(t, context.Canceled.Error(), err)
+		assert.Equal(t, stateNew, updatedState)
+	})
+
+	t.Run("invalid input state", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		invalidStates := []stateID{stateNew, stateScheduled, stateSkipped, stateSent}
+		for _, state := range invalidStates {
+			t.Run(state.String(), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				handlerFn := queue.onReadyToSendEvent(ctx)
+				updatedState, err := handlerFn(&stateMachine{
+					state: state,
+				}, nil)
+				assert.ErrorContains(t, errInvalidInitialState.Error(), err)
+				assert.Equal(t, state, updatedState)
+			})
+		}
+	})
+
+	t.Run("no blocks to send", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		handlerFn := queue.onReadyToSendEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateDataParsed,
+		}, nil)
+		// No error, but state is marked as skipped - as no blocks were produced for range.
+		assert.NoError(t, err)
+		assert.Equal(t, stateSkipped, updatedState)
+	})
+}
+
+func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
+	})
+
+	t.Run("expired context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onProcessSkippedEvent(ctx)
+		cancel()
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateSkipped,
+		}, nil)
+		assert.ErrorContains(t, context.Canceled.Error(), err)
+		assert.Equal(t, stateSkipped, updatedState)
+	})
+
+	t.Run("invalid input state", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSent}
+		for _, state := range invalidStates {
+			t.Run(state.String(), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				handlerFn := queue.onProcessSkippedEvent(ctx)
+				updatedState, err := handlerFn(&stateMachine{
+					state: state,
+				}, nil)
+				assert.ErrorContains(t, errInvalidInitialState.Error(), err)
+				assert.Equal(t, state, updatedState)
+			})
+		}
+	})
+}
+
+func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+		headFetcher:         mc,
+		finalizationFetcher: mc,
+		p2p:                 p2p,
+	})
+
+	t.Run("expired context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onCheckStaleEvent(ctx)
+		cancel()
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateSkipped,
+		}, nil)
+		assert.ErrorContains(t, context.Canceled.Error(), err)
+		assert.Equal(t, stateSkipped, updatedState)
+	})
+
+	t.Run("invalid input state", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped}
+		for _, state := range invalidStates {
+			t.Run(state.String(), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				handlerFn := queue.onCheckStaleEvent(ctx)
+				updatedState, err := handlerFn(&stateMachine{
+					state: state,
+				}, nil)
+				assert.ErrorContains(t, errInvalidInitialState.Error(), err)
+				assert.Equal(t, state, updatedState)
+			})
+		}
 	})
 }
