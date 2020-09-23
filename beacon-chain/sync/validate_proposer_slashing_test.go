@@ -94,7 +94,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 	}
 	val, err := state.ValidatorAtIndex(1)
 	require.NoError(t, err)
-	val.PublicKey = privKey.PublicKey().Marshal()[:]
+	val.PublicKey = privKey.PublicKey().Marshal()
 	require.NoError(t, state.UpdateValidatorAtIndex(1, val))
 
 	b := make([]byte, 32)
