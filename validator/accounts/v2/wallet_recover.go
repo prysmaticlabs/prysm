@@ -84,7 +84,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
 func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Wallet, error) {
-	w := wallet.NewWallet(&wallet.Config{
+	w := wallet.New(&wallet.Config{
 		WalletDir:      cfg.WalletDir,
 		KeymanagerKind: v2keymanager.Derived,
 		WalletPassword: cfg.WalletPassword,
