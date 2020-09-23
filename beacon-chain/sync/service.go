@@ -28,8 +28,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 var _ = shared.Service(&Service{})
@@ -249,9 +249,9 @@ func (s *Service) registerHandlers() {
 				s.registerRPCHandlers()
 				s.registerSubscribers()
 
-				if data.StartTime.After(roughtime.Now()) {
+				if data.StartTime.After(timeutils.Now()) {
 					stateSub.Unsubscribe()
-					time.Sleep(roughtime.Until(data.StartTime))
+					time.Sleep(timeutils.Until(data.StartTime))
 				}
 				s.chainStarted = true
 			}

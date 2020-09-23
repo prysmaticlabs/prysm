@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -42,7 +42,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{Genesis: roughtime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}},
+		chain:                &mock.ChainService{Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
@@ -61,7 +61,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{Genesis: roughtime.Now()},
+		chain:                &mock.ChainService{Genesis: timeutils.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 		stateSummaryCache:    cache.NewStateSummaryCache(),
@@ -105,7 +105,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{Genesis: roughtime.Now()},
+		chain:                &mock.ChainService{Genesis: timeutils.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 		stateSummaryCache:    cache.NewStateSummaryCache(),

@@ -8,7 +8,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -112,7 +112,7 @@ func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration
 		return err
 	}
 
-	currentTime := roughtime.Now()
+	currentTime := timeutils.Now()
 	diff := slotTime.Sub(currentTime)
 
 	if diff > timeTolerance {
@@ -142,7 +142,7 @@ func SlotsSince(time time.Time) uint64 {
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
 func CurrentSlot(genesisTimeSec uint64) uint64 {
-	now := roughtime.Now().Unix()
+	now := timeutils.Now().Unix()
 	genesis := int64(genesisTimeSec)
 	if now < genesis {
 		return 0

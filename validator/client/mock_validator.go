@@ -5,7 +5,7 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 var _ = Validator(&FakeValidator{})
@@ -93,7 +93,7 @@ func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
 // SlotDeadline for mocking.
 func (fv *FakeValidator) SlotDeadline(_ uint64) time.Time {
 	fv.SlotDeadlineCalled = true
-	return roughtime.Now()
+	return timeutils.Now()
 }
 
 // NextSlot for mocking.

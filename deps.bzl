@@ -304,12 +304,6 @@ def prysm_deps():
         version = "v0.3.4",
     )
     go_repository(
-        name = "com_github_cloudflare_cloudflare_go",
-        importpath = "github.com/cloudflare/cloudflare-go",
-        sum = "h1:J82+/8rub3qSy0HxEnoYD8cs+HDlHWYrqYXe2Vqxluk=",
-        version = "v0.10.2-0.20190916151808-a80f83b9add9",
-    )
-    go_repository(
         name = "com_github_cncf_udpa_go",
         importpath = "github.com/cncf/udpa/go",
         sum = "h1:WBZRG4aNOuI15bLRrCgN8fCq8E5Xuty6jGbmSNEvSsU=",
@@ -1894,19 +1888,6 @@ def prysm_deps():
         importpath = "github.com/urfave/cli/v2",
         sum = "h1:JTTnM6wKzdA0Jqodd966MVj4vWbbquZykeX1sKbe2C4=",
         version = "v2.2.0",
-    )
-    go_repository(
-        name = "com_github_cloudflare_roughtime",
-        importpath = "github.com/cloudflare/roughtime",
-        sum = "h1:jeSxE3fepJdhASERvBHI6RFkMhISv6Ir2JUybYLIVXs=",
-        version = "v0.0.0-20200205191924-a69ef1dab727",
-    )
-    go_repository(
-        name = "com_googlesource_roughtime_roughtime_git",
-        build_file_generation = "on",
-        importpath = "roughtime.googlesource.com/roughtime.git",
-        sum = "h1:Cmz+zn5wHFlBz3sPMsCzjmsn4zKLMMRRxhqnlKQ/zfI=",
-        version = "v0.0.0-20190418172256-51f6971f5f06",
     )
     go_repository(
         name = "com_github_multiformats_go_base36",

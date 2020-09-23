@@ -356,6 +356,11 @@ func (ms *ChainService) VerifyBlkDescendant(ctx context.Context, root [32]byte) 
 	return ms.VerifyBlkDescendantErr
 }
 
+// VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
+func (ms *ChainService) VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error {
+	return nil
+}
+
 // AttestationCheckPtInfo mocks AttestationCheckPtInfo and always returns nil.
 func (ms *ChainService) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
 	f := ms.State.Fork()

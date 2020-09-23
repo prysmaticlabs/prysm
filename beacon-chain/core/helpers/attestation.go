@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // SlotSignature returns the signed signature of the hash tree root of input slot.
@@ -139,7 +139,7 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 
 	// An attestation cannot be from the future, so the upper bounds is set to now, with a minor
 	// tolerance for peer clock disparity.
-	upperBounds := roughtime.Now().Add(clockDisparity)
+	upperBounds := timeutils.Now().Add(clockDisparity)
 
 	// An attestation cannot be older than the current slot - attestation propagation slot range
 	// with a minor tolerance for peer clock disparity.

@@ -10,10 +10,10 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -122,7 +122,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, finish := setup(t)
 	defer finish()
-	currentTime := roughtime.Now()
+	currentTime := timeutils.Now()
 	numOfSlots := uint64(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
@@ -130,7 +130,7 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 
 	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
-	currentTime = roughtime.Now()
+	currentTime = timeutils.Now()
 	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
 }
 
