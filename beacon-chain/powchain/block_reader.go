@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -50,7 +51,9 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 	span.AddAttributes(trace.BoolAttribute("headerCacheHit", false))
 
 	if s.eth1DataFetcher == nil {
-		return 0, errors.New("nil eth1DataFetcher")
+		err := errors.New("nil eth1DataFetcher")
+		traceutil.AnnotateError(span, err)
+		return 0, err
 	}
 
 	header, err := s.eth1DataFetcher.HeaderByNumber(ctx, height)
@@ -68,7 +71,9 @@ func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint6
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
 	if s.eth1DataFetcher == nil {
-		return 0, errors.New("nil eth1DataFetcher")
+		err := errors.New("nil eth1DataFetcher")
+		traceutil.AnnotateError(span, err)
+		return 0, err
 	}
 
 	header, err := s.eth1DataFetcher.HeaderByNumber(ctx, height)
