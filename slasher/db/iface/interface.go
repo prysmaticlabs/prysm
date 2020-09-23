@@ -73,7 +73,7 @@ type WriteAccessDatabase interface {
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// Highest Attestation related methods.
-	SaveHighestAttestation(ctx context.Context, validatorID uint64, highest *slashpb.HighestAttestation) error
+	SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error
 
 	// MinMaxSpan related methods.
 	SaveEpochSpans(ctx context.Context, epoch uint64, spans *detectionTypes.EpochStore, toCache bool) error

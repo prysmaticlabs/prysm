@@ -69,9 +69,11 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*s
 	return highestAtt, err
 }
 
-func (db *Store) SaveHighestAttestation(ctx context.Context, validatorID uint64, highest *slashpb.HighestAttestation) error {
+func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SavePubKey")
 	defer span.End()
+
+	validatorID := highest.ValidatorId
 
 	if db.highestAttCacheEnabled {
 		db.highestAttestationCache.Set(validatorID, highest)

@@ -230,10 +230,13 @@ func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Inde
 		if err != nil {
 			return err
 		}
-		//createDefault := false
 		if h == nil { // create default
-			h = &slashpb.HighestAttestation{HighestSourceEpoch: 0,HighestTargetEpoch:0}
-			//createDefault = true
+			h = &slashpb.HighestAttestation{
+				HighestSourceEpoch: 0,
+				HighestTargetEpoch:0,
+				ValidatorId: idx,
+			}
+			//createDefault
 		}
 		update := false
 		if h.HighestSourceEpoch < att.Data.Source.Epoch {
@@ -247,7 +250,7 @@ func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Inde
 
 		// if it's not a new instance of HighestAttestation, changing it will also change the cached instance
 		if update {
-			if err := ds.slasherDB.SaveHighestAttestation(ctx, idx, h); err != nil {
+			if err := ds.slasherDB.SaveHighestAttestation(ctx, h); err != nil {
 				return err
 			}
 		}

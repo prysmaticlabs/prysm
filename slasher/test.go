@@ -19,14 +19,17 @@ func main() {
 	client := slashpb.NewSlasherClient(conn)
 	res, err := client.HighestAttestations(context.Background(), &slashpb.HighestAttestationRequest{
 		Epoch:                1,
-		ValidatorIds:         []uint64{40},
+		ValidatorIds:         []uint64{40,41,42,43,44,45,46,100},
 	})
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 		return
 	}
 
-	fmt.Printf("%s", res)
+	for _,a := range res.Attestations {
+		fmt.Printf("%s\n", a)
+	}
+
 
 
 
