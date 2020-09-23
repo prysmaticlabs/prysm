@@ -53,7 +53,7 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 	if s.eth1DataFetcher == nil {
 		err := errors.New("nil eth1DataFetcher")
 		traceutil.AnnotateError(span, err)
-		return 0, err
+		return [32]byte{}, err
 	}
 
 	header, err := s.eth1DataFetcher.HeaderByNumber(ctx, height)
