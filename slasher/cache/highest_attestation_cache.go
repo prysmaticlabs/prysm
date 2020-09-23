@@ -7,7 +7,7 @@ import (
 
 var (
 	// validatorsCacheSize defines the max number of validators public keys the cache can hold.
-	highestAttCacheSize = 100000
+	highestAttCacheSize = 300000
 )
 
 // PublicKeyCache is used to store the public keys needed for signature verification.
