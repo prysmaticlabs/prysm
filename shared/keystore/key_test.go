@@ -36,7 +36,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 func TestStoreRandomKey(t *testing.T) {
 	tempDir, teardown := setupTempKeystoreDir(t)
 	defer teardown()
-	ks := &Store{
+	ks := &Keystore{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
