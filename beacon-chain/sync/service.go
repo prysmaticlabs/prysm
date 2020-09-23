@@ -111,8 +111,8 @@ type Service struct {
 	stateGen                  *stategen.State
 }
 
-// NewRegularSync service.
-func NewRegularSync(ctx context.Context, cfg *Config) *Service {
+// NewService initializes new regular sync service.
+func NewService(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
