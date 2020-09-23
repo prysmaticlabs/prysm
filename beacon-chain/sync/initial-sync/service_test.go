@@ -114,7 +114,7 @@ func TestService_InitStartStop(t *testing.T) {
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
-			s := New(ctx, &Config{
+			s := NewInitialSync(ctx, &Config{
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: mc.StateNotifier(),
@@ -145,7 +145,7 @@ func TestService_InitStartStop(t *testing.T) {
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
 	newService := func(ctx context.Context, mc *mock.ChainService) *Service {
-		s := New(ctx, &Config{
+		s := NewInitialSync(ctx, &Config{
 			Chain:         mc,
 			StateNotifier: mc.StateNotifier(),
 		})
@@ -251,7 +251,7 @@ func TestService_markSynced(t *testing.T) {
 	mc := &mock.ChainService{}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s := New(ctx, &Config{
+	s := NewInitialSync(ctx, &Config{
 		Chain:         mc,
 		StateNotifier: mc.StateNotifier(),
 	})
@@ -348,7 +348,7 @@ func TestService_Resync(t *testing.T) {
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
-			s := New(ctx, &Config{
+			s := NewInitialSync(ctx, &Config{
 				DB:            beaconDB,
 				P2P:           p,
 				Chain:         mc,
