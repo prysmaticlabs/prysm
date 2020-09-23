@@ -23,7 +23,7 @@ var _ = DepositFetcher(&DepositCache{})
 
 func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{})
@@ -33,7 +33,7 @@ func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 }
 
 func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	insertions := []struct {
@@ -75,7 +75,7 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 }
 
 func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	deposits := []*dbpb.DepositContainer{
@@ -115,7 +115,7 @@ func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
 }
 
 func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	deposits := []*dbpb.DepositContainer{
@@ -155,7 +155,7 @@ func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 }
 
 func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
@@ -238,7 +238,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 }
 
 func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOldestDeposit(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
@@ -272,7 +272,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 }
 
 func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
@@ -329,7 +329,7 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 }
 
 func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
@@ -393,7 +393,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 }
 
 func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	oldFinalizedDeposits := []*dbpb.DepositContainer{
@@ -451,7 +451,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 }
 
 func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := dc.finalizedDeposits
@@ -461,7 +461,7 @@ func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
 }
 
 func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
@@ -518,7 +518,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 }
 
 func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{

@@ -69,7 +69,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	vs := &Server{
@@ -145,7 +145,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())

@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/trie"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -117,6 +118,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 		[]*gethTypes.Transaction{},
 		[]*gethTypes.Header{},
 		[]*gethTypes.Receipt{},
+		new(trie.Trie),
 	)
 
 	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())

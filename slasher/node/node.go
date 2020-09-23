@@ -155,7 +155,7 @@ func (s *SlasherNode) Close() {
 }
 
 func (s *SlasherNode) registerPrometheusService() error {
-	service := prometheus.NewPrometheusService(
+	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
@@ -207,7 +207,7 @@ func (s *SlasherNode) registerBeaconClientService() error {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 
-	bs, err := beaconclient.NewBeaconClientService(s.ctx, &beaconclient.Config{
+	bs, err := beaconclient.NewService(s.ctx, &beaconclient.Config{
 		BeaconCert:            beaconCert,
 		SlasherDB:             s.db,
 		BeaconProvider:        beaconProvider,
@@ -225,7 +225,7 @@ func (s *SlasherNode) registerDetectionService() error {
 	if err := s.services.FetchService(&bs); err != nil {
 		panic(err)
 	}
-	ds := detection.NewDetectionService(s.ctx, &detection.Config{
+	ds := detection.NewService(s.ctx, &detection.Config{
 		Notifier:              bs,
 		SlasherDB:             s.db,
 		BeaconClient:          bs,

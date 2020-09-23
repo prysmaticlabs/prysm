@@ -56,7 +56,8 @@ func TestRecoverDerivedWallet(t *testing.T) {
 
 	ctx := context.Background()
 	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir: walletDir,
+		WalletDir:      walletDir,
+		WalletPassword: password,
 	})
 	assert.NoError(t, err)
 

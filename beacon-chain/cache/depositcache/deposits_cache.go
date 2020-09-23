@@ -58,8 +58,8 @@ type DepositCache struct {
 	chainStartPubkeys  map[string]bool
 }
 
-// NewDepositCache instantiates a new deposit cache
-func NewDepositCache() (*DepositCache, error) {
+// New instantiates a new deposit cache
+func New() (*DepositCache, error) {
 	finalizedDepositsTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		return nil, err
