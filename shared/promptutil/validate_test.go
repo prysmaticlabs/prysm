@@ -161,8 +161,8 @@ func TestValidatePhrase(t *testing.T) {
 	t.Run("correct input", func(t *testing.T) {
 		assert.NoError(t, ValidatePhrase(wantedPhrase, wantedPhrase))
 	})
-	t.Run("correct input with too many whitespace", func(t *testing.T) {
-		assert.NoError(t, ValidatePhrase("  wanted  phrase  ", wantedPhrase))
+	t.Run("correct input with whitespace", func(t *testing.T) {
+		assert.NoError(t, ValidatePhrase("  wanted phrase  ", wantedPhrase))
 	})
 	t.Run("incorrect input", func(t *testing.T) {
 		err := ValidatePhrase("foo", wantedPhrase)
