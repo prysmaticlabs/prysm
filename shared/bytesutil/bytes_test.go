@@ -46,7 +46,7 @@ func TestToBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		b := bytesutil.ToBytes(tt.a, len(tt.b))
-		assert.DeepEqual(t, tt.b, b[:])
+		assert.DeepEqual(t, tt.b, b)
 	}
 }
 
