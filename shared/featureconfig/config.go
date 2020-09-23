@@ -136,7 +136,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
 	}
-	if ctx.Bool(spadinaTestnet.Name) {
+	if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
@@ -309,7 +309,7 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
 	}
-	if ctx.Bool(spadinaTestnet.Name) {
+	if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
