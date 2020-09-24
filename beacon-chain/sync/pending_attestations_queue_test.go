@@ -245,14 +245,17 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: uint64(i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r1[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: uint64(i*2+i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r2[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: uint64(i*3+i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r3[:]}}}})
 	}
