@@ -16,6 +16,7 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -110,7 +111,7 @@ func TestServer_WalletConfig(t *testing.T) {
 		walletInitializedFeed: new(event.Feed),
 	}
 	// We attempt to create the wallet.
-	_, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
@@ -119,10 +120,22 @@ func TestServer_WalletConfig(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(ctx))
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	s.wallet = w
+	s.keymanager = km
 	resp, err := s.WalletConfig(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
+
+	expectedConfig := direct.DefaultKeymanagerOpts()
+	enc, err := json.Marshal(expectedConfig)
+	var jsonMap map[string]string
+	require.NoError(t, json.Unmarshal(enc, &jsonMap))
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
-		WalletPath: localWalletDir,
+		WalletPath:       localWalletDir,
+		KeymanagerKind:   pb.KeymanagerKind_DIRECT,
+		KeymanagerConfig: jsonMap,
 	})
 }
 
