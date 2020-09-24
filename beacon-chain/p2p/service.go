@@ -148,7 +148,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	// account previously added peers when creating the gossipsub
 	// object.
 	psOpts := []pubsub.Option{
-		pubsub.WithMessageSignaturePolicy(pubsub.LaxNoSign),
+		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
