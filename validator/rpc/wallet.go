@@ -9,7 +9,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -31,22 +30,13 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
 		return &pb.HasWalletResponse{
 			WalletExists: false,
-			HasUsedWeb:   false,
 		}, nil
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
 	}
-	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
-	if !fileutil.FileExists(hashedPasswordPath) {
-		return &pb.HasWalletResponse{
-			WalletExists: true,
-			HasUsedWeb:   false,
-		}, nil
-	}
 	return &pb.HasWalletResponse{
 		WalletExists: true,
-		HasUsedWeb:   true,
 	}, nil
 }
 

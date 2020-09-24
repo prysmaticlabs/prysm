@@ -194,9 +194,4 @@ message ChangePasswordRequest {
 message HasWalletResponse {
     // Whether or not the user has a wallet on disk.
     bool wallet_exists = 1;
-
-    // Whether or not the user has used the web UI before to set
-    // a wallet password. If not, the frontend should redirect
-    // to an appropriate onboarding screen.
-    bool has_used_web = 2;
 }

@@ -246,10 +246,9 @@ func TestServer_HasWallet(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, &pb.HasWalletResponse{
 		WalletExists: false,
-		HasUsedWeb:   false,
 	}, resp)
 	// We attempt to create the wallet.
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
 			KeymanagerKind: v2keymanager.Direct,
@@ -262,13 +261,5 @@ func TestServer_HasWallet(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, &pb.HasWalletResponse{
 		WalletExists: true,
-		HasUsedWeb:   false,
-	}, resp)
-	require.NoError(t, w.SaveHashedPassword(ctx))
-	resp, err = ss.HasWallet(ctx, &ptypes.Empty{})
-	require.NoError(t, err)
-	assert.DeepEqual(t, &pb.HasWalletResponse{
-		WalletExists: true,
-		HasUsedWeb:   true,
 	}, resp)
 }
