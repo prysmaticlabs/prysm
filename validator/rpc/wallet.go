@@ -129,15 +129,15 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	}
 	f, err := s.wallet.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not read keymanager config from disk: %v", err)
 	}
 	encoded, err := ioutil.ReadAll(f)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not parse keymanager config: %v", err)
 	}
 	var config map[string]string
 	if err := json.Unmarshal(encoded, &config); err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
 	}
 	return &pb.WalletResponse{
 		WalletPath:       defaultWalletPath,
