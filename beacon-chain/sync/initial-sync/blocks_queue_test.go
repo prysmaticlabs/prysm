@@ -468,9 +468,6 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			highestExpectedSlot: blockBatchLimit,
 		})
 
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state: stateScheduled,
@@ -479,16 +476,13 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		assert.Equal(t, stateScheduled, updatedState)
 	})
 
-	t.Run("slot is too high", func(t *testing.T) {
+	t.Run("slot is too high do nothing", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
 			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
@@ -499,6 +493,32 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		})
 		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
 		assert.Equal(t, stateScheduled, updatedState)
+	})
+
+	t.Run("slot is too high force re-request on previous epoch", func(t *testing.T) {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+
+		// Mark previous machine as skipped - to test effect of re-requesting.
+		queue.smm.addStateMachine(250)
+		queue.smm.machines[250].setState(stateSkipped)
+		assert.Equal(t, stateSkipped, queue.smm.machines[250].state)
+
+		handlerFn := queue.onDataReceivedEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateScheduled,
+		}, &fetchRequestResponse{
+			pid:   "abc",
+			err:   errSlotIsTooHigh,
+			start: 256,
+		})
+		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
+		assert.Equal(t, stateScheduled, updatedState)
+		assert.Equal(t, stateNew, queue.smm.machines[250].state)
 	})
 
 	t.Run("invalid data returned", func(t *testing.T) {
