@@ -142,6 +142,13 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 		return
 	}
 
+	// Skip if the attestation from the same aggregator already exists in the pending queue.
+	for _, a := range s.blkRootToPendingAtts[root] {
+		if a.Message.AggregatorIndex == att.Message.AggregatorIndex {
+			return
+		}
+	}
+
 	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
 }
 
