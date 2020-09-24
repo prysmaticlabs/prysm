@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -67,7 +68,10 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 		WalletDir:      defaultWalletPath,
 		WalletPassword: req.Password,
 	}); err != nil {
-		return nil, status.Error(codes.Internal, "Could not initialize wallet")
+		if strings.Contains(err.Error(), "invalid checksum") {
+			return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+		}
+		return nil, status.Errorf(codes.Internal, "Could not initialize wallet: %v", err)
 	}
 	return s.sendAuthResponse()
 }
