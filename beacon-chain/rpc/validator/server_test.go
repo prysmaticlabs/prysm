@@ -2,6 +2,8 @@ package validator
 
 import (
 	"context"
+	"encoding/hex"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -9,6 +11,8 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -28,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
@@ -530,4 +533,79 @@ func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 
 	exitRoutine <- true
 	require.LogsContain(t, hook, "Sending genesis time")
+}
+
+func hexDecodeOrDie(t testing.TB, h string) []byte {
+	b, err := hex.DecodeString(h)
+	require.NoError(t, err)
+	return b
+}
+
+func TestServer_DomainData(t *testing.T) {
+	bs := testutil.NewBeaconState()
+	cfg := params.BeaconConfig()
+	cfg.ForkVersionSchedule = map[uint64]*pbp2p.Fork{
+		300: {
+			PreviousVersion: bytesutil.PadTo([]byte("foo"), 4),
+			CurrentVersion:  bytesutil.PadTo([]byte("bar"), 4),
+			Epoch:           helpers.SlotToEpoch(350),
+		},
+	}
+	params.OverrideBeaconConfig(cfg)
+
+	tests := []struct {
+		name        string
+		stateSlot   uint64
+		currentSlot uint64
+		request     *ethpb.DomainRequest
+		want        *ethpb.DomainResponse
+		wantErr     bool
+	}{
+		{
+			name:        "Request too far in the future",
+			stateSlot:   55,
+			currentSlot: 55,
+			request:     &ethpb.DomainRequest{Epoch: 100000},
+			wantErr:     true,
+		},
+		{
+			name:        "Request in current epoch",
+			stateSlot:   55,
+			currentSlot: 55,
+			request:     &ethpb.DomainRequest{Epoch: helpers.SlotToEpoch(55)},
+			wantErr:     false,
+			want: &ethpb.DomainResponse{SignatureDomain: hexDecodeOrDie(t, "00000000f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a9")},
+		},
+		{
+			name:    "State has too many skip slots",
+			stateSlot:   55,
+			currentSlot: 55+(MinimumForkDelayEpochs*params.BeaconConfig().SlotsPerEpoch)+32,
+			request: &ethpb.DomainRequest{Epoch: helpers.SlotToEpoch(55+(MinimumForkDelayEpochs*params.BeaconConfig().SlotsPerEpoch)+32)},
+			wantErr: false,
+			want: &ethpb.DomainResponse{SignatureDomain: hexDecodeOrDie(t, "0000000034f5dec47409a5714a38ddc787ea7ffd053b6e7d1c1bc8741286fc34")},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, bs.SetSlot(tt.stateSlot))
+
+			m := &mockChain.ChainService{
+				Genesis: time.Now().Add(-1 * time.Duration(tt.currentSlot*params.BeaconConfig().SecondsPerSlot) * time.Second),
+				Fork:    bs.Fork(),
+			}
+			vs := &Server{
+				GenesisTimeFetcher: m,
+				HeadFetcher:        m,
+				ForkFetcher:        m,
+			}
+			got, err := vs.DomainData(context.Background(), tt.request)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DomainData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DomainData() got = %x, want %x", got.SignatureDomain, tt.want.SignatureDomain)
+			}
+		})
+	}
 }

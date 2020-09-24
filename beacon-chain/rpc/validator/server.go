@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,6 +40,8 @@ var log logrus.FieldLogger
 func init() {
 	log = logrus.WithField("prefix", "rpc/validator")
 }
+
+const MinimumForkDelayEpochs = 1024 // TODO: Move somewhere else.
 
 // Server defines a server implementation of the gRPC Validator service,
 // providing RPC endpoints for obtaining validator assignments per epoch, the slots
@@ -132,7 +135,32 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "DomainData")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("requestEpoch", int64(request.Epoch)))
+
+	// Prevent requests for epochs in the future, to mitigate against potential abuse or misuse.
+	if currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(vs.GenesisTimeFetcher.GenesisTime())); request.Epoch > currentEpoch {
+		// Using codes.Unavailable to indicate to the client that they may retry this request with a
+		// backoff. A retry will account for minor deviations/skew in clock time.
+		return nil, status.Error(codes.Unavailable, "Cannot request domain data for an epoch in the future")
+	}
+
 	fork := vs.ForkFetcher.CurrentFork()
+
+	if helpers.SlotToEpoch(vs.HeadFetcher.HeadSlot())+MinimumForkDelayEpochs < request.Epoch {
+		span.AddAttributes(trace.BoolAttribute("ForkFromConfig", true))
+		// In the event that there have been a very large range of skip slots, we must check the
+		// planned fork version to determine if there should be a fork update in this range.
+		bestFork := fork
+		for _, f := range params.BeaconConfig().ForkVersionSchedule {
+			if f.Epoch > bestFork.Epoch && f.Epoch <= request.Epoch {
+				bestFork = f
+			}
+		}
+		fork = bestFork
+	}
+
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
 	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {
