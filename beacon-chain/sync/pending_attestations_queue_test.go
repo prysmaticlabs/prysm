@@ -250,12 +250,12 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r1[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: uint64(i*2+i),
+				AggregatorIndex: uint64(i*2 + i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r2[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: uint64(i*3+i),
+				AggregatorIndex: uint64(i*3 + i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r3[:]}}}})
 	}
@@ -287,22 +287,21 @@ func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
 
 	r1 := [32]byte{'A'}
 	r2 := [32]byte{'B'}
-		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
-			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: 1,
-				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: uint64(1), BeaconBlockRoot: r1[:]}}}})
-		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
-			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: 2,
-				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: uint64(2), BeaconBlockRoot: r2[:]}}}})
-		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
-			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: 2,
-				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: uint64(3), BeaconBlockRoot: r2[:]}}}})
-
+	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+		Message: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 1,
+			Aggregate: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{Slot: uint64(1), BeaconBlockRoot: r1[:]}}}})
+	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+		Message: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 2,
+			Aggregate: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{Slot: uint64(2), BeaconBlockRoot: r2[:]}}}})
+	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+		Message: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 2,
+			Aggregate: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{Slot: uint64(3), BeaconBlockRoot: r2[:]}}}})
 
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r2]), "Did not save pending atts")
