@@ -19,13 +19,13 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	tests := []struct {
-		name           string
 		wsVerified     bool
+		wantErr        bool
 		wsRoot         [32]byte
 		wsEpoch        uint64
 		finalizedEpoch uint64
-		wantErr        bool
 		errString      string
+		name           string
 	}{
 		{
 			name:    "nil root and epoch",
