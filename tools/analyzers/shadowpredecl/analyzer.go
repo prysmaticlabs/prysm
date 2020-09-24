@@ -1,3 +1,5 @@
+// Package shadowpredecl implements a static analyzer which disallows declaring constructs
+// that shadow predeclared Go identifiers by having the same name.
 package shadowpredecl
 
 import (
