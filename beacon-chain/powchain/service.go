@@ -371,6 +371,10 @@ func (s *Service) connectToPowChain() error {
 		return errors.Wrap(err, "could not create deposit contract caller")
 	}
 
+	if httpClient == nil || rpcClient == nil || depositContractCaller == nil {
+		return errors.New("eth1 client is nil")
+	}
+
 	s.initializeConnection(httpClient, rpcClient, depositContractCaller)
 	return nil
 }

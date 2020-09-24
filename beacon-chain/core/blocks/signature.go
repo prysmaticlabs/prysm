@@ -70,7 +70,7 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey[:], block.Signature, domain)
+	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey, block.Signature, domain)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
@@ -97,7 +97,7 @@ func RandaoSignatureSet(beaconState *stateTrie.BeaconState,
 	if err != nil {
 		return nil, nil, err
 	}
-	set, err := retrieveSignatureSet(buf, proposerPub[:], body.RandaoReveal, domain)
+	set, err := retrieveSignatureSet(buf, proposerPub, body.RandaoReveal, domain)
 	if err != nil {
 		return nil, nil, err
 	}

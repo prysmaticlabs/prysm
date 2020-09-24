@@ -81,7 +81,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	}
 	pubkeys := []bls.PublicKey{}
 	for _, pkBytes := range pkMap {
-		pk, err := bls.PublicKeyFromBytes(pkBytes[:])
+		pk, err := bls.PublicKeyFromBytes(pkBytes)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not deserialize validator public key")
 		}
