@@ -378,3 +378,37 @@ func TestHandlePanic_OK(t *testing.T) {
 	web3Service.processBlockHeader(nil)
 	require.LogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }
+
+func TestLogTillGenesis_OK(t *testing.T) {
+	// Reset the var at the end of the test.
+	currPeriod := logPeriod
+	logPeriod = 1 * time.Second
+	defer func() {
+		logPeriod = currPeriod
+	}()
+	hook := logTest.NewGlobal()
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	beaconDB, _ := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	for i := 0; i < 30; i++ {
+		testAcc.Backend.Commit()
+	}
+	hd, err := testAcc.Backend.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: hd.Number.Uint64()}
+	// Spin off to a separate routine
+	go web3Service.logTillChainStart()
+	// Wait for 2 seconds so that the
+	// info is logged.
+	time.Sleep(2 * time.Second)
+	web3Service.cancel()
+	assert.LogsContain(t, hook, "Currently waiting for chainstart")
+}

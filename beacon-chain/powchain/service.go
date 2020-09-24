@@ -60,6 +60,9 @@ var backOffPeriod = 6 * time.Second
 // Amount of times before we log the status of the eth1 dial attempt.
 var logThreshold = 20
 
+// period to log chainstart related information
+var logPeriod = 1 * time.Minute
+
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
@@ -687,6 +690,11 @@ func (s *Service) run(done <-chan struct{}) {
 
 	s.initPOWService()
 
+	// Start a chainstart watcher.
+	if !s.chainStartData.Chainstarted {
+		go s.logTillChainStart()
+	}
+
 	for {
 		select {
 		case <-done:
@@ -704,6 +712,40 @@ func (s *Service) run(done <-chan struct{}) {
 			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
+		}
+	}
+}
+
+// logs the current thresholds required to hit chainstart every minute.
+func (s *Service) logTillChainStart() {
+	ticker := time.NewTicker(logPeriod)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if s.chainStartData.Chainstarted {
+				return
+			}
+			_, blockTime, err := s.retrieveBlockHashAndTime(s.ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock)))
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			valCount, genesisTime := s.currentCountAndGenesisTime(blockTime)
+			valNeeded := uint64(0)
+			if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
+				valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount
+			}
+			secondsLeft := uint64(0)
+			if genesisTime < params.BeaconConfig().MinGenesisTime {
+				secondsLeft = params.BeaconConfig().MinGenesisTime - genesisTime
+			}
+			log.WithFields(logrus.Fields{
+				"Extra validators needed":      fmt.Sprintf("%d", valNeeded),
+				"Minutes till minimum genesis": fmt.Sprintf("%d", uint64((time.Duration(secondsLeft) * time.Second).Minutes())),
+			}).Infof("Currently waiting for chainstart")
+		case <-s.ctx.Done():
+			return
 		}
 	}
 }
