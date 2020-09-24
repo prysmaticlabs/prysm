@@ -625,6 +625,93 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, stateSkipped, updatedState)
 	})
+
+	t.Run("send from the first machine", func(t *testing.T) {
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			p2p:                 p2p,
+		})
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		queue.smm.addStateMachine(256)
+		queue.smm.addStateMachine(320)
+		queue.smm.machines[256].pid = "abc"
+		queue.smm.machines[256].state = stateDataParsed
+		queue.smm.machines[256].blocks = []*eth.SignedBeaconBlock{
+			testutil.NewBeaconBlock(),
+		}
+
+		handlerFn := queue.onReadyToSendEvent(ctx)
+		updatedState, err := handlerFn(queue.smm.machines[256], nil)
+		// Machine is the first, has blocks, send them.
+		assert.NoError(t, err)
+		assert.Equal(t, stateSent, updatedState)
+	})
+
+	t.Run("previous machines are not processed - do not send", func(t *testing.T) {
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			p2p:                 p2p,
+		})
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		queue.smm.addStateMachine(128)
+		queue.smm.machines[128].setState(stateNew)
+		queue.smm.addStateMachine(192)
+		queue.smm.machines[192].setState(stateScheduled)
+		queue.smm.addStateMachine(256)
+		queue.smm.machines[256].setState(stateDataParsed)
+		queue.smm.addStateMachine(320)
+		queue.smm.machines[320].pid = "abc"
+		queue.smm.machines[320].state = stateDataParsed
+		queue.smm.machines[320].blocks = []*eth.SignedBeaconBlock{
+			testutil.NewBeaconBlock(),
+		}
+
+		handlerFn := queue.onReadyToSendEvent(ctx)
+		updatedState, err := handlerFn(queue.smm.machines[320], nil)
+		// Previous machines have stateNew, stateScheduled, stateDataParsed states, so current
+		// machine should wait before sending anything. So, no state change.
+		assert.NoError(t, err)
+		assert.Equal(t, stateDataParsed, updatedState)
+	})
+
+	t.Run("previous machines are processed - send", func(t *testing.T) {
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			p2p:                 p2p,
+		})
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		queue.smm.addStateMachine(256)
+		queue.smm.machines[256].setState(stateSkipped)
+		queue.smm.addStateMachine(320)
+		queue.smm.machines[320].pid = "abc"
+		queue.smm.machines[320].state = stateDataParsed
+		queue.smm.machines[320].blocks = []*eth.SignedBeaconBlock{
+			testutil.NewBeaconBlock(),
+		}
+
+		handlerFn := queue.onReadyToSendEvent(ctx)
+		updatedState, err := handlerFn(queue.smm.machines[320], nil)
+		assert.NoError(t, err)
+		assert.Equal(t, stateSent, updatedState)
+	})
 }
 
 func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
