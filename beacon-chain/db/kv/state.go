@@ -194,7 +194,7 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 				continue
 			}
 			// Safe guard against deleting genesis, finalized, head state.
-			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+			if bytes.Equal(blockRoot, checkpoint.Root) || bytes.Equal(blockRoot, genesisBlockRoot) || bytes.Equal(blockRoot, headBlkRoot) {
 				return errors.New("cannot delete genesis, finalized, or head state")
 			}
 
@@ -203,7 +203,7 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 				return err
 			}
 			indicesByBucket := createStateIndicesFromStateSlot(ctx, slot)
-			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
+			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot, tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
 

@@ -30,7 +30,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		if sr == nil || len(sr) == 0 {
 			return nil
 		}
-		copy(signingRoot[:], sr[:])
+		copy(signingRoot, sr)
 		return nil
 	})
 	return signingRoot, err

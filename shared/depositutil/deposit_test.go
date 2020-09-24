@@ -32,7 +32,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		nil, /*genesisValidatorsRoot*/
 	)
 	require.NoError(t, err)
-	root, err := (&pb.SigningData{ObjectRoot: sr[:], Domain: domain[:]}).HashTreeRoot()
+	root, err := (&pb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, true, sig.Verify(k1.PublicKey(), root[:]))
 }
