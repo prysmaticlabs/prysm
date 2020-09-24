@@ -72,15 +72,16 @@ service Auth {
     }
 }
 
+// Type of key manager for the wallet, either direct, derived, or remote.
+enum KeymanagerKind {
+    DERIVED = 0;
+    DIRECT = 1;
+    REMOTE = 2;
+}
+
 message CreateWalletRequest {
     // Path on disk where the wallet will be stored.
     string wallet_path = 1;
-    // Type of key manager for the wallet, either direct, derived, or remote.
-    enum KeymanagerKind {
-        DERIVED = 0;
-        DIRECT = 1;
-        REMOTE = 2;
-    }
     KeymanagerKind keymanager = 2;
 
     // Password for the wallet.
@@ -118,12 +119,11 @@ message GenerateMnemonicResponse {
 message WalletResponse {
     string wallet_path = 1;
 
+    KeymanagerKind keymanager_kind = 2;
+
     // Key manager configs, this is meant to be some what generic.
     // It'll later be encoded with json to represent in front end UI.
-    message KeymanagerConfig {
-        map<string, string> configs = 1;
-    }
-    KeymanagerConfig keymanager_config = 2;
+    map<string, string> keymanager_config = 3;
 }
 
 message CreateAccountResponse {

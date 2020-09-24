@@ -29,7 +29,7 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 	}
 	req := &pb.CreateWalletRequest{
 		WalletPath:        localWalletDir,
-		Keymanager:        pb.CreateWalletRequest_DIRECT,
+		Keymanager:        pb.KeymanagerKind_DIRECT,
 		WalletPassword:    strongPass,
 		KeystoresPassword: strongPass,
 	}
@@ -75,7 +75,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 	}
 	req := &pb.CreateWalletRequest{
 		WalletPath:     localWalletDir,
-		Keymanager:     pb.CreateWalletRequest_DERIVED,
+		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    0,
 	}
