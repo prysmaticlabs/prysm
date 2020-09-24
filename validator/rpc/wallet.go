@@ -165,6 +165,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid direct keymanager")
 		}
 		s.wallet.SetPassword(req.Password)
+		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not save hashed password: %v", err)
+		}
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
@@ -174,6 +177,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid derived keymanager")
 		}
 		s.wallet.SetPassword(req.Password)
+		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not save hashed password: %v", err)
+		}
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
