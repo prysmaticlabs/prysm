@@ -545,10 +545,20 @@ func TestServer_DomainData(t *testing.T) {
 	bs := testutil.NewBeaconState()
 	cfg := params.BeaconConfig()
 	cfg.ForkVersionSchedule = map[uint64]*pbp2p.Fork{
+		200: {
+			PreviousVersion: bytesutil.PadTo([]byte("fff"), 4),
+			CurrentVersion:  bytesutil.PadTo([]byte("bbb"), 4),
+			Epoch:           helpers.SlotToEpoch(250),
+		},
 		300: {
 			PreviousVersion: bytesutil.PadTo([]byte("foo"), 4),
 			CurrentVersion:  bytesutil.PadTo([]byte("bar"), 4),
 			Epoch:           helpers.SlotToEpoch(350),
+		},
+		3000000000: {
+			PreviousVersion: bytesutil.PadTo([]byte("zzz"), 4),
+			CurrentVersion:  bytesutil.PadTo([]byte("yyy"), 4),
+			Epoch:           helpers.SlotToEpoch(3000000000),
 		},
 	}
 	params.OverrideBeaconConfig(cfg)
