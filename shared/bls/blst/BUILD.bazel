@@ -15,6 +15,17 @@ config_setting(
 )
 
 config_setting(
+    name = "blst_enabled_darwin_amd64",
+    constraint_values = [
+        "@platforms//os:osx",
+        "@platforms//cpu:x86_64",
+    ],
+    values = {
+        "define": "blst_enabled=true",
+    },
+)
+
+config_setting(
     name = "blst_enabled_linux_arm64",
     constraint_values = [
         "@platforms//os:linux",
@@ -56,6 +67,7 @@ go_library(
             (
                 ":blst_enabled_linux_amd64",
                 ":blst_enabled_linux_arm64",
+                ":blst_enabled_darwin_amd64",
                 ":blst_enabled_android_amd64",
                 ":blst_enabled_android_arm64",
             ): [
@@ -78,6 +90,7 @@ go_library(
         (
             ":blst_enabled_linux_amd64",
             ":blst_enabled_linux_arm64",
+            ":blst_enabled_darwin_amd64",
             ":blst_enabled_android_amd64",
             ":blst_enabled_android_arm64",
         ): [
@@ -100,6 +113,7 @@ go_test(
         (
             ":blst_enabled_linux_amd64",
             ":blst_enabled_linux_arm64",
+            ":blst_enabled_darwin_amd64",
             ":blst_enabled_android_amd64",
             ":blst_enabled_android_arm64",
         ): [
@@ -112,6 +126,7 @@ go_test(
         (
             ":blst_enabled_linux_amd64",
             ":blst_enabled_linux_arm64",
+            ":blst_enabled_darwin_amd64",
             ":blst_enabled_android_amd64",
             ":blst_enabled_android_arm64",
         ): [
@@ -132,6 +147,7 @@ go_test(
         (
             ":blst_enabled_linux_amd64",
             ":blst_enabled_linux_arm64",
+            ":blst_enabled_darwin_amd64",
             ":blst_enabled_android_amd64",
             ":blst_enabled_android_arm64",
         ): [
@@ -144,6 +160,7 @@ go_test(
         (
             ":blst_enabled_linux_amd64",
             ":blst_enabled_linux_arm64",
+            ":blst_enabled_darwin_amd64",
             ":blst_enabled_android_amd64",
             ":blst_enabled_android_arm64",
         ): [
