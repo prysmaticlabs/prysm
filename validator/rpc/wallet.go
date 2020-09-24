@@ -118,6 +118,10 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
 	}
+	if s.wallet == nil {
+		// If no wallet is found, we simply return an empty response.
+		return &pb.WalletResponse{}, nil
+	}
 	var keymanagerKind pb.KeymanagerKind
 	switch s.wallet.KeymanagerKind() {
 	case v2keymanager.Derived:
