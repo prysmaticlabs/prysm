@@ -122,7 +122,6 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpanByValidatorIndex")
 	defer span.End()
 	if db.spanCacheEnabled {
-		setObservedEpochs(epoch)
 		spanMap, err := db.findOrLoadEpochInCache(ctx, epoch)
 		if err != nil {
 			return types.Span{}, err
@@ -232,8 +231,11 @@ func (db *Store) SaveValidatorEpochSpan(
 ) error {
 	ctx, traceSpan := trace.StartSpan(ctx, "slasherDB.SaveValidatorEpochSpan")
 	defer traceSpan.End()
+	err := db.setObservedEpochs(ctx, epoch)
+	if err != nil {
+		return err
+	}
 	if db.spanCacheEnabled {
-		setObservedEpochs(epoch)
 		spanMap, err := db.findOrLoadEpochInCache(ctx, epoch)
 		if err != nil {
 			return err
@@ -260,8 +262,11 @@ func (db *Store) SaveValidatorEpochSpan(
 func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpansMap")
 	defer span.End()
+	err := db.setObservedEpochs(ctx, epoch)
+	if err != nil {
+		return err
+	}
 	if db.spanCacheEnabled {
-		setObservedEpochs(epoch)
 		db.spanCache.Set(epoch, spanMap)
 		return nil
 	}
@@ -370,13 +375,19 @@ func (db *Store) findOrLoadEpochInCache(ctx context.Context, epoch uint64) (map[
 	return spanForEpoch, nil
 }
 
-func setObservedEpochs(epoch uint64) {
+func (db *Store) setObservedEpochs(ctx context.Context, epoch uint64) error {
+	var err error
 	if epoch > highestObservedEpoch {
 		slasherHighestObservedEpoch.Set(float64(epoch))
 		highestObservedEpoch = epoch
+		// Prune block header history every PruneSlasherStoragePeriod epoch.
+		if highestObservedEpoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
+			err = db.PruneAttHistory(ctx, epoch, params.BeaconConfig().WeakSubjectivityPeriod)
+		}
 	}
 	if epoch < lowestObservedEpoch {
 		slasherLowestObservedEpoch.Set(float64(epoch))
 		lowestObservedEpoch = epoch
 	}
+	return err
 }
