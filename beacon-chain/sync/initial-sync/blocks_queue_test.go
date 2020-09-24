@@ -336,9 +336,6 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		invalidStates := []stateID{stateScheduled, stateDataParsed, stateSkipped, stateSent}
 		for _, state := range invalidStates {
 			t.Run(state.String(), func(t *testing.T) {
-				ctx, cancel := context.WithCancel(ctx)
-				defer cancel()
-
 				handlerFn := queue.onScheduleEvent(ctx)
 				updatedState, err := handlerFn(&stateMachine{
 					state: state,
@@ -357,9 +354,6 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 			highestExpectedSlot: blockBatchLimit,
 		})
 
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
 		handlerFn := queue.onScheduleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state: stateNew,
@@ -370,8 +364,6 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	})
 
 	t.Run("fetcher fails scheduling", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
@@ -390,8 +382,6 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	})
 
 	t.Run("schedule next fetch ok", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
@@ -447,9 +437,6 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		invalidStates := []stateID{stateNew, stateDataParsed, stateSkipped, stateSent}
 		for _, state := range invalidStates {
 			t.Run(state.String(), func(t *testing.T) {
-				ctx, cancel := context.WithCancel(ctx)
-				defer cancel()
-
 				handlerFn := queue.onDataReceivedEvent(ctx)
 				updatedState, err := handlerFn(&stateMachine{
 					state: state,
@@ -529,9 +516,6 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			highestExpectedSlot: blockBatchLimit,
 		})
 
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
 		hook := logTest.NewGlobal()
 		defer hook.Reset()
 		handlerFn := queue.onDataReceivedEvent(ctx)
@@ -553,9 +537,6 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		response := &fetchRequestResponse{
@@ -618,9 +599,6 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		invalidStates := []stateID{stateNew, stateScheduled, stateSkipped, stateSent}
 		for _, state := range invalidStates {
 			t.Run(state.String(), func(t *testing.T) {
-				ctx, cancel := context.WithCancel(ctx)
-				defer cancel()
-
 				handlerFn := queue.onReadyToSendEvent(ctx)
 				updatedState, err := handlerFn(&stateMachine{
 					state: state,
@@ -638,9 +616,6 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
@@ -692,9 +667,6 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSent}
 		for _, state := range invalidStates {
 			t.Run(state.String(), func(t *testing.T) {
-				ctx, cancel := context.WithCancel(ctx)
-				defer cancel()
-
 				handlerFn := queue.onProcessSkippedEvent(ctx)
 				updatedState, err := handlerFn(&stateMachine{
 					state: state,
@@ -746,9 +718,6 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped}
 		for _, state := range invalidStates {
 			t.Run(state.String(), func(t *testing.T) {
-				ctx, cancel := context.WithCancel(ctx)
-				defer cancel()
-
 				handlerFn := queue.onCheckStaleEvent(ctx)
 				updatedState, err := handlerFn(&stateMachine{
 					state: state,
@@ -760,8 +729,6 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	})
 
 	t.Run("process non stale machine", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
@@ -779,8 +746,6 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	})
 
 	t.Run("process stale machine", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
