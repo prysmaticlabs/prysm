@@ -56,13 +56,16 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-	hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName))
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
-	}
-	// Compare the stored hashed password, with the hashed version of the password that was received.
-	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
-		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	if fileutil.FileExists(hashedPasswordPath) {
+		hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
+		}
+		// Compare the stored hashed password, with the hashed version of the password that was received.
+		if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
+			return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+		}
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
 		WalletDir:      defaultWalletPath,
