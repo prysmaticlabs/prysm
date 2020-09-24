@@ -316,13 +316,13 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 			finalizationFetcher: mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
-		handlerFn := queue.onDataReceivedEvent(ctx)
+		handlerFn := queue.onScheduleEvent(ctx)
 		cancel()
 		updatedState, err := handlerFn(&stateMachine{
-			state: stateScheduled,
+			state: stateNew,
 		}, nil)
 		assert.ErrorContains(t, context.Canceled.Error(), err)
-		assert.Equal(t, stateScheduled, updatedState)
+		assert.Equal(t, stateNew, updatedState)
 	})
 
 	t.Run("invalid input state", func(t *testing.T) {
@@ -367,6 +367,43 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		}, nil)
 		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
 		assert.Equal(t, stateSkipped, updatedState)
+	})
+
+	t.Run("fetcher fails scheduling", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		// Cancel to make fetcher spit error when trying to schedule next FSM.
+		requestCtx, requestCtxCancel := context.WithCancel(context.Background())
+		requestCtxCancel()
+		handlerFn := queue.onScheduleEvent(requestCtx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateNew,
+		}, nil)
+		assert.ErrorContains(t, context.Canceled.Error(), err)
+		assert.Equal(t, stateNew, updatedState)
+	})
+
+	t.Run("schedule next fetch ok", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onScheduleEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state: stateNew,
+		}, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, stateScheduled, updatedState)
 	})
 }
 
