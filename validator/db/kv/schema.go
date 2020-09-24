@@ -9,7 +9,4 @@ var (
 	historicAttestationsBucket = []byte("attestation-history-bucket")
 	// New Validator slashing protection from slashable attestations.
 	newHistoricAttestationsBucket = []byte("attestation-history-bucket-new")
-	// Bucket key for retrieving the hashed password used for
-	// authentication to the validator API.
-	apiHashedPasswordKey = []byte("hashed-password")
 )
