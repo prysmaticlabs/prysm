@@ -5,6 +5,11 @@ import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
 service Wallet {
+    rpc HasWallet(google.protobuf.Empty) returns (HasWalletResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/wallet/exists"
+        };
+    }
     rpc CreateWallet(CreateWalletRequest) returns (WalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/create",
@@ -184,4 +189,14 @@ message NodeConnectionResponse {
 message ChangePasswordRequest {
     string password = 1;
     string password_confirmation = 2;
+}
+
+message HasWalletResponse {
+    // Whether or not the user has a wallet on disk.
+    bool wallet_exists = 1;
+
+    // Whether or not the user has used the web UI before to set
+    // a wallet password. If not, the frontend should redirect
+    // to an appropriate onboarding screen.
+    bool has_used_web = 2;
 }

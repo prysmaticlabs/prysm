@@ -235,3 +235,40 @@ func TestServer_ChangePassword_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, w.Password(), newPassword)
 }
+
+func TestServer_HasWallet(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	ss := &Server{}
+	resp, err := ss.HasWallet(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	assert.DeepEqual(t, &pb.HasWalletResponse{
+		WalletExists: false,
+		HasUsedWeb:   false,
+	}, resp)
+	// We attempt to create the wallet.
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	resp, err = ss.HasWallet(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	assert.DeepEqual(t, &pb.HasWalletResponse{
+		WalletExists: true,
+		HasUsedWeb:   false,
+	}, resp)
+	require.NoError(t, w.SaveHashedPassword(ctx))
+	resp, err = ss.HasWallet(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	assert.DeepEqual(t, &pb.HasWalletResponse{
+		WalletExists: true,
+		HasUsedWeb:   true,
+	}, resp)
+}

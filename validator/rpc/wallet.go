@@ -9,6 +9,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -22,6 +23,32 @@ import (
 )
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
+
+// HasWallet checks if a user has created a wallet before as well as whether or not
+// they have used the web UI before to set a wallet password.
+func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletResponse, error) {
+	err := wallet.Exists(defaultWalletPath)
+	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
+		return &pb.HasWalletResponse{
+			WalletExists: false,
+			HasUsedWeb:   false,
+		}, nil
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+	}
+	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	if !fileutil.FileExists(hashedPasswordPath) {
+		return &pb.HasWalletResponse{
+			WalletExists: true,
+			HasUsedWeb:   false,
+		}, nil
+	}
+	return &pb.HasWalletResponse{
+		WalletExists: true,
+		HasUsedWeb:   true,
+	}, nil
+}
 
 // CreateWallet via an API request, allowing a user to save a new
 // derived, direct, or remote wallet.
