@@ -276,3 +276,31 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	// Verify the keys are deleted.
 	assert.Equal(t, 0, len(s.blkRootToPendingAtts), "Did not delete block keys")
 }
+
+func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
+	s := &Service{
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+	}
+
+	r1 := [32]byte{'A'}
+	r2 := [32]byte{'B'}
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: 1,
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(1), BeaconBlockRoot: r1[:]}}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: 2,
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(2), BeaconBlockRoot: r2[:]}}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: 2,
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(3), BeaconBlockRoot: r2[:]}}}})
+
+
+	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
+	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r2]), "Did not save pending atts")
+}
