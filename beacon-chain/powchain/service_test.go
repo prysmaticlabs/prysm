@@ -319,25 +319,6 @@ func TestFollowBlock_OK(t *testing.T) {
 	assert.Equal(t, expectedHeight, h, "Unexpected block height")
 }
 
-func TestInitDataFromContract_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
-	})
-	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	web3Service = setDefaultMocks(web3Service)
-	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
-	require.NoError(t, err)
-
-	testAcc.Backend.Commit()
-	err = web3Service.initDataFromContract()
-	require.NoError(t, err, "Could not init from deposit contract")
-}
-
 func TestStatus(t *testing.T) {
 	now := time.Now()
 
@@ -386,6 +367,23 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	defer func() {
 		logPeriod = currPeriod
 	}()
+
+	orgConfig := params.BeaconConfig().Copy()
+	cfg := params.BeaconConfig()
+	cfg.Eth1FollowDistance = 5
+	params.OverrideBeaconConfig(cfg)
+	defer func() {
+		params.OverrideBeaconConfig(orgConfig)
+	}()
+
+	orgNetworkConfig := params.BeaconNetworkConfig().Copy()
+	nCfg := params.BeaconNetworkConfig()
+	nCfg.ContractDeploymentBlock = 0
+	params.OverrideBeaconNetworkConfig(nCfg)
+	defer func() {
+		params.OverrideBeaconNetworkConfig(orgNetworkConfig)
+	}()
+
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
@@ -396,16 +394,16 @@ func TestLogTillGenesis_OK(t *testing.T) {
 		BeaconDB:        beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	require.NoError(t, err)
 
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	for i := 0; i < 30; i++ {
 		testAcc.Backend.Commit()
 	}
-	hd, err := testAcc.Backend.HeaderByNumber(context.Background(), nil)
-	require.NoError(t, err)
-	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: hd.Number.Uint64()}
+	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: 0}
 	// Spin off to a separate routine
-	go web3Service.logTillChainStart()
+	go web3Service.run(web3Service.ctx.Done())
 	// Wait for 2 seconds so that the
 	// info is logged.
 	time.Sleep(2 * time.Second)

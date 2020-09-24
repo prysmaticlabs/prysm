@@ -138,7 +138,6 @@ type Service struct {
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
-	depositRoot             []byte
 	depositTrie             *trieutil.SparseMerkleTrie
 	chainStartData          *protodb.ChainStartData
 	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
@@ -500,17 +499,6 @@ func (s *Service) retryETH1Node(err error) {
 	s.runError = nil
 }
 
-// initDataFromContract calls the deposit contract and finds the deposit count
-// and deposit root.
-func (s *Service) initDataFromContract() error {
-	root, err := s.depositContractCaller.GetDepositRoot(&bind.CallOpts{})
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve deposit root")
-	}
-	s.depositRoot = root[:]
-	return nil
-}
-
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
 	if len(ctrs) == 0 {
 		return nil
@@ -655,12 +643,6 @@ func (s *Service) initPOWService() {
 			return
 		default:
 			ctx := s.ctx
-			err := s.initDataFromContract()
-			if err != nil {
-				log.Errorf("Unable to retrieve data from deposit contract %v", err)
-				s.retryETH1Node(err)
-				continue
-			}
 
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
@@ -690,10 +672,8 @@ func (s *Service) run(done <-chan struct{}) {
 
 	s.initPOWService()
 
-	// Start a chainstart watcher.
-	if !s.chainStartData.Chainstarted {
-		go s.logTillChainStart()
-	}
+	chainstartTicker := time.NewTicker(logPeriod)
+	defer chainstartTicker.Stop()
 
 	for {
 		select {
@@ -712,40 +692,37 @@ func (s *Service) run(done <-chan struct{}) {
 			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
+		case <-chainstartTicker.C:
+			if s.chainStartData.Chainstarted {
+				chainstartTicker.Stop()
+				continue
+			}
+			s.logTillChainStart()
 		}
 	}
 }
 
 // logs the current thresholds required to hit chainstart every minute.
 func (s *Service) logTillChainStart() {
-	ticker := time.NewTicker(logPeriod)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			if s.chainStartData.Chainstarted {
-				return
-			}
-			_, blockTime, err := s.retrieveBlockHashAndTime(s.ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock)))
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			valCount, genesisTime := s.currentCountAndGenesisTime(blockTime)
-			valNeeded := uint64(0)
-			if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
-				valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount
-			}
-			secondsLeft := uint64(0)
-			if genesisTime < params.BeaconConfig().MinGenesisTime {
-				secondsLeft = params.BeaconConfig().MinGenesisTime - genesisTime
-			}
-			log.WithFields(logrus.Fields{
-				"Extra validators needed":      fmt.Sprintf("%d", valNeeded),
-				"Minutes till minimum genesis": fmt.Sprintf("%d", uint64((time.Duration(secondsLeft) * time.Second).Minutes())),
-			}).Infof("Currently waiting for chainstart")
-		case <-s.ctx.Done():
-			return
-		}
+	if s.chainStartData.Chainstarted {
+		return
 	}
+	_, blockTime, err := s.retrieveBlockHashAndTime(s.ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock)))
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	valCount, genesisTime := s.currentCountAndGenesisTime(blockTime)
+	valNeeded := uint64(0)
+	if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
+		valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount
+	}
+	secondsLeft := uint64(0)
+	if genesisTime < params.BeaconConfig().MinGenesisTime {
+		secondsLeft = params.BeaconConfig().MinGenesisTime - genesisTime
+	}
+	log.WithFields(logrus.Fields{
+		"Extra validators needed":      valNeeded,
+		"Minutes till minimum genesis": uint64((time.Duration(secondsLeft) * time.Second).Minutes()),
+	}).Infof("Currently waiting for chainstart")
 }
