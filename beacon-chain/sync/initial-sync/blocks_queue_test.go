@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -699,5 +700,43 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 				assert.Equal(t, state, updatedState)
 			})
 		}
+	})
+
+	t.Run("process non stale machine", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onCheckStaleEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state:   stateSent,
+			updated: timeutils.Now().Add(-staleEpochTimeout / 2),
+		}, nil)
+		// State should not change, as machine is not yet stale.
+		assert.NoError(t, err)
+		assert.Equal(t, stateSent, updatedState)
+	})
+
+	t.Run("process stale machine", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       fetcher,
+			headFetcher:         mc,
+			finalizationFetcher: mc,
+			highestExpectedSlot: blockBatchLimit,
+		})
+		handlerFn := queue.onCheckStaleEvent(ctx)
+		updatedState, err := handlerFn(&stateMachine{
+			state:   stateSent,
+			updated: timeutils.Now().Add(-staleEpochTimeout),
+		}, nil)
+		// State should change, as machine is stale.
+		assert.NoError(t, err)
+		assert.Equal(t, stateSkipped, updatedState)
 	})
 }
