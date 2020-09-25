@@ -462,7 +462,9 @@ func (s *Service) checkHeaderRange(start uint64, end uint64,
 	return nil
 }
 
-func (s *Service) currentCountAndGenesisTime(blockTime uint64) (uint64, uint64) {
+// retrieves the current active validator count and genesis time from
+// the provided block time.
+func (s *Service) currentCountAndTime(blockTime uint64) (uint64, uint64) {
 	if s.preGenesisState.NumValidators() == 0 {
 		return 0, 0
 	}
@@ -475,7 +477,7 @@ func (s *Service) currentCountAndGenesisTime(blockTime uint64) (uint64, uint64) 
 }
 
 func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
-	valCount, genesisTime := s.currentCountAndGenesisTime(blockTime)
+	valCount, genesisTime := s.currentCountAndTime(blockTime)
 	if valCount == 0 {
 		return
 	}

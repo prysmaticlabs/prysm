@@ -712,7 +712,7 @@ func (s *Service) logTillChainStart() {
 		log.Error(err)
 		return
 	}
-	valCount, genesisTime := s.currentCountAndGenesisTime(blockTime)
+	valCount, genesisTime := s.currentCountAndTime(blockTime)
 	valNeeded := uint64(0)
 	if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
 		valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount
@@ -721,8 +721,9 @@ func (s *Service) logTillChainStart() {
 	if genesisTime < params.BeaconConfig().MinGenesisTime {
 		secondsLeft = params.BeaconConfig().MinGenesisTime - genesisTime
 	}
+
 	log.WithFields(logrus.Fields{
-		"Extra validators needed":      valNeeded,
-		"Minutes till minimum genesis": uint64((time.Duration(secondsLeft) * time.Second).Minutes()),
+		"Extra validators needed":   valNeeded,
+		"Time till minimum genesis": fmt.Sprintf("%s", time.Duration(secondsLeft)*time.Second),
 	}).Infof("Currently waiting for chainstart")
 }
