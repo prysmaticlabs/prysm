@@ -43,6 +43,7 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 // CreateWallet via an API request, allowing a user to save a new
 // derived, direct, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
+	// Need to check in this function as well @@@
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
 		// Needs to unmarshal the keystores from the requests.
