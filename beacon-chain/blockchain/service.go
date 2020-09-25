@@ -194,7 +194,6 @@ func (s *Service) Start() {
 		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
-			return
 		}
 
 		s.stateNotifier.StateFeed().Send(&feed.Event{
