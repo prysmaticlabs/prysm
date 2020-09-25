@@ -56,5 +56,5 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 		}
 	}
 
-	return fmt.Errorf("node does not have root in db corresponds to epoch: %#x %d", r, s.wsEpoch)
+	return fmt.Errorf("node does not have root in db corresponding to epoch: %#x %d", r, s.wsEpoch)
 }
