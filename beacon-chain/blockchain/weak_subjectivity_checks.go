@@ -14,7 +14,7 @@ import (
 // Reference design: https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
 func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 	// TODO(7342): Remove the following to fully use weak subjectivity in production.
-	if len(s.wsRoot) == 0 && s.wsEpoch == 0 {
+	if len(s.wsRoot) == 0 || s.wsEpoch == 0 {
 		return nil
 	}
 

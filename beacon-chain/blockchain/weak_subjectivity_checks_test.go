@@ -58,7 +58,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 			wsRoot:         r, // Root belongs in epoch 1.
 			finalizedEpoch: 3,
 			wantErr:        true,
-			errString:      "node does not have root in db corresponds to epoch",
+			errString:      "node does not have root in db corresponding to epoch",
 		},
 		{
 			name:           "can verify and pass",
