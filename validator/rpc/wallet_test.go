@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -34,6 +35,9 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		WalletPassword:    strongPass,
 		KeystoresPassword: strongPass,
 	}
+	// We delete the directory as the wallet directory must not already exist or else the logic that prevents
+	// multiple wallets within a single wallet directory will lead to an error
+	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "No keystores included for import", err)
 
@@ -80,6 +84,9 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 		WalletPassword: strongPass,
 		NumAccounts:    0,
 	}
+	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
+	// where a directory already exists
+	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Must create at least 1 validator account", err)
 
@@ -93,6 +100,10 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
+
+	// Now trying to create a wallet where a previous wallet already exists.  We expect an error.
+	_, err = s.CreateWallet(ctx, req)
+	require.ErrorContains(t, "a wallet already exists at this location", err)
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {

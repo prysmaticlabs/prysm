@@ -9,6 +9,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -43,7 +44,15 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 // CreateWallet via an API request, allowing a user to save a new
 // derived, direct, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
-	// Need to check in this function as well @@@
+	// Currently defaultWalletPath is used as the wallet directory and req's WalletPath is ignored for simplicity
+	dirExists, err := fileutil.HasDir(defaultWalletPath)
+	if err != nil {
+		return nil, err
+	}
+	if dirExists {
+		return nil, errors.New("a wallet already exists at this location. Please input an" +
+			" alternative location for the new wallet or remove the current wallet")
+	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
 		// Needs to unmarshal the keystores from the requests.
