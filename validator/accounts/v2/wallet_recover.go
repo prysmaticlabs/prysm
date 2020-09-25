@@ -54,11 +54,6 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := wallet.Exists(walletDir); err != nil {
-		if !errors.Is(err, wallet.ErrNoWalletFound) {
-			return errors.Wrap(err, "could not check if wallet exists")
-		}
-	}
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")

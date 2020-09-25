@@ -51,7 +51,6 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
 	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(numAccounts))))
 	cliCtx := cli.NewContext(&app, set, nil)
-
 	require.NoError(t, RecoverWalletCli(cliCtx))
 
 	ctx := context.Background()
@@ -80,4 +79,37 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	assert.NoError(t, err)
 	require.Equal(t, len(names), int(numAccounts))
 
+}
+
+func TestRecoverDerivedWallet_AlreadyExists(t *testing.T) {
+	testDir := testutil.TempDir()
+	walletDir := filepath.Join(testDir, walletDirName)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(walletDir))
+	}()
+
+	passwordFilePath := filepath.Join(testDir, passwordFileName)
+	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	mnemonicFilePath := filepath.Join(testDir, mnemonicFileName)
+	require.NoError(t, ioutil.WriteFile(mnemonicFilePath, []byte(mnemonic), os.ModePerm))
+
+	numAccounts := int64(4)
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, walletDir, "")
+	set.String(flags.WalletPasswordFileFlag.Name, passwordFilePath, "")
+	set.String(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String(), "")
+	set.String(flags.MnemonicFileFlag.Name, mnemonicFilePath, "")
+	set.Int64(flags.NumAccountsFlag.Name, numAccounts, "")
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath))
+	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String()))
+	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
+	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(numAccounts))))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	require.NoError(t, RecoverWalletCli(cliCtx))
+
+	// Trying to recover an HD wallet into a directory that already exists should give an error
+	require.ErrorContains(t, "a wallet already exists at this location", RecoverWalletCli(cliCtx))
 }
