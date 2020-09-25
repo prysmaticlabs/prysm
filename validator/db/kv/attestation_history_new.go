@@ -10,14 +10,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// the size of each data entry in bytes source epoch(8 bytes) signing root (32 bytes)
-const uint64Size = 8
-const latestEpochWrittenSize = uint64Size
-const targetSize = uint64Size
-const sourceSize = uint64Size
-const signingRootSize = 32
-const historySize = targetSize + sourceSize + signingRootSize
-const minimalSize = latestEpochWrittenSize
+// The size of each data entry in bytes for the source epoch (8 bytes) and signing root (32 bytes).
+const (
+uint64Size = 8
+latestEpochWrittenSize = uint64Size
+targetSize = uint64Size
+sourceSize = uint64Size
+signingRootSize = 32
+historySize = targetSize + sourceSize + signingRootSize
+minimalSize = latestEpochWrittenSize
 
 // AttestationHistoryNew stores the historical attestation data needed
 // for protection of validators.
