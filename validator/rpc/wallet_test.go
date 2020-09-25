@@ -35,8 +35,8 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		WalletPassword:    strongPass,
 		KeystoresPassword: strongPass,
 	}
-	// We delete the directory as the wallet directory must not already exist or else the logic that prevents
-	// multiple wallets within a single wallet directory will lead to an error
+	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
+	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "No keystores included for import", err)
