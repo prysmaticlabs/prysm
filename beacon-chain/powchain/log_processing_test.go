@@ -179,8 +179,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	require.NoError(t, web3Service.initDataFromContract(), "Could not init from contract")
-
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)

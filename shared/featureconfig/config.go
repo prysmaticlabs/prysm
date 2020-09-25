@@ -322,6 +322,11 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg.EnableAccountsV2 = true
 	if ctx.Bool(disableAccountsV2.Name) {
 		log.Warn("Disabling v2 of Prysm validator accounts")
+		log.Error(
+			"Accounts v1 will be fully deprecated in Prysm within the next 2 releases! If you are still " +
+				"using this functionality, please begin to upgrade by creating a v2 wallet. More information can be " +
+				"found in our docs portal https://docs.prylabs.network/docs/wallet/introduction/",
+		)
 		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
