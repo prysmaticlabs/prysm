@@ -13,7 +13,6 @@ go_library(
         "-Ibindings",
         "-Isrc",
         "-D__BLST_PORTABLE__",
-        "-O",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",
