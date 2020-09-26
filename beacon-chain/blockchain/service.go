@@ -75,6 +75,9 @@ type Service struct {
 	justifiedBalances         []uint64
 	justifiedBalancesLock     sync.RWMutex
 	checkPtInfoCache          *checkPtInfoCache
+	wsEpoch                   uint64
+	wsRoot                    []byte
+	wsVerified                bool
 }
 
 // Config options for the service.
@@ -92,6 +95,8 @@ type Config struct {
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
+	WspBlockRoot      []byte
+	WspEpoch          uint64
 }
 
 // NewService instantiates a new block service instance that will
@@ -120,6 +125,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		recentCanonicalBlocks: make(map[[32]byte]bool),
 		justifiedBalances:     make([]uint64, 0),
 		checkPtInfoCache:      newCheckPointInfoCache(),
+		wsEpoch:               cfg.WspEpoch,
+		wsRoot:                cfg.WspBlockRoot,
 	}, nil
 }
 
@@ -183,6 +190,11 @@ func (s *Service) Start() {
 		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
+
+		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+			// Exit run time if the node failed to verify weak subjectivity checkpoint.
+			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+		}
 
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
