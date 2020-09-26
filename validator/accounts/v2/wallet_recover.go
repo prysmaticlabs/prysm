@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -81,7 +80,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
 func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Wallet, error) {
 	// Ensure that the wallet directory does not contain a wallet already
-	dirExists, err := fileutil.HasDir(cfg.WalletDir)
+	dirExists, err := wallet.Exists(cfg.WalletDir)
 	if err != nil {
 		return nil, err
 	}
