@@ -111,21 +111,30 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 }
 
 func Test_ExistsAndValid_RandomFiles(t *testing.T) {
-	path := testutil.TempDir()
-	walletDir := filepath.Join(path, "test")
-	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	err := wallet.ExistsAndValid(path)
-	require.ErrorContains(t, "no wallet found at path", err)
-	_, err = wallet.Exists(path)
-	require.ErrorContains(t, "no wallet found at path", err)
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random file path")
+	path := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
 
-	walletDir = filepath.Join(path, "direct")
-	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
-	_, err = wallet.Exists(path)
+	exists, err := wallet.Exists(path)
+	require.Equal(t, false, exists)
 	require.NoError(t, err)
+
+	require.NoError(t, os.MkdirAll(path, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(path), "Failed to remove directory")
+	})
+
+	err = wallet.ExistsAndValid(path)
+	require.ErrorContains(t, "directory does not contain valid wallet", err)
+
+	walletDir := filepath.Join(path, "direct")
+	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+
+	exists, err = wallet.Exists(path)
+	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	err = wallet.ExistsAndValid(path)
 	require.NoError(t, err)
-	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
 }
 
 func Test_LockUnlockFile(t *testing.T) {
