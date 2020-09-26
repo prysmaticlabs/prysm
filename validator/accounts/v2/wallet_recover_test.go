@@ -86,10 +86,8 @@ func TestRecoverDerivedWallet(t *testing.T) {
 func TestRecoverDerivedWallet_OneAccount(t *testing.T) {
 	testDir := testutil.TempDir()
 	walletDir := filepath.Join(testDir, walletDirName)
-	exportDir := filepath.Join(testDir, exportDirName)
 	defer func() {
 		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.RemoveAll(exportDir))
 	}()
 
 	passwordFilePath := filepath.Join(testDir, passwordFileName)
