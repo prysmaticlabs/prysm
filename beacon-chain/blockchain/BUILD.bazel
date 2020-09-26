@@ -18,6 +18,7 @@ go_library(
         "receive_attestation.go",
         "receive_block.go",
         "service.go",
+        "weak_subjectivity_checks.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
     visibility = [
@@ -34,6 +35,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",
@@ -86,6 +88,7 @@ go_test(
         "receive_attestation_test.go",
         "receive_block_test.go",
         "service_test.go",
+        "weak_subjectivity_checks_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
