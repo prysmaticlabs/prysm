@@ -100,35 +100,83 @@ func New(cfg *Config) *Wallet {
 	}
 }
 
-// Exists check if a wallet at the specified directory
-// exists and has valid information in it.
-func Exists(walletDir string) error {
+// Exists checks if directory at walletDir exists
+func Exists(walletDir string) (bool, error) {
 	dirExists, err := fileutil.HasDir(walletDir)
 	if err != nil {
-		return errors.Wrap(err, "could not parse wallet directory")
+		return false, errors.Wrap(err, "could not parse wallet directory")
 	}
 	if dirExists {
-		isEmptyWallet, err := isEmptyWallet(walletDir)
-		if err != nil {
-			return errors.Wrap(err, "could not check if wallet has files")
-		}
-		if isEmptyWallet {
-			return ErrNoWalletFound
-		}
-		return nil
+		return true, nil
+	} else {
+		return false, nil
 	}
-	return ErrNoWalletFound
+}
+
+// isValidWallet checks if a folder contains a key directory such as `derived`, `remote` or `direct`.
+// Returns true if one of those subdirectories exist, false otherwise.
+func isValidWallet(walletDir string) (bool, error) {
+	expanded, err := fileutil.ExpandPath(walletDir)
+	if err != nil {
+		return false, err
+	}
+	f, err := os.Open(expanded)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Debugf("Could not close directory: %s", expanded)
+		}
+	}()
+	names, err := f.Readdirnames(-1)
+	if err == io.EOF {
+		return false, nil
+	}
+
+	for _, n := range names {
+		// Nil error means input name is `derived`, `remote` or `direct`
+		_, err := v2keymanager.ParseKind(n)
+		if err == nil {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// ExistsAndValid returns a nil error if walletDir both exists and is valid, and if not, returns the error
+func ExistsAndValid(walletDir string) error {
+	dirExists, err := Exists(walletDir)
+	if err != nil {
+		return errors.Wrap(err, "could not check if wallet exists")
+	}
+	if !dirExists {
+		return ErrNoWalletFound
+	}
+
+	var valid bool
+	if valid, err = isValidWallet(walletDir); err != nil {
+		return errors.Wrap(err, "could not check if wallet is valid")
+	}
+	if !valid {
+		return errors.New("directory does not contain valid wallet")
+	}
+
+	return nil
 }
 
 // OpenWalletOrElseCli tries to open the wallet and if it fails or no wallet
 // is found, invokes a callback function.
 func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
-	if err := Exists(cliCtx.String(flags.WalletDirFlag.Name)); err != nil {
-		if errors.Is(err, ErrNoWalletFound) {
-			return otherwise(cliCtx)
-		}
+	exists, err := Exists(cliCtx.String(flags.WalletDirFlag.Name))
+	if err != nil {
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
+	if !exists {
+		return otherwise(cliCtx)
+	}
+
 	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
@@ -160,12 +208,10 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
-	if err := Exists(cfg.WalletDir); err != nil {
-		if errors.Is(err, ErrNoWalletFound) {
-			return nil, ErrNoWalletFound
-		}
-		return nil, errors.Wrap(err, "could not check if wallet exists")
+	if err := ExistsAndValid(cfg.WalletDir); err != nil {
+		return nil, err
 	}
+
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager kind for wallet")
@@ -443,38 +489,6 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 		}
 	}
 	return 0, errors.New("no keymanager folder, 'direct', 'remote', nor 'derived' found in wallet path")
-}
-
-// isEmptyWallet checks if a folder consists key directory such as `derived`, `remote` or `direct`.
-// Returns true if exists, false otherwise.
-func isEmptyWallet(name string) (bool, error) {
-	expanded, err := fileutil.ExpandPath(name)
-	if err != nil {
-		return false, err
-	}
-	f, err := os.Open(expanded)
-	if err != nil {
-		return false, err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Debugf("Could not close directory: %s", expanded)
-		}
-	}()
-	names, err := f.Readdirnames(-1)
-	if err == io.EOF {
-		return true, nil
-	}
-
-	for _, n := range names {
-		// Nil error means input name is `derived`, `remote` or `direct`, the wallet is not empty.
-		_, err := v2keymanager.ParseKind(n)
-		if err == nil {
-			return false, nil
-		}
-	}
-
-	return true, err
 }
 
 func inputPassword(

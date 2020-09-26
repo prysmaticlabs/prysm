@@ -27,14 +27,14 @@ var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletD
 // HasWallet checks if a user has created a wallet before as well as whether or not
 // they have used the web UI before to set a wallet password.
 func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletResponse, error) {
-	err := wallet.Exists(defaultWalletPath)
+	err := wallet.ExistsAndValid(defaultWalletPath)
 	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
 		return &pb.HasWalletResponse{
 			WalletExists: false,
 		}, nil
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+		return nil, status.Errorf(codes.Internal, "Error: %v", err)
 	}
 	return &pb.HasWalletResponse{
 		WalletExists: true,
@@ -50,8 +50,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return nil, err
 	}
 	if dirExists {
-		return nil, errors.New("a wallet already exists at this location. Please input an" +
-			" alternative location for the new wallet or remove the current wallet")
+		return nil, status.Error(codes.AlreadyExists, "A wallet already exists at this location.")
 	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
@@ -137,14 +136,15 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
-	err := wallet.Exists(defaultWalletPath)
+	err := wallet.ExistsAndValid(defaultWalletPath)
 	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+		return nil, status.Errorf(codes.Internal, "Error: %v", err)
 	}
+
 	if s.wallet == nil || s.keymanager == nil {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
@@ -199,13 +199,11 @@ func (s *Server) GenerateMnemonic(ctx context.Context, _ *ptypes.Empty) (*pb.Gen
 // ChangePassword allows changing a wallet password via the API as
 // an authenticated method.
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
-	err := wallet.Exists(defaultWalletPath)
-	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
-	}
+	err := wallet.ExistsAndValid(defaultWalletPath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+		return nil, status.Errorf(codes.Internal, "Error: %v", err)
 	}
+
 	if req.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")
 	}

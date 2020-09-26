@@ -103,7 +103,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 	// Now trying to create a wallet where a previous wallet already exists.  We expect an error.
 	_, err = s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "a wallet already exists at this location", err)
+	require.ErrorContains(t, "wallet already exists at this location", err)
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
