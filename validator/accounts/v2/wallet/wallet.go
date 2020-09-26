@@ -108,9 +108,8 @@ func Exists(walletDir string) (bool, error) {
 	}
 	if dirExists {
 		return true, nil
-	} else {
-		return false, nil
 	}
+	return false, nil
 }
 
 // isValidWallet checks if a folder contains a key directory such as `derived`, `remote` or `direct`.
