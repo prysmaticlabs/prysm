@@ -10,12 +10,12 @@ var (
 	highestAttCacheSize = 300000
 )
 
-// PublicKeyCache is used to store the public keys needed for signature verification.
+// HighestAttestationCache is used to store per validator id highest attestation in cache.
 type HighestAttestationCache struct {
 	cache *lru.Cache
 }
 
-// NewPublicKeyCache initializes the cache.
+// NewHighestAttestationCache initializes the cache.
 func NewHighestAttestationCache(size int, onEvicted func(key interface{}, value interface{})) (*HighestAttestationCache, error) {
 	if size != 0 {
 		highestAttCacheSize = size

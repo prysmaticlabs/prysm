@@ -38,11 +38,12 @@ func persistHighestAttestationCacheOnEviction(db *Store) func(key interface{}, v
 	}
 }
 
-// EnableSpanCache used to enable or disable span map cache in tests.
+// EnableHighestAttestationCache used to enable or disable highest attestation cache in tests.
 func (db *Store) EnableHighestAttestationCache(enable bool) {
 	db.highestAttCacheEnabled = enable
 }
 
+// HighestAttestation returns the highest calculated attestation for a validatorID
 func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
 	defer span.End()
@@ -69,6 +70,7 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*s
 	return highestAtt, err
 }
 
+// SaveHighestAttestation saves highest attestation for a validatorID
 func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SavePubKey")
 	defer span.End()
@@ -100,6 +102,6 @@ func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hi
 	return nil
 }
 
-func highestAttkey(validatorId uint64) []byte {
-	return bytesutil.Uint64ToBytesBigEndian(validatorId)
+func highestAttkey(validatorID uint64) []byte {
+	return bytesutil.Uint64ToBytesBigEndian(validatorID)
 }
