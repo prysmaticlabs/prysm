@@ -439,7 +439,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
+	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	var finalizedState *stateTrie.BeaconState
 
 	finalizedState, err = s.stateGen.Resume(ctx)
