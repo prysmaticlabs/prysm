@@ -119,7 +119,7 @@ func Test_ExistsAndValid_RandomFiles(t *testing.T) {
 	require.Equal(t, false, exists)
 	require.NoError(t, err)
 
-	require.NoError(t, os.MkdirAll(path, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+	require.NoError(t, os.MkdirAll(path, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to create directory")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(path), "Failed to remove directory")
 	})
@@ -128,7 +128,7 @@ func Test_ExistsAndValid_RandomFiles(t *testing.T) {
 	require.ErrorContains(t, "directory does not contain valid wallet", err)
 
 	walletDir := filepath.Join(path, "direct")
-	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to remove directory")
+	require.NoError(t, os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to create directory")
 
 	exists, err = wallet.Exists(path)
 	require.NoError(t, err)
