@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/bls:go_default_library",
-        "//shared/roughtime:go_default_library",
+        "//shared/timeutils:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

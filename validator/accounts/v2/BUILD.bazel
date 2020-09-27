@@ -52,8 +52,6 @@ go_library(
         "@com_github_urfave_cli_v2//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_google_grpc//codes:go_default_library",
-        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
 
@@ -81,10 +79,10 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
-        "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "//shared/timeutils:go_default_library",
         "//validator/accounts/v2/wallet:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",

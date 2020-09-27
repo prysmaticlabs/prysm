@@ -3,7 +3,6 @@ package v2
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -40,18 +39,23 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	}
 
 	dir := createWalletConfig.WalletCfg.WalletDir
-	kmKind := createWalletConfig.WalletCfg.KeymanagerKind
-	accountsPath := filepath.Join(dir, kmKind.String())
-	ok, err := fileutil.HasDir(accountsPath)
+	dirExists, err := fileutil.HasDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	// This wallet type already exists
-	if ok {
-		return nil, errors.New("a wallet of this type already exists at this location. Please input an" +
+	if dirExists {
+		return nil, errors.New("a wallet already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
-	return CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create wallet with keymanager")
+	}
+	// We store the hashed password to disk.
+	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
+		return nil, errors.Wrap(err, "could not save hashed password to database")
+	}
+	return w, nil
 }
 
 // CreateWalletWithKeymanager specified by configuration options.
@@ -61,7 +65,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			return nil, errors.Wrap(err, "could not check if wallet exists")
 		}
 	}
-	w := wallet.NewWallet(&wallet.Config{
+	w := wallet.New(&wallet.Config{
 		WalletDir:      cfg.WalletCfg.WalletDir,
 		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
 		WalletPassword: cfg.WalletCfg.WalletPassword,

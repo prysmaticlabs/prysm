@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -142,7 +142,7 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
-	totalSecondsPassed := roughtime.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	totalSecondsPassed := timeutils.Now().Unix() - genesisResponse.GenesisTime.Seconds
 	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
@@ -282,7 +282,7 @@ func signVoluntaryExit(
 	}
 
 	sig, err := signer(ctx, &validatorpb.SignRequest{
-		PublicKey:       pubKey[:],
+		PublicKey:       pubKey,
 		SigningRoot:     exitRoot[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Exit{Exit: exit},

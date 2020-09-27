@@ -64,7 +64,6 @@ type Flags struct {
 	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnableRoughtime                            bool // EnableRoughtime is an opt-in flag for enabling hourly syncing with roughtime. Default is to not sync.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -137,7 +136,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
 	}
-	if ctx.Bool(spadinaTestnet.Name) {
+	if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
@@ -263,14 +262,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling peer scoring in P2P")
 		cfg.EnablePeerScorer = true
 	}
-	if ctx.Bool(enableRoughtime.Name) {
-		log.Warn("Enabling roughtime sync")
-		cfg.EnableRoughtime = true
-	}
-	cfg.UseCheckPointInfoCache = true
-	if ctx.Bool(disableCheckPtInfoCache.Name) {
-		log.Warn("Disabling advanced check point info cache")
-		cfg.UseCheckPointInfoCache = false
+	if ctx.Bool(checkPtInfoCache.Name) {
+		log.Warn("Using advance check point info cache")
+		cfg.UseCheckPointInfoCache = true
 	}
 	if ctx.Bool(enableBlst.Name) {
 		log.Warn("Enabling new BLS library blst")
@@ -314,7 +308,7 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
 	}
-	if ctx.Bool(spadinaTestnet.Name) {
+	if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
@@ -328,6 +322,11 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg.EnableAccountsV2 = true
 	if ctx.Bool(disableAccountsV2.Name) {
 		log.Warn("Disabling v2 of Prysm validator accounts")
+		log.Error(
+			"Accounts v1 will be fully deprecated in Prysm within the next 2 releases! If you are still " +
+				"using this functionality, please begin to upgrade by creating a v2 wallet. More information can be " +
+				"found in our docs portal https://docs.prylabs.network/docs/wallet/introduction/",
+		)
 		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {

@@ -62,12 +62,17 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
-	if _, err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
+	w, err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
 		Mnemonic:       mnemonic,
 		NumAccounts:    numAccounts,
-	}); err != nil {
+	})
+	if err != nil {
+		return err
+	}
+	// We store the hashed password to disk.
+	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
 		return err
 	}
 	log.Infof(
@@ -79,7 +84,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
 func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Wallet, error) {
-	w := wallet.NewWallet(&wallet.Config{
+	w := wallet.New(&wallet.Config{
 		WalletDir:      cfg.WalletDir,
 		KeymanagerKind: v2keymanager.Derived,
 		WalletPassword: cfg.WalletPassword,
@@ -109,7 +114,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
-		return nil, nil
+		return w, nil
 	}
 	for i := int64(0); i < cfg.NumAccounts; i++ {
 		if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {

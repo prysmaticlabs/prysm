@@ -413,19 +413,26 @@ func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBl
 	return nil
 }
 
-// checkBlockNumberForChainStart checks the given block number for if chainstart has occurred.
-func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big.Int) error {
+func (s *Service) retrieveBlockHashAndTime(ctx context.Context, blkNum *big.Int) ([32]byte, uint64, error) {
 	hash, err := s.BlockHashByHeight(ctx, blkNum)
 	if err != nil {
-		return errors.Wrap(err, "could not get eth1 block hash")
+		return [32]byte{}, 0, errors.Wrap(err, "could not get eth1 block hash")
 	}
 	if hash == [32]byte{} {
-		return errors.Wrap(err, "got empty block hash")
+		return [32]byte{}, 0, errors.Wrap(err, "got empty block hash")
 	}
-
 	timeStamp, err := s.BlockTimeByHeight(ctx, blkNum)
 	if err != nil {
-		return errors.Wrap(err, "could not get block timestamp")
+		return [32]byte{}, 0, errors.Wrap(err, "could not get block timestamp")
+	}
+	return hash, timeStamp, nil
+}
+
+// checkBlockNumberForChainStart checks the given block number for if chainstart has occurred.
+func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big.Int) error {
+	hash, timeStamp, err := s.retrieveBlockHashAndTime(ctx, blkNum)
+	if err != nil {
+		return err
 	}
 	s.checkForChainstart(hash, blkNum, timeStamp)
 	return nil
@@ -455,17 +462,28 @@ func (s *Service) checkHeaderRange(start uint64, end uint64,
 	return nil
 }
 
-func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
+// retrieves the current active validator count and genesis time from
+// the provided block time.
+func (s *Service) currentCountAndTime(blockTime uint64) (uint64, uint64) {
 	if s.preGenesisState.NumValidators() == 0 {
-		return
+		return 0, 0
 	}
 	valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
 	if err != nil {
 		log.WithError(err).Error("Could not determine active validator count from pre genesis state")
+		return 0, 0
 	}
-	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(blockTime))
+	return valCount, s.createGenesisTime(blockTime)
+}
+
+func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
+	valCount, genesisTime := s.currentCountAndTime(blockTime)
+	if valCount == 0 {
+		return
+	}
+	triggered := state.IsValidGenesisState(valCount, genesisTime)
 	if triggered {
-		s.chainStartData.GenesisTime = s.createGenesisTime(blockTime)
+		s.chainStartData.GenesisTime = genesisTime
 		s.ProcessChainStart(s.chainStartData.GenesisTime, blockHash, blockNumber)
 	}
 }

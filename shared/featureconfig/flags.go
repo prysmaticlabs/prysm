@@ -15,7 +15,8 @@ var (
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
-	spadinaTestnet = &cli.BoolFlag{
+	// SpadinaTestnet flag for the multiclient eth2 devnet.
+	SpadinaTestnet = &cli.BoolFlag{
 		Name:  "spadina",
 		Usage: "This defines the flag through which we can run on the Spadina Multiclient Testnet",
 	}
@@ -169,18 +170,15 @@ var (
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
 	}
-	enableRoughtime = &cli.BoolFlag{
-		Name:  "enable-roughtime",
-		Usage: "Enables periodic roughtime syncs.",
-	}
-	disableCheckPtInfoCache = &cli.BoolFlag{
-		Name:  "disable-check-point-cache",
-		Usage: "Disables check point info caching",
+	checkPtInfoCache = &cli.BoolFlag{
+		Name:  "use-check-point-cache",
+		Usage: "Enables check point info caching",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
+	checkPtInfoCache,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -556,13 +554,13 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedCheckptInfoCache = &cli.BoolFlag{
-		Name:   "use-check-point-cache",
+	deprecatedBatchBlockVerify = &cli.BoolFlag{
+		Name:   "batch-block-verify",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedBatchBlockVerify = &cli.BoolFlag{
-		Name:   "batch-block-verify",
+	deprecatedEnableRoughtime = &cli.BoolFlag{
+		Name:   "enable-roughtime",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -642,8 +640,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSlasherProviderFlag,
 	deprecatedEnableSlasherFlag,
 	deprecatedEnableFinalizedDepositsCache,
-	deprecatedCheckptInfoCache,
 	deprecatedBatchBlockVerify,
+	deprecatedEnableRoughtime,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -654,7 +652,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
-	spadinaTestnet,
+	SpadinaTestnet,
 	disableAccountsV2,
 	enableBlst,
 }...)
@@ -695,7 +693,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
-	spadinaTestnet,
+	SpadinaTestnet,
 	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
@@ -703,8 +701,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
-	enableRoughtime,
-	disableCheckPtInfoCache,
+	checkPtInfoCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

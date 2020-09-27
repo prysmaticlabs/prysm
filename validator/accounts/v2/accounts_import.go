@@ -82,13 +82,17 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		w := wallet.NewWallet(&wallet.Config{
+		w := wallet.New(&wallet.Config{
 			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
 		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
+		}
+		// We store the hashed password to disk.
+		if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
+			return nil, err
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created new wallet",
