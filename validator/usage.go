@@ -56,6 +56,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
 			flags.MonitoringPortFlag,
+			cmd.DisableMonitoringFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
 			cmd.ConfigFileFlag,

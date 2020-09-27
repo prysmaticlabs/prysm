@@ -74,6 +74,7 @@ var appFlags = []cli.Flag{
 	flags.DisableAccountMetricsFlag,
 	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
+	cmd.DisableMonitoringFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
 	flags.DeprecatedPasswordsDirFlag,

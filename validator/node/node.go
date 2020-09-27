@@ -221,8 +221,10 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {
@@ -286,8 +288,10 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {
