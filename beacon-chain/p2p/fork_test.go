@@ -16,6 +16,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -244,7 +245,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	if !bytes.Equal(resp.CurrentForkDigest, want[:]) {
 		t.Errorf("Wanted fork digest: %v, received %v", want, resp.CurrentForkDigest)
 	}
-	if !bytes.Equal(resp.NextForkVersion[:], nextForkVersion) {
+	if !bytes.Equal(resp.NextForkVersion, nextForkVersion) {
 		t.Errorf("Wanted next fork version: %v, received %v", nextForkVersion, resp.NextForkVersion)
 	}
 	assert.Equal(t, nextForkEpoch, resp.NextForkEpoch, "Unexpected next fork epoch")
@@ -261,7 +262,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	require.NoError(t, err)
 
 	localNode := enode.NewLocalNode(db, pkey)
-	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), []byte{'A', 'B', 'C', 'D'})
+	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
 	require.NoError(t, err)
 	forkEntry, err := retrieveForkEntry(localNode.Node().Record())
 	require.NoError(t, err)

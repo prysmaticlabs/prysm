@@ -32,7 +32,7 @@ import (
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -59,6 +59,9 @@ var backOffPeriod = 6 * time.Second
 
 // Amount of times before we log the status of the eth1 dial attempt.
 var logThreshold = 20
+
+// period to log chainstart related information
+var logPeriod = 1 * time.Minute
 
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
@@ -135,7 +138,6 @@ type Service struct {
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
-	depositRoot             []byte
 	depositTrie             *trieutil.SparseMerkleTrie
 	chainStartData          *protodb.ChainStartData
 	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
@@ -371,6 +373,10 @@ func (s *Service) connectToPowChain() error {
 		return errors.Wrap(err, "could not create deposit contract caller")
 	}
 
+	if httpClient == nil || rpcClient == nil || depositContractCaller == nil {
+		return errors.New("eth1 client is nil")
+	}
+
 	s.initializeConnection(httpClient, rpcClient, depositContractCaller)
 	return nil
 }
@@ -493,17 +499,6 @@ func (s *Service) retryETH1Node(err error) {
 	s.runError = nil
 }
 
-// initDataFromContract calls the deposit contract and finds the deposit count
-// and deposit root.
-func (s *Service) initDataFromContract() error {
-	root, err := s.depositContractCaller.GetDepositRoot(&bind.CallOpts{})
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve deposit root")
-	}
-	s.depositRoot = root[:]
-	return nil
-}
-
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
 	if len(ctrs) == 0 {
 		return nil
@@ -610,7 +605,7 @@ func (s *Service) handleETH1FollowDistance() {
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
-	fiveMinutesTimeout := roughtime.Now().Add(-5 * time.Minute)
+	fiveMinutesTimeout := timeutils.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
 	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
 		log.Warn("eth1 client is not syncing")
@@ -648,12 +643,6 @@ func (s *Service) initPOWService() {
 			return
 		default:
 			ctx := s.ctx
-			err := s.initDataFromContract()
-			if err != nil {
-				log.Errorf("Unable to retrieve data from deposit contract %v", err)
-				s.retryETH1Node(err)
-				continue
-			}
 
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
@@ -683,6 +672,9 @@ func (s *Service) run(done <-chan struct{}) {
 
 	s.initPOWService()
 
+	chainstartTicker := time.NewTicker(logPeriod)
+	defer chainstartTicker.Stop()
+
 	for {
 		select {
 		case <-done:
@@ -700,6 +692,38 @@ func (s *Service) run(done <-chan struct{}) {
 			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
+		case <-chainstartTicker.C:
+			if s.chainStartData.Chainstarted {
+				chainstartTicker.Stop()
+				continue
+			}
+			s.logTillChainStart()
 		}
 	}
+}
+
+// logs the current thresholds required to hit chainstart every minute.
+func (s *Service) logTillChainStart() {
+	if s.chainStartData.Chainstarted {
+		return
+	}
+	_, blockTime, err := s.retrieveBlockHashAndTime(s.ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock)))
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	valCount, genesisTime := s.currentCountAndTime(blockTime)
+	valNeeded := uint64(0)
+	if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
+		valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount
+	}
+	secondsLeft := uint64(0)
+	if genesisTime < params.BeaconConfig().MinGenesisTime {
+		secondsLeft = params.BeaconConfig().MinGenesisTime - genesisTime
+	}
+
+	log.WithFields(logrus.Fields{
+		"Extra validators needed":   valNeeded,
+		"Time till minimum genesis": fmt.Sprintf("%s", time.Duration(secondsLeft)*time.Second),
+	}).Infof("Currently waiting for chainstart")
 }

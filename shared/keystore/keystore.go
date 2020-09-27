@@ -45,16 +45,16 @@ var (
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 )
 
-// Store defines a keystore with a directory path and scrypt values.
-type Store struct {
+// Keystore defines a keystore with a directory path and scrypt values.
+type Keystore struct {
 	keysDirPath string
 	scryptN     int
 	scryptP     int
 }
 
-// NewKeystore from a directory.
-func NewKeystore(directory string) Store {
-	return Store{
+// New creates a new keystore from a directory.
+func New(directory string) Keystore {
+	return Keystore{
 		keysDirPath: directory,
 		scryptN:     StandardScryptN,
 		scryptP:     StandardScryptP,
@@ -62,7 +62,7 @@ func NewKeystore(directory string) Store {
 }
 
 // GetKey from file using the filename path and a decryption password.
-func (ks Store) GetKey(filename, password string) (*Key, error) {
+func (ks Keystore) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	keyJSON, err := ioutil.ReadFile(filename)
@@ -74,7 +74,7 @@ func (ks Store) GetKey(filename, password string) (*Key, error) {
 
 // GetKeys from directory using the prefix to filter relevant files
 // and a decryption password.
-func (ks Store) GetKeys(directory, filePrefix, password string, warnOnFail bool) (map[string]*Key, error) {
+func (ks Keystore) GetKeys(directory, filePrefix, password string, warnOnFail bool) (map[string]*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	files, err := ioutil.ReadDir(directory)
@@ -116,7 +116,7 @@ func (ks Store) GetKeys(directory, filePrefix, password string, warnOnFail bool)
 }
 
 // StoreKey in filepath and encrypt it with a password.
-func (ks Store) StoreKey(filename string, key *Key, auth string) error {
+func (ks Keystore) StoreKey(filename string, key *Key, auth string) error {
 	keyJSON, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (ks Store) StoreKey(filename string, key *Key, auth string) error {
 }
 
 // JoinPath joins the filename with the keystore directory path.
-func (ks Store) JoinPath(filename string) string {
+func (ks Keystore) JoinPath(filename string) string {
 	if filepath.IsAbs(filename) {
 		return filename
 	}

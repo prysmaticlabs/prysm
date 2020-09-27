@@ -21,14 +21,15 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 var _ = shared.Service(&Service{})
@@ -110,8 +111,8 @@ type Service struct {
 	stateGen                  *stategen.State
 }
 
-// NewRegularSync service.
-func NewRegularSync(ctx context.Context, cfg *Config) *Service {
+// NewService initializes new regular sync service.
+func NewService(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
@@ -155,7 +156,9 @@ func (s *Service) Start() {
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
-	s.resyncIfBehind()
+	if !flags.Get().DisableSync {
+		s.resyncIfBehind()
+	}
 
 	// Update sync metrics.
 	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
@@ -246,10 +249,11 @@ func (s *Service) registerHandlers() {
 				s.registerRPCHandlers()
 				s.registerSubscribers()
 
-				if data.StartTime.After(roughtime.Now()) {
+				if data.StartTime.After(timeutils.Now()) {
 					stateSub.Unsubscribe()
-					time.Sleep(roughtime.Until(data.StartTime))
+					time.Sleep(timeutils.Until(data.StartTime))
 				}
+				log.WithField("starttime", data.StartTime).Debug("Chain started in sync service")
 				s.chainStarted = true
 			}
 		case <-s.ctx.Done():

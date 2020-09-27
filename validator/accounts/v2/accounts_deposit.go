@@ -12,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -21,7 +23,7 @@ import (
 // SendDepositCli transaction for user specified accounts via an interactive
 // CLI process or via command-line flags.
 func SendDepositCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to deposit",
 		)
@@ -29,7 +31,7 @@ func SendDepositCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := wallet.InitializeKeymanager(
+	keymanager, err := w.InitializeKeymanager(
 		cliCtx.Context,
 		true, /* skip mnemonic confirm */
 	)
@@ -39,7 +41,7 @@ func SendDepositCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	switch wallet.KeymanagerKind() {
+	switch w.KeymanagerKind() {
 	case v2keymanager.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
 		if !ok {
@@ -70,15 +72,15 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 			return nil, errors.Wrap(err, "could not parse BLS public key")
 		}
 	}
-	// Allow the user to interactively select the accounts to backup or optionally
+	// Allow the user to interactively select the accounts to deposit or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings. If the user has
 	// selected to deposit all accounts, we skip this part.
-	if !cliCtx.IsSet(flags.DepositPublicKeysFlag.Name) {
+	if !cliCtx.IsSet(flags.DepositAllAccountsFlag.Name) {
 		pubKeys, err = filterPublicKeysFromUserInput(
 			cliCtx,
 			flags.DepositPublicKeysFlag,
 			pubKeysBytes,
-			selectAccountsDepositPromptText,
+			prompt.SelectAccountsDepositPromptText,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not filter validating public keys for deposit")
@@ -137,6 +139,20 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 				return nil, err
 			}
 			config.Eth1PrivateKey = strings.TrimRight(string(fileBytes), "\r\n")
+		} else {
+			config.Eth1KeystoreUTCFile = cliCtx.String(flags.Eth1KeystoreUTCPathFlag.Name)
+			if cliCtx.IsSet(flags.Eth1KeystorePasswordFileFlag.Name) {
+				config.Eth1KeystorePasswordFile = cliCtx.String(flags.Eth1KeystorePasswordFileFlag.Name)
+			} else {
+				config.Eth1KeystorePasswordFile, err = prompt.InputWeakPassword(
+					cliCtx,
+					flags.Eth1KeystorePasswordFileFlag,
+					"Enter the file path of a text file containing your eth1 keystore password",
+				)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not read eth1 keystore password file path")
+				}
+			}
 		}
 		return config, nil
 	}
@@ -176,10 +192,10 @@ func createDepositConfig(cliCtx *cli.Context, km *derived.Keymanager) (*derived.
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read eth1 keystore UTC path")
 		}
-		eth1KeystorePasswordFile, err := inputWeakPassword(
+		eth1KeystorePasswordFile, err := prompt.InputWeakPassword(
 			cliCtx,
 			flags.Eth1KeystorePasswordFileFlag,
-			"Enter the file path a .txt file containing your eth1 keystore password",
+			"Enter the file path to a text file containing your eth1 keystore password",
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read eth1 keystore password file path")

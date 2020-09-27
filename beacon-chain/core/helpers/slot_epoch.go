@@ -8,7 +8,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -112,7 +112,7 @@ func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration
 		return err
 	}
 
-	currentTime := roughtime.Now()
+	currentTime := timeutils.Now()
 	diff := slotTime.Sub(currentTime)
 
 	if diff > timeTolerance {
@@ -142,7 +142,7 @@ func SlotsSince(time time.Time) uint64 {
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
 func CurrentSlot(genesisTimeSec uint64) uint64 {
-	now := roughtime.Now().Unix()
+	now := timeutils.Now().Unix()
 	genesis := int64(genesisTimeSec)
 	if now < genesis {
 		return 0
@@ -170,4 +170,37 @@ func RoundUpToNearestEpoch(slot uint64) uint64 {
 		slot += params.BeaconConfig().SlotsPerEpoch
 	}
 	return slot
+}
+
+// WeakSubjectivityCheckptEpoch returns the epoch of the latest weak subjectivity checkpoint for the active validator count and
+// finalized epoch.
+//
+// Reference spec implementation:
+// https://github.com/ethereum/eth2.0-specs/blob/weak-subjectivity-guide/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
+//  def compute_weak_subjectivity_period(state):
+//    weak_subjectivity_period = MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+//    val_count = len(get_active_validator_indices(state, get_current_epoch(state)))
+//    if val_count >= MIN_PER_EPOCH_CHURN_LIMIT * CHURN_LIMIT_QUOTIENT:
+//        weak_subjectivity_period += SAFETY_DECAY*CHURN_LIMIT_QUOTIENT/(2*100)
+//    else:
+//        weak_subjectivity_period += SAFETY_DECAY*val_count/(2*100*MIN_PER_EPOCH_CHURN_LIMIT)
+//    return weak_subjectivity_period
+func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
+	wsp := params.BeaconConfig().MinValidatorWithdrawabilityDelay
+
+	m := params.BeaconConfig().MinPerEpochChurnLimit
+	q := params.BeaconConfig().ChurnLimitQuotient
+	d := params.BeaconConfig().SafetyDecay
+	if valCount >= m*q {
+		v := d * q / (2 * 100)
+		wsp += v
+	} else {
+		v, err := mathutil.Mul64(d, valCount)
+		if err != nil {
+			return 0, err
+		}
+		v = v / (2 * 100 * m)
+		wsp += v
+	}
+	return wsp, nil
 }

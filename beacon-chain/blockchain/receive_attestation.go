@@ -14,8 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -26,6 +26,7 @@ type AttestationReceiver interface {
 	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
 	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
+	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -96,6 +97,11 @@ func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attesta
 	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
 }
 
+// VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
+func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
+	return s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot)
+}
+
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
 func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	// Wait for state to be initialized.
@@ -153,7 +159,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 // This verifies the epoch of input checkpoint is within current epoch and previous epoch
 // with respect to current time. Returns true if it's within, false if it's not.
 func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
-	now := uint64(roughtime.Now().Unix())
+	now := uint64(timeutils.Now().Unix())
 	genesisTime := uint64(s.genesisTime.Unix())
 	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
 	currentEpoch := helpers.SlotToEpoch(currentSlot)

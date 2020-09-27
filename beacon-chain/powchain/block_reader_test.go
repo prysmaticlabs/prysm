@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/trie"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -100,6 +101,22 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	require.Equal(t, true, exists, "Expected block info to be cached")
 }
 
+func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint: endpoint,
+		BeaconDB:     beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.eth1DataFetcher = nil
+	ctx := context.Background()
+
+	_, err = web3Service.BlockHashByHeight(ctx, big.NewInt(0))
+	require.ErrorContains(t, "nil eth1DataFetcher", err)
+}
+
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -117,6 +134,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 		[]*gethTypes.Transaction{},
 		[]*gethTypes.Header{},
 		[]*gethTypes.Receipt{},
+		new(trie.Trie),
 	)
 
 	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())
@@ -182,4 +200,20 @@ func TestBlockNumberByTimestamp(t *testing.T) {
 	if bn.Cmp(big.NewInt(0)) == 0 {
 		t.Error("Returned a block with zero number, expected to be non zero")
 	}
+}
+
+func TestService_BlockTimeByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint: endpoint,
+		BeaconDB:     beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.eth1DataFetcher = nil
+	ctx := context.Background()
+
+	_, err = web3Service.BlockTimeByHeight(ctx, big.NewInt(0))
+	require.ErrorContains(t, "nil eth1DataFetcher", err)
 }

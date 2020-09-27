@@ -81,7 +81,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	}
 	pubkeys := []bls.PublicKey{}
 	for _, pkBytes := range pkMap {
-		pk, err := bls.PublicKeyFromBytes(pkBytes[:])
+		pk, err := bls.PublicKeyFromBytes(pkBytes)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not deserialize validator public key")
 		}
@@ -108,6 +108,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		if err := ss.detector.UpdateSpans(ctx, req); err != nil {
 			log.WithError(err).Error("could not update spans")
+			return nil, status.Errorf(codes.Internal, "failed to update spans: %v: %v", req, err)
 		}
 	}
 	return &slashpb.AttesterSlashingResponse{
@@ -149,8 +150,13 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 		return nil, err
 	}
 	pkMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, []uint64{req.Header.ProposerIndex})
+	if err != nil {
+		return nil, err
+	}
 	if err := helpers.VerifyBlockHeaderSigningRoot(
-		req.Header, pkMap[req.Header.ProposerIndex], req.Signature, domain); err != nil {
+		req.Header,
+		pkMap[req.Header.ProposerIndex],
+		req.Signature, domain); err != nil {
 		return nil, err
 	}
 

@@ -27,7 +27,10 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 			if state.Slot() >= targetSlot {
 				break
 			}
-
+			// A node shouldn't process the block if the block slot is lower than the state slot.
+			if state.Slot() >= signed[i].Block.Slot {
+				continue
+			}
 			if featureconfig.Get().EnableStateGenSigVerify {
 				state, err = transition.ExecuteStateTransition(ctx, state, signed[i])
 				if err != nil {

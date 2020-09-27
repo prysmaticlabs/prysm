@@ -67,9 +67,13 @@ func TestService_CommitBlock(t *testing.T) {
 			BodyRoot:      bytesutil.PadTo([]byte("body"), 32),
 		},
 	}
-	assert.Equal(t, false, s.CommitBlock(context.Background(), blk), "Expected commit block to fail verification")
+	slashable, err := s.CommitBlock(context.Background(), blk)
+	assert.NoError(t, err)
+	assert.Equal(t, false, slashable, "Expected commit block to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}
-	assert.Equal(t, true, s.CommitBlock(context.Background(), blk), "Expected commit block to pass verification")
+	slashable, err = s.CommitBlock(context.Background(), blk)
+	assert.NoError(t, err)
+	assert.Equal(t, true, slashable, "Expected commit block to pass verification")
 }
 
 func TestService_VerifyBlock(t *testing.T) {

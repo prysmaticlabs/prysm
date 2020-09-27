@@ -9,6 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -17,7 +19,7 @@ import (
 
 // DeleteAccountConfig specifies parameters to run the delete account function.
 type DeleteAccountConfig struct {
-	Wallet     *Wallet
+	Wallet     *wallet.Wallet
 	Keymanager v2keymanager.IKeymanager
 	PublicKeys [][]byte
 }
@@ -25,7 +27,7 @@ type DeleteAccountConfig struct {
 // DeleteAccountCli deletes the accounts that the user requests to be deleted from the wallet.
 // This function uses the CLI to extract necessary values.
 func DeleteAccountCli(cliCtx *cli.Context) error {
-	wallet, err := OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*Wallet, error) {
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, nothing to delete",
 		)
@@ -33,7 +35,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := wallet.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -50,7 +52,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		cliCtx,
 		flags.DeletePublicKeysFlag,
 		validatingPublicKeys,
-		selectAccountsDeletePromptText,
+		prompt.SelectAccountsDeletePromptText,
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not filter public keys for deletion")
@@ -92,7 +94,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		}
 	}
 	if err := DeleteAccount(cliCtx.Context, &DeleteAccountConfig{
-		Wallet:     wallet,
+		Wallet:     w,
 		Keymanager: keymanager,
 		PublicKeys: rawPublicKeys,
 	}); err != nil {
