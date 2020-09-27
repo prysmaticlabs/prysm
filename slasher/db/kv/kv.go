@@ -38,6 +38,7 @@ type Config struct {
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
 	db.flatSpanCache.Purge()
+	db.highestAttestationCache.Purge()
 	return db.db.Close()
 }
 

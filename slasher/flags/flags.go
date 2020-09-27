@@ -61,7 +61,7 @@ var (
 	HighestAttestationCacheSize = &cli.IntFlag{
 		Name:  "highest-att-cache-size",
 		Usage: "Sets the highest attestation cache size.",
-		Value: 300000,
+		Value: 3000,
 	}
 
 )

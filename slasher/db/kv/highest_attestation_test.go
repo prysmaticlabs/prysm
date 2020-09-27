@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"flag"
+	"fmt"
 	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/urfave/cli/v2"
@@ -60,4 +61,32 @@ func TestSaveHighestAttestation(t *testing.T) {
 			}
 		})
 	}
+}
+
+
+func TestFetchNonExistingHighestAttestation(t *testing.T) {
+	app := &cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	ctx := context.Background()
+
+	t.Run("cached", func (t *testing.T) {
+		db.highestAttCacheEnabled = true
+		found, err := db.HighestAttestation(ctx, 1)
+		require.NoError(t, err)
+		if found != nil {
+			require.NoError(t, fmt.Errorf("should not find HighestAttestation"))
+		}
+	})
+
+	t.Run("disk", func (t *testing.T) {
+		db.highestAttCacheEnabled = false
+		found, err := db.HighestAttestation(ctx, 1)
+		require.NoError(t, err)
+		if found != nil {
+			require.NoError(t, fmt.Errorf("should not find HighestAttestation"))
+		}
+	})
+
+
 }

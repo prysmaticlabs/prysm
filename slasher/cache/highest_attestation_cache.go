@@ -3,11 +3,12 @@ package cache
 import (
 	lru "github.com/hashicorp/golang-lru"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
-	// validatorsCacheSize defines the max number of validators public keys the cache can hold.
-	highestAttCacheSize = 300000
+	// highestAttCacheSize defines the max number of sets of highest attestation in cache.
+	highestAttCacheSize = 3000
 )
 
 // HighestAttestationCache is used to store per validator id highest attestation in cache.
@@ -28,31 +29,36 @@ func NewHighestAttestationCache(size int, onEvicted func(key interface{}, value 
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.
-func (c *HighestAttestationCache) Get(validatorIdx uint64) (*slashpb.HighestAttestation, bool) {
-	item, exists := c.cache.Get(validatorIdx)
+func (c *HighestAttestationCache) Get(setKey uint64) (map[uint64]*slashpb.HighestAttestation, bool) {
+	item, exists := c.cache.Get(setKey)
 	if exists && item != nil {
-		//validatorsCacheHit.Inc()
-		return item.(*slashpb.HighestAttestation), true
+		return item.(map[uint64]*slashpb.HighestAttestation), true
 	}
-
-	//validatorsCacheMiss.Inc()
 	return nil, false
 }
 
 // Set the response in the cache.
-func (c *HighestAttestationCache) Set(validatorIdx uint64, highest *slashpb.HighestAttestation) {
-	_ = c.cache.Add(validatorIdx, highest)
+func (c *HighestAttestationCache) Set(setKey uint64, highest *slashpb.HighestAttestation) {
+	set, ok := c.Get(setKey)
+	if ok {
+		set[highest.ValidatorId] = highest
+	} else {
+		set = map[uint64]*slashpb.HighestAttestation {
+			highest.ValidatorId: highest,
+		}
+		c.cache.Add(setKey, set)
+	}
 }
 
 // Delete removes a validator id from the cache and returns if it existed or not.
 // Performs the onEviction function before removal.
-func (c *HighestAttestationCache) Delete(validatorIdx uint64) bool {
-	return c.cache.Remove(validatorIdx)
+func (c *HighestAttestationCache) Delete(setKey uint64) bool {
+	return c.cache.Remove(setKey)
 }
 
 // Has returns true if the key exists in the cache.
-func (c *HighestAttestationCache) Has(validatorIdx uint64) bool {
-	return c.cache.Contains(validatorIdx)
+func (c *HighestAttestationCache) Has(setKey uint64) bool {
+	return c.cache.Contains(setKey)
 }
 
 // Clear removes all keys from the ValidatorCache.
@@ -60,3 +66,8 @@ func (c *HighestAttestationCache) Clear() {
 	c.cache.Purge()
 }
 
+// Purge removes all keys from the SpanCache and evicts all current data.
+func (c *HighestAttestationCache) Purge() {
+	log.Info("Saving all highest attestation cache data to DB, please wait for completion.")
+	c.cache.Purge()
+}
