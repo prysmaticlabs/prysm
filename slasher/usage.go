@@ -84,6 +84,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.BeaconRPCProviderFlag,
 			flags.EnableHistoricalDetectionFlag,
 			flags.SpanCacheSize,
+			flags.HighestAttCacheSize,
 		},
 	},
 	{
