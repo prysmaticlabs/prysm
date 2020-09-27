@@ -55,7 +55,7 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*s
 	}
 
 	key := highestAttkey(validatorID)
-	var highestAtt *slashpb.HighestAttestation
+	highestAtt := &slashpb.HighestAttestation{}
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(highestAttestationBucket)
 		if enc := b.Get(key); enc != nil {
