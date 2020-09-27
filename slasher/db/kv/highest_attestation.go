@@ -18,7 +18,6 @@ func persistHighestAttestationCacheOnEviction(db *Store) func(key interface{}, v
 	// See https://godoc.org/github.com/dgraph-io/ristretto#Config.
 	return func(key interface{}, value interface{}) {
 		log.Tracef("Evicting highest attestation for validator: %d", key.(uint64))
-		log.Printf("persistHighestAttestationCacheOnEviction\n")
 		err := db.update(func(tx *bolt.Tx) error {
 			enc, err := json.Marshal(value.(map[uint64]*slashpb.HighestAttestation))
 			if err != nil {

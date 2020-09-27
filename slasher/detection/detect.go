@@ -223,7 +223,7 @@ func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.Indexed
 
 
 
-
+// UpdateHighestAttestation updates to the db the highest source and target attestations for a each validator
 func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	for _, idx := range att.AttestingIndices {
 		h, err := ds.slasherDB.HighestAttestation(ctx, idx)
