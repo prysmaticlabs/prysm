@@ -18,6 +18,7 @@ go_library(
         "//shared/event:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/sliceutil:go_default_library",
+        "//proto/slashing:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/db/types:go_default_library",

@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	json "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -19,7 +18,7 @@ func persistHighestAttestationCacheOnEviction(db *Store) func(key interface{}, v
 	return func(key interface{}, value interface{}) {
 		log.Tracef("Evicting highest attestation for validator: %d", key.(uint64))
 		err := db.update(func(tx *bolt.Tx) error {
-			enc, err := json.Marshal(value.(*slashpb.HighestAttestation))
+			enc, err := value.(*slashpb.HighestAttestation).Marshal()
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal")
 			}
@@ -60,7 +59,7 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*s
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(highestAttestationBucket)
 		if enc := b.Get(key); enc != nil {
-			err := json.Unmarshal(enc, &highestAtt)
+			err := highestAtt.Unmarshal(enc)
 			if err != nil {
 				return err
 			}
@@ -82,7 +81,7 @@ func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hi
 		return nil
 	}
 
-	enc, err := json.Marshal(highest)
+	enc, err := highest.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
