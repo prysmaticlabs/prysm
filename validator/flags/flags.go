@@ -44,6 +44,12 @@ var (
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
+	// EnableRPCFlag enables controlling the validator client via gRPC (without web UI).
+	EnableRPCFlag = &cli.BoolFlag{
+		Name:  "rpc",
+		Usage: "Enables the RPC server for the validator client (without Web UI)",
+		Value: false,
+	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{
 		Name:  "rpc-host",

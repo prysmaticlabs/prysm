@@ -234,11 +234,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if err := s.registerClientService(keyManagerV1, keyManagerV2); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx); err != nil {
-		return err
-	}
-	if err := s.registerRPCGatewayService(cliCtx); err != nil {
-		return err
+	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
+		if err := s.registerRPCService(cliCtx); err != nil {
+			return err
+		}
+		if err := s.registerRPCGatewayService(cliCtx); err != nil {
+			return err
+		}
 	}
 	return nil
 }

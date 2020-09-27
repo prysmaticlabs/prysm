@@ -89,6 +89,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
+			flags.EnableRPCFlag,
 			flags.RPCHost,
 			flags.RPCPort,
 			flags.GRPCGatewayPort,
