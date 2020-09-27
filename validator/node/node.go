@@ -183,7 +183,12 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
 				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 			}
-			accountsDir = s.wallet.AccountsDir()
+			dbDir := cliCtx.String(flags.ValidatorProtectionDirectory.Name)
+			if dbDir != "" {
+				accountsDir = dbDir
+			} else {
+				accountsDir = s.wallet.AccountsDir()
+			}
 		}
 	} else {
 		keyManagerV1, err = selectV1Keymanager(cliCtx)
@@ -192,12 +197,12 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	}
 
-	dataDir := moveDb(cliCtx, accountsDir)
+	dataDir := moveDb(cliCtx, accountsDir, s.wallet.AccountsDir())
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
-			dataDir = cmd.DefaultDataDir()
+			dataDir = s.wallet.AccountsDir()
 			if dataDir == "" {
 				log.Fatal(
 					"Could not determine your system's HOME path, please specify a --datadir you wish " +
@@ -237,15 +242,25 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context, accountsDir string) string {
+func moveDb(cliCtx *cli.Context, accountsDir string, walletDir string) string {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if accountsDir != "" {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
 		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
-		if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
+		walletDataFile := filepath.Join(walletDir, kv.ProtectionDbFileName)
+		if fileutil.FileExists(walletDataFile) && !fileutil.FileExists(newDataFile) {
 			log.WithFields(logrus.Fields{
-				"oldDbPath": dataDir,
-				"walletDir": accountsDir,
+				"oldDbPath":      dataDir,
+				"validatorDbDir": accountsDir,
+			}).Info("Moving validator protection db to validator protection db dir")
+			err := fileutil.CopyFile(dataFile, newDataFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
+			log.WithFields(logrus.Fields{
+				"oldDbPath":      dataDir,
+				"validatorDbDir": accountsDir,
 			}).Info("Moving validator protection db to wallet dir")
 			err := fileutil.CopyFile(dataFile, newDataFile)
 			if err != nil {

@@ -157,6 +157,11 @@ var (
 		Name:  "target-dir",
 		Usage: "The directory of the target validator database",
 	}
+	// ValidatorProtectionDirectory defines the location of the validator protection db.
+	ValidatorProtectionDirectory = &cli.StringFlag{
+		Name:  "validator-protection-dir",
+		Usage: "The directory of the validator protection db (default location is wallet-dir)",
+	}
 	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
 	// alternative from launching the validator client from decrypting a keystore directory.
 	UnencryptedKeysFlag = &cli.StringFlag{
