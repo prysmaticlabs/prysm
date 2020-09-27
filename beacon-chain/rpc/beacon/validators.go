@@ -272,19 +272,6 @@ func (bs *Server) ListValidators(
 		}
 	}
 
-	if requestedEpoch < currentEpoch {
-		stopIdx := len(validatorList)
-		for idx, item := range validatorList {
-			// The first time we see a validator with an activation epoch > the requested epoch,
-			// we know this validator is from the future relative to what the request wants.
-			if item.Validator.ActivationEpoch > requestedEpoch {
-				stopIdx = idx
-				break
-			}
-		}
-		validatorList = validatorList[:stopIdx]
-	}
-
 	// Filter active validators if the request specifies it.
 	res := validatorList
 	if req.Active {
