@@ -3,7 +3,6 @@ package direct
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
@@ -385,13 +383,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-		// If the password fails for an individual account, we ask the user to input
-		// that individual account's password until it succeeds.
-		enc, password, err = askUntilPasswordConfirms(decryptor, keystoreFile)
-		if err != nil {
-			return errors.Wrap(err, "could not confirm password via prompt")
-		}
-		dr.wallet.SetPassword(password) // Write the correct password to the wallet.
+		return errors.Wrap(err, "wrong password for wallet entered")
 	} else if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
@@ -473,38 +465,4 @@ func (dr *Keymanager) createAccountsKeystore(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
-}
-
-func askUntilPasswordConfirms(
-	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore,
-) ([]byte, string, error) {
-	au := aurora.NewAurora(true)
-	// Loop asking for the password until the user enters it correctly.
-	var secretKey []byte
-	var password string
-	var err error
-	publicKey, err := hex.DecodeString(keystore.Pubkey)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "could not decode public key")
-	}
-	formattedPublicKey := fmt.Sprintf("%#x", bytesutil.Trunc(publicKey))
-	for {
-		password, err = promptutil.PasswordPrompt(
-			fmt.Sprintf("\nPlease try again, incorrect password for account %s", au.BrightGreen(formattedPublicKey)),
-			promptutil.NotEmpty,
-		)
-		if err != nil {
-			return nil, "", fmt.Errorf("could not read account password: %v", err)
-		}
-		secretKey, err = decryptor.Decrypt(keystore.Crypto, password)
-		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Print(au.Red("Incorrect password entered, please try again"))
-			continue
-		}
-		if err != nil {
-			return nil, "", err
-		}
-		break
-	}
-	return secretKey, password, nil
 }

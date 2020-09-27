@@ -142,6 +142,11 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 	}
 
+	if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+		// Exit run time if the node failed to verify weak subjectivity checkpoint.
+		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+	}
+
 	return nil
 }
 

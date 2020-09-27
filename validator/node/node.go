@@ -174,6 +174,10 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 				return errors.Wrap(err, "could not open wallet")
 			}
 			s.wallet = w
+			log.WithFields(logrus.Fields{
+				"wallet":          w.AccountsDir(),
+				"keymanager-kind": w.KeymanagerKind().String(),
+			}).Info("Opened validator wallet")
 			keyManagerV2, err = w.InitializeKeymanager(
 				cliCtx.Context, false, /* skipMnemonicConfirm */
 			)
