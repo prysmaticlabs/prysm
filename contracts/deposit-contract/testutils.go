@@ -42,7 +42,7 @@ func Setup() (*TestAccount, error) {
 	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
 	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
 	var pubKey = make([]byte, 48)
-	copy(pubKey[:], publicKeyBytes)
+	copy(pubKey, publicKeyBytes)
 
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 	txOpts := bind.NewKeyedTransactor(privKey)

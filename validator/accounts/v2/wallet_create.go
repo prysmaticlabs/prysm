@@ -65,7 +65,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			return nil, errors.Wrap(err, "could not check if wallet exists")
 		}
 	}
-	w := wallet.NewWallet(&wallet.Config{
+	w := wallet.New(&wallet.Config{
 		WalletDir:      cfg.WalletCfg.WalletDir,
 		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
 		WalletPassword: cfg.WalletCfg.WalletPassword,

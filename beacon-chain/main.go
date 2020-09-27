@@ -52,6 +52,7 @@ var appFlags = []cli.Flag{
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
+	flags.WeakSubjectivityCheckpt,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,

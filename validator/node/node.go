@@ -174,6 +174,10 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 				return errors.Wrap(err, "could not open wallet")
 			}
 			s.wallet = w
+			log.WithFields(logrus.Fields{
+				"wallet":          w.AccountsDir(),
+				"keymanager-kind": w.KeymanagerKind().String(),
+			}).Info("Opened validator wallet")
 			keyManagerV2, err = w.InitializeKeymanager(
 				cliCtx.Context, false, /* skipMnemonicConfirm */
 			)
@@ -303,7 +307,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
-	service := prometheus.NewPrometheusService(
+	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
@@ -363,7 +367,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewSlashingProtectionService(s.cliCtx.Context, &slashing_protection.Config{
+	sp, err := slashing_protection.NewService(s.cliCtx.Context, &slashing_protection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,

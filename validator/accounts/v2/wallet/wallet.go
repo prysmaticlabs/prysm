@@ -89,8 +89,8 @@ type Wallet struct {
 	accountsChangedFeed *event.Feed
 }
 
-// NewWallet creates a struct from config values.
-func NewWallet(cfg *Config) *Wallet {
+// New creates a struct from config values.
+func New(cfg *Config) *Wallet {
 	accountsPath := filepath.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	return &Wallet{
 		walletDir:      cfg.WalletDir,

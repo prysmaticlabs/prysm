@@ -132,7 +132,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 			return pubsub.ValidationReject
 		}
 		pk := c.PubKeys[signed.Message.AggregatorIndex]
-		if err := helpers.VerifySigningRoot(a.Data.Slot, pk[:], signed.Message.SelectionProof, d); err != nil {
+		if err := helpers.VerifySigningRoot(a.Data.Slot, pk, signed.Message.SelectionProof, d); err != nil {
 			return pubsub.ValidationReject
 		}
 		// Is the attestation signature correct.
@@ -140,7 +140,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if err != nil {
 			return pubsub.ValidationReject
 		}
-		if err := helpers.VerifySigningRoot(signed.Message, pk[:], signed.Signature, d); err != nil {
+		if err := helpers.VerifySigningRoot(signed.Message, pk, signed.Signature, d); err != nil {
 			return pubsub.ValidationReject
 		}
 		if err := blocks.VerifyAttSigUseCheckPt(ctx, c, signed.Message.Aggregate); err != nil {

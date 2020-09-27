@@ -26,9 +26,11 @@ var WalletCommands = &cli.Command{
 				flags.WalletPasswordFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
 				if _, err := CreateAndSaveWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not create a wallet: %v", err)
 				}
@@ -46,9 +48,11 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCACertPathFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
 				if err := EditWalletConfigurationCli(cliCtx); err != nil {
 					log.Fatalf("Could not edit wallet configuration: %v", err)
 				}
@@ -65,9 +69,11 @@ var WalletCommands = &cli.Command{
 				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.SpadinaTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
 				if err := RecoverWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not recover wallet: %v", err)
 				}

@@ -134,7 +134,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		w := wallet.NewWallet(&wallet.Config{
+		w := wallet.New(&wallet.Config{
 			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
@@ -266,7 +266,7 @@ func TestCorrectPassphrase_Derived(t *testing.T) {
 	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.Equal(t, nil, err, "error in CreateAndSaveWalletCli()")
 
-	w := wallet.NewWallet(&wallet.Config{
+	w := wallet.New(&wallet.Config{
 		WalletDir:      walletDir,
 		KeymanagerKind: v2keymanager.Derived,
 	})

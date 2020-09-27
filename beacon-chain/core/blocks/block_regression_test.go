@@ -56,7 +56,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		aggSigs = append(aggSigs, sig)
 	}
 	aggregateSig := bls.AggregateSignatures(aggSigs)
-	att1.Signature = aggregateSig.Marshal()[:]
+	att1.Signature = aggregateSig.Marshal()
 
 	root2 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
 	att2 := &ethpb.IndexedAttestation{
@@ -76,7 +76,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		aggSigs = append(aggSigs, sig)
 	}
 	aggregateSig = bls.AggregateSignatures(aggSigs)
-	att2.Signature = aggregateSig.Marshal()[:]
+	att2.Signature = aggregateSig.Marshal()
 
 	slashings := []*ethpb.AttesterSlashing{
 		{

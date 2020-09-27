@@ -54,15 +54,15 @@ def prysm_deps():
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/bazel-go-ethereum",
         replace = "github.com/ethereum/go-ethereum",
-        sum = "h1:9JrPtwqCvV38DXYaHbB855KUIHYMwjJBE88lL8lMu8Q=",
-        version = "v0.0.0-20200626171358-a933315235ec",
+        sum = "h1:yoOj4FD6uNdWDjgZqlKGxmUYnR6tI9zN1NrE8tJ3/xE=",
+        version = "v0.0.0-20200922100503-3794d0d7ca25",
     )
 
     # Note: It is required to define com_github_ethereum_go_ethereum like this for some reason...
     # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        commit = "82ea6953710decd73e89ca368c309e732233e39a",  # keep
+        commit = "3794d0d7ca257542c40a8c55e35fe218cc216717",  # keep
         importpath = "github.com/ethereum/go-ethereum",  # keep
         # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
         # a fork that has resolved these issues by disabling HID/USB support and
@@ -3416,11 +3416,11 @@ def prysm_deps():
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/d75dab4fb87df7fc753d348b17be671c69b625f5.tar.gz",
+            "https://github.com/supranational/blst/archive/cd0847a7580b22677e9069f671a79f0d874442b3.tar.gz",
         ],
-        strip_prefix = "blst-d75dab4fb87df7fc753d348b17be671c69b625f5",
+        strip_prefix = "blst-cd0847a7580b22677e9069f671a79f0d874442b3",
         build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "c541403e73fb0553a55d7ebfef6db695f48f18855fff1a87c7fd08f69827da51",
+        sha256 = "047aee659f6228b7d0d8a1c963d0e75de6e5d605756ff9cc1f3aafd2ea2b378b",
     )
     go_repository(
         name = "com_github_nbutton23_zxcvbn_go",

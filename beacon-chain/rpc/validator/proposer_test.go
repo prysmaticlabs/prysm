@@ -280,7 +280,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
-	req.Block.Body.RandaoReveal = randaoReveal[:]
+	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
@@ -438,7 +438,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
@@ -573,7 +573,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
@@ -673,7 +673,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -769,7 +769,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -863,7 +863,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -972,7 +972,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
@@ -1058,7 +1058,7 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range deps {
@@ -1113,7 +1113,7 @@ func TestProposer_Eth1Data(t *testing.T) {
 
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}))
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	ps := &Server{
@@ -1157,7 +1157,7 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range deps {
@@ -1250,7 +1250,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 	}
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
 
@@ -1767,7 +1767,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			BlockHash: []byte("eth1data"),
 		}
 
-		depositCache, err := depositcache.NewDepositCache()
+		depositCache, err := depositcache.New()
 		require.NoError(t, err)
 
 		beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -1892,7 +1892,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig
 					}
-					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()
 				}
 				return atts
 			},
@@ -1952,7 +1952,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(b, err)
 
 	for i, dp := range deposits {
@@ -2063,7 +2063,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {

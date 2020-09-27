@@ -153,5 +153,25 @@ func TestDefaultAndValidatePrompt(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
 
+func TestValidatePhrase(t *testing.T) {
+	wantedPhrase := "wanted phrase"
+
+	t.Run("correct input", func(t *testing.T) {
+		assert.NoError(t, ValidatePhrase(wantedPhrase, wantedPhrase))
+	})
+	t.Run("correct input with whitespace", func(t *testing.T) {
+		assert.NoError(t, ValidatePhrase("  wanted phrase  ", wantedPhrase))
+	})
+	t.Run("incorrect input", func(t *testing.T) {
+		err := ValidatePhrase("foo", wantedPhrase)
+		assert.NotNil(t, err)
+		assert.ErrorContains(t, errIncorrectPhrase.Error(), err)
+	})
+	t.Run("wrong letter case", func(t *testing.T) {
+		err := ValidatePhrase("Wanted Phrase", wantedPhrase)
+		assert.NotNil(t, err)
+		assert.ErrorContains(t, errIncorrectPhrase.Error(), err)
+	})
 }
