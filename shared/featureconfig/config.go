@@ -251,9 +251,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling finalized deposits cache")
 		cfg.EnableFinalizedDepositsCache = false
 	}
-	if ctx.Bool(enableEth1DataMajorityVote.Name) {
-		log.Warn("Enabling eth1data majority vote")
-		cfg.EnableEth1DataMajorityVote = true
+	cfg.EnableEth1DataMajorityVote = true
+	if ctx.Bool(disableEth1DataMajorityVote.Name) {
+		log.Warn("Disabling eth1data majority vote")
+		cfg.EnableEth1DataMajorityVote = false
 	}
 	if ctx.Bool(enableAttBroadcastDiscoveryAttempts.Name) {
 		cfg.EnableAttBroadcastDiscoveryAttempts = true
