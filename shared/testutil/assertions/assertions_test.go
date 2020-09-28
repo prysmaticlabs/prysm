@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -463,6 +464,7 @@ func Test_NotNil(t *testing.T) {
 		obj  interface{}
 		msgs []interface{}
 	}
+	var nilBlock *eth.SignedBeaconBlock = nil
 	tests := []struct {
 		name        string
 		args        args
@@ -498,6 +500,21 @@ func Test_NotNil(t *testing.T) {
 				obj: "some value",
 			},
 			expectedErr: "",
+		},
+		{
+			name: "nil value of dynamic type",
+			args: args{
+				tb:  &assertions.TBMock{},
+				obj: nilBlock,
+			},
+			expectedErr: "Unexpected nil value",
+		},
+		{
+			name: "make sure that assertion works for basic type",
+			args: args{
+				tb:  &assertions.TBMock{},
+				obj: 15,
+			},
 		},
 	}
 	for _, tt := range tests {
