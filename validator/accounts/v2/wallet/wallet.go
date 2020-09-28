@@ -106,15 +106,12 @@ func Exists(walletDir string) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not parse wallet directory")
 	}
-	if dirExists {
-		return true, nil
-	}
-	return false, nil
+	return dirExists, nil
 }
 
-// isValidWallet checks if a folder contains a key directory such as `derived`, `remote` or `direct`.
+// isValid checks if a folder contains a key directory such as `derived`, `remote` or `direct`.
 // Returns true if one of those subdirectories exist, false otherwise.
-func isValidWallet(walletDir string) (bool, error) {
+func isValid(walletDir string) (bool, error) {
 	expanded, err := fileutil.ExpandPath(walletDir)
 	if err != nil {
 		return false, err
@@ -129,18 +126,19 @@ func isValidWallet(walletDir string) (bool, error) {
 		}
 	}()
 	names, err := f.Readdirnames(-1)
-	if err == io.EOF {
-		return false, nil
+	if err != nil {
+		return false, err
 	}
 
-	for _, n := range names {
-		// Nil error means input name is `derived`, `remote` or `direct`
-		_, err := v2keymanager.ParseKind(n)
-		if err == nil {
-			return true, nil
-		}
+	if len(names) != 1 {
+		return false, errors.New("unexpected number of subdirectories")
 	}
 
+	// Nil error means input name is `derived`, `remote` or `direct`
+	_, err = v2keymanager.ParseKind(names[0])
+	if err == nil {
+		return true, nil
+	}
 	return false, nil
 }
 
@@ -155,7 +153,7 @@ func ExistsAndValid(walletDir string) error {
 	}
 
 	var valid bool
-	if valid, err = isValidWallet(walletDir); err != nil {
+	if valid, err = isValid(walletDir); err != nil {
 		return errors.Wrap(err, "could not check if wallet is valid")
 	}
 	if !valid {
