@@ -509,6 +509,13 @@ func Test_NotNil(t *testing.T) {
 			},
 			expectedErr: "Unexpected nil value",
 		},
+		{
+			name: "make sure that assertion works for basic type",
+			args: args{
+				tb:  &assertions.TBMock{},
+				obj: 15,
+			},
+		},
 	}
 	for _, tt := range tests {
 		verify := func() {
