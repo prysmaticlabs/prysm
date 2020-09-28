@@ -263,6 +263,37 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 }
 
+func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
+	db, sc := testDB.SetupDB(t)
+	ctx := context.Background()
+
+	genesis := testutil.NewBeaconBlock()
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, db.SaveBlock(ctx, genesis))
+
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
+	headBlock := testutil.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot
+	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headState := testutil.NewBeaconState()
+	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, headState, headRoot))
+	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
+	require.NoError(t, db.SaveBlock(ctx, headBlock))
+	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
+	require.NoError(t, c.initializeChainInfo(ctx))
+	s, err := c.HeadState(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	assert.DeepEqual(t, genesis, c.head.block)
+}
+
 func TestChainService_SaveHeadNoDB(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	ctx := context.Background()
