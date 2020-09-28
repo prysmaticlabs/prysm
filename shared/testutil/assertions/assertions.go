@@ -86,7 +86,6 @@ func isNil(obj interface{}) bool {
 	if obj == nil {
 		return true
 	}
-
 	value := reflect.ValueOf(obj)
 	switch value.Kind() {
 	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
