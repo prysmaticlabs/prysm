@@ -122,6 +122,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 		// Update deposit cache.
 		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
+		for _, d := range signed.Block.Body.Deposits {
+			s.depositCache.RemovePendingDeposit(ctx, d)
+			// Proof was used to verify the deposit during state transition and can be now safely removed to save space.
+			d.Proof = nil
+		}
 	}
 
 	defer reportAttestationInclusion(b)
@@ -307,6 +312,11 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
+		}
+		for _, d := range b.Body.Deposits {
+			s.depositCache.RemovePendingDeposit(ctx, d)
+			// Proof was used to verify the deposit during state transition and can be now safely removed to save space.
+			d.Proof = nil
 		}
 	}
 	return nil
