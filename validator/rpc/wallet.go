@@ -233,6 +233,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	return &ptypes.Empty{}, nil
 }
 
+// ImportKeystores --
 func (s *Server) ImportKeystores(
 	ctx context.Context, req *pb.ImportKeystoresRequest,
 ) (*pb.ImportKeystoresResponse, error) {
