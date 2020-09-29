@@ -122,6 +122,7 @@ func (dc *DepositCache) RemovePendingDeposit(ctx context.Context, d *ethpb.Depos
 	}
 
 	if idx >= 0 {
+		log.Errorf("Found matching pending deposit")
 		dc.pendingDeposits = append(dc.pendingDeposits[:idx], dc.pendingDeposits[idx+1:]...)
 		pendingDepositsCount.Dec()
 	}
