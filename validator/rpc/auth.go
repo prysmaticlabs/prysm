@@ -111,9 +111,21 @@ func (s *Server) createTokenString() (string, uint64, error) {
 // Initialize a wallet and send it over a global feed.
 func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error {
 	// We first ensure the user has a wallet.
-	if err := wallet.ExistsAndValid(cfg.WalletDir); err != nil {
-		return err
+	exists, err := wallet.Exists(cfg.WalletDir)
+	if err != nil {
+		return errors.Wrap(err, "could not check if wallet exists")
 	}
+	if !exists {
+		return wallet.ErrNoWalletFound
+	}
+	valid, err := wallet.IsValid(cfg.WalletDir)
+	if err != nil {
+		return errors.Wrap(err, "could not check if wallet is valid")
+	}
+	if !valid {
+		return errors.New("directory does not contain valid wallet")
+	}
+
 	// We fire an event with the opened wallet over
 	// a global feed signifying wallet initialization.
 	w, err := wallet.OpenWallet(ctx, &wallet.Config{

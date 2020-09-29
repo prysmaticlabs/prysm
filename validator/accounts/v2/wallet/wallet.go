@@ -109,9 +109,9 @@ func Exists(walletDir string) (bool, error) {
 	return dirExists, nil
 }
 
-// isValid checks if a folder contains a key directory such as `derived`, `remote` or `direct`.
+// IsValid checks if a folder contains a key directory such as `derived`, `remote` or `direct`.
 // Returns true if one of those subdirectories exist, false otherwise.
-func isValid(walletDir string) (bool, error) {
+func IsValid(walletDir string) (bool, error) {
 	expanded, err := fileutil.ExpandPath(walletDir)
 	if err != nil {
 		return false, err
@@ -131,7 +131,7 @@ func isValid(walletDir string) (bool, error) {
 	}
 
 	if len(names) != 1 {
-		return false, errors.New("unexpected number of subdirectories")
+		return false, nil
 	}
 
 	// Nil error means input name is `derived`, `remote` or `direct`
@@ -142,26 +142,27 @@ func isValid(walletDir string) (bool, error) {
 	return false, nil
 }
 
-// ExistsAndValid returns a nil error if walletDir both exists and is valid, and if not, returns the error
-func ExistsAndValid(walletDir string) error {
-	dirExists, err := Exists(walletDir)
-	if err != nil {
-		return errors.Wrap(err, "could not check if wallet exists")
-	}
-	if !dirExists {
-		return ErrNoWalletFound
-	}
-
-	var valid bool
-	if valid, err = isValid(walletDir); err != nil {
-		return errors.Wrap(err, "could not check if wallet is valid")
-	}
-	if !valid {
-		return errors.New("directory does not contain valid wallet")
-	}
-
-	return nil
-}
+// DELETE THE FOLLOWING
+//// ExistsAndValid returns a nil error if walletDir both exists and is valid, and if not, returns the error
+//func ExistsAndValid(walletDir string) error {
+//	dirExists, err := Exists(walletDir)
+//	if err != nil {
+//		return errors.Wrap(err, "could not check if wallet exists")
+//	}
+//	if !dirExists {
+//		return ErrNoWalletFound
+//	}
+//
+//	var valid bool
+//	if valid, err = IsValid(walletDir); err != nil {
+//		return errors.Wrap(err, "could not check if wallet is valid")
+//	}
+//	if !valid {
+//		return errors.New("directory does not contain valid wallet")
+//	}
+//
+//	return nil
+//}
 
 // OpenWalletOrElseCli tries to open the wallet and if it fails or no wallet
 // is found, invokes a callback function.
@@ -205,8 +206,19 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
 func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
-	if err := ExistsAndValid(cfg.WalletDir); err != nil {
-		return nil, err
+	exists, err := Exists(cfg.WalletDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check if wallet exists")
+	}
+	if !exists {
+		return nil, ErrNoWalletFound
+	}
+	valid, err := IsValid(cfg.WalletDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check if wallet is valid")
+	}
+	if !valid {
+		return nil, errors.New("directory does not contain valid wallet")
 	}
 
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
