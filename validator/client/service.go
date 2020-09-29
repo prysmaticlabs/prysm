@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -210,6 +211,8 @@ func (v *ValidatorService) Status() error {
 }
 
 func (v *ValidatorService) recheckKeys(ctx context.Context) {
+	var validatingKeys [][48]byte
+	var err error
 	if featureconfig.Get().EnableAccountsV2 {
 		if v.useWeb {
 			initializedChan := make(chan *wallet.Wallet)
@@ -224,7 +227,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 			}
 			v.keyManagerV2 = keyManagerV2
 		}
-		validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch validating keys")
 		}
@@ -233,13 +236,18 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		}
 		go recheckValidatingKeysBucket(ctx, v.db, v.keyManagerV2)
 	} else {
-		validatingKeys, err := v.keyManager.FetchValidatingKeys()
+		validatingKeys, err = v.keyManager.FetchValidatingKeys()
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch validating keys")
 		}
 		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
 			log.WithError(err).Debug("Could not update public keys buckets")
 		}
+	}
+	for _, key := range validatingKeys {
+		log.WithField(
+			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
+		).Info("Validating for public key")
 	}
 }
 
@@ -338,6 +346,7 @@ func ConstructDialOptions(
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
 		),
+		grpc.WithResolvers(&multipleEndpointsGrpcResolverBuilder{}),
 	}
 
 	dialOpts = append(dialOpts, extraOpts...)
