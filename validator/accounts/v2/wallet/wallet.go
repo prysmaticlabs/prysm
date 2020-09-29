@@ -42,8 +42,11 @@ const (
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"
 	hashCost                  = 8
+	// CheckExistsErrMsg for when there is an error while checking for a wallet
 	CheckExistsErrMsg         = "could not check if wallet exists"
+	// CheckValidityErrMsg for when there is an error while checking wallet validity
 	CheckValidityErrMsg       = "could not check if wallet is valid"
+	// InvalidWalletErrMsg for when a directory does not contain a valid wallet
 	InvalidWalletErrMsg       = "directory does not contain valid wallet"
 )
 
