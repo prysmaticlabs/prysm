@@ -22,12 +22,19 @@ import (
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
 
+const (
+	checkExistsErrMsg   = "Could not check if wallet exists"
+	checkValidityErrMsg = "Could not check if wallet is valid"
+	emptyDirMsg         = "Wallet directory is empty"
+	invalidWalletMsg    = "Directory does not contain a valid wallet"
+)
+
 // HasWallet checks if a user has created a wallet before as well as whether or not
 // they have used the web UI before to set a wallet password.
 func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletResponse, error) {
 	exists, err := wallet.Exists(defaultWalletPath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists")
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
 	}
 	if !exists {
 		return &pb.HasWalletResponse{
@@ -36,13 +43,13 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
 	if err == wallet.ErrNoWalletFound {
-		return nil, status.Errorf(codes.FailedPrecondition, "Wallet directory is empty")
+		return nil, status.Errorf(codes.FailedPrecondition, emptyDirMsg)
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet is valid")
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
 	}
 	if !valid {
-		return nil, status.Errorf(codes.FailedPrecondition, "Directory does not contain a valid wallet")
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 	return &pb.HasWalletResponse{
 		WalletExists: true,
@@ -146,7 +153,7 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
 	exists, err := wallet.Exists(defaultWalletPath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists")
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
 	}
 	if !exists {
 		// If no wallet is found, we simply return an empty response.
@@ -154,13 +161,13 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
 	if err == wallet.ErrNoWalletFound {
-		return nil, status.Errorf(codes.FailedPrecondition, "Wallet directory is empty")
+		return nil, status.Errorf(codes.FailedPrecondition, emptyDirMsg)
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet is valid")
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
 	}
 	if !valid {
-		return nil, status.Errorf(codes.FailedPrecondition, "Directory does not contain a valid wallet")
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 
 	if s.wallet == nil || s.keymanager == nil {
@@ -219,20 +226,20 @@ func (s *Server) GenerateMnemonic(ctx context.Context, _ *ptypes.Empty) (*pb.Gen
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
 	exists, err := wallet.Exists(defaultWalletPath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists")
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
 	}
 	if !exists {
 		return nil, status.Errorf(codes.FailedPrecondition, "No wallet found at path")
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
 	if err == wallet.ErrNoWalletFound {
-		return nil, status.Errorf(codes.FailedPrecondition, "Wallet directory is empty")
+		return nil, status.Errorf(codes.FailedPrecondition, emptyDirMsg)
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet is valid")
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
 	}
 	if !valid {
-		return nil, status.Errorf(codes.FailedPrecondition, "Directory does not contain a valid wallet")
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 	if req.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")

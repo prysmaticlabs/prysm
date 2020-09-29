@@ -159,7 +159,7 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
 		Password: "",
 	})
-	assert.ErrorContains(t, "Wallet directory is empty", err)
+	assert.ErrorContains(t, emptyDirMsg, err)
 	// We attempt to create the wallet.
 	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
@@ -264,7 +264,7 @@ func TestServer_HasWallet(t *testing.T) {
 	// We now create the folder but without a valid wallet, i.e. lacking a subdirectory such as 'direct'
 	require.NoError(t, os.MkdirAll(defaultWalletPath, os.ModePerm))
 	_, err = ss.HasWallet(ctx, &ptypes.Empty{})
-	require.ErrorContains(t, "Wallet directory is empty", err)
+	require.ErrorContains(t, emptyDirMsg, err)
 
 	// We attempt to create the wallet.
 	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{

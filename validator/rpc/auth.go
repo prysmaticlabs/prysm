@@ -113,7 +113,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	// We first ensure the user has a wallet.
 	exists, err := wallet.Exists(cfg.WalletDir)
 	if err != nil {
-		return errors.Wrap(err, "could not check if wallet exists")
+		return errors.Wrap(err, wallet.CheckExistsErrMsg)
 	}
 	if !exists {
 		return wallet.ErrNoWalletFound
@@ -123,10 +123,10 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 		return wallet.ErrNoWalletFound
 	}
 	if err != nil {
-		return errors.Wrap(err, "could not check if wallet is valid")
+		return errors.Wrap(err, wallet.CheckValidityErrMsg)
 	}
 	if !valid {
-		return errors.New("directory does not contain valid wallet")
+		return errors.New(wallet.InvalidWalletErrMsg)
 	}
 
 	// We fire an event with the opened wallet over

@@ -42,6 +42,9 @@ const (
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"
 	hashCost                  = 8
+	CheckExistsErrMsg         = "could not check if wallet exists"
+	CheckValidityErrMsg       = "could not check if wallet is valid"
+	InvalidWalletErrMsg       = "directory does not contain valid wallet"
 )
 
 var (
@@ -143,10 +146,7 @@ func IsValid(walletDir string) (bool, error) {
 			numWalletTypes++
 		}
 	}
-	if numWalletTypes == 1 {
-		return true, nil
-	}
-	return false, nil
+	return numWalletTypes == 1, nil
 }
 
 // OpenWalletOrElseCli tries to open the wallet and if it fails or no wallet
@@ -154,7 +154,7 @@ func IsValid(walletDir string) (bool, error) {
 func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
 	exists, err := Exists(cliCtx.String(flags.WalletDirFlag.Name))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if wallet exists")
+		return nil, errors.Wrap(err, CheckExistsErrMsg)
 	}
 	if !exists {
 		return otherwise(cliCtx)
@@ -164,10 +164,10 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		return otherwise(cliCtx)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if wallet is valid")
+		return nil, errors.Wrap(err, CheckValidityErrMsg)
 	}
 	if !isValid {
-		return nil, errors.New("directory does not contain valid wallet")
+		return nil, errors.New(InvalidWalletErrMsg)
 	}
 
 	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
@@ -203,7 +203,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
 	exists, err := Exists(cfg.WalletDir)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if wallet exists")
+		return nil, errors.Wrap(err, CheckExistsErrMsg)
 	}
 	if !exists {
 		return nil, ErrNoWalletFound
@@ -213,10 +213,10 @@ func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
 		return nil, ErrNoWalletFound
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if wallet is valid")
+		return nil, errors.Wrap(err, CheckValidityErrMsg)
 	}
 	if !valid {
-		return nil, errors.New("directory does not contain valid wallet")
+		return nil, errors.New(InvalidWalletErrMsg)
 	}
 
 	keymanagerKind, err := readKeymanagerKindFromWalletPath(cfg.WalletDir)
