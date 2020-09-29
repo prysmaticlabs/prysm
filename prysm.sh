@@ -112,6 +112,17 @@ function get_prysm_version() {
     fi
 }
 
+checkSum() {
+        utility=$1
+	fileToCheck=$2
+	if [ "$utility" = "shasum" ]; then
+		shasum -a 256 -c $fileToCheck 
+	else
+		sha256sum -c $fileToCheck
+	fi
+	return $? 
+}
+
 function verify() {
     file=$1
 
@@ -119,10 +130,13 @@ function verify() {
     if [[ $skip == 1 ]]; then
         return 0
     fi
-
+    checkSumUtility="shasum"
     hash shasum 2>/dev/null || {
-        echo >&2 "shasum is not available. Either install it or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
-        exit 1
+	checkSumUtility="sha256sum"
+    	hash sha256sum 2>/dev/null || {
+		echo >&2 "SHA checksum utility not available. Either install one (shasum or sha256sum) or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
+		exit 1
+    	}
     }
     hash gpg 2>/dev/null || {
         echo >&2 "gpg is not available. Either install it or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
@@ -134,7 +148,7 @@ function verify() {
     gpg --list-keys $PRYLABS_SIGNING_KEY >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
     (
         cd $wrapper_dir
-        shasum -a 256 -c "${file}.sha256" || failed_verification
+	checkSum $checkSumUtility "${file}.sha256" || failed_verification
     )
     (
         cd $wrapper_dir
