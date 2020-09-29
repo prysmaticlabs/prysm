@@ -159,7 +159,7 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
 		Password: "",
 	})
-	assert.ErrorContains(t, "directory does not contain valid wallet", err)
+	assert.ErrorContains(t, "Directory does not contain a valid wallet", err)
 	// We attempt to create the wallet.
 	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{

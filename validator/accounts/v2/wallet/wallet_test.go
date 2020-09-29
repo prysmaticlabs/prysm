@@ -140,7 +140,7 @@ func Test_IsValid_RandomFiles(t *testing.T) {
 	})
 
 	valid, err := wallet.IsValid(path)
-	require.ErrorContains(t, "unexpected number of subdirectories", err)
+	require.NoError(t, err)
 	require.Equal(t, false, valid)
 
 	walletDir := filepath.Join(path, "direct")
