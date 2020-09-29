@@ -207,8 +207,6 @@ func (kv *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*
 		blk = &ethpb.SignedBeaconBlock{}
 		return decode(ctx, enc, blk)
 	})
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-	}
+	traceutil.AnnotateError(span, err)
 	return blk, err
 }
