@@ -264,7 +264,7 @@ func TestServer_HasWallet(t *testing.T) {
 	// We now create the folder but without a valid wallet, i.e. lacking a subdirectory such as 'direct'
 	require.NoError(t, os.MkdirAll(defaultWalletPath, os.ModePerm))
 	_, err = ss.HasWallet(ctx, &ptypes.Empty{})
-	require.ErrorContains(t, "Wallet validity check failed", err)
+	require.ErrorContains(t, "Wallet directory is empty", err)
 
 	// We attempt to create the wallet.
 	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{

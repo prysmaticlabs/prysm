@@ -35,8 +35,11 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 		}, nil
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
+		return nil, status.Errorf(codes.FailedPrecondition, "Wallet directory is empty")
+	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Wallet validity check failed.")
+		return nil, status.Errorf(codes.Internal, "Could not check if wallet is valid")
 	}
 	if !valid {
 		return nil, status.Errorf(codes.FailedPrecondition, "Directory does not contain a valid wallet")
@@ -219,6 +222,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Errorf(codes.FailedPrecondition, "No wallet found at path")
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
+		return nil, status.Errorf(codes.FailedPrecondition, "Wallet directory is empty")
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if wallet is valid")
 	}
