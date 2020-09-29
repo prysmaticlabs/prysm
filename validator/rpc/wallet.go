@@ -153,6 +153,9 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 		return &pb.WalletResponse{}, nil
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
+		return nil, status.Errorf(codes.FailedPrecondition, "Wallet directory is empty")
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if wallet is valid")
 	}

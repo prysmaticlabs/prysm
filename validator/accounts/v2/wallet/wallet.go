@@ -167,7 +167,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		return nil, errors.Wrap(err, "could not check if wallet is valid")
 	}
 	if !isValid {
-		return nil, errors.New("wallet is not valid")
+		return nil, errors.New("directory does not contain valid wallet")
 	}
 
 	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
@@ -209,6 +209,9 @@ func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
 		return nil, ErrNoWalletFound
 	}
 	valid, err := IsValid(cfg.WalletDir)
+	if err == ErrNoWalletFound {
+		return nil, ErrNoWalletFound
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check if wallet is valid")
 	}
