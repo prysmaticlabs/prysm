@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -36,9 +35,8 @@ func TestServer_CreateAccount(t *testing.T) {
 		walletInitialized: true,
 		wallet:            w,
 	}
-	resp, err := s.CreateAccount(ctx, &ptypes.Empty{})
+	_, err = s.CreateAccount(ctx, &pb.CreateAccountRequest{})
 	require.NoError(t, err)
-	assert.NotNil(t, resp.Account.ValidatingPublicKey)
 }
 
 func TestServer_ListAccounts(t *testing.T) {
