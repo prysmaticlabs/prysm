@@ -259,6 +259,8 @@ func moveDb(cliCtx *cli.Context, accountsDir string) string {
 			}
 		}
 		dataDir = accountsDir
+	} else {
+		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
 	}
 	return dataDir
 }
