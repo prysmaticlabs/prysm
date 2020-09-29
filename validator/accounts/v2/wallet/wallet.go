@@ -153,11 +153,18 @@ func IsValid(walletDir string) (bool, error) {
 // is found, invokes a callback function.
 func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
 	exists, err := Exists(cliCtx.String(flags.WalletDirFlag.Name))
-	if err != nil && err != ErrNoWalletFound {
+	if err != nil {
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
-	if !exists || err == ErrNoWalletFound {
+	isValid, err := IsValid(cliCtx.String(flags.WalletDirFlag.Name))
+	if err == ErrNoWalletFound || !exists {
 		return otherwise(cliCtx)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check if wallet is valid")
+	}
+	if !isValid {
+		return nil, errors.New("wallet is not valid")
 	}
 
 	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
