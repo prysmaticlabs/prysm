@@ -25,7 +25,7 @@ var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletD
 const (
 	checkExistsErrMsg   = "Could not check if wallet exists"
 	checkValidityErrMsg = "Could not check if wallet is valid"
-	emptyDirMsg         = "Wallet directory is empty"
+	noWalletMsg         = "No wallet found at path"
 	invalidWalletMsg    = "Directory does not contain a valid wallet"
 )
 
@@ -231,11 +231,11 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
 	}
 	if !exists {
-		return nil, status.Errorf(codes.FailedPrecondition, "No wallet found at path")
+		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
 	if err == wallet.ErrNoWalletFound {
-		return nil, status.Errorf(codes.FailedPrecondition, emptyDirMsg)
+		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
