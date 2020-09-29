@@ -232,3 +232,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	}
 	return &ptypes.Empty{}, nil
 }
+
+func (s *Server) ImportKeystores(
+	ctx context.Context, req *pb.ImportKeystoresRequest,
+) (*pb.ImportKeystoresResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
