@@ -212,6 +212,7 @@ func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
 		return nil, ErrNoWalletFound
 	}
 	valid, err := IsValid(cfg.WalletDir)
+	// ErrNoWalletFound represents both a directory that does not exist as well as an empty directory
 	if err == ErrNoWalletFound {
 		return nil, ErrNoWalletFound
 	}

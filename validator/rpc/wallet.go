@@ -43,7 +43,9 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
 	if err == wallet.ErrNoWalletFound {
-		return nil, status.Errorf(codes.FailedPrecondition, emptyDirMsg)
+		return &pb.HasWalletResponse{
+			WalletExists: false,
+		}, nil
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
@@ -161,7 +163,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
 	if err == wallet.ErrNoWalletFound {
-		return nil, status.Errorf(codes.FailedPrecondition, emptyDirMsg)
+		return &pb.WalletResponse{}, nil
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)

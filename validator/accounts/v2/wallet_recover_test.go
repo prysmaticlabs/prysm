@@ -29,7 +29,6 @@ type recoverCfgStruct struct {
 func setupRecoverCfg(t *testing.T) *recoverCfgStruct {
 	testDir := testutil.TempDir()
 	walletDir := filepath.Join(testDir, walletDirName)
-	passwordsDir := filepath.Join(testDir, passwordDirName)
 	passwordFilePath := filepath.Join(testDir, passwordFileName)
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	mnemonicFilePath := filepath.Join(testDir, mnemonicFileName)
@@ -37,7 +36,6 @@ func setupRecoverCfg(t *testing.T) *recoverCfgStruct {
 
 	t.Cleanup(func() {
 		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.RemoveAll(passwordsDir))
 		assert.NoError(t, os.Remove(passwordFilePath))
 		assert.NoError(t, os.Remove(mnemonicFilePath))
 	})
