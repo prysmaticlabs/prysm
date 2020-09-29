@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
@@ -16,12 +15,10 @@ import (
 )
 
 // CreateAccount allows creation of a new account in a user's wallet via RPC.
-func (s *Server) CreateAccount(ctx context.Context, _ *ptypes.Empty) (*pb.CreateAccountResponse, error) {
+func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest) (*pb.DepositDataResponse, error) {
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
-	var pubKey []byte
-	var err error
 	switch s.wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
@@ -31,26 +28,23 @@ func (s *Server) CreateAccount(ctx context.Context, _ *ptypes.Empty) (*pb.Create
 			return nil, status.Error(codes.InvalidArgument, "Not a direct keymanager")
 		}
 		// Create a new validator account using the specified keymanager.
-		pubKey, err = km.CreateAccount(ctx)
+		pubKey, err := km.CreateAccount(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
+		_ = pubKey
 	case v2keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
 		}
-		pubKey, err = km.CreateAccount(ctx, false /*logAccountInfo*/)
+		pubKey, err := km.CreateAccount(ctx, false /*logAccountInfo*/)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
+		_ = pubKey
 	}
-	return &pb.CreateAccountResponse{
-		Account: &pb.Account{
-			ValidatingPublicKey: pubKey,
-			AccountName:         petnames.DeterministicName(pubKey, "-"),
-		},
-	}, nil
+	return &pb.DepositDataResponse{}, nil
 }
 
 // ListAccounts allows retrieval of validating keys and their petnames
@@ -76,4 +70,18 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 	return &pb.ListAccountsResponse{
 		Accounts: accounts,
 	}, nil
+}
+
+// BackupAccounts --
+func (s *Server) BackupAccounts(
+	ctx context.Context, req *pb.BackupAccountsRequest,
+) (*pb.BackupAccountsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+// DeleteAccounts --
+func (s *Server) DeleteAccounts(
+	ctx context.Context, req *pb.DeleteAccountsRequest,
+) (*pb.DeleteAccountsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
