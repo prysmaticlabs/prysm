@@ -347,16 +347,15 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	epoch := uint64(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
-	require.NoError(t, baseState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch))
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
-	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
+	assert.Equal(t, returned.Slot(), checkpoint.Epoch*params.BeaconConfig().SlotsPerEpoch, "Incorrectly returned base state")
 
 	cached, err := service.checkpointState.StateByCheckpoint(checkpoint)
 	require.NoError(t, err)
-	assert.NotNil(t, cached, "State should have been cached")
+	assert.Equal(t, returned.Slot(), cached.Slot(), "State should have been cached")
 
 	epoch = uint64(2)
 	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), 32)}

@@ -186,7 +186,8 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 			require.NotNil(t, bha)
 			require.DeepEqual(t, tt.bh, bha[0], "Should return bh")
 		} else {
-			require.NotNil(t, bha, "Block header should have been pruned")
+			require.Equal(t, 0, len(bha), "Block header should have been pruned")
+			require.DeepEqual(t, []*ethpb.SignedBeaconBlockHeader(nil), bha, "Block header should have been pruned")
 		}
 	}
 }
