@@ -152,17 +152,16 @@ func (s *Service) Start() {
 			if err != nil {
 				log.Fatalf("Could not fetch finalized cp: %v", err)
 			}
-			if genesisBlock == nil {
-				log.Fatal("genesis block can't be nil")
+			if genesisBlock != nil {
+				r, err = genesisBlock.Block.HashTreeRoot()
+				if err != nil {
+					log.Fatalf("Could not tree hash genesis block: %v", err)
+				}
 			}
-			r, err = genesisBlock.Block.HashTreeRoot()
+			beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
 			if err != nil {
-				log.Fatalf("Could not tree hash genesis block: %v", err)
+				log.Fatalf("Could not fetch beacon state by root: %v", err)
 			}
-		}
-		beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
-		if err != nil {
-			log.Fatalf("Could not fetch beacon state by root: %v", err)
 		}
 	}
 
