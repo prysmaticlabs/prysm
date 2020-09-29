@@ -156,8 +156,11 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
+	if !exists {
+		return otherwise(cliCtx)
+	}
 	isValid, err := IsValid(cliCtx.String(flags.WalletDirFlag.Name))
-	if err == ErrNoWalletFound || !exists {
+	if err == ErrNoWalletFound {
 		return otherwise(cliCtx)
 	}
 	if err != nil {
