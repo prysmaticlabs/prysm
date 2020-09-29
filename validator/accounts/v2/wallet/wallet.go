@@ -130,6 +130,10 @@ func IsValid(walletDir string) (bool, error) {
 		return false, err
 	}
 
+	if len(names) == 0 {
+		return false, ErrNoWalletFound
+	}
+
 	// Count how many wallet types we have in the directory
 	numWalletTypes := 0
 	for _, name := range names {
@@ -149,10 +153,10 @@ func IsValid(walletDir string) (bool, error) {
 // is found, invokes a callback function.
 func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
 	exists, err := Exists(cliCtx.String(flags.WalletDirFlag.Name))
-	if err != nil {
+	if err != nil && err != ErrNoWalletFound {
 		return nil, errors.Wrap(err, "could not check if wallet exists")
 	}
-	if !exists {
+	if !exists || err == ErrNoWalletFound {
 		return otherwise(cliCtx)
 	}
 
