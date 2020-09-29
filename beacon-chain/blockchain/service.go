@@ -158,10 +158,10 @@ func (s *Service) Start() {
 					log.Fatalf("Could not tree hash genesis block: %v", err)
 				}
 			}
-			beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
-			if err != nil {
-				log.Fatalf("Could not fetch beacon state by root: %v", err)
-			}
+		}
+		beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
+		if err != nil {
+			log.Fatalf("Could not fetch beacon state by root: %v", err)
 		}
 	}
 
