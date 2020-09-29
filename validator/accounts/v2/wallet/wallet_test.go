@@ -140,7 +140,7 @@ func Test_IsValid_RandomFiles(t *testing.T) {
 	})
 
 	valid, err := wallet.IsValid(path)
-	require.NoError(t, err)
+	require.ErrorContains(t, "no wallet found at path", err)
 	require.Equal(t, false, valid)
 
 	walletDir := filepath.Join(path, "direct")

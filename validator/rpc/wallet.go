@@ -36,7 +36,7 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 	}
 	valid, err := wallet.IsValid(defaultWalletPath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet is valid")
+		return nil, status.Errorf(codes.Internal, "Wallet validity check failed.")
 	}
 	if !valid {
 		return nil, status.Errorf(codes.FailedPrecondition, "Directory does not contain a valid wallet")
