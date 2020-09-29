@@ -130,13 +130,16 @@ func IsValid(walletDir string) (bool, error) {
 		return false, err
 	}
 
-	if len(names) != 1 {
-		return false, nil
+	// Count how many wallet types we have in the directory
+	numWalletTypes := 0
+	for _, name := range names {
+		// Nil error means input name is `derived`, `remote` or `direct`
+		_, err = v2keymanager.ParseKind(name)
+		if err == nil {
+			numWalletTypes++
+		}
 	}
-
-	// Nil error means input name is `derived`, `remote` or `direct`
-	_, err = v2keymanager.ParseKind(names[0])
-	if err == nil {
+	if numWalletTypes == 1 {
 		return true, nil
 	}
 	return false, nil
