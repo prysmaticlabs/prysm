@@ -145,28 +145,6 @@ func IsValid(walletDir string) (bool, error) {
 	return false, nil
 }
 
-// DELETE THE FOLLOWING
-//// ExistsAndValid returns a nil error if walletDir both exists and is valid, and if not, returns the error
-//func ExistsAndValid(walletDir string) error {
-//	dirExists, err := Exists(walletDir)
-//	if err != nil {
-//		return errors.Wrap(err, "could not check if wallet exists")
-//	}
-//	if !dirExists {
-//		return ErrNoWalletFound
-//	}
-//
-//	var valid bool
-//	if valid, err = IsValid(walletDir); err != nil {
-//		return errors.Wrap(err, "could not check if wallet is valid")
-//	}
-//	if !valid {
-//		return errors.New("directory does not contain valid wallet")
-//	}
-//
-//	return nil
-//}
-
 // OpenWalletOrElseCli tries to open the wallet and if it fails or no wallet
 // is found, invokes a callback function.
 func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context) (*Wallet, error)) (*Wallet, error) {
