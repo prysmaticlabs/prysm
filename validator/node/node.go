@@ -155,7 +155,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManagerV1 v1.KeyManager
 	var keyManagerV2 v2.IKeymanager
 	var err error
-	var accountsDir string
+	var dbDir string
 	if featureconfig.Get().EnableAccountsV2 {
 		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
@@ -164,7 +164,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not generate interop keys")
 			}
-			accountsDir = cliCtx.String(flags.KeystorePathFlag.Name)
+			dbDir = cliCtx.String(flags.KeystorePathFlag.Name)
 		} else {
 			// Read the wallet from the specified path.
 			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
@@ -187,11 +187,9 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
 				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 			}
-			dbDir := cliCtx.String(flags.ValidatorProtectionDirectory.Name)
-			if dbDir != "" {
-				accountsDir = dbDir
-			} else {
-				accountsDir = s.wallet.AccountsDir()
+			dbDir = cliCtx.String(cmd.DataDirFlag.Name)
+			if dbDir == cmd.DefaultDataDir() {
+				dbDir = s.wallet.AccountsDir()
 			}
 		}
 	} else {
@@ -200,13 +198,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	var dataDir string
-	if s.wallet != nil {
-		dataDir = moveDb(cliCtx, accountsDir, s.wallet.AccountsDir())
-	} else {
-		dataDir = moveDb(cliCtx, accountsDir, "")
-	}
-
+	dataDir := moveDb(cliCtx, dbDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
@@ -251,25 +243,12 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context, accountsDir string, walletDir string) string {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+func moveDb(cliCtx *cli.Context, accountsDir string) string {
+	dataDir := cmd.DefaultDataDir()
 	if accountsDir != "" {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
 		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
-		var walletDataFile string
-		if walletDir != "" {
-			walletDataFile = filepath.Join(walletDir, kv.ProtectionDbFileName)
-		}
-		if walletDataFile != "" && walletDataFile != newDataFile && fileutil.FileExists(walletDataFile) && !fileutil.FileExists(newDataFile) {
-			log.WithFields(logrus.Fields{
-				"oldDbPath":      dataDir,
-				"validatorDbDir": accountsDir,
-			}).Info("Moving validator protection db to validator protection db dir")
-			err := fileutil.CopyFile(dataFile, newDataFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
+		if newDataFile != dataFile && fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
 			log.WithFields(logrus.Fields{
 				"oldDbPath":      dataDir,
 				"validatorDbDir": accountsDir,
