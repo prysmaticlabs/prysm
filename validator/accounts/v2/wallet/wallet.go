@@ -109,7 +109,7 @@ func Exists(walletDir string) (bool, error) {
 	return dirExists, nil
 }
 
-// IsValid checks if a folder contains a key directory such as `derived`, `remote` or `direct`.
+// IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `direct`.
 // Returns true if one of those subdirectories exist, false otherwise.
 func IsValid(walletDir string) (bool, error) {
 	expanded, err := fileutil.ExpandPath(walletDir)
