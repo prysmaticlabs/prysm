@@ -38,18 +38,36 @@ service Wallet {
             body: "*"
         };
     }
+    rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/keystores/import",
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
-    rpc CreateAccount(google.protobuf.Empty) returns (CreateAccountResponse) {
+    rpc CreateAccount(CreateAccountRequest) returns (DepositDataResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/accounts/create",
+            post: "/v2/validator/wallet/accounts/create",
             body: "*"
         };
     }
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/accounts"
+        };
+    }
+    rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/accounts/backup",
+            body: "*"
+        };
+    }
+    rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/accounts/delete",
+            body: "*"
         };
     }
 }
@@ -131,10 +149,6 @@ message WalletResponse {
     map<string, string> keymanager_config = 3;
 }
 
-message CreateAccountResponse {
-    Account account = 1;
-}
-
 message ListAccountsRequest {
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
@@ -194,4 +208,56 @@ message ChangePasswordRequest {
 message HasWalletResponse {
     // Whether or not the user has a wallet on disk.
     bool wallet_exists = 1;
+}
+
+message ImportKeystoresRequest {
+    // JSON-encoded keystore files to import during wallet creation.
+    repeated string keystores_imported = 1;
+
+    // Password to unlock imported keystore files.
+    string keystores_password = 2;
+}
+
+message ImportKeystoresResponse {
+    repeated bytes imported_public_keys = 1;
+}
+
+message CreateAccountRequest {
+    uint64 num_accounts = 1;
+}
+
+message DepositDataResponse {
+    // The deposit data for each created account
+    // represented as a list in the same format as
+    // the deposit_data.json file from the eth2.0-deposit-cli.
+    repeated DepositData deposit_data_list = 1;
+    message DepositData {
+        string pubkey = 1;
+        string withdrawal_credentials = 2;
+        uint64 amount = 3;
+        string signature = 4;
+        string deposit_message_root = 5;
+        string deposit_data_root = 6;
+        string fork_version = 7;
+    }
+}
+
+message BackupAccountsRequest {
+    // List of public keys to backup.
+    repeated string public_keys = 1;
+}
+
+message BackupAccountsResponse {
+    // Zip file containing backed up keystores.
+    bytes zip_file = 1;
+}
+
+message DeleteAccountsRequest {
+    // List of public keys to delete.
+    repeated string public_keys = 1;
+}
+
+message DeleteAccountsResponse {
+    // List of public keys successfully deleted.
+    repeated string deleted_keys = 1;
 }
