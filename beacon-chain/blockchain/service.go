@@ -147,6 +147,9 @@ func (s *Service) Start() {
 
 	if beaconState == nil {
 		r := bytesutil.ToBytes32(cp.Root)
+		// Before the first finalized epoch, in the current epoch,
+		// the finalized root is defined as zero hashes instead of genesis root hash.
+		// We want to use genesis root to retrieve for state.
 		if r == params.BeaconConfig().ZeroHash {
 			genesisBlock, err := s.beaconDB.GenesisBlock(s.ctx)
 			if err != nil {
