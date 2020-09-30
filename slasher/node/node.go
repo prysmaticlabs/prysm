@@ -85,8 +85,11 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		services:              registry,
 		stop:                  make(chan struct{}),
 	}
-	if err := slasher.registerPrometheusService(); err != nil {
-		return nil, err
+
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := slasher.registerPrometheusService(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := slasher.startDB(); err != nil {
