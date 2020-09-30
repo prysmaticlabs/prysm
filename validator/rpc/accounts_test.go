@@ -1,9 +1,12 @@
 package rpc
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/google/uuid"
@@ -82,6 +85,88 @@ func TestServer_ListAccounts(t *testing.T) {
 }
 
 func TestServer_BackupAccounts(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(ctx))
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	ss := &Server{
+		keymanager: km,
+		wallet:     w,
+	}
+	// First we import 3 accounts into the wallet.
+	encryptor := keystorev4.New()
+	keystores := make([]string, 3)
+	pubKeys := make([][]byte, len(keystores))
+	for i := 0; i < len(keystores); i++ {
+		privKey := bls.RandKey()
+		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
+		id, err := uuid.NewRandom()
+		require.NoError(t, err)
+		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
+		require.NoError(t, err)
+		item := &v2keymanager.Keystore{
+			Crypto:  cryptoFields,
+			ID:      id.String(),
+			Version: encryptor.Version(),
+			Pubkey:  pubKey,
+			Name:    encryptor.Name(),
+		}
+		encodedFile, err := json.MarshalIndent(item, "", "\t")
+		require.NoError(t, err)
+		keystores[i] = string(encodedFile)
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
+	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+		KeystoresImported: keystores,
+		KeystoresPassword: strongPass,
+	})
+	require.NoError(t, err)
+	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+
+	// We now attempt to backup all public keys from the wallet.
+	res, err := ss.BackupAccounts(ctx, &pb.BackupAccountsRequest{
+		PublicKeys:     pubKeys,
+		BackupPassword: strongPass,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res.ZipFile)
+
+	// Open a zip archive for reading.
+	buf := bytes.NewReader(res.ZipFile)
+	r, err := zip.NewReader(buf, int64(len(res.ZipFile)))
+	require.NoError(t, err)
+
+	// Iterate through the files in the archive, checking they
+	// match the keystores we wanted to backup.
+	for i, f := range r.File {
+		keystoreFile, err := f.Open()
+		require.NoError(t, err)
+		encoded, err := ioutil.ReadAll(keystoreFile)
+		if err != nil {
+			require.NoError(t, keystoreFile.Close())
+			t.Fatal(err)
+		}
+		keystore := &v2keymanager.Keystore{}
+		if err := json.Unmarshal(encoded, &keystore); err != nil {
+			require.NoError(t, keystoreFile.Close())
+			t.Fatal(err)
+		}
+		assert.Equal(t, keystore.Pubkey, fmt.Sprintf("%x", pubKeys[i]))
+		require.NoError(t, keystoreFile.Close())
+	}
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {

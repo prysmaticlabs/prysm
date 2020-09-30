@@ -91,7 +91,7 @@ func (s *Server) BackupAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != v2keymanager.Direct || s.wallet.KeymanagerKind() != v2keymanager.Derived {
+	if s.wallet.KeymanagerKind() != v2keymanager.Direct && s.wallet.KeymanagerKind() != v2keymanager.Derived {
 		return nil, status.Error(codes.FailedPrecondition, "Only HD or direct wallets can backup accounts")
 	}
 	pubKeys := make([]bls.PublicKey, len(req.PublicKeys))
@@ -124,29 +124,42 @@ func (s *Server) BackupAccounts(
 			return nil, errors.Wrap(err, "could not backup accounts for derived keymanager")
 		}
 	}
+	if keystoresToBackup == nil || len(keystoresToBackup) == 0 {
+		return nil, errors.New("no keystores to backup")
+	}
+
+	// Determine size of a single keystore file in order to create a buffer
+	// of bytes needed to zip all keystores together.
 	buf := new(bytes.Buffer)
 	writer := zip.NewWriter(buf)
-	defer func() {
-		if err := writer.Close(); err != nil {
-			log.WithError(err).Error("Could not close zip file after writing")
-		}
-	}()
 	for i, k := range keystoresToBackup {
 		encodedFile, err := json.MarshalIndent(k, "", "\t")
 		if err != nil {
+			if err := writer.Close(); err != nil {
+				log.WithError(err).Error("Could not close zip file after writing")
+			}
 			return nil, errors.Wrap(err, "could not marshal keystore to JSON file")
 		}
 		f, err := writer.Create(fmt.Sprintf("keystore-%d.json", i))
 		if err != nil {
+			if err := writer.Close(); err != nil {
+				log.WithError(err).Error("Could not close zip file after writing")
+			}
 			return nil, errors.Wrap(err, "could not write keystore file to zip")
 		}
 		if _, err = f.Write(encodedFile); err != nil {
+			if err := writer.Close(); err != nil {
+				log.WithError(err).Error("Could not close zip file after writing")
+			}
 			return nil, errors.Wrap(err, "could not write keystore file contents")
 		}
 	}
+	if err := writer.Close(); err != nil {
+		log.WithError(err).Error("Could not close zip file after writing")
+	}
 	return &pb.BackupAccountsResponse{
 		ZipFile: buf.Bytes(),
-	}, status.Error(codes.Unimplemented, "Unimplemented")
+	}, nil
 }
 
 // DeleteAccounts deletes accounts from a user if their wallet is a non-HD wallet.
