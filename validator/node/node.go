@@ -221,8 +221,10 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {
@@ -232,11 +234,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if err := s.registerClientService(keyManagerV1, keyManagerV2); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx); err != nil {
-		return err
-	}
-	if err := s.registerRPCGatewayService(cliCtx); err != nil {
-		return err
+	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
+		if err := s.registerRPCService(cliCtx); err != nil {
+			return err
+		}
+		if err := s.registerRPCGatewayService(cliCtx); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -286,8 +290,10 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {
