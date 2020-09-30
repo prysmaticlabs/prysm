@@ -245,6 +245,8 @@ message DepositDataResponse {
 message BackupAccountsRequest {
     // List of public keys to backup.
     repeated bytes public_keys = 1;
+
+    string backup_password = 2;
 }
 
 message BackupAccountsResponse {
