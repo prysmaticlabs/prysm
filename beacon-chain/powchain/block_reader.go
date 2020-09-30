@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -91,34 +92,104 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	head, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
+	if time > s.latestEth1Data.BlockTime {
+		return nil, errors.New("provided time is later than the current eth1 head")
+	}
+	headNumber := big.NewInt(int64(s.latestEth1Data.BlockHeight))
+	headTime := s.latestEth1Data.BlockTime
+	numOfBlocks := uint64(0)
+	estimatedBlk := headNumber.Uint64()
+	for {
+		if time > headTime+10*params.BeaconConfig().SecondsPerETH1Block {
+			numOfBlocks = (time - headTime) / params.BeaconConfig().SecondsPerETH1Block
+			estimatedBlk = headNumber.Uint64() + numOfBlocks
+		} else if time+10*params.BeaconConfig().SecondsPerETH1Block < headTime {
+			numOfBlocks = (headTime - time) / params.BeaconConfig().SecondsPerETH1Block
+			estimatedBlk = headNumber.Uint64() - numOfBlocks
+		} else {
+			break
+		}
+		hinfo, err := s.retrieveHeaderInfo(ctx, estimatedBlk)
+		if err != nil {
+			return nil, err
+		}
+		headNumber = hinfo.Number
+		headTime = hinfo.Time
 	}
 
-	for bn := head.Number; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
+	log.Errorf("num of blocks: %d, estimated %d. Retrieved info time %d wanted time %d and expected head %d "+
+		"and head time %d", numOfBlocks, estimatedBlk, headTime, time, headNumber.Uint64(), s.latestEth1Data.BlockTime)
+	if headTime >= time {
+		return s.findLessTargetEth1Block(ctx, big.NewInt(int64(estimatedBlk)), time)
+	}
+	return s.findMoreTargetEth1Block(ctx, big.NewInt(int64(estimatedBlk)), time)
+}
+
+// Performs a search to find a target eth1 block which is less than or equal to the
+// target time. This method is used when head.time >= targetTime
+func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, targetTime uint64) (*big.Int, error) {
+	defer func() {
+		log.Error("finished finding blocks")
+	}()
+	for bn := head; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-
-		exists, info, err := s.headerCache.HeaderInfoByHeight(bn)
+		info, err := s.retrieveHeaderInfo(ctx, bn.Uint64())
 		if err != nil {
 			return nil, err
 		}
 
-		if !exists {
-			blk, err := s.eth1DataFetcher.HeaderByNumber(ctx, bn)
-			if err != nil {
-				return nil, err
-			}
-			if err := s.headerCache.AddHeader(blk); err != nil {
-				return nil, err
-			}
-			info = headerToHeaderInfo(blk)
-		}
-
-		if info.Time <= time {
+		if info.Time <= targetTime {
 			return info.Number, nil
 		}
 	}
+}
+
+// Performs a search to find a target eth1 block which is the the block which
+// is just less than to the target time. This method is used when head.time < targetTime
+func (s *Service) findMoreTargetEth1Block(ctx context.Context, head *big.Int, targetTime uint64) (*big.Int, error) {
+	defer func() {
+		log.Error("finished finding blocks")
+	}()
+	for bn := head; ; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		info, err := s.retrieveHeaderInfo(ctx, bn.Uint64())
+		if err != nil {
+			return nil, err
+		}
+
+		// Return the last block before we hit the threshold
+		// time.
+		if info.Time > targetTime {
+			return big.NewInt(info.Number.Int64() - 1), nil
+		}
+		// If time is equal, this is our target block.
+		if info.Time == targetTime {
+			return info.Number, nil
+		}
+	}
+}
+
+func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*headerInfo, error) {
+	bn := big.NewInt(int64(bNum))
+	log.Errorf("retrieving: %d", bNum)
+	exists, info, err := s.headerCache.HeaderInfoByHeight(bn)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		blk, err := s.eth1DataFetcher.HeaderByNumber(ctx, bn)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.headerCache.AddHeader(blk); err != nil {
+			return nil, err
+		}
+		info = headerToHeaderInfo(blk)
+	}
+	return info, nil
 }
