@@ -128,8 +128,6 @@ func (s *Server) BackupAccounts(
 		return nil, status.Error(codes.InvalidArgument, "No keystores to backup")
 	}
 
-	// Determine size of a single keystore file in order to create a buffer
-	// of bytes needed to zip all keystores together.
 	buf := new(bytes.Buffer)
 	writer := zip.NewWriter(buf)
 	for i, k := range keystoresToBackup {
