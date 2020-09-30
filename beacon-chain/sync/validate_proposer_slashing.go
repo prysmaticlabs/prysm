@@ -7,7 +7,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -48,23 +47,10 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationIgnore
 	}
 
-	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
 	headState, err := s.chain.HeadState(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore
 	}
-	slashSlot := slashing.Header_1.Header.Slot
-	if headState.Slot() < slashSlot {
-		if ctx.Err() != nil {
-			return pubsub.ValidationIgnore
-		}
-		var err error
-		headState, err = state.ProcessSlots(ctx, headState, slashSlot)
-		if err != nil {
-			return pubsub.ValidationIgnore
-		}
-	}
-
 	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
 		return pubsub.ValidationReject
 	}
