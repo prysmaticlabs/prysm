@@ -2,19 +2,24 @@ package beacon
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	ptypes "github.com/gogo/protobuf/types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func GetForkSchedule(ctx context.Context, req *ptypes.Empty) (*ethpb.ForkScheduleResponse, error) {
-	return &ethpb.ForkScheduleResponse{}, nil
-}
-
-func GetSpec(ctx context.Context, req *ptypes.Empty) (*ethpb.SpecResponse, error) {
-	return &ethpb.SpecResponse{}, nil
-}
-
-func GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
-	return &ethpb.DepositContractResponse{}, nil
+// GetBeaconConfig retrieves the current configuration parameters of the beacon chain.
+func (bs *Server) GetBeaconConfig(ctx context.Context, _ *ptypes.Empty) (*ethpb.BeaconConfig, error) {
+	conf := params.BeaconConfig()
+	val := reflect.ValueOf(conf).Elem()
+	numFields := val.Type().NumField()
+	res := make(map[string]string, numFields)
+	for i := 0; i < numFields; i++ {
+		res[val.Type().Field(i).Name] = fmt.Sprintf("%v", val.Field(i).Interface())
+	}
+	return &ethpb.BeaconConfig{
+		Config: res,
+	}, nil
 }

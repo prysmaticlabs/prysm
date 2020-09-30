@@ -1,4 +1,4 @@
-package beacon
+package beacon_v1
 
 import (
 	"context"
