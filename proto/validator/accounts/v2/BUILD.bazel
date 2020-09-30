@@ -3,6 +3,7 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
+# gazelle:ignore
 proto_library(
     name = "ethereum_validator_accounts_v2_proto",
     srcs = [
@@ -40,12 +41,13 @@ go_proto_library(
         "@com_github_golang_protobuf//ptypes/empty:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
+        "@com_github_gogo_protobuf//gogoproto:go_default_library",
     ],
 )
 
 go_proto_library(
     name = "ethereum_validator_account_go_proto",
-    compilers = ["@prysm//:grpc_proto_compiler"],
+    compiler = "//:proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2",
     proto = ":ethereum_validator_accounts_v2_proto",
     visibility = ["//visibility:public"],

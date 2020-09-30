@@ -33,17 +33,26 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
 		_ = pubKey
+		_ = depositData
+		//depositMessage := &pb.DepositMessage{
+		//	Pubkey:                pubKey,
+		//	WithdrawalCredentials: depositData.WithdrawalCredentials,
+		//	Amount:                depositData.Amount,
+		//}
 		return &pb.DepositDataResponse{
 			DepositDataList: []*pb.DepositDataResponse_DepositData{
 				{
-					Pubkey:                "",
-					WithdrawalCredentials: "",
-					Amount:                depositData.Amount,
-					Signature:             "",
-					DepositMessageRoot:    "",
-					DepositDataRoot:       "",
-					ForkVersion:           "",
+					Data: nil,
 				},
+				//{
+				//	Pubkey:                "",
+				//	WithdrawalCredentials: "",
+				//	Amount:                depositData.Amount,
+				//	Signature:             "",
+				//	DepositMessageRoot:    "",
+				//	DepositDataRoot:       "",
+				//	ForkVersion:           "",
+				//},
 			},
 		}, nil
 	case v2keymanager.Derived:

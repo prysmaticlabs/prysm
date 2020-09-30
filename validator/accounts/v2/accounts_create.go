@@ -58,7 +58,7 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 			return errors.New("not a direct keymanager")
 		}
 		// Create a new validator account using the specified keymanager.
-		if _, err := km.CreateAccount(ctx); err != nil {
+		if _, _, err := km.CreateAccount(ctx); err != nil {
 			return errors.Wrap(err, "could not create account in wallet")
 		}
 	case v2keymanager.Derived:

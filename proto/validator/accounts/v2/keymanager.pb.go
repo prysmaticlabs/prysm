@@ -4,15 +4,11 @@
 package ethereum_validator_accounts_v2
 
 import (
-	context "context"
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
-	types "github.com/gogo/protobuf/types"
+	_ "github.com/gogo/protobuf/types"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -381,122 +377,6 @@ var fileDescriptor_795e98bd0a473d79 = []byte{
 	0xc1, 0xea, 0xce, 0xbf, 0x98, 0xaa, 0x35, 0xe4, 0x24, 0x55, 0x4d, 0x5d, 0x35, 0x89, 0xd8, 0x5c,
 	0xbb, 0xf4, 0xe5, 0xa6, 0xae, 0x7c, 0xbd, 0xa9, 0x2b, 0xdf, 0x6f, 0xea, 0xca, 0xa0, 0x20, 0x1d,
 	0xd8, 0xfb, 0x15, 0x00, 0x00, 0xff, 0xff, 0x8e, 0x70, 0x82, 0xe4, 0x14, 0x05, 0x00, 0x00,
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// RemoteSignerClient is the client API for RemoteSigner service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type RemoteSignerClient interface {
-	ListValidatingPublicKeys(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ListPublicKeysResponse, error)
-	Sign(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error)
-}
-
-type remoteSignerClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewRemoteSignerClient(cc *grpc.ClientConn) RemoteSignerClient {
-	return &remoteSignerClient{cc}
-}
-
-func (c *remoteSignerClient) ListValidatingPublicKeys(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ListPublicKeysResponse, error) {
-	out := new(ListPublicKeysResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.RemoteSigner/ListValidatingPublicKeys", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *remoteSignerClient) Sign(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error) {
-	out := new(SignResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.RemoteSigner/Sign", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// RemoteSignerServer is the server API for RemoteSigner service.
-type RemoteSignerServer interface {
-	ListValidatingPublicKeys(context.Context, *types.Empty) (*ListPublicKeysResponse, error)
-	Sign(context.Context, *SignRequest) (*SignResponse, error)
-}
-
-// UnimplementedRemoteSignerServer can be embedded to have forward compatible implementations.
-type UnimplementedRemoteSignerServer struct {
-}
-
-func (*UnimplementedRemoteSignerServer) ListValidatingPublicKeys(ctx context.Context, req *types.Empty) (*ListPublicKeysResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListValidatingPublicKeys not implemented")
-}
-func (*UnimplementedRemoteSignerServer) Sign(ctx context.Context, req *SignRequest) (*SignResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Sign not implemented")
-}
-
-func RegisterRemoteSignerServer(s *grpc.Server, srv RemoteSignerServer) {
-	s.RegisterService(&_RemoteSigner_serviceDesc, srv)
-}
-
-func _RemoteSigner_ListValidatingPublicKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RemoteSignerServer).ListValidatingPublicKeys(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.validator.accounts.v2.RemoteSigner/ListValidatingPublicKeys",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RemoteSignerServer).ListValidatingPublicKeys(ctx, req.(*types.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RemoteSigner_Sign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RemoteSignerServer).Sign(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.validator.accounts.v2.RemoteSigner/Sign",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RemoteSignerServer).Sign(ctx, req.(*SignRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _RemoteSigner_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "ethereum.validator.accounts.v2.RemoteSigner",
-	HandlerType: (*RemoteSignerServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "ListValidatingPublicKeys",
-			Handler:    _RemoteSigner_ListValidatingPublicKeys_Handler,
-		},
-		{
-			MethodName: "Sign",
-			Handler:    _RemoteSigner_Sign_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/validator/accounts/v2/keymanager.proto",
 }
 
 func (m *ListPublicKeysResponse) Marshal() (dAtA []byte, err error) {
