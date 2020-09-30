@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
@@ -23,17 +22,36 @@ import (
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
 
+const (
+	checkExistsErrMsg   = "Could not check if wallet exists"
+	checkValidityErrMsg = "Could not check if wallet is valid"
+	noWalletMsg         = "No wallet found at path"
+	invalidWalletMsg    = "Directory does not contain a valid wallet"
+)
+
 // HasWallet checks if a user has created a wallet before as well as whether or not
 // they have used the web UI before to set a wallet password.
 func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletResponse, error) {
-	err := wallet.Exists(defaultWalletPath)
-	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
+	}
+	if !exists {
+		return &pb.HasWalletResponse{
+			WalletExists: false,
+		}, nil
+	}
+	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
 		return &pb.HasWalletResponse{
 			WalletExists: false,
 		}, nil
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
+	}
+	if !valid {
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 	return &pb.HasWalletResponse{
 		WalletExists: true,
@@ -43,6 +61,14 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 // CreateWallet via an API request, allowing a user to save a new
 // derived, direct, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
+	// Currently defaultWalletPath is used as the wallet directory and req's WalletPath is ignored for simplicity
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check for existing wallet: %v", err)
+	}
+	if exists {
+		return nil, status.Error(codes.AlreadyExists, "A wallet already exists at this location.")
+	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
 		// Needs to unmarshal the keystores from the requests.
@@ -127,14 +153,25 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
-	err := wallet.Exists(defaultWalletPath)
-	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
+	}
+	if !exists {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
+		return &pb.WalletResponse{}, nil
 	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
+	}
+	if !valid {
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
+	}
+
 	if s.wallet == nil || s.keymanager == nil {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
@@ -189,12 +226,22 @@ func (s *Server) GenerateMnemonic(ctx context.Context, _ *ptypes.Empty) (*pb.Gen
 // ChangePassword allows changing a wallet password via the API as
 // an authenticated method.
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
-	err := wallet.Exists(defaultWalletPath)
-	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
+	}
+	if !exists {
+		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
+	}
+	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
+		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
+	}
+	if !valid {
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 	if req.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")
