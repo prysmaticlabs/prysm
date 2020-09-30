@@ -660,6 +660,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
+	AltonaTestnet,
+	OnyxTestnet,
+	SpadinaTestnet,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
