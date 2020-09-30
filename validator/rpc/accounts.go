@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
@@ -32,27 +33,32 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
-		_ = pubKey
-		_ = depositData
-		//depositMessage := &pb.DepositMessage{
-		//	Pubkey:                pubKey,
-		//	WithdrawalCredentials: depositData.WithdrawalCredentials,
-		//	Amount:                depositData.Amount,
-		//}
+		depositMessage := &pb.DepositMessage{
+			Pubkey:                pubKey,
+			WithdrawalCredentials: depositData.WithdrawalCredentials,
+			Amount:                depositData.Amount,
+		}
+		depositMessageRoot, err := depositMessage.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		depositDataRoot, err := depositData.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		data := make(map[string]string)
+		data["pubkey"] = fmt.Sprintf("%x", pubKey)
+		data["withdrawal_credentials"] = fmt.Sprintf("%x", depositData.WithdrawalCredentials)
+		data["amount"] = fmt.Sprintf("%d", depositData.Amount)
+		data["signature"] = fmt.Sprintf("%x", depositData.Signature)
+		data["deposit_message_root"] = fmt.Sprintf("%x", depositMessageRoot)
+		data["deposit_data_root"] = fmt.Sprintf("%x", depositDataRoot)
+		data["fork_version"] = fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion)
 		return &pb.DepositDataResponse{
 			DepositDataList: []*pb.DepositDataResponse_DepositData{
 				{
-					Data: nil,
+					Data: data,
 				},
-				//{
-				//	Pubkey:                "",
-				//	WithdrawalCredentials: "",
-				//	Amount:                depositData.Amount,
-				//	Signature:             "",
-				//	DepositMessageRoot:    "",
-				//	DepositDataRoot:       "",
-				//	ForkVersion:           "",
-				//},
 			},
 		}, nil
 	case v2keymanager.Derived:

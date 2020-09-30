@@ -4,11 +4,15 @@
 package ethereum_validator_accounts_v2
 
 import (
+	context "context"
 	fmt "fmt"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	_ "github.com/gogo/protobuf/types"
+	types "github.com/gogo/protobuf/types"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -1504,6 +1508,662 @@ var fileDescriptor_8a5153635bfe042e = []byte{
 	0xb7, 0xc8, 0x44, 0x2f, 0x09, 0xa5, 0xe1, 0x63, 0xb4, 0xff, 0xa8, 0xf4, 0xe7, 0xd7, 0x5b, 0xe8,
 	0x2f, 0xaf, 0xb7, 0xd0, 0x3f, 0x5e, 0x6f, 0xa1, 0xb3, 0x05, 0x19, 0x98, 0xc3, 0xff, 0x04, 0x00,
 	0x00, 0xff, 0xff, 0x0c, 0x09, 0x90, 0xed, 0x0f, 0x15, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// WalletClient is the client API for Wallet service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type WalletClient interface {
+	HasWallet(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*HasWalletResponse, error)
+	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*WalletResponse, error)
+	EditConfig(ctx context.Context, in *EditWalletConfigRequest, opts ...grpc.CallOption) (*WalletResponse, error)
+	WalletConfig(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
+	GenerateMnemonic(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*types.Empty, error)
+	ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error)
+}
+
+type walletClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewWalletClient(cc *grpc.ClientConn) WalletClient {
+	return &walletClient{cc}
+}
+
+func (c *walletClient) HasWallet(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*HasWalletResponse, error) {
+	out := new(HasWalletResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/HasWallet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletClient) CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*WalletResponse, error) {
+	out := new(WalletResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/CreateWallet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletClient) EditConfig(ctx context.Context, in *EditWalletConfigRequest, opts ...grpc.CallOption) (*WalletResponse, error) {
+	out := new(WalletResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/EditConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletClient) WalletConfig(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*WalletResponse, error) {
+	out := new(WalletResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/WalletConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletClient) GenerateMnemonic(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
+	out := new(GenerateMnemonicResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*types.Empty, error) {
+	out := new(types.Empty)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/ChangePassword", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletClient) ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error) {
+	out := new(ImportKeystoresResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/ImportKeystores", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// WalletServer is the server API for Wallet service.
+type WalletServer interface {
+	HasWallet(context.Context, *types.Empty) (*HasWalletResponse, error)
+	CreateWallet(context.Context, *CreateWalletRequest) (*WalletResponse, error)
+	EditConfig(context.Context, *EditWalletConfigRequest) (*WalletResponse, error)
+	WalletConfig(context.Context, *types.Empty) (*WalletResponse, error)
+	GenerateMnemonic(context.Context, *types.Empty) (*GenerateMnemonicResponse, error)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*types.Empty, error)
+	ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error)
+}
+
+// UnimplementedWalletServer can be embedded to have forward compatible implementations.
+type UnimplementedWalletServer struct {
+}
+
+func (*UnimplementedWalletServer) HasWallet(ctx context.Context, req *types.Empty) (*HasWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HasWallet not implemented")
+}
+func (*UnimplementedWalletServer) CreateWallet(ctx context.Context, req *CreateWalletRequest) (*WalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWallet not implemented")
+}
+func (*UnimplementedWalletServer) EditConfig(ctx context.Context, req *EditWalletConfigRequest) (*WalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EditConfig not implemented")
+}
+func (*UnimplementedWalletServer) WalletConfig(ctx context.Context, req *types.Empty) (*WalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WalletConfig not implemented")
+}
+func (*UnimplementedWalletServer) GenerateMnemonic(ctx context.Context, req *types.Empty) (*GenerateMnemonicResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateMnemonic not implemented")
+}
+func (*UnimplementedWalletServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*types.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
+}
+func (*UnimplementedWalletServer) ImportKeystores(ctx context.Context, req *ImportKeystoresRequest) (*ImportKeystoresResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportKeystores not implemented")
+}
+
+func RegisterWalletServer(s *grpc.Server, srv WalletServer) {
+	s.RegisterService(&_Wallet_serviceDesc, srv)
+}
+
+func _Wallet_HasWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).HasWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/HasWallet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).HasWallet(ctx, req.(*types.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Wallet_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).CreateWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/CreateWallet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).CreateWallet(ctx, req.(*CreateWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Wallet_EditConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EditWalletConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).EditConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/EditConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).EditConfig(ctx, req.(*EditWalletConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).WalletConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/WalletConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).WalletConfig(ctx, req.(*types.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).GenerateMnemonic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*types.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Wallet_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangePasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).ChangePassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/ChangePassword",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Wallet_ImportKeystores_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportKeystoresRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).ImportKeystores(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/ImportKeystores",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).ImportKeystores(ctx, req.(*ImportKeystoresRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Wallet_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.validator.accounts.v2.Wallet",
+	HandlerType: (*WalletServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "HasWallet",
+			Handler:    _Wallet_HasWallet_Handler,
+		},
+		{
+			MethodName: "CreateWallet",
+			Handler:    _Wallet_CreateWallet_Handler,
+		},
+		{
+			MethodName: "EditConfig",
+			Handler:    _Wallet_EditConfig_Handler,
+		},
+		{
+			MethodName: "WalletConfig",
+			Handler:    _Wallet_WalletConfig_Handler,
+		},
+		{
+			MethodName: "GenerateMnemonic",
+			Handler:    _Wallet_GenerateMnemonic_Handler,
+		},
+		{
+			MethodName: "ChangePassword",
+			Handler:    _Wallet_ChangePassword_Handler,
+		},
+		{
+			MethodName: "ImportKeystores",
+			Handler:    _Wallet_ImportKeystores_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/validator/accounts/v2/web_api.proto",
+}
+
+// AccountsClient is the client API for Accounts service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type AccountsClient interface {
+	CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*DepositDataResponse, error)
+	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	BackupAccounts(ctx context.Context, in *BackupAccountsRequest, opts ...grpc.CallOption) (*BackupAccountsResponse, error)
+	DeleteAccounts(ctx context.Context, in *DeleteAccountsRequest, opts ...grpc.CallOption) (*DeleteAccountsResponse, error)
+}
+
+type accountsClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewAccountsClient(cc *grpc.ClientConn) AccountsClient {
+	return &accountsClient{cc}
+}
+
+func (c *accountsClient) CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*DepositDataResponse, error) {
+	out := new(DepositDataResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/CreateAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsClient) ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error) {
+	out := new(ListAccountsResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/ListAccounts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsClient) BackupAccounts(ctx context.Context, in *BackupAccountsRequest, opts ...grpc.CallOption) (*BackupAccountsResponse, error) {
+	out := new(BackupAccountsResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/BackupAccounts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsClient) DeleteAccounts(ctx context.Context, in *DeleteAccountsRequest, opts ...grpc.CallOption) (*DeleteAccountsResponse, error) {
+	out := new(DeleteAccountsResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/DeleteAccounts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AccountsServer is the server API for Accounts service.
+type AccountsServer interface {
+	CreateAccount(context.Context, *CreateAccountRequest) (*DepositDataResponse, error)
+	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	BackupAccounts(context.Context, *BackupAccountsRequest) (*BackupAccountsResponse, error)
+	DeleteAccounts(context.Context, *DeleteAccountsRequest) (*DeleteAccountsResponse, error)
+}
+
+// UnimplementedAccountsServer can be embedded to have forward compatible implementations.
+type UnimplementedAccountsServer struct {
+}
+
+func (*UnimplementedAccountsServer) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*DepositDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateAccount not implemented")
+}
+func (*UnimplementedAccountsServer) ListAccounts(ctx context.Context, req *ListAccountsRequest) (*ListAccountsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (*UnimplementedAccountsServer) BackupAccounts(ctx context.Context, req *BackupAccountsRequest) (*BackupAccountsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BackupAccounts not implemented")
+}
+func (*UnimplementedAccountsServer) DeleteAccounts(ctx context.Context, req *DeleteAccountsRequest) (*DeleteAccountsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccounts not implemented")
+}
+
+func RegisterAccountsServer(s *grpc.Server, srv AccountsServer) {
+	s.RegisterService(&_Accounts_serviceDesc, srv)
+}
+
+func _Accounts_CreateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServer).CreateAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Accounts/CreateAccount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServer).CreateAccount(ctx, req.(*CreateAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Accounts_ListAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServer).ListAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Accounts/ListAccounts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServer).ListAccounts(ctx, req.(*ListAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Accounts_BackupAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackupAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServer).BackupAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Accounts/BackupAccounts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServer).BackupAccounts(ctx, req.(*BackupAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Accounts_DeleteAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServer).DeleteAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Accounts/DeleteAccounts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServer).DeleteAccounts(ctx, req.(*DeleteAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Accounts_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.validator.accounts.v2.Accounts",
+	HandlerType: (*AccountsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateAccount",
+			Handler:    _Accounts_CreateAccount_Handler,
+		},
+		{
+			MethodName: "ListAccounts",
+			Handler:    _Accounts_ListAccounts_Handler,
+		},
+		{
+			MethodName: "BackupAccounts",
+			Handler:    _Accounts_BackupAccounts_Handler,
+		},
+		{
+			MethodName: "DeleteAccounts",
+			Handler:    _Accounts_DeleteAccounts_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/validator/accounts/v2/web_api.proto",
+}
+
+// HealthClient is the client API for Health service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type HealthClient interface {
+	GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
+}
+
+type healthClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewHealthClient(cc *grpc.ClientConn) HealthClient {
+	return &healthClient{cc}
+}
+
+func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
+	out := new(NodeConnectionResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// HealthServer is the server API for Health service.
+type HealthServer interface {
+	GetBeaconNodeConnection(context.Context, *types.Empty) (*NodeConnectionResponse, error)
+}
+
+// UnimplementedHealthServer can be embedded to have forward compatible implementations.
+type UnimplementedHealthServer struct {
+}
+
+func (*UnimplementedHealthServer) GetBeaconNodeConnection(ctx context.Context, req *types.Empty) (*NodeConnectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconNodeConnection not implemented")
+}
+
+func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
+	s.RegisterService(&_Health_serviceDesc, srv)
+}
+
+func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HealthServer).GetBeaconNodeConnection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*types.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Health_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.validator.accounts.v2.Health",
+	HandlerType: (*HealthServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetBeaconNodeConnection",
+			Handler:    _Health_GetBeaconNodeConnection_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/validator/accounts/v2/web_api.proto",
+}
+
+// AuthClient is the client API for Auth service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type AuthClient interface {
+	Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
+	Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
+}
+
+type authClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewAuthClient(cc *grpc.ClientConn) AuthClient {
+	return &authClient{cc}
+}
+
+func (c *authClient) Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
+	out := new(AuthResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Login", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
+	out := new(AuthResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Signup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AuthServer is the server API for Auth service.
+type AuthServer interface {
+	Login(context.Context, *AuthRequest) (*AuthResponse, error)
+	Signup(context.Context, *AuthRequest) (*AuthResponse, error)
+}
+
+// UnimplementedAuthServer can be embedded to have forward compatible implementations.
+type UnimplementedAuthServer struct {
+}
+
+func (*UnimplementedAuthServer) Login(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+}
+func (*UnimplementedAuthServer) Signup(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Signup not implemented")
+}
+
+func RegisterAuthServer(s *grpc.Server, srv AuthServer) {
+	s.RegisterService(&_Auth_serviceDesc, srv)
+}
+
+func _Auth_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).Login(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Auth/Login",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).Login(ctx, req.(*AuthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_Signup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).Signup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Auth/Signup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).Signup(ctx, req.(*AuthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Auth_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.validator.accounts.v2.Auth",
+	HandlerType: (*AuthServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Login",
+			Handler:    _Auth_Login_Handler,
+		},
+		{
+			MethodName: "Signup",
+			Handler:    _Auth_Signup_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/validator/accounts/v2/web_api.proto",
 }
 
 func (m *CreateWalletRequest) Marshal() (dAtA []byte, err error) {
