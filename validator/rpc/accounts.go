@@ -98,7 +98,7 @@ func (s *Server) BackupAccounts(
 	for i, key := range req.PublicKeys {
 		pubKey, err := bls.PublicKeyFromBytes(key)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.InvalidArgument, "%#x Not a valid BLS public key: %v", key, err)
 		}
 		pubKeys[i] = pubKey
 	}
@@ -108,24 +108,24 @@ func (s *Server) BackupAccounts(
 	case v2keymanager.Direct:
 		km, ok := s.keymanager.(*direct.Keymanager)
 		if !ok {
-			return nil, nil
+			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
 		}
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not backup accounts for direct keymanager")
+			return nil, status.Errorf(codes.Internal, "Could not backup accounts for direct keymanager: %v", err)
 		}
 	case v2keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
-			return nil, errors.New("could not assert keymanager interface to concrete type")
+			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
 		}
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not backup accounts for derived keymanager")
+			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derived keymanager: %v", err)
 		}
 	}
 	if keystoresToBackup == nil || len(keystoresToBackup) == 0 {
-		return nil, errors.New("no keystores to backup")
+		return nil, status.Error(codes.InvalidArgument, "No keystores to backup")
 	}
 
 	// Determine size of a single keystore file in order to create a buffer
@@ -138,20 +138,20 @@ func (s *Server) BackupAccounts(
 			if err := writer.Close(); err != nil {
 				log.WithError(err).Error("Could not close zip file after writing")
 			}
-			return nil, errors.Wrap(err, "could not marshal keystore to JSON file")
+			return nil, status.Errorf(codes.Internal, "could not marshal keystore to JSON file: %v", err)
 		}
 		f, err := writer.Create(fmt.Sprintf("keystore-%d.json", i))
 		if err != nil {
 			if err := writer.Close(); err != nil {
 				log.WithError(err).Error("Could not close zip file after writing")
 			}
-			return nil, errors.Wrap(err, "could not write keystore file to zip")
+			return nil, status.Errorf(codes.Internal, "Could not write keystore file to zip: %v", err)
 		}
 		if _, err = f.Write(encodedFile); err != nil {
 			if err := writer.Close(); err != nil {
 				log.WithError(err).Error("Could not close zip file after writing")
 			}
-			return nil, errors.Wrap(err, "could not write keystore file contents")
+			return nil, status.Errorf(codes.Internal, "Could not write keystore file contents")
 		}
 	}
 	if err := writer.Close(); err != nil {
