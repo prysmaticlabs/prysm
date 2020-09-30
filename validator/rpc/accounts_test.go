@@ -9,16 +9,13 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/google/uuid"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestServer_CreateAccount(t *testing.T) {
@@ -85,61 +82,12 @@ func TestServer_ListAccounts(t *testing.T) {
 }
 
 func TestServer_BackupAccounts(t *testing.T) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
-	require.NoError(t, err)
-	ss := &Server{
-		keymanager: km,
-		wallet:     w,
-	}
-	// First we import 3 accounts into the wallet.
-	encryptor := keystorev4.New()
-	keystores := make([]string, 3)
-	pubKeys := make([][]byte, len(keystores))
-	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
-		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
-		id, err := uuid.NewRandom()
-		require.NoError(t, err)
-		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
-		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Version: encryptor.Version(),
-			Pubkey:  pubKey,
-			Name:    encryptor.Name(),
-		}
-		encodedFile, err := json.MarshalIndent(item, "", "\t")
-		require.NoError(t, err)
-		keystores[i] = string(encodedFile)
-		pubKeys[i] = privKey.PublicKey().Marshal()
-	}
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
-		KeystoresImported: keystores,
-		KeystoresPassword: strongPass,
-	})
-	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
-	require.NoError(t, err)
+	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
 
 	// We now attempt to backup all public keys from the wallet.
-	res, err := ss.BackupAccounts(ctx, &pb.BackupAccountsRequest{
+	res, err := ss.BackupAccounts(context.Background(), &pb.BackupAccountsRequest{
 		PublicKeys:     pubKeys,
-		BackupPassword: strongPass,
+		BackupPassword: ss.wallet.Password(),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, res.ZipFile)
@@ -148,6 +96,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 	buf := bytes.NewReader(res.ZipFile)
 	r, err := zip.NewReader(buf, int64(len(res.ZipFile)))
 	require.NoError(t, err)
+	require.Equal(t, len(pubKeys), len(r.File))
 
 	// Iterate through the files in the archive, checking they
 	// match the keystores we wanted to backup.
@@ -208,60 +157,11 @@ func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_DeleteAccounts_OK(t *testing.T) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
+	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
-	require.NoError(t, err)
-	ss := &Server{
-		keymanager: km,
-		wallet:     w,
-	}
-	// First we import 3 accounts into the wallet.
-	encryptor := keystorev4.New()
-	keystores := make([]string, 3)
-	pubKeys := make([][]byte, len(keystores))
-	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
-		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
-		id, err := uuid.NewRandom()
-		require.NoError(t, err)
-		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
-		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Version: encryptor.Version(),
-			Pubkey:  pubKey,
-			Name:    encryptor.Name(),
-		}
-		encodedFile, err := json.MarshalIndent(item, "", "\t")
-		require.NoError(t, err)
-		keystores[i] = string(encodedFile)
-		pubKeys[i] = privKey.PublicKey().Marshal()
-	}
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
-		KeystoresImported: keystores,
-		KeystoresPassword: strongPass,
-	})
-	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
-	require.NoError(t, err)
-
 	keys, err := ss.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
-	require.Equal(t, len(keystores), len(keys))
+	require.Equal(t, len(pubKeys), len(keys))
 
 	// Next, we attempt to delete one of the keystores.
 	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
@@ -274,5 +174,5 @@ func TestServer_DeleteAccounts_OK(t *testing.T) {
 	// We expect one of the keys to have been deleted.
 	keys, err = ss.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, len(keystores)-1, len(keys))
+	assert.Equal(t, len(pubKeys)-1, len(keys))
 }
