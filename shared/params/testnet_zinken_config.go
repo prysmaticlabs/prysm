@@ -23,7 +23,7 @@ func UseZinkenConfig() {
 // Zinken testnet.
 func ZinkenConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
-	cfg.MinGenesisTime = 1601899200
+	cfg.MinGenesisTime = 1602504000
 	cfg.GenesisDelay = 345600
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x03}
 	cfg.NetworkName = "zinken"
