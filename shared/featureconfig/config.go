@@ -281,6 +281,24 @@ func ConfigureSlasher(ctx *cli.Context) {
 
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
+	if ctx.Bool(AltonaTestnet.Name) {
+		log.Warn("Running Validator on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
+	}
+	if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running Node on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(SpadinaTestnet.Name) {
+		log.Warn("Running Node on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
+	}
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
 		cfg.DisableLookback = true
