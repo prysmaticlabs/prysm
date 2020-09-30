@@ -123,6 +123,7 @@ func highestAttSetkeyBytes(validatorID uint64) []byte {
 	return bytesutil.Uint64ToBytesBigEndian(highestAttSetkey(validatorID))
 }
 
+// divide validators by id into 1k-ish buckets (0-1000,1001-1999, etc)
 func highestAttSetkey(validatorID uint64) uint64 {
-	return validatorID % 1000
+	return validatorID / 1000
 }

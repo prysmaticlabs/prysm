@@ -367,7 +367,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{1, 3, 7},
 				Data: &ethpb.AttestationData{
-					Source:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
@@ -375,7 +375,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 			},
 			expected: &ethereum_slashing.HighestAttestation{
 				ValidatorId:          1,
-				HighestSourceEpoch:   2,
+				HighestSourceEpoch:   1,
 				HighestTargetEpoch:   4,
 			},
 		},
