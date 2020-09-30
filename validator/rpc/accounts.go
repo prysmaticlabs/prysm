@@ -77,6 +77,15 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 func (s *Server) BackupAccounts(
 	ctx context.Context, req *pb.BackupAccountsRequest,
 ) (*pb.BackupAccountsResponse, error) {
+	if req.PublicKeys == nil || len(req.PublicKeys) < 1 {
+		return nil, status.Error(codes.FailedPrecondition, "No public keys specified to backup")
+	}
+	if s.wallet == nil || s.keymanager == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
+	}
+	if s.wallet.KeymanagerKind() != v2keymanager.Direct || s.wallet.KeymanagerKind() != v2keymanager.Derived {
+		return nil, status.Error(codes.FailedPrecondition, "Only HD or direct wallets can backup accounts")
+	}
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
