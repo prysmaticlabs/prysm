@@ -19,56 +19,70 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func TestRecoverDerivedWallet(t *testing.T) {
+type recoverCfgStruct struct {
+	walletDir        string
+	passwordFilePath string
+	mnemonicFilePath string
+	numAccounts      int64
+}
+
+func setupRecoverCfg(t *testing.T) *recoverCfgStruct {
 	testDir := testutil.TempDir()
 	walletDir := filepath.Join(testDir, walletDirName)
-	passwordsDir := filepath.Join(testDir, passwordDirName)
-	exportDir := filepath.Join(testDir, exportDirName)
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.RemoveAll(passwordsDir))
-		assert.NoError(t, os.RemoveAll(exportDir))
-	}()
-
 	passwordFilePath := filepath.Join(testDir, passwordFileName)
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	mnemonicFilePath := filepath.Join(testDir, mnemonicFileName)
 	require.NoError(t, ioutil.WriteFile(mnemonicFilePath, []byte(mnemonic), os.ModePerm))
 
-	numAccounts := int64(4)
+	t.Cleanup(func() {
+		assert.NoError(t, os.RemoveAll(walletDir))
+		assert.NoError(t, os.Remove(passwordFilePath))
+		assert.NoError(t, os.Remove(mnemonicFilePath))
+	})
+
+	return &recoverCfgStruct{
+		walletDir:        walletDir,
+		passwordFilePath: passwordFilePath,
+		mnemonicFilePath: mnemonicFilePath,
+	}
+}
+
+func createRecoverCliCtx(t *testing.T, cfg *recoverCfgStruct) *cli.Context {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.DeprecatedPasswordsDirFlag.Name, passwordsDir, "")
-	set.String(flags.WalletPasswordFileFlag.Name, passwordFilePath, "")
+	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
+	set.String(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath, "")
 	set.String(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String(), "")
-	set.String(flags.MnemonicFileFlag.Name, mnemonicFilePath, "")
-	set.Int64(flags.NumAccountsFlag.Name, numAccounts, "")
-	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.DeprecatedPasswordsDirFlag.Name, passwordsDir))
-	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath))
+	set.String(flags.MnemonicFileFlag.Name, cfg.mnemonicFilePath, "")
+	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath))
 	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String()))
-	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
-	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(numAccounts))))
-	cliCtx := cli.NewContext(&app, set, nil)
+	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, cfg.mnemonicFilePath))
+	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
+	return cli.NewContext(&app, set, nil)
+}
 
+func TestRecoverDerivedWallet(t *testing.T) {
+	cfg := setupRecoverCfg(t)
+	cfg.numAccounts = 4
+	cliCtx := createRecoverCliCtx(t, cfg)
 	require.NoError(t, RecoverWalletCli(cliCtx))
 
 	ctx := context.Background()
 	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir:      walletDir,
+		WalletDir:      cfg.walletDir,
 		WalletPassword: password,
 	})
 	assert.NoError(t, err)
 
 	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
-	cfg, err := derived.UnmarshalOptionsFile(encoded)
+	walletCfg, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
-
 	// We assert the created configuration was as desired.
 	wantCfg := derived.DefaultKeymanagerOpts()
-	assert.DeepEqual(t, wantCfg, cfg)
+	assert.DeepEqual(t, wantCfg, walletCfg)
 
 	keymanager, err := w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)
@@ -78,43 +92,29 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	}
 	names, err := km.ValidatingAccountNames(ctx)
 	assert.NoError(t, err)
-	require.Equal(t, len(names), int(numAccounts))
-
+	require.Equal(t, len(names), int(cfg.numAccounts))
 }
 
 // TestRecoverDerivedWallet_OneAccount is a test for regression in cases where the number of accounts recovered is 1
 func TestRecoverDerivedWallet_OneAccount(t *testing.T) {
-	testDir := testutil.TempDir()
-	walletDir := filepath.Join(testDir, walletDirName)
-	defer func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-	}()
-
-	passwordFilePath := filepath.Join(testDir, passwordFileName)
-	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
-	mnemonicFilePath := filepath.Join(testDir, mnemonicFileName)
-	require.NoError(t, ioutil.WriteFile(mnemonicFilePath, []byte(mnemonic), os.ModePerm))
-
-	numAccounts := int64(1)
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.WalletPasswordFileFlag.Name, passwordFilePath, "")
-	set.String(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String(), "")
-	set.String(flags.MnemonicFileFlag.Name, mnemonicFilePath, "")
-	set.Int64(flags.NumAccountsFlag.Name, numAccounts, "")
-	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath))
-	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String()))
-	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, mnemonicFilePath))
-	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(numAccounts))))
-	cliCtx := cli.NewContext(&app, set, nil)
-
+	cfg := setupRecoverCfg(t)
+	cfg.numAccounts = 1
+	cliCtx := createRecoverCliCtx(t, cfg)
 	require.NoError(t, RecoverWalletCli(cliCtx))
 
 	_, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir:      walletDir,
+		WalletDir:      cfg.walletDir,
 		WalletPassword: password,
 	})
 	assert.NoError(t, err)
+}
+
+func TestRecoverDerivedWallet_AlreadyExists(t *testing.T) {
+	cfg := setupRecoverCfg(t)
+	cfg.numAccounts = 4
+	cliCtx := createRecoverCliCtx(t, cfg)
+	require.NoError(t, RecoverWalletCli(cliCtx))
+
+	// Trying to recover an HD wallet into a directory that already exists should give an error
+	require.ErrorContains(t, "a wallet already exists at this location", RecoverWalletCli(cliCtx))
 }
