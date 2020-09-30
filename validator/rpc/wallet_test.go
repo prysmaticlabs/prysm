@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -34,6 +35,9 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		WalletPassword:    strongPass,
 		KeystoresPassword: strongPass,
 	}
+	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
+	// where a directory already exists
+	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "No keystores included for import", err)
 
@@ -80,6 +84,9 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 		WalletPassword: strongPass,
 		NumAccounts:    0,
 	}
+	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
+	// where a directory already exists
+	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Must create at least 1 validator account", err)
 
@@ -93,6 +100,10 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
+
+	// Now trying to create a wallet where a previous wallet already exists.  We expect an error.
+	_, err = s.CreateWallet(ctx, req)
+	require.ErrorContains(t, "wallet already exists at this location", err)
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
@@ -148,7 +159,7 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
 		Password: "",
 	})
-	assert.ErrorContains(t, "No wallet found", err)
+	assert.ErrorContains(t, noWalletMsg, err)
 	// We attempt to create the wallet.
 	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
@@ -242,11 +253,23 @@ func TestServer_HasWallet(t *testing.T) {
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	ss := &Server{}
+	// First delete the created folder and check the response
+	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	resp, err := ss.HasWallet(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 	assert.DeepEqual(t, &pb.HasWalletResponse{
 		WalletExists: false,
 	}, resp)
+
+	// We now create the folder but without a valid wallet, i.e. lacking a subdirectory such as 'direct'
+	// We expect an empty directory to behave similarly as if there were no directory
+	require.NoError(t, os.MkdirAll(defaultWalletPath, os.ModePerm))
+	resp, err = ss.HasWallet(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	assert.DeepEqual(t, &pb.HasWalletResponse{
+		WalletExists: false,
+	}, resp)
+
 	// We attempt to create the wallet.
 	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
