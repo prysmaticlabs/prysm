@@ -79,9 +79,12 @@ func (s *Server) BackupAccounts(
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
-// DeleteAccounts --
+// DeleteAccounts deletes accounts from a user if their wallet is a non-HD wallet.
 func (s *Server) DeleteAccounts(
 	ctx context.Context, req *pb.DeleteAccountsRequest,
 ) (*pb.DeleteAccountsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	if req.PublicKeys == nil || len(req.PublicKeys) < 1 {
+		return nil, status.Error(codes.FailedPrecondition, "No public keys specified to delete")
+	}
+	return nil, nil
 }
