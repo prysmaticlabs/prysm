@@ -28,11 +28,24 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 			return nil, status.Error(codes.InvalidArgument, "Not a direct keymanager")
 		}
 		// Create a new validator account using the specified keymanager.
-		pubKey, err := km.CreateAccount(ctx)
+		pubKey, depositData, err := km.CreateAccount(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
 		_ = pubKey
+		return &pb.DepositDataResponse{
+			DepositDataList: []*pb.DepositDataResponse_DepositData{
+				{
+					Pubkey:                "",
+					WithdrawalCredentials: "",
+					Amount:                depositData.Amount,
+					Signature:             "",
+					DepositMessageRoot:    "",
+					DepositDataRoot:       "",
+					ForkVersion:           "",
+				},
+			},
+		}, nil
 	case v2keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
