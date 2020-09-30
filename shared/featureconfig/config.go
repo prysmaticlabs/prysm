@@ -35,6 +35,7 @@ type Flags struct {
 	// Testnet Flags.
 	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the Altona testnet.
 	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the Onyx testnet.
+	MedallaTestnet bool // MedallaTestnet defines the flag through which we can enable the node to run on the Medalla testnet.
 	SpadinaTestnet bool // SpadinaTestnet defines the flag through which we can enable the node to run on the Spadina testnet.
 	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
 
@@ -136,6 +137,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(MedallaTestnet.Name) {
+		log.Warn("Running Node on Medalla Testnet")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
 	}
 	if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
@@ -300,6 +307,12 @@ func ConfigureSlasher(ctx *cli.Context) {
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
 	}
+	if ctx.Bool(MedallaTestnet.Name) {
+		log.Warn("Running Node on Medalla Testnet")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
+	}
 	if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
@@ -338,6 +351,12 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(MedallaTestnet.Name) {
+		log.Warn("Running Node on Medalla Testnet")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
 	}
 	if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
