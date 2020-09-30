@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -280,9 +281,48 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	return &ptypes.Empty{}, nil
 }
 
-// ImportKeystores --
+// ImportKeystores allows importing new keystores via RPC into the wallet
+// which will be decrypted using the specified password .
 func (s *Server) ImportKeystores(
 	ctx context.Context, req *pb.ImportKeystoresRequest,
 ) (*pb.ImportKeystoresResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	if s.wallet == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
+	}
+	if s.wallet.KeymanagerKind() != v2keymanager.Direct {
+		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
+	}
+	if req.KeystoresPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
+	}
+	// Needs to unmarshal the keystores from the requests.
+	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
+		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
+	}
+	keystores := make([]*v2keymanager.Keystore, len(req.KeystoresImported))
+	importedPubKeys := make([][]byte, len(req.KeystoresImported))
+	for i := 0; i < len(req.KeystoresImported); i++ {
+		encoded := req.KeystoresImported[i]
+		keystore := &v2keymanager.Keystore{}
+		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
+		}
+		keystores[i] = keystore
+		pubKey, err := hex.DecodeString(keystore.Pubkey)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Not a valid BLS public key in keystore file: %v", err)
+		}
+		importedPubKeys[i] = pubKey
+	}
+	// Import the uploaded accounts.
+	if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
+		Wallet:          s.wallet,
+		Keystores:       keystores,
+		AccountPassword: req.KeystoresPassword,
+	}); err != nil {
+		return nil, err
+	}
+	return &pb.ImportKeystoresResponse{
+		ImportedPublicKeys: importedPubKeys,
+	}, nil
 }
