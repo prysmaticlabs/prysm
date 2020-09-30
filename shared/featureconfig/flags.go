@@ -15,10 +15,15 @@ var (
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
-	// SpadinaTestnet flag for the multiclient eth2 devnet.
+	// SpadinaTestnet flag for the multiclient eth2 testnet.
 	SpadinaTestnet = &cli.BoolFlag{
 		Name:  "spadina",
 		Usage: "This defines the flag through which we can run on the Spadina Multiclient Testnet",
+	}
+	// ZinkenTestnet flag for the multiclient eth2 testnet.
+	ZinkenTestnet = &cli.BoolFlag{
+		Name:  "zinken",
+		Usage: "This defines the flag through which we can run on the Zinken Multiclient Testnet",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
@@ -653,6 +658,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	SpadinaTestnet,
+	ZinkenTestnet,
 	disableAccountsV2,
 	enableBlst,
 }...)
@@ -697,6 +703,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	SpadinaTestnet,
+	ZinkenTestnet,
 	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,

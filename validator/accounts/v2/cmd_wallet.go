@@ -27,6 +27,7 @@ var WalletCommands = &cli.Command{
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -49,6 +50,7 @@ var WalletCommands = &cli.Command{
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -70,6 +72,7 @@ var WalletCommands = &cli.Command{
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {

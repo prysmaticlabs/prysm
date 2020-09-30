@@ -15,6 +15,7 @@ go_library(
         "testnet_medalla_config.go",
         "testnet_onyx_config.go",
         "testnet_spadina_config.go",
+        "testnet_zinken_config.go",
         "testutils.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/params",
