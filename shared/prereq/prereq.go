@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type platform struct {
@@ -44,8 +45,8 @@ func parseVersion(input string, num int, sep string) ([]int, error) {
 	return version, nil
 }
 
-// MeetsMinPlatformReqs returns true if the runtime matches any on the list of supported platforms
-func MeetsMinPlatformReqs(ctx context.Context) (bool, error) {
+// meetsMinPlatformReqs returns true if the runtime matches any on the list of supported platforms
+func meetsMinPlatformReqs(ctx context.Context) (bool, error) {
 	okPlatforms := getSupportedPlatforms()
 	runtimeOS := runtime.GOOS
 	runtimeArch := runtime.GOARCH
@@ -74,4 +75,17 @@ func MeetsMinPlatformReqs(ctx context.Context) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// WarnIfNotSupported warns if the user's platform is not supported
+func WarnIfNotSupported(ctx context.Context) error {
+	supported, err := meetsMinPlatformReqs(ctx)
+	if err != nil {
+		return err
+	}
+	if !supported {
+		log.Warn("This platform is not supported. The following platforms are supported: Linux/AMD64," +
+			" Linux/ARM64, Mac OS X/AMD64 (10.14+ only), and Windows/AMD64")
+	}
+	return nil
 }
