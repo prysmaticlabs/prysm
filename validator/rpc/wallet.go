@@ -286,6 +286,12 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 func (s *Server) ImportKeystores(
 	ctx context.Context, req *pb.ImportKeystoresRequest,
 ) (*pb.ImportKeystoresResponse, error) {
+	if s.wallet == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
+	}
+	if s.wallet.KeymanagerKind() != v2keymanager.Direct {
+		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
+	}
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
 	}

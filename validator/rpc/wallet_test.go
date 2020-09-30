@@ -286,3 +286,27 @@ func TestServer_HasWallet(t *testing.T) {
 		WalletExists: true,
 	}, resp)
 }
+
+func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	ss := &Server{
+		wallet:     w,
+		keymanager: km,
+	}
+	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
+	require.ErrorContains(t, "Only Non-HD wallets can import", err)
+}
