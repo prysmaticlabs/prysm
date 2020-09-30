@@ -178,3 +178,35 @@ func (kv *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool 
 	}
 	return exists
 }
+
+// FinalizedChildBlock returns the child block of a provided finalized block. If
+// no finalized block or its respective child block exists we return with a nil
+// block.
+func (kv *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
+	defer span.End()
+
+	var blk *ethpb.SignedBeaconBlock
+	err := kv.db.View(func(tx *bolt.Tx) error {
+		blkBytes := tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:])
+		if blkBytes == nil {
+			return nil
+		}
+		if bytes.Equal(blkBytes, containerFinalizedButNotCanonical) {
+			return nil
+		}
+		ctr := &dbpb.FinalizedBlockRootContainer{}
+		if err := decode(ctx, blkBytes, ctr); err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		enc := tx.Bucket(blocksBucket).Get(ctr.ChildRoot)
+		if enc == nil {
+			return nil
+		}
+		blk = &ethpb.SignedBeaconBlock{}
+		return decode(ctx, enc, blk)
+	})
+	traceutil.AnnotateError(span, err)
+	return blk, err
+}
