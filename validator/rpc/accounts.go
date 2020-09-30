@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -86,5 +87,20 @@ func (s *Server) DeleteAccounts(
 	if req.PublicKeys == nil || len(req.PublicKeys) < 1 {
 		return nil, status.Error(codes.FailedPrecondition, "No public keys specified to delete")
 	}
-	return nil, nil
+	if s.wallet == nil || s.keymanager == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
+	}
+	if s.wallet.KeymanagerKind() != v2keymanager.Direct {
+		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can delete accounts")
+	}
+	if err := v2.DeleteAccount(ctx, &v2.DeleteAccountConfig{
+		Wallet:     s.wallet,
+		Keymanager: s.keymanager,
+		PublicKeys: req.PublicKeys,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
+	}
+	return &pb.DeleteAccountsResponse{
+		DeletedKeys: req.PublicKeys,
+	}, nil
 }
