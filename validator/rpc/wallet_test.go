@@ -287,7 +287,7 @@ func TestServer_HasWallet(t *testing.T) {
 	}, resp)
 }
 
-func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
+func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
@@ -308,5 +308,109 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 		keymanager: km,
 	}
 	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
-	require.ErrorContains(t, "Only Non-HD wallets can import", err)
+	assert.ErrorContains(t, "Only Non-HD wallets can import", err)
+}
+
+func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(ctx))
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	ss := &Server{
+		keymanager: km,
+	}
+	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
+	assert.ErrorContains(t, "No wallet initialized", err)
+	ss.wallet = w
+	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
+	assert.ErrorContains(t, "Password required for keystores", err)
+	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+		KeystoresPassword: strongPass,
+	})
+	assert.ErrorContains(t, "No keystores included for import", err)
+	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+		KeystoresPassword: strongPass,
+		KeystoresImported: []string{"badjson"},
+	})
+	assert.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
+}
+
+func TestServer_ImportKeystores_OK(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(ctx))
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	ss := &Server{
+		keymanager: km,
+		wallet:     w,
+	}
+
+	// Create 3 keystores.
+	encryptor := keystorev4.New()
+	keystores := make([]string, 3)
+	pubKeys := make([][]byte, 3)
+	for i := 0; i < len(keystores); i++ {
+		privKey := bls.RandKey()
+		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
+		id, err := uuid.NewRandom()
+		require.NoError(t, err)
+		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
+		require.NoError(t, err)
+		item := &v2keymanager.Keystore{
+			Crypto:  cryptoFields,
+			ID:      id.String(),
+			Version: encryptor.Version(),
+			Pubkey:  pubKey,
+			Name:    encryptor.Name(),
+		}
+		encodedFile, err := json.MarshalIndent(item, "", "\t")
+		require.NoError(t, err)
+		keystores[i] = string(encodedFile)
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
+
+	// Check the wallet has no accounts to start with.
+	keys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(keys))
+
+	// Import the 3 keystores and verify the wallet has 3 new accounts.
+	res, err := ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+		KeystoresPassword: strongPass,
+		KeystoresImported: keystores,
+	})
+	require.NoError(t, err)
+	assert.DeepEqual(t, &pb.ImportKeystoresResponse{
+		ImportedPublicKeys: pubKeys,
+	}, res)
+
+	km, err = w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	require.NoError(t, err)
+	keys, err = km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(keys))
 }
