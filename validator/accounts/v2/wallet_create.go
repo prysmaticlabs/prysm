@@ -6,7 +6,6 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -39,7 +38,7 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	}
 
 	dir := createWalletConfig.WalletCfg.WalletDir
-	dirExists, err := fileutil.HasDir(dir)
+	dirExists, err := wallet.Exists(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +46,7 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New("a wallet already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
+
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create wallet with keymanager")
@@ -60,11 +60,6 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 
 // CreateWalletWithKeymanager specified by configuration options.
 func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*wallet.Wallet, error) {
-	if err := wallet.Exists(cfg.WalletCfg.WalletDir); err != nil {
-		if !errors.Is(err, wallet.ErrNoWalletFound) {
-			return nil, errors.Wrap(err, "could not check if wallet exists")
-		}
-	}
 	w := wallet.New(&wallet.Config{
 		WalletDir:      cfg.WalletCfg.WalletDir,
 		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
