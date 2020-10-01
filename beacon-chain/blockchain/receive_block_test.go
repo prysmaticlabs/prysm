@@ -139,6 +139,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 			gRoot, err := gBlk.Block.HashTreeRoot()
+			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -179,6 +180,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	gBlk, err := s.beaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -261,6 +263,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 			require.NoError(t, err)
 
 			gRoot, err := gBlk.Block.HashTreeRoot()
+			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -341,6 +344,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 
 			gRoot, err := gBlk.Block.HashTreeRoot()
+			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
