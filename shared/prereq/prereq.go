@@ -18,6 +18,22 @@ type platform struct {
 	minorVersion int
 }
 
+var (
+	// execShellOutput has execShellOutputFunc as the default but can be changed for testing purposes.
+	execShellOutput func(ctx context.Context, command string, args ...string) (string, error) = execShellOutputFunc
+	runtimeOS                                                                                 = runtime.GOOS
+	runtimeArch                                                                               = runtime.GOARCH
+)
+
+// execShellOutputFunc passes a command args to exec.CommandContext and returns the result as a string
+func execShellOutputFunc(ctx context.Context, command string, args ...string) (string, error) {
+	result, err := exec.CommandContext(ctx, command, args...).Output()
+	if err != nil {
+		return "", errors.Wrap(err, "error in command execution")
+	}
+	return string(result), nil
+}
+
 func getSupportedPlatforms() []platform {
 	return []platform{
 		{os: "linux", arch: "amd64"},
@@ -32,6 +48,9 @@ func getSupportedPlatforms() []platform {
 func parseVersion(input string, num int, sep string) ([]int, error) {
 	var version = make([]int, num)
 	components := strings.Split(input, sep)
+	for i, component := range components {
+		components[i] = strings.TrimSpace(component)
+	}
 	if len(components) < num {
 		return nil, errors.New("insufficient information about version")
 	}
@@ -48,17 +67,15 @@ func parseVersion(input string, num int, sep string) ([]int, error) {
 // meetsMinPlatformReqs returns true if the runtime matches any on the list of supported platforms
 func meetsMinPlatformReqs(ctx context.Context) (bool, error) {
 	okPlatforms := getSupportedPlatforms()
-	runtimeOS := runtime.GOOS
-	runtimeArch := runtime.GOARCH
 	for _, platform := range okPlatforms {
 		if runtimeOS == platform.os && runtimeArch == platform.arch {
 			// If MacOS we make sure it meets the minimum version cutoff
 			if runtimeOS == "darwin" {
-				versionBytes, err := exec.CommandContext(ctx, "uname", "-r").Output()
+				versionStr, err := execShellOutput(ctx, "uname", "-r")
 				if err != nil {
 					return false, errors.Wrap(err, "error obtaining MacOS version")
 				}
-				version, err := parseVersion(string(versionBytes), 2, ".")
+				version, err := parseVersion(versionStr, 2, ".")
 				if err != nil {
 					return false, errors.Wrap(err, "error parsing version")
 				}
