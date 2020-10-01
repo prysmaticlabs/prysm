@@ -172,6 +172,7 @@ func Test_LockUnlockFile(t *testing.T) {
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
+	require.NoError(t, err)
 	defer unlock(t, w)
 	_, err = w.InitializeKeymanager(cliCtx.Context, true)
 	require.NoError(t, err)

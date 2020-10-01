@@ -807,6 +807,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		Signature: make([]byte, 96),
 	}
 	currDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	require.NoError(t, err)
 	root, err = helpers.ComputeSigningRoot(att2.Data, currDomain)
 	require.NoError(t, err)
 	sigs = nil

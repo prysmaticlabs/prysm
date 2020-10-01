@@ -164,6 +164,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 		require.Equal(t, tt.ss, st, "Failed to find attester slashing with the correct status: %v", tt.as)
 
 		err = db.SaveAttesterSlashing(ctx, types.SlashingStatus(types.Included), tt.as)
+		require.NoError(t, err)
 		has, st, err = db.HasAttesterSlashing(ctx, tt.as)
 		require.NoError(t, err, "Failed to get attester slashing")
 		require.Equal(t, true, has, "Failed to find attester slashing: %v", tt.as)
