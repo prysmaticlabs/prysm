@@ -18,9 +18,6 @@ const searchThreshold = 5
 
 // amount of times we repeat a failed search till is satisfies the conditional.
 const repeatedSearches = 2 * searchThreshold
-
-var errSearch = errors.New("unable to perform search within the threshold")
-
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
