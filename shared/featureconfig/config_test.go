@@ -30,3 +30,14 @@ func TestConfigureBeaconConfig(t *testing.T) {
 	c := Get()
 	assert.Equal(t, true, c.SkipBLSVerify)
 }
+
+func TestVerifyTestnet(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	context := cli.NewContext(&app, set, nil)
+	assert.Equal(t, true, VerifyTestnet(context) != nil)
+
+	set.Bool(MedallaTestnet.Name, true, "test")
+	context = cli.NewContext(&app, set, nil)
+	assert.Equal(t, true, VerifyTestnet(context) == nil)
+}
