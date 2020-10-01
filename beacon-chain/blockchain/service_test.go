@@ -204,6 +204,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    make([]byte, 32),
 	})
+	require.NoError(t, err)
 	genState, err = b.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)
 

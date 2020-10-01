@@ -209,7 +209,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 	changeToChild := []uint64{childIndex, bestDescendant}
 	noChange := []uint64{parent.bestChild, parent.bestDescendant}
-	newParentChild := make([]uint64, 0)
+	var newParentChild []uint64
 
 	if parent.bestChild != NonExistentNode {
 		if parent.bestChild == childIndex && !childLeadsToViableHead {

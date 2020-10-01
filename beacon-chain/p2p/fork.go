@@ -88,7 +88,7 @@ func addForkEntry(
 	currentSlot := helpers.SlotsSince(genesisTime)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 	if timeutils.Now().Before(genesisTime) {
-		currentSlot, currentEpoch = 0, 0
+		currentEpoch = 0
 	}
 	fork, err := p2putils.Fork(currentEpoch)
 	if err != nil {
