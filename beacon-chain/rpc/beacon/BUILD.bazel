@@ -14,7 +14,7 @@ go_library(
         "validators.go",
         "validators_stream.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon_alpha",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",

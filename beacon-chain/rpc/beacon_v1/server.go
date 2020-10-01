@@ -40,6 +40,7 @@ type Server struct {
 	BlockFetcher                powchain.POWBlockFetcher
 	GenesisTimeFetcher          blockchain.TimeFetcher
 	GenesisFetcher              blockchain.GenesisFetcher
+	BlockReceiver               blockchain.BlockReceiver
 	StateNotifier               statefeed.Notifier
 	BlockNotifier               blockfeed.Notifier
 	AttestationNotifier         operation.Notifier
