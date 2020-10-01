@@ -156,6 +156,32 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	require.LogsContain(t, hook, "data already exists")
 }
 
+func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, sc := testDB.SetupDB(t)
+
+	chainService := setupBeaconChain(t, db, sc)
+
+	genesisBlk := testutil.NewBeaconBlock()
+	blkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
+	s := testutil.NewBeaconState()
+	require.NoError(t, db.SaveState(ctx, s, blkRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}))
+
+	// Test the start function.
+	chainService.Start()
+
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+
+	// The context should have been canceled.
+	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
+	require.LogsContain(t, hook, "data already exists")
+}
+
 func TestChainService_InitializeBeaconChain(t *testing.T) {
 	helpers.ClearCache()
 	db, sc := testDB.SetupDB(t)

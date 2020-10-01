@@ -671,6 +671,9 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			return nil, errors.Wrap(err, "could not get unaggregated attestations")
 		}
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not filter attestations")
+		}
 		atts = append(atts, uAtts...)
 
 		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
