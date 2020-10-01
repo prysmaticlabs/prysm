@@ -198,11 +198,11 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	dataDir := moveDb(cliCtx, dbDir)
+	dataDir := s.moveDb(cliCtx, dbDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
-		if dataDir == "" {
+		if dataDir == "" && s.wallet != nil {
 			dataDir = s.wallet.AccountsDir()
 			if dataDir == "" {
 				log.Fatal(
@@ -243,24 +243,46 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context, accountsDir string) string {
-	dataDir := cmd.DefaultDataDir()
-	if accountsDir != "" {
+func (s *ValidatorClient) moveDb(cliCtx *cli.Context, dbDir string) string {
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	if dbDir != "" {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
-		if newDataFile != dataFile && fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
+		var accountsDirDbFile string
+		if s.wallet != nil {
+			accountsDirDbFile = filepath.Join(s.wallet.AccountsDir(), kv.ProtectionDbFileName)
+		}
+		newDataFile := filepath.Join(dbDir, kv.ProtectionDbFileName)
+		if accountsDirDbFile != "" && accountsDirDbFile != newDataFile && fileutil.FileExists(accountsDirDbFile) && !fileutil.FileExists(newDataFile) { //move files from account dir to datadir.
 			log.WithFields(logrus.Fields{
-				"oldDbPath":      dataDir,
-				"validatorDbDir": accountsDir,
-			}).Info("Moving validator protection db to wallet dir")
-			err := fileutil.CopyFile(dataFile, newDataFile)
+				"oldDbPath":      s.wallet.AccountsDir(),
+				"validatorDbDir": dbDir,
+			}).Info("Moving validator protection db from wallet dir")
+			err := fileutil.CopyFile(accountsDirDbFile, newDataFile)
 			if err != nil {
 				log.Fatal(err)
 			}
+			log.WithFields(logrus.Fields{
+				"oldDbFile": dataFile,
+			}).Info("Deleting validator db in folder")
+			if err := os.Remove(accountsDirDbFile); err != nil {
+				log.Info(errors.Wrap(err, "could not delete old db file"))
+			}
+		} else if newDataFile != dataFile && fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) { //move files to account dir.
+			log.WithFields(logrus.Fields{
+				"oldDbPath":      dataDir,
+				"validatorDbDir": dbDir,
+			}).Info("Copying validator protection db to wallet dir")
+			if err := fileutil.CopyFile(dataFile, newDataFile); err != nil {
+				log.Fatal(err)
+			}
+			log.WithFields(logrus.Fields{
+				"oldDbFile": dataFile,
+			}).Info("Deleting validator db in folder")
+			if err := os.Remove(dataFile); err != nil {
+				log.Info(errors.Wrap(err, "could not delete old db file"))
+			}
 		}
-		dataDir = accountsDir
-	} else {
-		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+		dataDir = dbDir
 	}
 	return dataDir
 }
