@@ -204,6 +204,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	hd, err := testAcc.Backend.HeaderByNumber(ctx, nil)
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
+	web3Service.latestEth1Data.BlockHeight = hd.Number.Uint64()
 	bn, err := web3Service.BlockNumberByTimestamp(ctx, 1000 /* time */)
 	require.NoError(t, err)
 	if bn.Cmp(big.NewInt(0)) == 0 {
