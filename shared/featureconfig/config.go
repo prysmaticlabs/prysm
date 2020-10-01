@@ -116,6 +116,7 @@ func InitWithReset(c *Flags) func() {
 	return resetFunc
 }
 
+// TestnetFeatureCheck checks for required testnet flag
 func TestnetFeatureCheck(ctx *cli.Context) error {
 	if !ctx.Bool(AltonaTestnet.Name) &&
 		!ctx.Bool(OnyxTestnet.Name) &&
