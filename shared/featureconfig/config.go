@@ -33,9 +33,10 @@ type Flags struct {
 	// State locks
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
-	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
-	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
-	SpadinaTestnet bool // Spadina defines the flag through which we can enable the node to run on the spadina testnet.
+	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the Altona testnet.
+	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the Onyx testnet.
+	SpadinaTestnet bool // SpadinaTestnet defines the flag through which we can enable the node to run on the Spadina testnet.
+	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -141,6 +142,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
+	}
+	if ctx.Bool(ZinkenTestnet.Name) {
+		log.Warn("Running Node on Zinken Testnet")
+		params.UseZinkenConfig()
+		params.UseZinkenNetworkConfig()
+		cfg.ZinkenTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -281,6 +288,30 @@ func ConfigureSlasher(ctx *cli.Context) {
 
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
+	if ctx.Bool(AltonaTestnet.Name) {
+		log.Warn("Running Validator on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
+	}
+	if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running Node on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(SpadinaTestnet.Name) {
+		log.Warn("Running Node on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
+	}
+	if ctx.Bool(ZinkenTestnet.Name) {
+		log.Warn("Running Node on Zinken Testnet")
+		params.UseZinkenConfig()
+		params.UseZinkenNetworkConfig()
+		cfg.ZinkenTestnet = true
+	}
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
 		cfg.DisableLookback = true
@@ -313,6 +344,12 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
+	}
+	if ctx.Bool(ZinkenTestnet.Name) {
+		log.Warn("Running Node on Zinken Testnet")
+		params.UseZinkenConfig()
+		params.UseZinkenNetworkConfig()
+		cfg.ZinkenTestnet = true
 	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true

@@ -51,6 +51,7 @@ var appFlags = []cli.Flag{
 	cmd.TraceSampleFractionFlag,
 	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
+	cmd.DisableMonitoringFlag,
 	cmd.LogFileName,
 	cmd.LogFormat,
 	cmd.ClearDB,
