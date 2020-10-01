@@ -12,6 +12,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// searchThreshold to apply for when searching for blocks of a particular time. If the buffer
+// is exceeded we recalibrate the search again.
+const searchThreshold = 5
+
+var searchErr = errors.New("unable to perform search within the threshold")
+
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
@@ -99,14 +105,19 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	headTime := s.latestEth1Data.BlockTime
 	numOfBlocks := uint64(0)
 	estimatedBlk := headNumber.Uint64()
-	for {
-		if time > headTime+10*params.BeaconConfig().SecondsPerETH1Block {
+	maxTimeBuffer := searchThreshold * params.BeaconConfig().SecondsPerETH1Block
+	// Terminate if we cant find an acceptible block after
+	// maxBuffer searches.
+	for i := 0; i < searchThreshold; i++ {
+		if time > headTime+maxTimeBuffer {
 			numOfBlocks = (time - headTime) / params.BeaconConfig().SecondsPerETH1Block
 			estimatedBlk = headNumber.Uint64() + numOfBlocks
-		} else if time+10*params.BeaconConfig().SecondsPerETH1Block < headTime {
+		} else if time+maxTimeBuffer < headTime {
 			numOfBlocks = (headTime - time) / params.BeaconConfig().SecondsPerETH1Block
 			estimatedBlk = headNumber.Uint64() - numOfBlocks
 		} else {
+			// Exit if we are in the range of
+			// time - buffer <= head.time <= time + buffer
 			break
 		}
 		hinfo, err := s.retrieveHeaderInfo(ctx, estimatedBlk)
@@ -131,7 +142,9 @@ func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, ta
 	defer func() {
 		log.Error("finished finding blocks")
 	}()
-	for bn := head; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
+	// Add double the threshold so that searches do not go on endlessly.
+	threshold := head.Uint64() - (2 * searchThreshold)
+	for bn := head; bn.Uint64() >= threshold; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -144,6 +157,7 @@ func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, ta
 			return info.Number, nil
 		}
 	}
+	return nil, searchErr
 }
 
 // Performs a search to find a target eth1 block which is the the block which
@@ -152,7 +166,9 @@ func (s *Service) findMoreTargetEth1Block(ctx context.Context, head *big.Int, ta
 	defer func() {
 		log.Error("finished finding blocks")
 	}()
-	for bn := head; ; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
+	// Add double threshold so that searches do not go on endlessly.
+	threshold := head.Uint64() + 2*searchThreshold
+	for bn := head; bn.Uint64() <= threshold; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -171,6 +187,7 @@ func (s *Service) findMoreTargetEth1Block(ctx context.Context, head *big.Int, ta
 			return info.Number, nil
 		}
 	}
+	return nil, searchErr
 }
 
 func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*headerInfo, error) {
@@ -185,6 +202,9 @@ func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*headerI
 		blk, err := s.eth1DataFetcher.HeaderByNumber(ctx, bn)
 		if err != nil {
 			return nil, err
+		}
+		if blk == nil {
+			return nil, errors.New("header with the provided number does not exist")
 		}
 		if err := s.headerCache.AddHeader(blk); err != nil {
 			return nil, err
