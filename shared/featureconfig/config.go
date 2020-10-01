@@ -20,6 +20,8 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
+	"sync"
+
 	"errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -93,9 +95,13 @@ type Flags struct {
 }
 
 var featureConfig *Flags
+var featureConfigLock sync.RWMutex
 
 // Get retrieves feature config.
 func Get() *Flags {
+	featureConfigLock.RLock()
+	defer featureConfigLock.RUnlock()
+
 	if featureConfig == nil {
 		return &Flags{}
 	}
@@ -104,6 +110,9 @@ func Get() *Flags {
 
 // Init sets the global config equal to the config that is passed in.
 func Init(c *Flags) {
+	featureConfigLock.Lock()
+	defer featureConfigLock.Unlock()
+
 	featureConfig = c
 }
 
