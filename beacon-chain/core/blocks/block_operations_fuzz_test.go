@@ -6,14 +6,12 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-
-	//"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestFuzzProcessAttestationNoVerify_10000(t *testing.T) {
