@@ -106,6 +106,7 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 	b0r := [32]byte{'a'}
 	require.NoError(t, r.db.SaveBlock(context.Background(), b0))
 	b0Root, err := b0.Block.HashTreeRoot()
+	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = b0Root[:]

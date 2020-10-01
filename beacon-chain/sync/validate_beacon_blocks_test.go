@@ -695,6 +695,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	// valid block
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	genesisTime := time.Now()
 	c, err := lru.New(10)
