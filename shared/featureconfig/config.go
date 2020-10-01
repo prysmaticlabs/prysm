@@ -118,7 +118,8 @@ func InitWithReset(c *Flags) func() {
 
 // VerifyTestnet checks for required testnet flag
 func VerifyTestnet(ctx *cli.Context) error {
-	if !ctx.Bool(AltonaTestnet.Name) &&
+	if !ctx.Bool(cmd.E2EConfigFlag.Name) &&
+		!ctx.Bool(AltonaTestnet.Name) &&
 		!ctx.Bool(OnyxTestnet.Name) &&
 		!ctx.Bool(MedallaTestnet.Name) &&
 		!ctx.Bool(SpadinaTestnet.Name) &&
