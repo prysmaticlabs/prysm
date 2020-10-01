@@ -460,12 +460,12 @@ func TestPrune(t *testing.T) {
 
 	// Not so good peer is pruned away so that we can reduce the
 	// total size of the handler.
-	badRes, err = scorer.Count(secondPID)
-	assert.NotNil(t, err, "error is supposed to be not nil")
+	_, err = scorer.Count(secondPID)
+	assert.ErrorContains(t, "peer unknown", err)
 
 	// Last peer has been removed.
-	badRes, err = scorer.Count(thirdPID)
-	assert.NotNil(t, err, "error is supposed to be not nil")
+	_, err = scorer.Count(thirdPID)
+	assert.ErrorContains(t, "peer unknown", err)
 }
 
 func TestTrimmedOrderedPeers(t *testing.T) {
