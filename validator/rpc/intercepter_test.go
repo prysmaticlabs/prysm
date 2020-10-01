@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -57,10 +56,5 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)
 	_, err = interceptor(ctx, "xyz", unaryInfo, unaryHandler)
-	if err == nil {
-		t.Fatalf("Unexpected success processing token %v", err)
-	}
-	if !strings.Contains(err.Error(), "signature is invalid") {
-		t.Fatalf("Expected error validating signature, received %v", err)
-	}
+	require.ErrorContains(t, "signature is invalid", err)
 }
