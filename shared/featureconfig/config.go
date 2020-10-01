@@ -20,11 +20,11 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
+	"errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"errors"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -124,7 +124,7 @@ func VerifyTestnet(ctx *cli.Context) error {
 		!ctx.Bool(MedallaTestnet.Name) &&
 		!ctx.Bool(SpadinaTestnet.Name) &&
 		!ctx.Bool(ZinkenTestnet.Name) {
-			return errors.New("testnet is not specified, required: --<testnet-name>")
+		return errors.New("testnet is not specified, required: --<testnet-name>")
 	}
 	return nil
 }
