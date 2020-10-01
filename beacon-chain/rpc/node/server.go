@@ -102,7 +102,7 @@ func (ns *Server) GetHost(ctx context.Context, _ *ptypes.Empty) (*ethpb.HostData
 	}
 	record := ns.PeerManager.ENR()
 	enr := ""
-	err := error(nil)
+	var err error
 	if record != nil {
 		enr, err = p2p.SerializeENR(record)
 		if err != nil {

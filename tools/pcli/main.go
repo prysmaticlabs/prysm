@@ -177,6 +177,9 @@ func main() {
 					log.Fatal(err)
 				}
 				postRoot, err := postState.HashTreeRoot(context.Background())
+				if err != nil {
+					log.Fatal(err)
+				}
 				log.Infof("Finished state transition with post state root of %#x", postRoot)
 
 				// Diff the state if a post state is provided.

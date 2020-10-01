@@ -360,7 +360,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 	}
 
 	targetRoot := make([]byte, 32)
-	headRoot := make([]byte, 32)
+	var headRoot []byte
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {

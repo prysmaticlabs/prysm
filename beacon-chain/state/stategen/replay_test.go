@@ -738,5 +738,6 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 
 	require.NoError(t, s.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: roots[8][:]}))
 	filteredBlocks, err = s.loadFinalizedBlocks(ctx, 0, 8)
+	require.NoError(t, err)
 	require.Equal(t, 10, len(filteredBlocks))
 }
