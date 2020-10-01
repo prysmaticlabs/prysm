@@ -95,7 +95,7 @@ func main() {
 			}
 		}
 
-		if err := featureconfig.TestnetFeatureCheck(ctx); err != nil {
+		if err := featureconfig.VerifyTestnet(ctx); err != nil {
 			return err
 		}
 

@@ -304,7 +304,7 @@ contract in order to activate the validator client`,
 		}
 		flags.ComplainOnDeprecatedFlags(ctx)
 
-		if err := featureconfig.TestnetFeatureCheck(ctx); err != nil {
+		if err := featureconfig.VerifyTestnet(ctx); err != nil {
 			return err
 		}
 
