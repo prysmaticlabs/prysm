@@ -118,9 +118,6 @@ func InitWithReset(c *Flags) func() {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
-	// Using Medalla as the default configuration for now.
-	//params.UseMedallaConfig()
-
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
@@ -290,9 +287,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // ConfigureSlasher sets the global config based
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
-	// Using Medalla as the default configuration for now.
-	//params.UseMedallaConfig()
-
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(AltonaTestnet.Name) {
@@ -335,9 +329,6 @@ func ConfigureSlasher(ctx *cli.Context) {
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
-	// Using Medalla as the default configuration for now.
-	//params.UseMedallaConfig()
-
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(AltonaTestnet.Name) {
