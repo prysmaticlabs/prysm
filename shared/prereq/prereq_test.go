@@ -2,9 +2,11 @@ package prereq
 
 import (
 	"context"
+	"testing"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"testing"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestMeetsMinPlatformReqs(t *testing.T) {
@@ -27,7 +29,7 @@ func TestMeetsMinPlatformReqs(t *testing.T) {
 	// Mac OS X
 	// In this function we'll set the execShellOutput package variable to another function that will 'mock' the shell
 	execShellOutput = func(ctx context.Context, command string, args ...string) (string, error) {
-		return "", errors.New("Error while running command")
+		return "", errors.New("error while running command")
 	}
 	runtimeOS = "darwin"
 	runtimeArch = "amd64"
@@ -98,4 +100,27 @@ func TestParseVersion(t *testing.T) {
 
 	_, err = parseVersion("10.11", 3, ".")
 	require.ErrorContains(t, "insufficient information about version", err)
+}
+
+func TestWarnIfNotSupported(t *testing.T) {
+	runtimeOS = "linux"
+	runtimeArch = "amd64"
+	err := WarnIfNotSupported(context.Background())
+	require.NoError(t, err)
+
+	// Now expect an error
+	execShellOutput = func(ctx context.Context, command string, args ...string) (string, error) {
+		return "tiger.lion", nil
+	}
+	runtimeOS = "darwin"
+	runtimeArch = "amd64"
+	err = WarnIfNotSupported(context.Background())
+	require.ErrorContains(t, "error parsing version", err)
+
+	runtimeOS = "falseOs"
+	runtimeArch = "falseArch"
+	hook := logTest.NewGlobal()
+	err = WarnIfNotSupported(context.Background())
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "platform is not supported")
 }

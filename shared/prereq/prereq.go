@@ -25,7 +25,7 @@ var (
 	runtimeArch                                                                               = runtime.GOARCH
 )
 
-// execShellOutputFunc passes a command args to exec.CommandContext and returns the result as a string
+// execShellOutputFunc passes a command and args to exec.CommandContext and returns the result as a string
 func execShellOutputFunc(ctx context.Context, command string, args ...string) (string, error) {
 	result, err := exec.CommandContext(ctx, command, args...).Output()
 	if err != nil {
