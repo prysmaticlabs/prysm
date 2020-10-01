@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -195,12 +194,7 @@ func TestRemoteKeymanager_Sign(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(nil, errors.New("could not sign"))
 	_, err := k.Sign(context.Background(), nil)
-	if err == nil {
-		t.Fatal("Expected error, received nil")
-	}
-	if !strings.Contains(err.Error(), "could not sign") {
-		t.Errorf("Unexpected error %v", err)
-	}
+	require.ErrorContains(t, "could not sign", err)
 
 	// Expected proper error handling for signing response statuses.
 	m.EXPECT().Sign(
@@ -259,12 +253,7 @@ func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(nil, errors.New("could not fetch keys"))
 	_, err := k.FetchValidatingPublicKeys(context.Background())
-	if err == nil {
-		t.Fatal("Expected error, received nil")
-	}
-	if !strings.Contains(err.Error(), "could not fetch keys") {
-		t.Errorf("Unexpected error %v", err)
-	}
+	require.ErrorContains(t, "could not fetch keys", err)
 
 	// Expect an empty response to return empty keys.
 	m.EXPECT().ListValidatingPublicKeys(
