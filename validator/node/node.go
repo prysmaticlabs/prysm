@@ -73,10 +73,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	logrus.SetLevel(level)
 
 	// Warn if user's platform is not supported
-	err = prereq.WarnIfNotSupported(cliCtx.Context)
-	if err != nil {
-		return nil, err
-	}
+	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{

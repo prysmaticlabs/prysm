@@ -93,10 +93,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 
 	// Warn if user's platform is not supported
-	err := prereq.WarnIfNotSupported(cliCtx.Context)
-	if err != nil {
-		return nil, err
-	}
+	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)

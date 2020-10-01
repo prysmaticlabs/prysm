@@ -105,22 +105,24 @@ func TestParseVersion(t *testing.T) {
 func TestWarnIfNotSupported(t *testing.T) {
 	runtimeOS = "linux"
 	runtimeArch = "amd64"
-	err := WarnIfNotSupported(context.Background())
-	require.NoError(t, err)
+	hook := logTest.NewGlobal()
+	WarnIfNotSupported(context.Background())
+	require.LogsDoNotContain(t, hook, "Failed to detect host platform")
+	require.LogsDoNotContain(t, hook, "platform is not supported")
 
-	// Now expect an error
 	execShellOutput = func(ctx context.Context, command string, args ...string) (string, error) {
 		return "tiger.lion", nil
 	}
 	runtimeOS = "darwin"
 	runtimeArch = "amd64"
-	err = WarnIfNotSupported(context.Background())
-	require.ErrorContains(t, "error parsing version", err)
+	hook = logTest.NewGlobal()
+	WarnIfNotSupported(context.Background())
+	require.LogsContain(t, hook, "Failed to detect host platform")
+	require.LogsContain(t, hook, "error parsing version")
 
 	runtimeOS = "falseOs"
 	runtimeArch = "falseArch"
-	hook := logTest.NewGlobal()
-	err = WarnIfNotSupported(context.Background())
-	require.NoError(t, err)
+	hook = logTest.NewGlobal()
+	WarnIfNotSupported(context.Background())
 	require.LogsContain(t, hook, "platform is not supported")
 }

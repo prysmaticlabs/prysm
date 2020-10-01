@@ -94,15 +94,15 @@ func meetsMinPlatformReqs(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-// WarnIfNotSupported warns if the user's platform is not supported
-func WarnIfNotSupported(ctx context.Context) error {
+// WarnIfNotSupported warns if the user's platform is not supported or if it fails to detect user's platform
+func WarnIfNotSupported(ctx context.Context) {
 	supported, err := meetsMinPlatformReqs(ctx)
 	if err != nil {
-		return err
+		log.Warnf("Failed to detect host platform:  %v", err)
+		return
 	}
 	if !supported {
 		log.Warn("This platform is not supported. The following platforms are supported: Linux/AMD64," +
 			" Linux/ARM64, Mac OS X/AMD64 (10.14+ only), and Windows/AMD64")
 	}
-	return nil
 }
