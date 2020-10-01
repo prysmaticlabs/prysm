@@ -212,6 +212,9 @@ func createAccountWithDepositData(ctx context.Context, km accountCreator) (*pb.D
 	if err != nil {
 		return nil, err
 	}
+	// The reason we utilize this map is to ensure we match the format of
+	// the eth2 deposit cli, which utilizes snake case and hex strings to represent binary data.
+	// Our gRPC gateway instead uses camel case and base64, which is why we use this workaround.
 	data := make(map[string]string)
 	data["pubkey"] = fmt.Sprintf("%x", pubKey)
 	data["withdrawal_credentials"] = fmt.Sprintf("%x", depositData.WithdrawalCredentials)
