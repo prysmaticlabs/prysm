@@ -95,13 +95,8 @@ func main() {
 			}
 		}
 
-		if !ctx.Bool(featureconfig.AltonaTestnet.Name) &&
-			!ctx.Bool(featureconfig.OnyxTestnet.Name) &&
-			!ctx.Bool(featureconfig.MedallaTestnet.Name) &&
-			!ctx.Bool(featureconfig.SpadinaTestnet.Name) &&
-			!ctx.Bool(featureconfig.ZinkenTestnet.Name) {
-				log.Error("testnet is not specified, required: --<testnet-name>")
-				os.Exit(1)
+		if err := featureconfig.TestnetFeatureCheck(ctx); err != nil {
+			return err
 		}
 
 		format := ctx.String(cmd.LogFormat.Name)

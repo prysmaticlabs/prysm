@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"errors"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -113,6 +114,17 @@ func InitWithReset(c *Flags) func() {
 	}
 	Init(c)
 	return resetFunc
+}
+
+func TestnetFeatureCheck(ctx *cli.Context) error {
+	if !ctx.Bool(AltonaTestnet.Name) &&
+		!ctx.Bool(OnyxTestnet.Name) &&
+		!ctx.Bool(MedallaTestnet.Name) &&
+		!ctx.Bool(SpadinaTestnet.Name) &&
+		!ctx.Bool(ZinkenTestnet.Name) {
+			return errors.New("testnet is not specified, required: --<testnet-name>")
+	}
+	return nil
 }
 
 // ConfigureBeaconChain sets the global config based
