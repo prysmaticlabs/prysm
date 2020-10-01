@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -181,8 +180,7 @@ func TestDerivedKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	}
 	dr := &Keymanager{}
 	_, err := dr.Sign(context.Background(), req)
-	assert.NotNil(t, err)
-	assert.Equal(t, strings.Contains(err.Error(), "nil public key"), true)
+	assert.ErrorContains(t, "nil public key", err)
 }
 
 func TestDerivedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
@@ -191,8 +189,7 @@ func TestDerivedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	}
 	dr := &Keymanager{}
 	_, err := dr.Sign(context.Background(), req)
-	assert.NotNil(t, err)
-	assert.Equal(t, strings.Contains(err.Error(), "no signing key found"), true)
+	assert.ErrorContains(t, "no signing key found", err)
 }
 
 func TestDerivedKeymanager_RefreshWalletPassword(t *testing.T) {

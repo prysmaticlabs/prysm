@@ -239,6 +239,7 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 		require.Equal(t, tt.ss, st, "Failed to find proposer slashing with the correct status")
 
 		err = db.SaveProposerSlashing(ctx, types.SlashingStatus(types.Included), tt.ps)
+		require.NoError(t, err)
 		has, st, err = db.HasProposerSlashing(ctx, tt.ps)
 		require.NoError(t, err, "Failed to get proposer slashing")
 		require.Equal(t, true, has, "Failed to find proposer slashing")

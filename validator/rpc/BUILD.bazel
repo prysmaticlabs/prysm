@@ -15,6 +15,7 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/event:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",

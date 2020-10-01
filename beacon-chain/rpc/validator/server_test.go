@@ -282,8 +282,6 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
@@ -427,8 +425,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 func TestWaitForSynced_ContextClosed(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{

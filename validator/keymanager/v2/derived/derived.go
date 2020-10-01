@@ -295,6 +295,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, *pb.Deposit_Da
 		nil, /*forkVersion*/
 		nil, /*genesisValidatorsRoot*/
 	)
+	if err != nil {
+		return nil, err
+	}
 	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
 		return nil, nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
 	}
