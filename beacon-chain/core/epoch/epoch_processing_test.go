@@ -333,6 +333,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		})
 	}
 	state, err := state.InitializeFromProto(base)
+	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(state)
 	newState, err := epoch.ProcessRegistryUpdates(state)
 	require.NoError(t, err)

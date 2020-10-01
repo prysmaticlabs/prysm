@@ -63,6 +63,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
 	bs, err := beaconclient.NewService(ctx, bcCfg)
+	require.NoError(t, err)
 	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
@@ -165,6 +166,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
 	bs, err := beaconclient.NewService(ctx, bcCfg)
+	require.NoError(t, err)
 	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableAttestation(ctx, savedAttestation)
@@ -223,6 +225,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
 	bs, err := beaconclient.NewService(ctx, bcCfg)
+	require.NoError(t, err)
 	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 
@@ -311,6 +314,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	savedBlock.Signature = marshalledSig
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
 	bs, err := beaconclient.NewService(ctx, bcCfg)
+	require.NoError(t, err)
 	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableBlock(ctx, savedBlock)
