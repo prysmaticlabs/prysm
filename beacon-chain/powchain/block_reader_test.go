@@ -232,7 +232,7 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	// Provide an unattainable target time
 	_, err = web3Service.findLessTargetEth1Block(ctx, hd.Number, hd.Time/2)
-	require.ErrorContains(t, searchErr.Error(), err)
+	require.ErrorContains(t, errSearch.Error(), err)
 
 	// Provide an attainable target time
 	bn, err := web3Service.findLessTargetEth1Block(ctx, hd.Number, hd.Time-5)
@@ -261,7 +261,7 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	// Provide an unattainable target time with respective to head
 	_, err = web3Service.findMoreTargetEth1Block(ctx, big.NewInt(0).Div(hd.Number, big.NewInt(2)), hd.Time)
-	require.ErrorContains(t, searchErr.Error(), err)
+	require.ErrorContains(t, errSearch.Error(), err)
 
 	// Provide an attainable target time with respective to head
 	bn, err := web3Service.findMoreTargetEth1Block(ctx, big.NewInt(0).Sub(hd.Number, big.NewInt(5)), hd.Time)

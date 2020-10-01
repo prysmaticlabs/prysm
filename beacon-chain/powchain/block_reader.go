@@ -19,7 +19,7 @@ const searchThreshold = 3
 // amount of times we repeat a failed search till is satisfies the conditional.
 const repeatedSearches = 2 * searchThreshold
 
-var searchErr = errors.New("unable to perform search within the threshold")
+var errSearch = errors.New("unable to perform search within the threshold")
 
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
@@ -154,7 +154,7 @@ func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, ta
 			return info.Number, nil
 		}
 	}
-	return nil, searchErr
+	return nil, errSearch
 }
 
 // Performs a search to find a target eth1 block which is the the block which
@@ -181,7 +181,7 @@ func (s *Service) findMoreTargetEth1Block(ctx context.Context, head *big.Int, ta
 			return info.Number, nil
 		}
 	}
-	return nil, searchErr
+	return nil, errSearch
 }
 
 func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*headerInfo, error) {
