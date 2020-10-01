@@ -244,7 +244,9 @@ message DepositDataResponse {
 
 message BackupAccountsRequest {
     // List of public keys to backup.
-    repeated string public_keys = 1;
+    repeated bytes public_keys = 1;
+
+    string backup_password = 2;
 }
 
 message BackupAccountsResponse {
@@ -254,10 +256,10 @@ message BackupAccountsResponse {
 
 message DeleteAccountsRequest {
     // List of public keys to delete.
-    repeated string public_keys = 1;
+    repeated bytes public_keys = 1;
 }
 
 message DeleteAccountsResponse {
     // List of public keys successfully deleted.
-    repeated string deleted_keys = 1;
+    repeated bytes deleted_keys = 1;
 }
