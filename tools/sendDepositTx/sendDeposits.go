@@ -182,7 +182,7 @@ func main() {
 			prefix := params.BeaconConfig().ValidatorPrivkeyFileName
 			validatorKeys, err = store.GetKeys(prysmKeystorePath, prefix, rawPassword, false /* warnOnFail */)
 			if err != nil {
-				log.WithField("path", prysmKeystorePath).WithField("password", rawPassword).Errorf("Could not get keys: %v", err)
+				log.WithField("path", prysmKeystorePath).Errorf("Could not get keys: %v", err)
 			}
 		}
 
