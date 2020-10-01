@@ -230,14 +230,18 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	hd, err := testAcc.Backend.HeaderByNumber(ctx, nil)
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
+	// Use extremely small deadline to illustrate that context deadlines are respected.
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Nanosecond)
+	defer cancel()
+
 	// Provide an unattainable target time
 	_, err = web3Service.findLessTargetEth1Block(ctx, hd.Number, hd.Time/2)
-	require.ErrorContains(t, errSearch.Error(), err)
+	require.ErrorContains(t, context.DeadlineExceeded.Error(), err)
 
 	// Provide an attainable target time
-	bn, err := web3Service.findLessTargetEth1Block(ctx, hd.Number, hd.Time-5)
+	bn, err := web3Service.findLessTargetEth1Block(context.Background(), hd.Number, hd.Time-5)
 	require.NoError(t, err)
-	require.NotEqual(t, hd.Number.Uint64(), bn.Uint64(), "retrieved block is less than the head")
+	require.NotEqual(t, hd.Number.Uint64(), bn.Uint64(), "retrieved block is not less than the head")
 }
 
 func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
@@ -259,12 +263,16 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	hd, err := testAcc.Backend.HeaderByNumber(ctx, nil)
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
-	// Provide an unattainable target time with respective to head
-	_, err = web3Service.findMoreTargetEth1Block(ctx, big.NewInt(0).Div(hd.Number, big.NewInt(2)), hd.Time)
-	require.ErrorContains(t, errSearch.Error(), err)
+	// Use extremely small deadline to illustrate that context deadlines are respected.
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Nanosecond)
+	defer cancel()
 
-	// Provide an attainable target time with respective to head
-	bn, err := web3Service.findMoreTargetEth1Block(ctx, big.NewInt(0).Sub(hd.Number, big.NewInt(5)), hd.Time)
+	// Provide an unattainable target time with respect to head
+	_, err = web3Service.findMoreTargetEth1Block(ctx, big.NewInt(0).Div(hd.Number, big.NewInt(2)), hd.Time)
+	require.ErrorContains(t, context.DeadlineExceeded.Error(), err)
+
+	// Provide an attainable target time with respect to head
+	bn, err := web3Service.findMoreTargetEth1Block(context.Background(), big.NewInt(0).Sub(hd.Number, big.NewInt(5)), hd.Time)
 	require.NoError(t, err)
 	require.Equal(t, hd.Number.Uint64(), bn.Uint64(), "retrieved block is not equal to the head")
 }
