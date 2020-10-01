@@ -571,7 +571,6 @@ func (bs *Server) GetValidatorQueue(
 	if churnLimit < exitQueueChurn {
 		// If we are above the churn limit, we simply increase the churn by one.
 		exitQueueEpoch++
-		exitQueueChurn = churnLimit
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
@@ -776,11 +775,11 @@ func (bs *Server) GetIndividualVotes(
 		return filteredIndices[i] < filteredIndices[j]
 	})
 
-	v, b, err := precompute.New(ctx, requestedState)
+	v, bal, err := precompute.New(ctx, requestedState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
 	}
-	v, b, err = precompute.ProcessAttestations(ctx, requestedState, v, b)
+	v, _, err = precompute.ProcessAttestations(ctx, requestedState, v, bal)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 	}
