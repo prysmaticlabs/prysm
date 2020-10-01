@@ -172,28 +172,31 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
-	setupValidators(t, db, 3)
-	st := testutil.NewBeaconState()
+
+	setupValidators(t, db, 100)
+	headState, err := db.HeadState(context.Background())
+	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, db.SaveState(ctx, st, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, sc),
 		HeadFetcher: &mock.ChainService{
-			State: st,
+			State: headState,
 		},
 	}
 
-	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 100, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
-	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(st.Balances()))
-	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil {
-		assert.ErrorContains(t, wanted, err)
-	}
+	wanted := fmt.Sprintf("page start %d >= list %d", 200, len(headState.Balances()))
+	_, err = bs.ListValidatorBalances(context.Background(), &ethpb.ListValidatorBalancesRequest{
+		PageToken:   strconv.Itoa(2),
+		PageSize:    100,
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
+	})
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
