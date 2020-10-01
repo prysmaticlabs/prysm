@@ -68,12 +68,12 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 		}
 		startNum := km.NextAccountNumber(ctx)
 		if cfg.NumAccounts == 1 {
-			if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
+			if _, _, err := km.CreateAccount(ctx); err != nil {
 				return errors.Wrap(err, "could not create account in wallet")
 			}
 		} else {
 			for i := 0; i < int(cfg.NumAccounts); i++ {
-				if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
+				if _, _, err := km.CreateAccount(ctx); err != nil {
 					return errors.Wrap(err, "could not create account in wallet")
 				}
 			}
