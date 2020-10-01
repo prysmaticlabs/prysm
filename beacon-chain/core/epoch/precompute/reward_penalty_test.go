@@ -202,7 +202,7 @@ func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
 
 	pVals, pBal, err := New(context.Background(), state)
 	require.NoError(t, err)
-	pVals, pBal, err = ProcessAttestations(context.Background(), state, pVals, pBal)
+	_, _, err = ProcessAttestations(context.Background(), state, pVals, pBal)
 	require.ErrorContains(t, "attestation with inclusion delay of 0", err)
 }
 

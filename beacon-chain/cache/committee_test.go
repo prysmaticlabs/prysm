@@ -89,9 +89,7 @@ func TestCommitteeCache_ActiveCount(t *testing.T) {
 
 func TestCommitteeCache_AddProposerIndicesList(t *testing.T) {
 	cache := NewCommitteesCache()
-
 	seed := [32]byte{'A'}
-	indices := []uint64{1, 2, 3, 4, 5}
 	indices, err := cache.ProposerIndices(seed)
 	require.NoError(t, err)
 	if indices != nil {
