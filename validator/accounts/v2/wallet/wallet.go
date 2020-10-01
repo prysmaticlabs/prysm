@@ -112,7 +112,11 @@ func Exists(walletDir string) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not parse wallet directory")
 	}
-	return dirExists, nil
+	isValid, err := IsValid(walletDir)
+	if err != nil {
+		return false, errors.Wrap(err, "could not check if dir is valid")
+	}
+	return dirExists && isValid, nil
 }
 
 // IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `direct`.
