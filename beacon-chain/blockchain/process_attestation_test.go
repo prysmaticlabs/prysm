@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -69,47 +68,40 @@ func TestStore_OnAttestation(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
 
 	tests := []struct {
-		name          string
-		a             *ethpb.Attestation
-		wantErr       bool
-		wantErrString string
+		name      string
+		a         *ethpb.Attestation
+		wantedErr string
 	}{
 		{
-			name:          "attestation's data slot not aligned with target vote",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
-			wantErr:       true,
-			wantErrString: "data slot is not in the same epoch as target 1 != 0",
+			name:      "attestation's data slot not aligned with target vote",
+			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
+			wantedErr: "data slot is not in the same epoch as target 1 != 0",
 		},
 		{
-			name:          "attestation's target root not in db",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}},
-			wantErr:       true,
-			wantErrString: "target root does not exist in db",
+			name:      "attestation's target root not in db",
+			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}},
+			wantedErr: "target root does not exist in db",
 		},
 		{
-			name:          "no pre state for attestations's target block",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
-			wantErr:       true,
-			wantErrString: "could not get pre state for epoch 0",
+			name:      "no pre state for attestations's target block",
+			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
+			wantedErr: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
 			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
 				Root: BlkWithStateBadAttRoot[:]}}},
-			wantErr:       true,
-			wantErrString: "target epoch 100 does not match current epoch",
+			wantedErr: "target epoch 100 does not match current epoch",
 		},
 		{
-			name:          "process nil attestation",
-			a:             nil,
-			wantErr:       true,
-			wantErrString: "nil attestation",
+			name:      "process nil attestation",
+			a:         nil,
+			wantedErr: "nil attestation",
 		},
 		{
-			name:          "process nil field (a.Data) in attestation",
-			a:             &ethpb.Attestation{},
-			wantErr:       true,
-			wantErrString: "nil attestation.Data field",
+			name:      "process nil field (a.Data) in attestation",
+			a:         &ethpb.Attestation{},
+			wantedErr: "nil attestation.Data field",
 		},
 		{
 			name: "process nil field (a.Target) in attestation",
@@ -122,20 +114,17 @@ func TestStore_OnAttestation(t *testing.T) {
 				AggregationBits: make([]byte, 1),
 				Signature:       make([]byte, 96),
 			},
-			wantErr:       true,
-			wantErrString: "nil attestation.Data.Target field",
+			wantedErr: "nil attestation.Data.Target field",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := service.onAttestation(ctx, tt.a)
-			if tt.wantErr {
-				if err == nil || !strings.Contains(err.Error(), tt.wantErrString) {
-					t.Errorf("Store.onAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
-				}
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
-				t.Error(err)
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -191,47 +180,40 @@ func TestStore_OnAttestationUsingCheckptCache(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
 
 	tests := []struct {
-		name          string
-		a             *ethpb.Attestation
-		wantErr       bool
-		wantErrString string
+		name      string
+		a         *ethpb.Attestation
+		wantedErr string
 	}{
 		{
-			name:          "attestation's data slot not aligned with target vote",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
-			wantErr:       true,
-			wantErrString: "data slot is not in the same epoch as target 1 != 0",
+			name:      "attestation's data slot not aligned with target vote",
+			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
+			wantedErr: "data slot is not in the same epoch as target 1 != 0",
 		},
 		{
-			name:          "attestation's target root not in db",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}},
-			wantErr:       true,
-			wantErrString: "target root does not exist in db",
+			name:      "attestation's target root not in db",
+			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}},
+			wantedErr: "target root does not exist in db",
 		},
 		{
-			name:          "no pre state for attestations's target block",
-			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
-			wantErr:       true,
-			wantErrString: "could not get pre state for epoch 0",
+			name:      "no pre state for attestations's target block",
+			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
+			wantedErr: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
 			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
 				Root: BlkWithStateBadAttRoot[:]}}},
-			wantErr:       true,
-			wantErrString: "target epoch 100 does not match current epoch",
+			wantedErr: "target epoch 100 does not match current epoch",
 		},
 		{
-			name:          "process nil attestation",
-			a:             nil,
-			wantErr:       true,
-			wantErrString: "nil attestation",
+			name:      "process nil attestation",
+			a:         nil,
+			wantedErr: "nil attestation",
 		},
 		{
-			name:          "process nil field (a.Data) in attestation",
-			a:             &ethpb.Attestation{},
-			wantErr:       true,
-			wantErrString: "nil attestation.Data field",
+			name:      "process nil field (a.Data) in attestation",
+			a:         &ethpb.Attestation{},
+			wantedErr: "nil attestation.Data field",
 		},
 		{
 			name: "process nil field (a.Target) in attestation",
@@ -244,20 +226,17 @@ func TestStore_OnAttestationUsingCheckptCache(t *testing.T) {
 				AggregationBits: make([]byte, 1),
 				Signature:       make([]byte, 96),
 			},
-			wantErr:       true,
-			wantErrString: "nil attestation.Data.Target field",
+			wantedErr: "nil attestation.Data.Target field",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := service.onAttestation(ctx, tt.a)
-			if tt.wantErr {
-				if err == nil || !strings.Contains(err.Error(), tt.wantErrString) {
-					t.Errorf("Store.onAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
-				}
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
-				t.Error(err)
+				assert.NoError(t, err)
 			}
 		})
 	}
