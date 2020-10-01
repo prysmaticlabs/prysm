@@ -521,6 +521,7 @@ func TestActivationStatus_OK(t *testing.T) {
 	ctx := context.Background()
 
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
+	require.NoError(t, err)
 	pubKeys := [][]byte{deposits[0].Data.PublicKey, deposits[1].Data.PublicKey, deposits[2].Data.PublicKey, deposits[3].Data.PublicKey}
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 4000,
@@ -543,6 +544,7 @@ func TestActivationStatus_OK(t *testing.T) {
 			},
 		},
 	})
+	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -837,6 +839,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	ctx := context.Background()
 
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(6)
+	require.NoError(t, err)
 	pubKeys := [][]byte{
 		deposits[0].Data.PublicKey,
 		deposits[1].Data.PublicKey,
@@ -877,6 +880,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 			},
 		},
 	})
+	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -985,6 +989,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		},
 	}
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
+	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")

@@ -207,6 +207,9 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 
 	// Gather last saved state, that is where node starts to replay the blocks.
 	startState, err := s.lastSavedState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
 
 	// Gather the last saved block root and the slot number.
 	lastValidRoot, lastValidSlot, err := s.lastSavedBlock(ctx, slot)

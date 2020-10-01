@@ -102,7 +102,7 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 	for i := 0; i < int(m.depth); i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
-		neighbor := make([]byte, 32)
+		var neighbor []byte
 		if neighborIdx >= len(m.branches[i]) {
 			neighbor = ZeroHashes[i][:]
 		} else {
