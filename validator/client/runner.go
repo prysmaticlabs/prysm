@@ -83,11 +83,11 @@ func run(ctx context.Context, v Validator) {
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
-		defer span.End()
 
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
+			span.End()
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
@@ -112,6 +112,7 @@ func run(ctx context.Context, v Validator) {
 			if featureconfig.Get().LocalProtection {
 				if err := v.UpdateProtections(ctx, slot); err != nil {
 					log.WithError(err).Error("Could not update validator protection")
+					span.End()
 					continue
 				}
 			}
@@ -126,6 +127,7 @@ func run(ctx context.Context, v Validator) {
 			allRoles, err := v.RolesAt(ctx, slot)
 			if err != nil {
 				log.WithError(err).Error("Could not get validator roles")
+				span.End()
 				continue
 			}
 			for pubKey, roles := range allRoles {
