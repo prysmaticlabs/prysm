@@ -14,7 +14,7 @@ import (
 
 // searchThreshold to apply for when searching for blocks of a particular time. If the buffer
 // is exceeded we recalibrate the search again.
-const searchThreshold = 3
+const searchThreshold = 5
 
 // amount of times we repeat a failed search till is satisfies the conditional.
 const repeatedSearches = 2 * searchThreshold
@@ -139,9 +139,7 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 // Performs a search to find a target eth1 block which is less than or equal to the
 // target time. This method is used when head.time >= targetTime
 func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, targetTime uint64) (*big.Int, error) {
-	// Add double the threshold so that searches do not go on endlessly.
-	threshold := head.Uint64() - (repeatedSearches)
-	for bn := head; bn.Uint64() >= threshold; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
+	for bn := head; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -149,20 +147,16 @@ func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, ta
 		if err != nil {
 			return nil, err
 		}
-
 		if info.Time <= targetTime {
 			return info.Number, nil
 		}
 	}
-	return nil, errSearch
 }
 
 // Performs a search to find a target eth1 block which is the the block which
 // is just less than to the target time. This method is used when head.time < targetTime
 func (s *Service) findMoreTargetEth1Block(ctx context.Context, head *big.Int, targetTime uint64) (*big.Int, error) {
-	// Add double threshold so that searches do not go on endlessly.
-	threshold := head.Uint64() + repeatedSearches
-	for bn := head; bn.Uint64() <= threshold; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
+	for bn := head; ; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -181,7 +175,6 @@ func (s *Service) findMoreTargetEth1Block(ctx context.Context, head *big.Int, ta
 			return info.Number, nil
 		}
 	}
-	return nil, errSearch
 }
 
 func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*headerInfo, error) {
