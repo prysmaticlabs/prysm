@@ -14,7 +14,10 @@ import (
 
 // searchThreshold to apply for when searching for blocks of a particular time. If the buffer
 // is exceeded we recalibrate the search again.
-const searchThreshold = 5
+const searchThreshold = 3
+
+// amount of times we repeat a failed search till is satisfies the conditional.
+const repeatedSearches = 2 * searchThreshold
 
 var searchErr = errors.New("unable to perform search within the threshold")
 
@@ -91,7 +94,7 @@ func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint6
 }
 
 // BlockNumberByTimestamp returns the most recent block number up to a given timestamp.
-// This is an optimized version with the worst case being O(searchThreshold) number of calls
+// This is an optimized version with the worst case being O(2*repeatedSearches) number of calls
 // while in best case search for the block is performed in O(1).
 func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
@@ -107,7 +110,7 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	maxTimeBuffer := searchThreshold * params.BeaconConfig().SecondsPerETH1Block
 	// Terminate if we cant find an acceptible block after
 	// maxBuffer searches.
-	for i := 0; i < searchThreshold; i++ {
+	for i := 0; i < repeatedSearches; i++ {
 		if time > headTime+maxTimeBuffer {
 			numOfBlocks = (time - headTime) / params.BeaconConfig().SecondsPerETH1Block
 			estimatedBlk = headNumber.Uint64() + numOfBlocks
@@ -137,7 +140,7 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 // target time. This method is used when head.time >= targetTime
 func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, targetTime uint64) (*big.Int, error) {
 	// Add double the threshold so that searches do not go on endlessly.
-	threshold := head.Uint64() - (2 * searchThreshold)
+	threshold := head.Uint64() - (repeatedSearches)
 	for bn := head; bn.Uint64() >= threshold; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -158,7 +161,7 @@ func (s *Service) findLessTargetEth1Block(ctx context.Context, head *big.Int, ta
 // is just less than to the target time. This method is used when head.time < targetTime
 func (s *Service) findMoreTargetEth1Block(ctx context.Context, head *big.Int, targetTime uint64) (*big.Int, error) {
 	// Add double threshold so that searches do not go on endlessly.
-	threshold := head.Uint64() + 2*searchThreshold
+	threshold := head.Uint64() + repeatedSearches
 	for bn := head; bn.Uint64() <= threshold; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
