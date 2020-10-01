@@ -309,7 +309,7 @@ contract in order to activate the validator client`,
 			!ctx.Bool(featureconfig.MedallaTestnet.Name) &&
 			!ctx.Bool(featureconfig.SpadinaTestnet.Name) &&
 			!ctx.Bool(featureconfig.ZinkenTestnet.Name) {
-				log.Error("testnet is not specified")
+				log.Error("testnet is not specified, required: --<testnet-name>")
 				os.Exit(1)
 		}
 
