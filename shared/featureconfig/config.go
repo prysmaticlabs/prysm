@@ -119,7 +119,7 @@ func InitWithReset(c *Flags) func() {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
 	// Using Medalla as the default configuration for now.
-	params.UseMedallaConfig()
+	//params.UseMedallaConfig()
 
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
@@ -291,7 +291,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
 	// Using Medalla as the default configuration for now.
-	params.UseMedallaConfig()
+	//params.UseMedallaConfig()
 
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
@@ -336,7 +336,7 @@ func ConfigureSlasher(ctx *cli.Context) {
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
 	// Using Medalla as the default configuration for now.
-	params.UseMedallaConfig()
+	//params.UseMedallaConfig()
 
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}

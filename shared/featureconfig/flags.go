@@ -519,11 +519,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedMedallaTestnet = &cli.BoolFlag{
-		Name:   "medalla",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableAccountsV2 = &cli.BoolFlag{
 		Name:   "enable-accounts-v2",
 		Usage:  deprecatedUsage,
@@ -641,7 +636,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
-	deprecatedMedallaTestnet,
 	deprecatedEnableAccountsV2,
 	deprecatedCustomGenesisDelay,
 	deprecatedNewBeaconStateLocks,
