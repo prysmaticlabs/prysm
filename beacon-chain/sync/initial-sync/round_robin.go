@@ -21,8 +21,6 @@ import (
 const (
 	// counterSeconds is an interval over which an average rate will be calculated.
 	counterSeconds = 20
-	// refreshTime defines an interval at which suitable peer is checked during 2nd phase of sync.
-	refreshTime = 6 * time.Second
 )
 
 // blockReceiverFn defines block receiving function.
