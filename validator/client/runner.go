@@ -83,6 +83,7 @@ func run(ctx context.Context, v Validator) {
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
+		defer span.End()
 
 		select {
 		case <-ctx.Done():

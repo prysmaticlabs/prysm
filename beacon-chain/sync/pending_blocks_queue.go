@@ -59,6 +59,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	randGen := rand.NewGenerator()
 	for _, slot := range slots {
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
+		defer span.End()
 		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
 		s.pendingQueueLock.RLock()
