@@ -4,7 +4,6 @@ package ineffassign
 
 import (
 	"errors"
-	"fmt"
 	"go/ast"
 	"sort"
 
@@ -15,8 +14,6 @@ import (
 
 // Doc explaining the tool.
 const Doc = "Tool to make sure there are no ineffectual assignments in source code"
-
-var errIneffectualAssgnments = errors.New("ineffectual assignments are found")
 
 // Analyzer runs static analysis.
 var Analyzer = &analysis.Analyzer{
@@ -35,7 +32,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	nodeFilter := []ast.Node{
 		(*ast.File)(nil),
 	}
-
 	insp.Preorder(nodeFilter, func(node ast.Node) {
 		f, ok := node.(*ast.File)
 		if !ok {
@@ -51,8 +47,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		// Report ineffectual assignments if any.
 		for _, id := range chk.ineff {
 			if id.Name != "ctx" { // We allow ineffectual assignment to ctx (to override ctx).
-				msg := fmt.Sprintf("!!!!!!!!%s: %#v ineffectual assignment to %s\n", f.Name, id.Obj.Decl, id.Name)
-				pass.Reportf(id.Pos(), msg)
+				pass.Reportf(id.Pos(), "ineffectual assignment to %q", id.Name)
 			}
 		}
 	})
