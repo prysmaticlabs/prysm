@@ -100,13 +100,16 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	if time > s.latestEth1Data.BlockTime {
+	latestBlkHeight := s.latestEth1Data.BlockHeight
+	latestBlkTime := s.latestEth1Data.BlockTime
+
+	if time > latestBlkTime {
 		return nil, errors.New("provided time is later than the current eth1 head")
 	}
 	// Initialize a pointer to eth1 chain's history to start our search
 	// from.
-	cursorNum := big.NewInt(int64(s.latestEth1Data.BlockHeight))
-	cursorTime := s.latestEth1Data.BlockTime
+	cursorNum := big.NewInt(int64(latestBlkHeight))
+	cursorTime := latestBlkTime
 
 	numOfBlocks := uint64(0)
 	estimatedBlk := cursorNum.Uint64()
@@ -121,7 +124,7 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 			numOfBlocks = (time - cursorTime) / params.BeaconConfig().SecondsPerETH1Block
 			// In the event we have an infeasible estimated block, this is a defensive
 			// check to ensure it does not exceed rational bounds.
-			if cursorNum.Uint64()+numOfBlocks > s.latestEth1Data.BlockHeight {
+			if cursorNum.Uint64()+numOfBlocks > latestBlkHeight {
 				break
 			}
 			estimatedBlk = cursorNum.Uint64() + numOfBlocks
