@@ -41,6 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -90,6 +91,9 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
+
+	// Warn if user's platform is not supported
+	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
