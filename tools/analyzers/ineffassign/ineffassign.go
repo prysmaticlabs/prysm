@@ -381,8 +381,10 @@ func (bld *builder) swtch(stmt ast.Stmt, cases []ast.Stmt) {
 	exits := make([]*block, 0, len(cases)+1)
 	var dfault, fallthru *block
 	for _, c := range cases {
-		c := c.(*ast.CaseClause)
-
+		c, ok := c.(*ast.CaseClause)
+		if !ok {
+			continue
+		}
 		if c.List != nil {
 			list = bld.newBlock(list)
 			for _, x := range c.List {
