@@ -42,7 +42,7 @@ func BlockHeader(slot uint64, proposerIdx uint64) (*ethpb.BeaconBlockHeader, err
 
 func genRandomByteArray(length int) ([]byte, error) {
 	blk := make([]byte, length)
-	randGen := rand.NewGenerator()
+	randGen := rand.NewDeterministicGenerator()
 	_, err := randGen.Read(blk)
 	return blk, err
 }
