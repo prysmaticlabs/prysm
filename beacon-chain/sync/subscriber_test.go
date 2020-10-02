@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -246,4 +247,48 @@ func TestStaticSubnets(t *testing.T) {
 		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
 	}
 	cancel()
+}
+
+func Test_wrapAndReportValidation(t *testing.T) {
+	type args struct {
+		topic string
+		v     pubsub.ValidatorEx
+		pid   peer.ID
+		msg   *pubsub.Message
+	}
+	tests := []struct {
+		name string
+		args args
+		want pubsub.ValidationResult
+	}{
+		{
+			name: "validator panicked",
+			args: args{
+				topic: "foo",
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+					panic("oh no!")
+				},
+			},
+			want: pubsub.ValidationIgnore,
+		},
+		{
+			name: "validator OK",
+			args: args{
+				topic: "foo",
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+					return pubsub.ValidationAccept
+				},
+			},
+			want: pubsub.ValidationAccept,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, v := wrapAndReportValidation(tt.args.topic, tt.args.v)
+			got := v(context.Background(), tt.args.pid, tt.args.msg)
+			if got != tt.want {
+				t.Errorf("wrapAndReportValidation() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
