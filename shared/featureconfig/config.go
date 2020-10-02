@@ -20,6 +20,8 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
+	"sync"
+
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -33,9 +35,10 @@ type Flags struct {
 	// State locks
 	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
-	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
-	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the onyx testnet.
-	SpadinaTestnet bool // Spadina defines the flag through which we can enable the node to run on the spadina testnet.
+	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the Altona testnet.
+	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the Onyx testnet.
+	SpadinaTestnet bool // SpadinaTestnet defines the flag through which we can enable the node to run on the Spadina testnet.
+	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -90,9 +93,13 @@ type Flags struct {
 }
 
 var featureConfig *Flags
+var featureConfigLock sync.RWMutex
 
 // Get retrieves feature config.
 func Get() *Flags {
+	featureConfigLock.RLock()
+	defer featureConfigLock.RUnlock()
+
 	if featureConfig == nil {
 		return &Flags{}
 	}
@@ -101,6 +108,9 @@ func Get() *Flags {
 
 // Init sets the global config equal to the config that is passed in.
 func Init(c *Flags) {
+	featureConfigLock.Lock()
+	defer featureConfigLock.Unlock()
+
 	featureConfig = c
 }
 
@@ -141,6 +151,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
+	}
+	if ctx.Bool(ZinkenTestnet.Name) {
+		log.Warn("Running Node on Zinken Testnet")
+		params.UseZinkenConfig()
+		params.UseZinkenNetworkConfig()
+		cfg.ZinkenTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -262,10 +278,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling peer scoring in P2P")
 		cfg.EnablePeerScorer = true
 	}
-	cfg.UseCheckPointInfoCache = true
-	if ctx.Bool(disableCheckPtInfoCache.Name) {
-		log.Warn("Disabling advanced check point info cache")
-		cfg.UseCheckPointInfoCache = false
+	if ctx.Bool(checkPtInfoCache.Name) {
+		log.Warn("Using advance check point info cache")
+		cfg.UseCheckPointInfoCache = true
 	}
 	if ctx.Bool(enableBlst.Name) {
 		log.Warn("Enabling new BLS library blst")
@@ -282,6 +297,30 @@ func ConfigureSlasher(ctx *cli.Context) {
 
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
+	if ctx.Bool(AltonaTestnet.Name) {
+		log.Warn("Running Validator on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
+	}
+	if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running Node on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
+	}
+	if ctx.Bool(SpadinaTestnet.Name) {
+		log.Warn("Running Node on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
+	}
+	if ctx.Bool(ZinkenTestnet.Name) {
+		log.Warn("Running Node on Zinken Testnet")
+		params.UseZinkenConfig()
+		params.UseZinkenNetworkConfig()
+		cfg.ZinkenTestnet = true
+	}
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
 		cfg.DisableLookback = true
@@ -315,6 +354,12 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
 	}
+	if ctx.Bool(ZinkenTestnet.Name) {
+		log.Warn("Running Node on Zinken Testnet")
+		params.UseZinkenConfig()
+		params.UseZinkenNetworkConfig()
+		cfg.ZinkenTestnet = true
+	}
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true
 	} else {
@@ -323,6 +368,11 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg.EnableAccountsV2 = true
 	if ctx.Bool(disableAccountsV2.Name) {
 		log.Warn("Disabling v2 of Prysm validator accounts")
+		log.Error(
+			"Accounts v1 will be fully deprecated in Prysm within the next 2 releases! If you are still " +
+				"using this functionality, please begin to upgrade by creating a v2 wallet. More information can be " +
+				"found in our docs portal https://docs.prylabs.network/docs/wallet/introduction/",
+		)
 		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {

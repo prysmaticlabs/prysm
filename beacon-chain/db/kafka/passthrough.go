@@ -207,6 +207,11 @@ func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	return e.db.IsFinalizedBlock(ctx, blockRoot)
 }
 
+// FinalizedChildBlock -- passthrough.
+func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
+	return e.db.FinalizedChildBlock(ctx, blockRoot)
+}
+
 // PowchainData -- passthrough
 func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
 	return e.db.PowchainData(ctx)

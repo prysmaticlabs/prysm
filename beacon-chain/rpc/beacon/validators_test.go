@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -172,28 +171,31 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
-	setupValidators(t, db, 3)
-	st := testutil.NewBeaconState()
+
+	setupValidators(t, db, 100)
+	headState, err := db.HeadState(context.Background())
+	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, db.SaveState(ctx, st, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, sc),
 		HeadFetcher: &mock.ChainService{
-			State: st,
+			State: headState,
 		},
 	}
 
-	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 100, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
-	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(st.Balances()))
-	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil {
-		assert.ErrorContains(t, wanted, err)
-	}
+	wanted := fmt.Sprintf("page start %d >= list %d", 200, len(headState.Balances()))
+	_, err = bs.ListValidatorBalances(context.Background(), &ethpb.ListValidatorBalancesRequest{
+		PageToken:   strconv.Itoa(2),
+		PageSize:    100,
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
+	})
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
@@ -526,6 +528,75 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.DeepEqual(t, activeValidators, received.ValidatorList)
+}
+
+func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
+	ctx := context.Background()
+	db, _ := dbTest.SetupDB(t)
+	count := 100
+	balances := make([]uint64, count)
+	validators := make([]*ethpb.Validator, count)
+	activeValidators := make([]*ethpb.Validators_ValidatorContainer, 0)
+	for i := 0; i < count; i++ {
+		pubKey := pubKey(uint64(i))
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+
+		// We mark even validators as active, and odd validators as inactive.
+		if i%2 == 0 {
+			val := &ethpb.Validator{
+				PublicKey:             pubKey,
+				WithdrawalCredentials: make([]byte, 32),
+				ActivationEpoch:       0,
+				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			}
+			validators[i] = val
+			activeValidators = append(activeValidators, &ethpb.Validators_ValidatorContainer{
+				Index:     uint64(i),
+				Validator: val,
+			})
+		} else {
+			validators[i] = &ethpb.Validator{
+				PublicKey:             pubKey,
+				WithdrawalCredentials: make([]byte, 32),
+				ActivationEpoch:       0,
+				ExitEpoch:             0,
+			}
+		}
+	}
+
+	// Set first validator to be inactive.
+	validators[0].ActivationEpoch = params.BeaconConfig().FarFutureEpoch
+	activeValidators[0].Validator.ActivationEpoch = params.BeaconConfig().FarFutureEpoch
+
+	st := testutil.NewBeaconState()
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetBalances(balances))
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
+
+	b := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, b))
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, st, gRoot))
+
+	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		Active: true,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, count/2-1, len(received.ValidatorList))
+	require.Equal(t, count/2-1, int(received.TotalSize))
 }
 
 func TestServer_ListValidators_NoPagination(t *testing.T) {
@@ -910,7 +981,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	res, err := bs.ListValidators(context.Background(), req)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(res.ValidatorList))
+	assert.Equal(t, 30, len(res.ValidatorList))
 
 	req = &ethpb.ListValidatorsRequest{
 		QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
@@ -919,7 +990,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	res, err = bs.ListValidators(context.Background(), req)
 	require.NoError(t, err)
-	assert.DeepEqual(t, want[:21], res.ValidatorList, "Incorrect number of validators")
+	assert.DeepEqual(t, want, res.ValidatorList, "Incorrect number of validators")
 }
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
@@ -1405,37 +1476,6 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
 }
 
-func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
-	db, sc := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2-1))
-
-	b := testutil.NewBeaconBlock()
-	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
-	require.NoError(t, db.SaveBlock(ctx, b))
-	bRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, headState, bRoot))
-
-	m := &mock.ChainService{State: headState}
-	bs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        m,
-		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
-	}
-
-	wanted := "Participation information for epoch 0 is not yet available"
-	_, err = bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0},
-	})
-	if err != nil && !strings.Contains(err.Error(), wanted) {
-		assert.ErrorContains(t, wanted, err)
-	}
-}
-
 func TestGetValidatorPerformance_Syncing(t *testing.T) {
 	ctx := context.Background()
 
@@ -1568,7 +1608,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	require.NoError(t, err)
 	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)
 	require.NoError(t, err)
-	c, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
+	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -1639,7 +1679,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	require.NoError(t, err)
 	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)
 	require.NoError(t, err)
-	c, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
+	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	want := &ethpb.ValidatorPerformanceResponse{

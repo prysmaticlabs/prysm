@@ -53,11 +53,6 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := wallet.Exists(walletDir); err != nil {
-		if !errors.Is(err, wallet.ErrNoWalletFound) {
-			return errors.Wrap(err, "could not check if wallet exists")
-		}
-	}
 	numAccounts, err := inputNumAccounts(cliCtx)
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
@@ -84,6 +79,15 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
 func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Wallet, error) {
+	// Ensure that the wallet directory does not contain a wallet already
+	dirExists, err := wallet.Exists(cfg.WalletDir)
+	if err != nil {
+		return nil, err
+	}
+	if dirExists {
+		return nil, errors.New("a wallet already exists at this location. Please input an" +
+			" alternative location for the new wallet or remove the current wallet")
+	}
 	w := wallet.New(&wallet.Config{
 		WalletDir:      cfg.WalletDir,
 		KeymanagerKind: v2keymanager.Derived,
@@ -114,7 +118,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
-		return nil, nil
+		return w, nil
 	}
 	for i := int64(0); i < cfg.NumAccounts; i++ {
 		if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {

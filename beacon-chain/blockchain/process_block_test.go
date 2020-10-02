@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -675,18 +674,16 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		finalizedSlot uint64
 	}
 	tests := []struct {
-		name        string
-		args        args
-		shouldError bool
-		err         string
+		name      string
+		args      args
+		wantedErr string
 	}{
 		{
 			name: "could not get finalized block in block service cache",
 			args: args{
 				finalizedRoot: [32]byte{'a'},
 			},
-			shouldError: true,
-			err:         "nil finalized block",
+			wantedErr: "nil finalized block",
 		},
 		{
 			name: "could not get finalized block root in DB",
@@ -694,8 +691,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r,
 				parentRoot:    [32]byte{'a'},
 			},
-			shouldError: true,
-			err:         "could not get finalized block root",
+			wantedErr: "could not get finalized block root",
 		},
 		{
 			name: "is not descendant",
@@ -703,8 +699,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r1,
 				parentRoot:    r,
 			},
-			shouldError: true,
-			err:         "is not a descendent of the current finalized block slot",
+			wantedErr: "is not a descendent of the current finalized block slot",
 		},
 		{
 			name: "is descendant",
@@ -712,22 +707,19 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r,
 				parentRoot:    r,
 			},
-			shouldError: false,
 		},
 	}
-	for _, test := range tests {
+	for _, tt := range tests {
 		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(db, sc), ForkChoiceStore: protoarray.New(0, 0, [32]byte{})})
 		require.NoError(t, err)
 		service.finalizedCheckpt = &ethpb.Checkpoint{
-			Root: test.args.finalizedRoot[:],
+			Root: tt.args.finalizedRoot[:],
 		}
-		err = service.VerifyBlkDescendant(ctx, test.args.parentRoot)
-		if test.shouldError {
-			if err == nil || !strings.Contains(err.Error(), test.err) {
-				t.Error("Did not get wanted error")
-			}
+		err = service.VerifyBlkDescendant(ctx, tt.args.parentRoot)
+		if tt.wantedErr != "" {
+			assert.ErrorContains(t, tt.wantedErr, err)
 		} else if err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 		}
 	}
 }

@@ -15,6 +15,7 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/event:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
@@ -77,6 +78,7 @@ go_test(
         "//validator/db/testing:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/derived:go_default_library",
+        "//validator/keymanager/v2/direct:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",

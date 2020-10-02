@@ -108,7 +108,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	if err != nil {
 		return nil, err
 	}
-	targetRoot := make([]byte, 32)
+	var targetRoot []byte
 	if epochStartSlot == headState.Slot() {
 		targetRoot = headRoot
 	} else {

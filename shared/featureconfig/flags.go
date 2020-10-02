@@ -15,10 +15,15 @@ var (
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
-	// SpadinaTestnet flag for the multiclient eth2 devnet.
+	// SpadinaTestnet flag for the multiclient eth2 testnet.
 	SpadinaTestnet = &cli.BoolFlag{
 		Name:  "spadina",
 		Usage: "This defines the flag through which we can run on the Spadina Multiclient Testnet",
+	}
+	// ZinkenTestnet flag for the multiclient eth2 testnet.
+	ZinkenTestnet = &cli.BoolFlag{
+		Name:  "zinken",
+		Usage: "This defines the flag through which we can run on the Zinken Multiclient Testnet",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
@@ -170,14 +175,15 @@ var (
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
 	}
-	disableCheckPtInfoCache = &cli.BoolFlag{
-		Name:  "disable-check-point-cache",
-		Usage: "Disables check point info caching",
+	checkPtInfoCache = &cli.BoolFlag{
+		Name:  "use-check-point-cache",
+		Usage: "Enables check point info caching",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
+	checkPtInfoCache,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -553,11 +559,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedCheckptInfoCache = &cli.BoolFlag{
-		Name:   "use-check-point-cache",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedBatchBlockVerify = &cli.BoolFlag{
 		Name:   "batch-block-verify",
 		Usage:  deprecatedUsage,
@@ -644,7 +645,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSlasherProviderFlag,
 	deprecatedEnableSlasherFlag,
 	deprecatedEnableFinalizedDepositsCache,
-	deprecatedCheckptInfoCache,
 	deprecatedBatchBlockVerify,
 	deprecatedEnableRoughtime,
 }
@@ -658,6 +658,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	SpadinaTestnet,
+	ZinkenTestnet,
 	disableAccountsV2,
 	enableBlst,
 }...)
@@ -665,6 +666,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
+	AltonaTestnet,
+	OnyxTestnet,
+	SpadinaTestnet,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
@@ -699,6 +703,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	SpadinaTestnet,
+	ZinkenTestnet,
 	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
@@ -706,7 +711,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
-	disableCheckPtInfoCache,
+	checkPtInfoCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

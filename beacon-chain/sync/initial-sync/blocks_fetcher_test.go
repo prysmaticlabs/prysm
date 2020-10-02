@@ -497,7 +497,7 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 	// Test context cancellation.
 	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
-	blocks, err = fetcher.requestBlocks(ctx, req, peerIDs[0])
+	_, err = fetcher.requestBlocks(ctx, req, peerIDs[0])
 	assert.ErrorContains(t, "context canceled", err)
 }
 
