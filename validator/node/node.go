@@ -256,7 +256,11 @@ func (s *ValidatorClient) moveDb(cliCtx *cli.Context, dbDir string) string {
 			accountsDirDbFile = filepath.Join(s.wallet.AccountsDir(), kv.ProtectionDbFileName)
 		}
 		newDataFile := filepath.Join(dbDir, kv.ProtectionDbFileName)
-		if accountsDirDbFile != "" && accountsDirDbFile != newDataFile && fileutil.FileExists(accountsDirDbFile) && !fileutil.FileExists(newDataFile) { //move files from account dir to datadir.
+		accountsDBExistAndDifferent := accountsDirDbFile != "" && accountsDirDbFile != newDataFile
+		accountsDBExistsNoDataDirDb := fileutil.FileExists(accountsDirDbFile) && !fileutil.FileExists(newDataFile)
+		dataDirDBExistsAndDifferent := newDataFile != dataFile && fileutil.FileExists(dataFile)
+		accountsDirDBDoesntExist := !fileutil.FileExists(newDataFile)
+		if accountsDBExistAndDifferent && accountsDBExistsNoDataDirDb { //move files from account dir to datadir.
 			log.WithFields(logrus.Fields{
 				"oldDbPath":      s.wallet.AccountsDir(),
 				"validatorDbDir": dbDir,
@@ -271,7 +275,7 @@ func (s *ValidatorClient) moveDb(cliCtx *cli.Context, dbDir string) string {
 			if err := os.Remove(accountsDirDbFile); err != nil {
 				log.Info(errors.Wrap(err, "could not delete old db file"))
 			}
-		} else if newDataFile != dataFile && fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) { //move files to account dir.
+		} else if dataDirDBExistsAndDifferent && accountsDirDBDoesntExist { //move files to account dir.
 			log.WithFields(logrus.Fields{
 				"oldDbPath":      dataDir,
 				"validatorDbDir": dbDir,
