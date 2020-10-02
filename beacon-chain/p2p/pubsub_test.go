@@ -33,6 +33,6 @@ func TestMessageIDFunction_HashesCorrectly(t *testing.T) {
 	msg := [32]byte{'J', 'U', 'N', 'K'}
 	pMsg := &pubsubpb.Message{Data: msg[:]}
 	hashedData := hashutil.Hash(pMsg.Data)
-	msgID := string(hashedData[:8])
+	msgID := string(hashedData[:])
 	assert.Equal(t, msgID, msgIDFunction(pMsg), "Got incorrect msg id")
 }
