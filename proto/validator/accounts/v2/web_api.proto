@@ -161,6 +161,9 @@ message ListAccountsRequest {
     // that indicates where this listing should continue from.
     // This field is optional.
     string page_token = 3;
+
+    // Whether to return all available accounts in a single response.
+    bool all = 4;
 }
 
 message ListAccountsResponse {

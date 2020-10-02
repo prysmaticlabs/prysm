@@ -78,6 +78,13 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 			accounts[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		}
 	}
+	if req.All {
+		return &pb.ListAccountsResponse{
+			Accounts:      accounts,
+			TotalSize:     int32(len(keys)),
+			NextPageToken: "",
+		}, nil
+	}
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(keys))
 	if err != nil {
 		return nil, status.Errorf(
