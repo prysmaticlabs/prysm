@@ -3,10 +3,9 @@
 package testing
 
 import (
-	"crypto/rand"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // SignedBlockHeader given slot, proposer index this function generates signed block header.
@@ -43,7 +42,8 @@ func BlockHeader(slot uint64, proposerIdx uint64) (*ethpb.BeaconBlockHeader, err
 
 func genRandomByteArray(length int) ([]byte, error) {
 	blk := make([]byte, length)
-	_, err := rand.Read(blk)
+	randGen := rand.NewGenerator()
+	_, err := randGen.Read(blk)
 	return blk, err
 }
 
