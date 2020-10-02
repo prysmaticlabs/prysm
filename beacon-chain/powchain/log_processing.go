@@ -268,7 +268,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	// Batch request the desired headers and store them in a
 	// map for quick access.
 	requestHeaders := func(startBlk uint64, endBlk uint64) error {
-		headers, err := s.batchRequestHeaders(startBlk, endBlk)
+		headers, err := s.BatchRequestHeaders(startBlk, endBlk)
 		if err != nil {
 			return err
 		}

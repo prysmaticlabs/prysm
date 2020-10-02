@@ -177,8 +177,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
-	defer cancel()
 
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
@@ -218,8 +216,6 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 //    - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
 //    - This vote's block is the eth1 block to use for the block proposal.
 func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTrie.BeaconState) (*ethpb.Eth1Data, error) {
-	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
-	defer cancel()
 
 	slot := beaconState.Slot()
 	votingPeriodStartTime := vs.slotStartTime(slot)
@@ -297,10 +293,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 
 func (vs *Server) slotStartTime(slot uint64) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	startTime +=
-		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
-			params.BeaconConfig().SecondsPerSlot
-	return startTime
+	return helpers.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
@@ -312,9 +305,9 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 
 	var inRangeVotes []eth1DataSingleVote
 	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		ok, height, err := vs.BlockFetcher.BlockExists(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
+		ok, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
 		if err != nil {
-			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
+			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
 		}
 		// Make sure we don't "undo deposit progress". See https://github.com/ethereum/eth2.0-specs/pull/1836
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {

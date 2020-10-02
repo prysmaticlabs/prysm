@@ -82,8 +82,10 @@ type ChainInfoFetcher interface {
 type POWBlockFetcher interface {
 	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
 	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
+	BatchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
 
 // Chain defines a standard interface for the powchain service in Prysm.
@@ -548,7 +550,7 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
-func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
+func (s *Service) BatchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
