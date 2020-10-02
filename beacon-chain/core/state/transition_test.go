@@ -953,3 +953,80 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	_, err = state.ProcessSlots(context.Background(), parentState, slot-1)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
 }
+
+func TestProcessBlock_ProposerIndicesMixup(t *testing.T) {
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
+	blockSlot := params.BeaconConfig().SlotsPerEpoch - 1
+	problemSlot := blockSlot + 1
+	problemEpoch := uint64(1)
+
+	activeIndicesNoCache := func(state *beaconstate.BeaconState, epoch uint64) []uint64 {
+		var indices []uint64
+		if err := state.ReadFromEveryValidator(func(idx int, val *beaconstate.ReadOnlyValidator) error {
+			if helpers.IsActiveValidatorUsingTrie(val, epoch) {
+				indices = append(indices, uint64(idx))
+			}
+			return nil
+		}); err != nil {
+			require.NoError(t, err)
+		}
+		return indices
+	}
+	noCacheProposerIdx := func(state *beaconstate.BeaconState) uint64 {
+		tmp := state.Copy()
+		ep := problemEpoch
+		seed, err := helpers.Seed(tmp, ep, params.BeaconConfig().DomainBeaconProposer)
+		require.NoError(t, err)
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(tmp.Slot())...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+
+		indices := activeIndicesNoCache(tmp, ep)
+
+		idx, err := helpers.ComputeProposerIndex(tmp, indices, seedWithSlotHash)
+		require.NoError(t, err)
+		return idx
+	}
+
+	block1, err := testutil.GenerateFullBlock(beaconState.Copy(), privKeys, nil, blockSlot)
+	require.NoError(t, err)
+
+	out1, err := state.ExecuteStateTransition(context.Background(), beaconState.Copy(), block1)
+	require.NoError(t, err)
+	out1, err = state.ProcessSlots(context.Background(), out1.Copy(), problemSlot)
+	require.NoError(t, err)
+
+	proposerIdx1, err := helpers.BeaconProposerIndex(out1)
+	require.NoError(t, err)
+	expected1 := noCacheProposerIdx(out1)
+	require.NoError(t, err)
+	if proposerIdx1 != expected1 {
+		t.Fatalf("expected proposer index: %d, but got: %d", expected1, proposerIdx1)
+	}
+
+	block2, err := testutil.GenerateFullBlock(beaconState.Copy(), privKeys, nil, blockSlot)
+	require.NoError(t, err)
+	out2, err := state.ExecuteStateTransition(context.Background(), beaconState.Copy(), block2)
+	require.NoError(t, err)
+
+	// Imagine the above state transition harshly slashed the validator.
+	// Similarly, it could have 31 eth by just not doing its duties well, but has to be more unlucky with proposer selection.
+	require.NoError(t, out2.UpdateBalancesAtIndex(proposerIdx1, 0))
+
+	out2, err = state.ProcessSlots(context.Background(), out2.Copy(), problemSlot)
+	require.NoError(t, err)
+
+	proposerIdx2, err := helpers.BeaconProposerIndex(out2)
+	require.NoError(t, err)
+	expected2 := noCacheProposerIdx(out2)
+	require.NoError(t, err)
+	if expected1 == expected2 {
+		t.Fatalf("tests expects new different proposer index, but got the same: %d <> %d", expected1, expected2)
+	}
+	if proposerIdx2 == expected1 {
+		t.Errorf("warning, expected %d previously, and got it again: %d", expected1, proposerIdx2)
+	}
+	if proposerIdx2 != expected2 {
+		t.Fatalf("expected proposer index: %d, but got: %d", expected2, proposerIdx2)
+	}
+}
