@@ -113,7 +113,9 @@ func Exists(walletDir string) (bool, error) {
 		return false, errors.Wrap(err, "could not parse wallet directory")
 	}
 	isValid, err := IsValid(walletDir)
-	if err != nil {
+	if err == ErrNoWalletFound {
+		return false, nil
+	} else if err != nil {
 		return false, errors.Wrap(err, "could not check if dir is valid")
 	}
 	return dirExists && isValid, nil
@@ -128,6 +130,9 @@ func IsValid(walletDir string) (bool, error) {
 	}
 	f, err := os.Open(expanded)
 	if err != nil {
+		if strings.Contains(err.Error(), "no such file") {
+			return false, nil
+		}
 		return false, err
 	}
 	defer func() {
