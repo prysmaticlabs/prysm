@@ -1,4 +1,4 @@
-package beacon_v1
+package beaconv1
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*et
 	return nil, errors.New("unimplemented")
 }
 
-// ListValidators returns a filterable list of validator balances.
+// ListValidatorBalances returns a filterable list of validator balances.
 func ListValidatorBalances(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
 	return nil, errors.New("unimplemented")
 }

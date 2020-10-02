@@ -1,4 +1,4 @@
-package beacon_v1
+package beaconv1
 
 import (
 	"context"
@@ -13,7 +13,7 @@ func GetForkSchedule(ctx context.Context, req *ptypes.Empty) (*ethpb.ForkSchedul
 	return nil, errors.New("unimplemented")
 }
 
-// Spec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
+// GetSpec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
 // Values are returned with following format:
 // - any value starting with 0x in the spec is returned as a hex string.
 // - all other values are returned as number.

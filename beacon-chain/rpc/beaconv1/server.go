@@ -1,7 +1,7 @@
-// Package beacon defines a gRPC beacon service implementation, providing
-// useful endpoints for checking fetching chain-specific data such as
-// blocks, committees, validators, assignments, and more.
-package beacon_v1
+// Package beaconv1 defines a gRPC beacon service implementation,
+// following the official API standards https://ethereum.github.io/eth2.0-APIs/#/.
+// This package includes the beacon and config endpoints.
+package beaconv1
 
 import (
 	"context"
