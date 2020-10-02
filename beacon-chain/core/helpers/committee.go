@@ -5,6 +5,7 @@ package helpers
 import (
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -19,6 +20,7 @@ import (
 )
 
 var committeeCache = cache.NewCommitteesCache()
+var committeeCacheLock sync.RWMutex
 
 // SlotCommitteeCount returns the number of crosslink committees of a slot. The
 // active validator count is provided as an argument rather than a direct implementation
@@ -73,10 +75,12 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committ
 		return nil, errors.Wrap(err, "could not get seed")
 	}
 
+	committeeCacheLock.RLock()
 	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
 	}
+	committeeCacheLock.RUnlock()
 	if indices != nil {
 		return indices, nil
 	}
@@ -93,6 +97,8 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committ
 // validator indices and seed are provided as an argument rather than a direct implementation
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
 func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, committeeIndex uint64) ([]uint64, error) {
+	committeeCacheLock.RLock()
+	defer committeeCacheLock.RUnlock()
 	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
@@ -157,6 +163,8 @@ func ComputeCommittee(
 		})
 
 		count = SlotCommitteeCount(uint64(len(shuffledIndices)))
+		committeeCacheLock.Lock()
+		defer committeeCacheLock.Unlock()
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledList,
 			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
@@ -307,6 +315,9 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
 func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
+	committeeCacheLock.Lock()
+	defer committeeCacheLock.Unlock()
+
 	for _, e := range []uint64{epoch, epoch + 1} {
 		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
@@ -348,6 +359,9 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
+	committeeCacheLock.Lock()
+	defer committeeCacheLock.Unlock()
+
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return err
@@ -370,6 +384,8 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 
 // ClearCache clears the committee cache
 func ClearCache() {
+	committeeCacheLock.Lock()
+	defer committeeCacheLock.Unlock()
 	committeeCache = cache.NewCommitteesCache()
 }
 

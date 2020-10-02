@@ -75,10 +75,13 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
+	committeeCacheLock.RLock()
 	activeIndices, err := committeeCache.ActiveIndices(seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
 	}
+	committeeCacheLock.RUnlock()
+
 	if activeIndices != nil {
 		return activeIndices, nil
 	}
@@ -106,10 +109,13 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get seed")
 	}
+	committeeCacheLock.RLock()
 	activeCount, err := committeeCache.ActiveIndicesCount(seed)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not interface with committee cache")
 	}
+	committeeCacheLock.RUnlock()
+
 	if activeCount != 0 && state.Slot() != 0 {
 		return uint64(activeCount), nil
 	}
@@ -180,10 +186,12 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
+	committeeCacheLock.RLock()
 	proposerIndices, err := committeeCache.ProposerIndices(seed)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not interface with committee cache")
 	}
+	committeeCacheLock.RUnlock()
 	if proposerIndices != nil {
 		return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
 	}
