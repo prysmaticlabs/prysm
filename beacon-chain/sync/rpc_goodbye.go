@@ -36,8 +36,6 @@ func (s *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
-	defer cancel()
 	SetRPCStreamDeadlines(stream)
 
 	m, ok := msg.(*uint64)

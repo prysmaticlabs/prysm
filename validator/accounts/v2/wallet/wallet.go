@@ -184,6 +184,9 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		false, /* Do not confirm password */
 		ValidateExistingPass,
 	)
+	if err != nil {
+		return nil, err
+	}
 	if fileutil.FileExists(filepath.Join(walletDir, HashedPasswordFileName)) {
 		hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(walletDir, HashedPasswordFileName))
 		if err != nil {

@@ -81,7 +81,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//  head -> 4  3
 	//          |
 	//          5 <- starting from 5 with justified epoch 0 should error
-	r, err = f.Head(context.Background(), 1, indexToHash(5), balances, 1)
+	_, err = f.Head(context.Background(), 1, indexToHash(5), balances, 1)
 	wanted := "head at slot 0 with weight 0 is not eligible, finalizedEpoch 1 != 1, justifiedEpoch 2 != 1"
 	require.ErrorContains(t, wanted, err)
 
