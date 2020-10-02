@@ -58,6 +58,18 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 	return err
 }
 
+// ImportProposalHistory accepts a validator public key and returns the corresponding signing root.
+// Returns nil if there is no proposal history for the validator at this slot.
+func (store *Store) ImportProposalHistory(ctx context.Context, publicKey []byte) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.ImportProposalHistory")
+	defer span.End()
+
+	store.ProposalHistoryForEpoch(ctx, publicKey, epoch)
+	var err error
+	var pubKeyProposals *pubKeyProposals
+
+}
+
 // UpdatePublicKeysNewBuckets for a specified list of keys.
 func (store *Store) UpdatePublicKeysNewBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
