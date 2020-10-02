@@ -18,8 +18,6 @@ func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream l
 			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
-	defer cancel()
 	SetRPCStreamDeadlines(stream)
 
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {

@@ -102,6 +102,9 @@ func decrypt(cliCtx *cli.Context) error {
 			// Any password is valid.
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 	isDir, err := fileutil.HasDir(fullPath)
 	if err != nil {
@@ -139,6 +142,9 @@ func encrypt(cliCtx *cli.Context) error {
 			// Any password is valid.
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 	privateKeyString := cliCtx.String(privateKeyFlag.Name)
 	if privateKeyString == "" {

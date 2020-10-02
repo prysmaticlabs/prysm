@@ -63,6 +63,9 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 
 func createENR() *enr.Record {
 	key, err := crypto.GenerateKey()
+	if err != nil {
+		log.Error(err)
+	}
 	db, err := enode.OpenDB("")
 	if err != nil {
 		log.Error("could not open node's peer database")

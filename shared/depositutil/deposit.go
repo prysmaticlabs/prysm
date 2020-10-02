@@ -142,6 +142,9 @@ func GenerateDepositTransaction(
 		depositData.Signature,
 		depositRoot,
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 	return tx, depositData, nil
 }
 
