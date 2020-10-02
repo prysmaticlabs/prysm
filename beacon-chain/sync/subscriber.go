@@ -166,8 +166,9 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 // Wrap the pubsub validator with a metric monitoring function. This function increments the
 // appropriate counter if the particular message fails to validate.
 func wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
-	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) (res pubsub.ValidationResult) {
 		defer messagehandler.HandlePanic(ctx, msg)
+		res = pubsub.ValidationIgnore // Default: ignore any message that panics.
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
