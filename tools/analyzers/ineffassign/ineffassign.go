@@ -14,11 +14,9 @@ import (
 // The core of this code originates here: https://github.com/gordonklaus/ineffassign and was
 // adapted for our workflow (the original source code is under the MIT license).
 // If you need a standalone CLI ineffassign runner, please, use the one above.
-const invalidArgumentExitCode = 3
-
 func walkPath(root string) bool {
 	lintFailed := false
-	filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf("Error during filesystem walk: %v\n", err)
 			return nil
@@ -33,6 +31,9 @@ func walkPath(root string) bool {
 		}
 		return nil
 	})
+	if err != nil {
+		return false
+	}
 	return lintFailed
 }
 
@@ -170,7 +171,10 @@ func (bld *builder) Visit(n ast.Node) ast.Visitor {
 		exits := make([]*block, len(n.Body.List))
 		dfault := false
 		for i, c := range n.Body.List {
-			c := c.(*ast.CommClause)
+			c, ok := c.(*ast.CommClause)
+			if !ok {
+				continue
+			}
 			bld.newBlock(b0)
 			bld.walk(c)
 			exits[i] = bld.block
@@ -224,7 +228,10 @@ func (bld *builder) Visit(n ast.Node) ast.Visitor {
 	case *ast.GenDecl:
 		if n.Tok == token.VAR {
 			for _, s := range n.Specs {
-				s := s.(*ast.ValueSpec)
+				s, ok := s.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
 				for _, x := range s.Values {
 					bld.walk(x)
 				}
