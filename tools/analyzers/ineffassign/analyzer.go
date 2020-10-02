@@ -54,13 +54,3 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	return nil, nil
 }
-
-func isPkgDot(expr ast.Expr, pkg, name string) bool {
-	sel, ok := expr.(*ast.SelectorExpr)
-	return ok && isIdent(sel.X, pkg) && isIdent(sel.Sel, name)
-}
-
-func isIdent(expr ast.Expr, ident string) bool {
-	id, ok := expr.(*ast.Ident)
-	return ok && id.Name == ident
-}
