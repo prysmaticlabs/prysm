@@ -29,28 +29,26 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type Server struct {
-	BeaconDB                    db.ReadOnlyDatabase
-	Ctx                         context.Context
-	ChainStartFetcher           powchain.ChainStartFetcher
-	HeadFetcher                 blockchain.HeadFetcher
-	FinalizationFetcher         blockchain.FinalizationFetcher
-	DepositFetcher              depositcache.DepositFetcher
-	BlockFetcher                powchain.POWBlockFetcher
-	GenesisTimeFetcher          blockchain.TimeFetcher
-	GenesisFetcher              blockchain.GenesisFetcher
-	BlockReceiver               blockchain.BlockReceiver
-	StateNotifier               statefeed.Notifier
-	BlockNotifier               blockfeed.Notifier
-	AttestationNotifier         operation.Notifier
-	Broadcaster                 p2p.Broadcaster
-	AttestationsPool            attestations.Pool
-	SlashingsPool               *slashings.Pool
-	CanonicalStateChan          chan *pbp2p.BeaconState
-	ChainStartChan              chan time.Time
-	ReceivedAttestationsBuffer  chan *ethpb.Attestation
-	CollectedAttestationsBuffer chan []*ethpb.Attestation
-	StateGen                    *stategen.State
-	SyncChecker                 sync.Checker
+	BeaconDB            db.ReadOnlyDatabase
+	Ctx                 context.Context
+	ChainStartFetcher   powchain.ChainStartFetcher
+	HeadFetcher         blockchain.HeadFetcher
+	FinalizationFetcher blockchain.FinalizationFetcher
+	DepositFetcher      depositcache.DepositFetcher
+	BlockFetcher        powchain.POWBlockFetcher
+	GenesisTimeFetcher  blockchain.TimeFetcher
+	GenesisFetcher      blockchain.GenesisFetcher
+	BlockReceiver       blockchain.BlockReceiver
+	StateNotifier       statefeed.Notifier
+	BlockNotifier       blockfeed.Notifier
+	AttestationNotifier operation.Notifier
+	Broadcaster         p2p.Broadcaster
+	AttestationsPool    attestations.Pool
+	SlashingsPool       *slashings.Pool
+	CanonicalStateChan  chan *pbp2p.BeaconState
+	ChainStartChan      chan time.Time
+	StateGen            *stategen.State
+	SyncChecker         sync.Checker
 }
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
