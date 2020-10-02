@@ -81,6 +81,7 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committ
 		return nil, errors.Wrap(err, "could not interface with committee cache")
 	}
 	committeeCacheLock.RUnlock()
+
 	if indices != nil {
 		return indices, nil
 	}
@@ -98,11 +99,12 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committ
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
 func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, committeeIndex uint64) ([]uint64, error) {
 	committeeCacheLock.RLock()
-	defer committeeCacheLock.RUnlock()
 	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
 	}
+	committeeCacheLock.RUnlock()
+
 	if indices != nil {
 		return indices, nil
 	}
@@ -163,8 +165,8 @@ func ComputeCommittee(
 		})
 
 		count = SlotCommitteeCount(uint64(len(shuffledIndices)))
+
 		committeeCacheLock.Lock()
-		defer committeeCacheLock.Unlock()
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledList,
 			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
@@ -173,6 +175,7 @@ func ComputeCommittee(
 		}); err != nil {
 			return nil, err
 		}
+		committeeCacheLock.Unlock()
 	}
 
 	return shuffledList[start:end], nil
