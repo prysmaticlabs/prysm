@@ -8,14 +8,20 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 )
 
+// GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
 func GetForkSchedule(ctx context.Context, req *ptypes.Empty) (*ethpb.ForkScheduleResponse, error) {
 	return nil, errors.New("unimplemented")
 }
 
+// Spec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
+// Values are returned with following format:
+// - any value starting with 0x in the spec is returned as a hex string.
+// - all other values are returned as number.
 func GetSpec(ctx context.Context, req *ptypes.Empty) (*ethpb.SpecResponse, error) {
 	return nil, errors.New("unimplemented")
 }
 
+// GetDepositContract retrieves deposit contract address and genesis fork version.
 func GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
 	return nil, errors.New("unimplemented")
 }

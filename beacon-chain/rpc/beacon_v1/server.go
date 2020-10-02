@@ -5,6 +5,7 @@ package beacon_v1
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -22,9 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
@@ -55,26 +53,7 @@ type Server struct {
 	SyncChecker                 sync.Checker
 }
 
-// GetGenesis fetches genesis chain information of Ethereum 2.0. Returns unix timestamp 0
-// if a genesis time has yet to be determined.
+// GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
 func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
-	genesisTime := ns.GenesisTimeFetcher.GenesisTime()
-	var defaultGenesisTime time.Time
-	var gt *ptypes.Timestamp
-	var err error
-	if genesisTime == defaultGenesisTime {
-		gt, err = ptypes.TimestampProto(time.Unix(0, 0))
-	} else {
-		gt, err = ptypes.TimestampProto(genesisTime)
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
-	}
-
-	genValRoot := ns.GenesisFetcher.GenesisValidatorRoot()
-	return &ethpb.GenesisResponse{
-		GenesisTime:           uint64(gt.GetSeconds()),
-		GenesisForkVersion:    params.BeaconConfig().GenesisForkVersion,
-		GenesisValidatorsRoot: genValRoot[:],
-	}, nil
+	return nil, errors.New("unimplemented")
 }
