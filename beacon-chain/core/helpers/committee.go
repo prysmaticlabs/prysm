@@ -362,9 +362,6 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
-	committeeCacheLock.Lock()
-	defer committeeCacheLock.Unlock()
-
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return err
@@ -378,9 +375,11 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return err
 	}
+	committeeCacheLock.Lock()
 	if err := committeeCache.AddProposerIndicesList(seed, proposerIndices); err != nil {
 		return err
 	}
+	committeeCacheLock.Unlock()
 
 	return nil
 }
