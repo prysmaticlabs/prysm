@@ -101,6 +101,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "decode_pubsub_test.go",
         "error_test.go",
         "pending_attestations_queue_test.go",
         "pending_blocks_queue_test.go",
@@ -158,6 +159,7 @@ go_test(
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/timeutils:go_default_library",
+        "@com_github_d4l3k_messagediff//:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
