@@ -86,6 +86,7 @@
     "only_files": {
       "beacon-chain/.*": "",
       "shared/.*": "",
+      "slasher/.*": "",
       "validator/.*": ""
     },
     "exclude_files": {
