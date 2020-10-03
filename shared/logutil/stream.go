@@ -127,6 +127,7 @@ func (ss *StreamServer) sendLogsToClients() {
 	}
 }
 
+// The caller of this function needs to acquire a mutex.
 func (ss *StreamServer) removeClient(conn *websocket.Conn) {
 	delete(ss.clients, conn)
 	if err := conn.Close(); err != nil {
