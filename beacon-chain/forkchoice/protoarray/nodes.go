@@ -65,8 +65,8 @@ func (s *Store) insert(ctx context.Context,
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
-	s.nodeIndicesLock.Lock()
-	defer s.nodeIndicesLock.Unlock()
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
 
 	// Return if the block has been inserted into Store before.
 	if _, ok := s.nodesIndices[root]; ok {
@@ -181,6 +181,7 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become best child.
 func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
+
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
 		return errInvalidNodeIndex
@@ -280,8 +281,8 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
 	defer span.End()
 
-	s.nodeIndicesLock.Lock()
-	defer s.nodeIndicesLock.Unlock()
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
 
 	// The node would have seen finalized root or else it'd
 	// be able to prune it.
