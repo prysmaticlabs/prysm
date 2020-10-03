@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/d4l3k/messagediff"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -41,7 +42,8 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 	if !reflect.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
-		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
+		diff, _ := messagediff.PrettyDiff(expected, actual)
+		loggerFn("%s:%d %s, want: %#v, got: %#v, diff: %s", filepath.Base(file), line, errMsg, expected, actual, diff)
 	}
 }
 
