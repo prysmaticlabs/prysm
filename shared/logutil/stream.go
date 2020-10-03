@@ -108,7 +108,7 @@ func (ss *StreamServer) sendLogsToClients() {
 			ss.lock.Lock()
 			for conn := range ss.clients {
 				if err := conn.WriteMessage(websocket.TextMessage, evt); err != nil {
-					log.Errorf("Could not write websocket message: %v", err)
+					log.WithError(err).Error("Could not write websocket message")
 					ss.removeClient(conn)
 				}
 			}
