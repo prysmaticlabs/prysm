@@ -154,10 +154,30 @@ message WalletResponse {
 message ListAccountsRequest {
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
+
+    // The maximum number of accounts to return in the response.
+    // This field is optional.
+    int32 page_size = 2;
+
+    // A pagination token returned from a previous call to `ListAccounts`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 3;
+
+    // Whether to return all available accounts in a single response.
+    bool all = 4;
 }
 
 message ListAccountsResponse {
     repeated Account accounts = 1;
+
+    // A pagination token returned from a previous call to `ListAccounts`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count matching the request.
+    int32 total_size = 3;
 }
 
 message Account {

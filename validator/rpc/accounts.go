@@ -11,6 +11,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
@@ -66,6 +68,10 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
+			req.PageSize, cmd.Get().MaxRPCPageSize)
+	}
 	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, err
@@ -80,8 +86,25 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 			accounts[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		}
 	}
+	if req.All {
+		return &pb.ListAccountsResponse{
+			Accounts:      accounts,
+			TotalSize:     int32(len(keys)),
+			NextPageToken: "",
+		}, nil
+	}
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(keys))
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not paginate results: %v",
+			err,
+		)
+	}
 	return &pb.ListAccountsResponse{
-		Accounts: accounts,
+		Accounts:      accounts[start:end],
+		TotalSize:     int32(len(keys)),
+		NextPageToken: nextPageToken,
 	}, nil
 }
 
