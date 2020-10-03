@@ -97,7 +97,7 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 
 // HeadSlot returns the slot of the head of the chain.
 func (s *Service) HeadSlot() uint64 {
-	if !s.hasHeadState() {
+	if !s.HasHeadState() {
 		return 0
 	}
 
@@ -131,7 +131,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
 func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
-	if s.hasHeadState() {
+	if s.HasHeadState() {
 		return s.headBlock(), nil
 	}
 
@@ -145,7 +145,7 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.HeadState")
 	defer span.End()
 
-	ok := s.hasHeadState()
+	ok := s.HasHeadState()
 	span.AddAttributes(trace.BoolAttribute("cache_hit", ok))
 
 	if ok {
@@ -157,7 +157,7 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
 func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
-	if !s.hasHeadState() {
+	if !s.HasHeadState() {
 		return []uint64{}, nil
 	}
 	return helpers.ActiveValidatorIndices(s.headState(ctx), epoch)
@@ -165,7 +165,7 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]ui
 
 // HeadSeed returns the seed from the head view of a given epoch.
 func (s *Service) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) {
-	if !s.hasHeadState() {
+	if !s.HasHeadState() {
 		return [32]byte{}, nil
 	}
 
@@ -174,7 +174,7 @@ func (s *Service) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) 
 
 // HeadGenesisValidatorRoot returns genesis validator root of the head state.
 func (s *Service) HeadGenesisValidatorRoot() [32]byte {
-	if !s.hasHeadState() {
+	if !s.HasHeadState() {
 		return [32]byte{}
 	}
 
