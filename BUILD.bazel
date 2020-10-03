@@ -111,6 +111,7 @@ nogo(
         "//tools/analyzers/shadowpredecl:go_tool_library",
         "//tools/analyzers/nop:go_tool_library",
         "//tools/analyzers/slicedirect:go_tool_library",
+        "//tools/analyzers/ineffassign:go_tool_library",
     ] + select({
         # nogo checks that fail with coverage enabled.
         ":coverage_enabled": [],
