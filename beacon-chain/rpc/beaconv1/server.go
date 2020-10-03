@@ -5,11 +5,8 @@ package beaconv1
 
 import (
 	"context"
-	"errors"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -49,9 +46,4 @@ type Server struct {
 	ChainStartChan      chan time.Time
 	StateGen            *stategen.State
 	SyncChecker         sync.Checker
-}
-
-// GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
-	return nil, errors.New("unimplemented")
 }
