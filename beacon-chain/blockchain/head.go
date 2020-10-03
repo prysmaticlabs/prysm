@@ -233,7 +233,7 @@ func (s *Service) HasHeadState() bool {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	return s.head != nil && s.head.state != nil
+	return s.hasHeadState()
 }
 
 // Returns true if head state exists.
