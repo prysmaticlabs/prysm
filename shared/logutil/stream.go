@@ -3,6 +3,7 @@ package logutil
 import (
 	"io"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	lru "github.com/hashicorp/golang-lru"
@@ -15,14 +16,23 @@ import (
 // websocket connections.
 const LogCacheSize = 20
 
-// Compile time interface check.
-var _ = io.Writer(&StreamServer{})
+var (
+	// Compile time interface check.
+	_              = io.Writer(&StreamServer{})
+	streamUpgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin:     func(r *http.Request) bool { return true },
+	}
+)
 
 // StreamServer defines a a websocket server which can receive events from
 // a feed and write them to open websocket connections.
 type StreamServer struct {
-	feed  *event.Feed
-	cache *lru.Cache
+	feed    *event.Feed
+	cache   *lru.Cache
+	clients map[*websocket.Conn]bool
+	lock    sync.RWMutex
 }
 
 // NewLogStreamServer initializes a new stream server capable of
@@ -33,17 +43,13 @@ func NewLogStreamServer() *StreamServer {
 		panic(err) // This can only occur when the LogCacheSize is negative.
 	}
 	ss := &StreamServer{
-		feed:  new(event.Feed),
-		cache: c,
+		feed:    new(event.Feed),
+		cache:   c,
+		clients: make(map[*websocket.Conn]bool),
 	}
 	addLogWriter(ss)
+	go ss.sendLogsToClients()
 	return ss
-}
-
-var streamUpgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 // Handler for new websocket connections to stream new events received
@@ -54,16 +60,6 @@ func (ss *StreamServer) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Errorf("Could not write websocket message: %v", err)
 		return
 	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Errorf("Could not close websocket connection: %v", err)
-		}
-	}()
-
-	ch := make(chan []byte, 1)
-	defer close(ch)
-	sub := ss.feed.Subscribe(ch)
-	defer sub.Unsubscribe()
 
 	// Backfill stream with recent messages.
 	for _, k := range ss.cache.Keys() {
@@ -71,30 +67,16 @@ func (ss *StreamServer) Handler(w http.ResponseWriter, r *http.Request) {
 		if ok {
 			if err := conn.WriteMessage(websocket.TextMessage, d.([]byte)); err != nil {
 				log.Errorf("Could not write websocket message: %v", err)
+				if err := conn.Close(); err != nil {
+					log.Errorf("Could not close websocket connection: %v", err)
+				}
 				return
 			}
 		}
 	}
-
-	for {
-		select {
-		case evt := <-ch:
-			if err := conn.WriteMessage(websocket.TextMessage, evt); err != nil {
-				log.Errorf("Could not write websocket message: %v", err)
-				return
-			}
-		case <-r.Context().Done():
-			if err := conn.WriteMessage(websocket.CloseNormalClosure, []byte("context canceled")); err != nil {
-				log.Error(err)
-				return
-			}
-		case err := <-sub.Err():
-			if err := conn.WriteMessage(websocket.CloseInternalServerErr, []byte(err.Error())); err != nil {
-				log.Error(err)
-				return
-			}
-		}
-	}
+	ss.lock.Lock()
+	ss.clients[conn] = true
+	ss.lock.Unlock()
 }
 
 // Write a binary message and send over the event feed.
@@ -102,4 +84,42 @@ func (ss *StreamServer) Write(p []byte) (n int, err error) {
 	ss.feed.Send(p)
 	ss.cache.Add(rand.NewGenerator().Uint64(), p)
 	return len(p), nil
+}
+
+func (ss *StreamServer) sendLogsToClients() {
+	ch := make(chan []byte, 100)
+	defer close(ch)
+	sub := ss.feed.Subscribe(ch)
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case evt := <-ch:
+			ss.lock.Lock()
+			for conn := range ss.clients {
+				if err := conn.WriteMessage(websocket.TextMessage, evt); err != nil {
+					log.Errorf("Could not write websocket message: %v", err)
+					ss.removeClient(conn)
+				}
+			}
+			ss.lock.Unlock()
+		case err := <-sub.Err():
+			ss.lock.Lock()
+			for conn := range ss.clients {
+				if err := conn.WriteMessage(websocket.CloseInternalServerErr, []byte(err.Error())); err != nil {
+					log.Errorf("Could not write websocket message: %v", err)
+					log.Error(err)
+				}
+				ss.removeClient(conn)
+			}
+			ss.lock.Unlock()
+		}
+	}
+}
+
+func (ss *StreamServer) removeClient(conn *websocket.Conn) {
+	delete(ss.clients, conn)
+	if err := conn.Close(); err != nil {
+		log.Errorf("Could not close websocket connection: %v", err)
+	}
 }
