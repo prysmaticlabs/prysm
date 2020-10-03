@@ -70,7 +70,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	ctx := context.Background()
-	_, err := dr.CreateAccount(ctx, true /*logAccountInfo*/)
+	_, _, err := dr.CreateAccount(ctx)
 	require.NoError(t, err)
 
 	// Assert the new value for next account increased and also
@@ -110,7 +110,7 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	numAccounts := 20
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, _, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
@@ -149,7 +149,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	numAccounts := 2
 	ctx := context.Background()
 	for i := 0; i < numAccounts; i++ {
-		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, _, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
@@ -215,7 +215,7 @@ func TestDerivedKeymanager_RefreshWalletPassword(t *testing.T) {
 	numAccounts := 2
 	ctx := context.Background()
 	for i := 0; i < numAccounts; i++ {
-		_, err := dr.CreateAccount(ctx, false /*logAccountInfo*/)
+		_, _, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 

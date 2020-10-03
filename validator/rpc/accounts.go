@@ -8,8 +8,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -19,11 +21,16 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type accountCreator interface {
+	CreateAccount(ctx context.Context) ([]byte, *ethpb.Deposit_Data, error)
+}
+
 // CreateAccount allows creation of a new account in a user's wallet via RPC.
 func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest) (*pb.DepositDataResponse, error) {
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
+	var creator accountCreator
 	switch s.wallet.KeymanagerKind() {
 	case v2keymanager.Remote:
 		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
@@ -32,24 +39,25 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a direct keymanager")
 		}
-		// Create a new validator account using the specified keymanager.
-		pubKey, err := km.CreateAccount(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create account in wallet")
-		}
-		_ = pubKey
+		creator = km
 	case v2keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
 		}
-		pubKey, err := km.CreateAccount(ctx, false /*logAccountInfo*/)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create account in wallet")
-		}
-		_ = pubKey
+		creator = km
 	}
-	return &pb.DepositDataResponse{}, nil
+	dataList := make([]*pb.DepositDataResponse_DepositData, req.NumAccounts)
+	for i := uint64(0); i < req.NumAccounts; i++ {
+		data, err := createAccountWithDepositData(ctx, creator)
+		if err != nil {
+			return nil, err
+		}
+		dataList[i] = data
+	}
+	return &pb.DepositDataResponse{
+		DepositDataList: dataList,
+	}, nil
 }
 
 // ListAccounts allows retrieval of validating keys and their petnames
@@ -182,5 +190,40 @@ func (s *Server) DeleteAccounts(
 	}
 	return &pb.DeleteAccountsResponse{
 		DeletedKeys: req.PublicKeys,
+	}, nil
+}
+
+func createAccountWithDepositData(ctx context.Context, km accountCreator) (*pb.DepositDataResponse_DepositData, error) {
+	// Create a new validator account using the specified keymanager.
+	pubKey, depositData, err := km.CreateAccount(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create account in wallet")
+	}
+	depositMessage := &pb.DepositMessage{
+		Pubkey:                pubKey,
+		WithdrawalCredentials: depositData.WithdrawalCredentials,
+		Amount:                depositData.Amount,
+	}
+	depositMessageRoot, err := depositMessage.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	depositDataRoot, err := depositData.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	// The reason we utilize this map is to ensure we match the format of
+	// the eth2 deposit cli, which utilizes snake case and hex strings to represent binary data.
+	// Our gRPC gateway instead uses camel case and base64, which is why we use this workaround.
+	data := make(map[string]string)
+	data["pubkey"] = fmt.Sprintf("%x", pubKey)
+	data["withdrawal_credentials"] = fmt.Sprintf("%x", depositData.WithdrawalCredentials)
+	data["amount"] = fmt.Sprintf("%d", depositData.Amount)
+	data["signature"] = fmt.Sprintf("%x", depositData.Signature)
+	data["deposit_message_root"] = fmt.Sprintf("%x", depositMessageRoot)
+	data["deposit_data_root"] = fmt.Sprintf("%x", depositDataRoot)
+	data["fork_version"] = fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion)
+	return &pb.DepositDataResponse_DepositData{
+		Data: data,
 	}, nil
 }
