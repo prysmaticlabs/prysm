@@ -189,7 +189,6 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 	if !s.hasHeadState() {
 		return &ethpb.Eth1Data{}
 	}
-
 	return s.head.state.Eth1Data()
 }
 
