@@ -12,9 +12,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// LogCacheSize is the number of log entries to keep in memory for new
-// websocket connections.
-const LogCacheSize = 20
+const (
+	// LogCacheSize is the number of log entries to keep in memory for new
+	// websocket connections.
+	LogCacheSize = 20
+	// Size for the buffered channel used for receiving log messages. The default
+	// value should be enough to handle most incoming amount of logs without
+	// blocking the thread.
+	logBufferSize = 100
+)
 
 var (
 	// Compile time interface check.
@@ -87,7 +93,7 @@ func (ss *StreamServer) Write(p []byte) (n int, err error) {
 }
 
 func (ss *StreamServer) sendLogsToClients() {
-	ch := make(chan []byte, 100)
+	ch := make(chan []byte, logBufferSize)
 	defer close(ch)
 	sub := ss.feed.Subscribe(ch)
 	defer sub.Unsubscribe()
