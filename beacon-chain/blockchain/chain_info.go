@@ -211,7 +211,6 @@ func (s *Service) GenesisValidatorRoot() [32]byte {
 	if !s.hasHeadState() {
 		return [32]byte{}
 	}
-
 	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
