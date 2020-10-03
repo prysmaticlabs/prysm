@@ -3,6 +3,7 @@ package logutil
 import (
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -28,7 +29,10 @@ var (
 	streamUpgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
-		CheckOrigin:     func(r *http.Request) bool { return true },
+		CheckOrigin: func(r *http.Request) bool {
+			// Only allow requests from localhost.
+			return strings.Contains(r.Host, "localhost")
+		},
 	}
 )
 
