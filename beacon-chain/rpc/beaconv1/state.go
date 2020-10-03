@@ -9,7 +9,7 @@ import (
 )
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
+func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
 	return nil, errors.New("unimplemented")
 }
 
