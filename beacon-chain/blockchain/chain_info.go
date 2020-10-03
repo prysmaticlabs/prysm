@@ -227,7 +227,6 @@ func (s *Service) CurrentFork() *pb.Fork {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
 	}
-
 	return s.head.state.Fork()
 }
 
