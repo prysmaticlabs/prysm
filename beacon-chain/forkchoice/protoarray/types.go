@@ -4,20 +4,21 @@ import "sync"
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store    *Store
-	votes    []Vote   // tracks individual validator's last vote.
-	balances []uint64 // tracks individual validator's last justified balances.
+	store     *Store
+	votes     []Vote // tracks individual validator's last vote.
+	votesLock sync.RWMutex
+	balances  []uint64 // tracks individual validator's last justified balances.
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
-	pruneThreshold  uint64              // do not prune tree unless threshold is reached.
-	justifiedEpoch  uint64              // latest justified epoch in store.
-	finalizedEpoch  uint64              // latest finalized epoch in store.
-	finalizedRoot   [32]byte            // latest finalized root in store.
-	nodes           []*Node             // list of block nodes, each node is a representation of one block.
-	nodesIndices    map[[32]byte]uint64 // the root of block node and the nodes index in the list.
-	nodeIndicesLock sync.RWMutex
+	pruneThreshold uint64              // do not prune tree unless threshold is reached.
+	justifiedEpoch uint64              // latest justified epoch in store.
+	finalizedEpoch uint64              // latest finalized epoch in store.
+	finalizedRoot  [32]byte            // latest finalized root in store.
+	nodes          []*Node             // list of block nodes, each node is a representation of one block.
+	nodesIndices   map[[32]byte]uint64 // the root of block node and the nodes index in the list.
+	nodesLock      sync.RWMutex
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
