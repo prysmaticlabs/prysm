@@ -113,7 +113,7 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 
 // CopyProposerSlashings copies the provided ProposerSlashing array.
 func CopyProposerSlashings(slashings []*ethpb.ProposerSlashing) []*ethpb.ProposerSlashing {
-	if slashings == nil || len(slashings) < 1 {
+	if slashings == nil {
 		return nil
 	}
 	newSlashings := make([]*ethpb.ProposerSlashing, len(slashings))
@@ -162,9 +162,9 @@ func CopyBeaconBlockHeader(header *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHe
 	}
 }
 
-// CopyAttesterSlashings copies the provided AttesterSlashings array (of size 1).
+// CopyAttesterSlashings copies the provided AttesterSlashings array.
 func CopyAttesterSlashings(slashings []*ethpb.AttesterSlashing) []*ethpb.AttesterSlashing {
-	if slashings == nil || len(slashings) < 1 {
+	if slashings == nil {
 		return nil
 	}
 	newSlashings := make([]*ethpb.AttesterSlashing, len(slashings))
