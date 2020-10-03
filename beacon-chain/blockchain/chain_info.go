@@ -183,12 +183,14 @@ func (s *Service) HeadGenesisValidatorRoot() [32]byte {
 
 // HeadETH1Data returns the eth1data of the current head state.
 func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	if !s.hasHeadState() {
 		return &ethpb.Eth1Data{}
 	}
+
+	// read lock starts here because `hasHeadState` calls the same read lock.
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	return s.head.state.Eth1Data()
 }
 
@@ -205,26 +207,30 @@ func (s *Service) GenesisTime() time.Time {
 // GenesisValidatorRoot returns the genesis validator
 // root of the chain.
 func (s *Service) GenesisValidatorRoot() [32]byte {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	if !s.hasHeadState() {
 		return [32]byte{}
 	}
+
+	// read lock starts here because `hasHeadState` calls the same read lock.
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
 func (s *Service) CurrentFork() *pb.Fork {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	if !s.hasHeadState() {
 		return &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
 	}
+
+	// read lock starts here because `hasHeadState` calls the same read lock.
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	return s.head.state.Fork()
 }
 
