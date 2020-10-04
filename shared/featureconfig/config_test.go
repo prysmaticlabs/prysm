@@ -35,9 +35,9 @@ func TestVerifyTestnet(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(&app, set, nil)
-	assert.Equal(t, true, VerifyTestnet(context) != nil)
+	assert.ErrorContains(t, "testnet is not specified", VerifyTestnet(context))
 
 	set.Bool(MedallaTestnet.Name, true, "test")
 	context = cli.NewContext(&app, set, nil)
-	assert.Equal(t, true, VerifyTestnet(context) == nil)
+	assert.NoError(t, VerifyTestnet(context))
 }
