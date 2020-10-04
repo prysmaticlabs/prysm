@@ -125,15 +125,12 @@ func TestGetSlotTickerWithOffset_OK(t *testing.T) {
 			if firstTicked != 1 {
 				t.Fatal("Expected other ticker to tick first")
 			}
-			firstTicked = 2
 			return
 		case <-normalTicker.C():
 			if firstTicked != 0 {
 				t.Fatal("Expected normal ticker to tick first")
 			}
 			firstTicked = 1
-			break
 		}
 	}
-
 }

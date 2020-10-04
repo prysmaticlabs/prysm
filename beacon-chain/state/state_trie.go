@@ -436,9 +436,7 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 }
 
 func (b *BeaconState) resetFieldTrie(index fieldIndex, elements interface{}, length uint64) error {
-	fTrie := b.stateFieldLeaves[index]
-	var err error
-	fTrie, err = NewFieldTrie(index, elements, length)
+	fTrie, err := NewFieldTrie(index, elements, length)
 	if err != nil {
 		return err
 	}

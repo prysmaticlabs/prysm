@@ -112,7 +112,13 @@ func Exists(walletDir string) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not parse wallet directory")
 	}
-	return dirExists, nil
+	isValid, err := IsValid(walletDir)
+	if err == ErrNoWalletFound {
+		return false, nil
+	} else if err != nil {
+		return false, errors.Wrap(err, "could not check if dir is valid")
+	}
+	return dirExists && isValid, nil
 }
 
 // IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `direct`.
@@ -124,6 +130,9 @@ func IsValid(walletDir string) (bool, error) {
 	}
 	f, err := os.Open(expanded)
 	if err != nil {
+		if strings.Contains(err.Error(), "no such file") {
+			return false, nil
+		}
 		return false, err
 	}
 	defer func() {
@@ -184,6 +193,9 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		false, /* Do not confirm password */
 		ValidateExistingPass,
 	)
+	if err != nil {
+		return nil, err
+	}
 	if fileutil.FileExists(filepath.Join(walletDir, HashedPasswordFileName)) {
 		hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(walletDir, HashedPasswordFileName))
 		if err != nil {

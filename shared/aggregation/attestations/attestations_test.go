@@ -26,7 +26,10 @@ func TestMain(m *testing.M) {
 		AttestationAggregationStrategy: string(MaxCoverAggregation),
 	})
 	defer resetCfg()
-	os.Exit(m.Run())
+	code := m.Run()
+	// os.Exit will prevent defer from being called
+	resetCfg()
+	os.Exit(code)
 }
 
 func TestAggregateAttestations_AggregatePair(t *testing.T) {
