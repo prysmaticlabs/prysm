@@ -55,3 +55,10 @@ go_test(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
+
+go_test(
+    name = "go_default_test",
+    srcs = ["server_test.go"],
+    embed = [":go_default_library"],
+    deps = ["@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library"],
+)
