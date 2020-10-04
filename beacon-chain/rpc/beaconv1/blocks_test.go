@@ -5,6 +5,11 @@ import (
 	"reflect"
 	"testing"
 
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 
 	"github.com/golang/protobuf/proto"
@@ -14,6 +19,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -168,6 +174,46 @@ func TestServer_ListBlockHeaders_ParentRoot(t *testing.T) {
 			t.Error("Expected blocks to equal")
 		}
 	}
+}
+
+func TestServer_ProposeBlock_OK(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+
+	genesis := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(context.Background(), genesis), "Could not save genesis block")
+
+	numDeposits := uint64(64)
+	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
+	bsRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+	beaconChainServer := &Server{
+		BeaconDB:          db,
+		ChainStartFetcher: &mockPOW.POWChain{},
+		BlockReceiver:     c,
+		HeadFetcher:       c,
+		BlockNotifier:     c.BlockNotifier(),
+		Broadcaster:       mockp2p.NewTestP2P(t),
+	}
+	req := testutil.NewBeaconBlock()
+	req.Block.Slot = 5
+	req.Block.ParentRoot = bsRoot[:]
+	v1Block, err := v1alpha1ToV1Block(req)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, req))
+	blockReq := &ethpb.BeaconBlockContainer{
+		Message:   v1Block.Block,
+		Signature: v1Block.Signature,
+	}
+	_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
+	assert.NoError(t, err, "Could not propose block correctly")
 }
 
 func TestServer_GetBlock_GenesisRoot(t *testing.T) {
