@@ -112,8 +112,7 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 // actions for a block post-transition.
 func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
-	cleanup := span.End
-	defer cleanup()
+	defer span.End()
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
 	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
@@ -145,7 +144,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 
 	if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
 		// log.Fatalf will prevent defer from being called
-		cleanup()
+		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
 		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 	}
