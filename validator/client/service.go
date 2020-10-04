@@ -217,12 +217,15 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		if v.useWeb {
 			initializedChan := make(chan *wallet.Wallet)
 			sub := v.walletInitializedFeed.Subscribe(initializedChan)
-			defer sub.Unsubscribe()
+			cleanup := sub.Unsubscribe
+			defer cleanup()
 			w := <-initializedChan
 			keyManagerV2, err := w.InitializeKeymanager(
 				ctx, true, /* skipMnemonicConfirm */
 			)
 			if err != nil {
+				// log.Fatalf will prevent defer from being called
+				cleanup()
 				log.Fatalf("Could not read keymanager for wallet: %v", err)
 			}
 			v.keyManagerV2 = keyManagerV2
