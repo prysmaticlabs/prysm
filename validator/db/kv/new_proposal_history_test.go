@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -135,5 +137,40 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 			require.NoError(t, err, "Failed to get proposal history")
 			require.DeepEqual(t, signedRoot, sr, "Unexpected difference in bytes for epoch %d", slot)
 		}
+	}
+}
+
+func TestStore_ImportProposalHistory(t *testing.T) {
+	pubkey := [48]byte{3}
+	ctx := context.Background()
+	db := setupDB(t, [][48]byte{pubkey})
+	tests := []struct {
+		slot uint64
+	}{
+		{
+			slot: 0,
+		},
+		{
+			slot: 100,
+		},
+		{
+			slot: 10000,
+		},
+		{
+			slot: 105011,
+		},
+	}
+	for _, tt := range tests {
+		slotBitlist := make(bitfield.Bitlist, params.BeaconConfig().SlotsPerEpoch/8+1)
+		slotBitlist.SetBitAt(tt.slot%params.BeaconConfig().SlotsPerEpoch, true)
+		err := db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(tt.slot), slotBitlist)
+		require.NoError(t, err)
+	}
+	err := db.ImportProposalHistory(ctx)
+	require.NoError(t, err)
+	for _, tt := range tests {
+		root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], tt.slot)
+		require.NoError(t, err)
+		require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root)
 	}
 }
