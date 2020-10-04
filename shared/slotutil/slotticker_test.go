@@ -131,8 +131,6 @@ func TestGetSlotTickerWithOffset_OK(t *testing.T) {
 				t.Fatal("Expected normal ticker to tick first")
 			}
 			firstTicked = 1
-			break
 		}
 	}
-
 }
