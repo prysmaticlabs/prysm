@@ -58,7 +58,7 @@ func TestGetTargetData(t *testing.T) {
 		Source:      0,
 		SigningRoot: bytesutil.PadTo([]byte{}, 32),
 	}, td)
-	td, err = getTargetData(ctx, ha, 1)
+	_, err = getTargetData(ctx, ha, 1)
 	require.ErrorContains(t, "is smaller then the requested target location", err)
 }
 
@@ -143,7 +143,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := setupDB(t, pubkeys)
 
-	historyForPubKeys, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
+	_, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
 	setAttHistoryForPubKeys := make(map[[48]byte][]byte)
@@ -161,7 +161,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	}
 	err = db.SaveAttestationHistoryNewForPubKeys(context.Background(), setAttHistoryForPubKeys)
 	require.NoError(t, err)
-	historyForPubKeys, err = db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
+	historyForPubKeys, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 	require.DeepEqual(t, setAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
