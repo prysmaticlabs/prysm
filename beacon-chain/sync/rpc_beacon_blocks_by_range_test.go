@@ -434,7 +434,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 			name: "Valid Request",
 			req: &pb.BeaconBlocksByRangeRequest{
 				Step:      1,
-				Count:     uint64(params.BeaconNetworkConfig().MaxRequestBlocks) - 1,
+				Count:     params.BeaconNetworkConfig().MaxRequestBlocks - 1,
 				StartSlot: 50,
 			},
 			errorToLog: "validation failed with valid params",

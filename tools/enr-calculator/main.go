@@ -39,7 +39,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	ecdsaPrivKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
+	ecdsaPrivKey := (*ecdsa.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey))
 
 	if net.ParseIP(*ipAddr).To4() == nil {
 		log.Fatalf("Invalid ipv4 address given: %v\n", err)

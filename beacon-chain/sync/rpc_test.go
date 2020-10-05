@@ -35,7 +35,7 @@ func expectFailure(t *testing.T, expectedCode uint8, expectedErrorMsg string, st
 	code, errMsg, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	require.NoError(t, err)
 	require.NotEqual(t, uint8(0), code, "Expected request to fail but got a 0 response code")
-	require.Equal(t, uint8(expectedCode), code, "Received incorrect response code")
+	require.Equal(t, expectedCode, code, "Received incorrect response code")
 	require.Equal(t, expectedErrorMsg, errMsg)
 }
 

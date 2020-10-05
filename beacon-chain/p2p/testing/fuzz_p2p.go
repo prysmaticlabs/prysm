@@ -48,7 +48,7 @@ func (p *FakeP2P) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {
 
 // PeerID -- fake.
 func (p *FakeP2P) PeerID() peer.ID {
-	return peer.ID("fake")
+	return "fake"
 }
 
 // ENR returns the enr of the local peer.
