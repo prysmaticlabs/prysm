@@ -369,13 +369,16 @@ func (s *Service) pingPeers() {
 func (s *Service) awaitStateInitialized() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
+	cleanup := stateSub.Unsubscribe
+	defer cleanup()
 	for {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
+					// log.Fatalf will prevent defer from being called
+					cleanup()
 					log.Fatalf("Received wrong data over state initialized feed: %v", data)
 				}
 				s.genesisTime = data.StartTime
