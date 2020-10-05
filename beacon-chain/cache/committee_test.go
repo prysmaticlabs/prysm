@@ -87,35 +87,6 @@ func TestCommitteeCache_ActiveCount(t *testing.T) {
 	assert.Equal(t, len(item.SortedIndices), count)
 }
 
-func TestCommitteeCache_AddProposerIndicesList(t *testing.T) {
-	cache := NewCommitteesCache()
-	seed := [32]byte{'A'}
-	indices, err := cache.ProposerIndices(seed)
-	require.NoError(t, err)
-	if indices != nil {
-		t.Error("Expected committee count not to exist in empty cache")
-	}
-	require.NoError(t, cache.AddProposerIndicesList(seed, indices))
-
-	received, err := cache.ProposerIndices(seed)
-	require.NoError(t, err)
-	assert.DeepEqual(t, received, indices)
-
-	item := &Committees{Seed: [32]byte{'B'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
-	require.NoError(t, cache.AddCommitteeShuffledList(item))
-
-	indices, err = cache.ProposerIndices(item.Seed)
-	require.NoError(t, err)
-	if indices != nil {
-		t.Error("Expected committee count not to exist in empty cache")
-	}
-	require.NoError(t, cache.AddProposerIndicesList(item.Seed, indices))
-
-	received, err = cache.ProposerIndices(item.Seed)
-	require.NoError(t, err)
-	assert.DeepEqual(t, received, indices)
-}
-
 func TestCommitteeCache_CanRotate(t *testing.T) {
 	cache := NewCommitteesCache()
 
@@ -150,7 +121,6 @@ func TestCommitteeCacheOutOfRange(t *testing.T) {
 		Seed:            seed,
 		ShuffledIndices: []uint64{0},
 		SortedIndices:   []uint64{},
-		ProposerIndices: []uint64{},
 	})
 	require.NoError(t, err)
 
