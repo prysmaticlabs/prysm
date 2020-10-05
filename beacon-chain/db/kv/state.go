@@ -18,7 +18,7 @@ import (
 func (s *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
-	var s *pb.BeaconState
+	var st *pb.BeaconState
 	enc, err := s.stateBytes(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -28,18 +28,18 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSta
 		return nil, nil
 	}
 
-	s, err = createState(ctx, enc)
+	st, err = createState(ctx, enc)
 	if err != nil {
 		return nil, err
 	}
-	return state.InitializeFromProtoUnsafe(s)
+	return state.InitializeFromProtoUnsafe(st)
 }
 
 // HeadState returns the latest canonical state in beacon chain.
 func (s *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
-	var s *pb.BeaconState
+	var st *pb.BeaconState
 	err := s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve head block's signing root from blocks bucket,
 		// to look up what the head state is.
@@ -53,27 +53,27 @@ func (s *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 		}
 
 		var err error
-		s, err = createState(ctx, enc)
+		st, err = createState(ctx, enc)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	if s == nil {
+	if st == nil {
 		return nil, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("exists", s != nil))
-	if s != nil {
-		span.AddAttributes(trace.Int64Attribute("slot", int64(s.Slot)))
+	if st != nil {
+		span.AddAttributes(trace.Int64Attribute("slot", int64(st.Slot)))
 	}
-	return state.InitializeFromProtoUnsafe(s)
+	return state.InitializeFromProtoUnsafe(st)
 }
 
 // GenesisState returns the genesis state in beacon chain.
 func (s *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
-	var s *pb.BeaconState
+	var st *pb.BeaconState
 	err := s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
@@ -87,16 +87,16 @@ func (s *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 		}
 
 		var err error
-		s, err = createState(ctx, enc)
+		st, err = createState(ctx, enc)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	if s == nil {
+	if st == nil {
 		return nil, nil
 	}
-	return state.InitializeFromProtoUnsafe(s)
+	return state.InitializeFromProtoUnsafe(st)
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
