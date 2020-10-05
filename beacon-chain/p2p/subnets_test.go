@@ -23,7 +23,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port), LocalIP: ipAddr.String()},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -47,6 +47,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 			Discv5BootStrapAddr: []string{bootNode.String()},
 			MaxPeers:            30,
 			UDPPort:             uint(port),
+			LocalIP:             ipAddr.String(),
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
