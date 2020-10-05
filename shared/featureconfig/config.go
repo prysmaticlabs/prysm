@@ -22,7 +22,6 @@ package featureconfig
 import (
 	"sync"
 
-	"errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -133,7 +132,9 @@ func VerifyTestnet(ctx *cli.Context) error {
 		!ctx.Bool(MedallaTestnet.Name) &&
 		!ctx.Bool(SpadinaTestnet.Name) &&
 		!ctx.Bool(ZinkenTestnet.Name) {
-		return errors.New("testnet is not specified, required: --<testnet-name>")
+			// temporary warning till next release
+			log.Warn("--<testnet> flag is not specified, this will become required from next release!")
+			ctx.Set(string(MedallaTestnet.Name), "")
 	}
 	return nil
 }
