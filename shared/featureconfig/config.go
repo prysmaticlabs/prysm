@@ -136,7 +136,7 @@ func VerifyTestnet(ctx *cli.Context) error {
 		// temporary warning till next release
 		log.Warn("--<testnet> flag is not specified (default: medalla), this will become required from next release! ")
 		if err := ctx.Set(string(MedallaTestnet.Name), "true"); err != nil {
-			errors.New("error setting default testnet flag")
+			return errors.New("error setting default testnet flag")
 		}
 	}
 	return nil
