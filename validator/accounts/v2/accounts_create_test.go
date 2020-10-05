@@ -106,7 +106,7 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 
 	// Now we change the password to "SecoNDxyzPass__9!@#"
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("SecoNDxyzPass__9!@#"), os.ModePerm))
-	w, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
+	_, err = wallet.OpenWalletOrElseCli(cliCtx, CreateAndSaveWalletCli)
 	require.ErrorContains(t, "wrong password for wallet", err)
 
 	require.NoError(t, ioutil.WriteFile(walletPasswordFile, []byte("Pa$sW0rD0__Fo0xPr"), os.ModePerm))

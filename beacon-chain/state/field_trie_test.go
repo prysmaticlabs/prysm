@@ -21,6 +21,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
+	require.NoError(t, err)
 	assert.Equal(t, root, newRoot)
 }
 

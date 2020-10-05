@@ -115,13 +115,13 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		return nil, err
 	}
 	if cfg.NumAccounts == 1 {
-		if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
+		if _, _, err := km.CreateAccount(ctx); err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
 		return w, nil
 	}
 	for i := int64(0); i < cfg.NumAccounts; i++ {
-		if _, err := km.CreateAccount(ctx, false /*logAccountInfo*/); err != nil {
+		if _, _, err := km.CreateAccount(ctx); err != nil {
 			return nil, errors.Wrap(err, "could not create account in wallet")
 		}
 	}
