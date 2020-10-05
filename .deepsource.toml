@@ -4,6 +4,6 @@ version = 1
 name = "go"
 enabled = true
 
-  [analyzers.meta]
-  import_paths = ["github.com/prysmaticlabs/prysm"]
+[analyzers.meta]
+import_paths = ["github.com/prysmaticlabs/prysm"]
 
