@@ -95,10 +95,6 @@ func main() {
 			}
 		}
 
-		if err := featureconfig.VerifyTestnet(ctx); err != nil {
-			return err
-		}
-
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":

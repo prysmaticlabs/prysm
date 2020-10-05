@@ -304,10 +304,6 @@ contract in order to activate the validator client`,
 		}
 		flags.ComplainOnDeprecatedFlags(ctx)
 
-		if err := featureconfig.VerifyTestnet(ctx); err != nil {
-			return err
-		}
-
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":

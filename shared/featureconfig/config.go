@@ -20,13 +20,11 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
-	"sync"
-
-	"errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"sync"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -125,23 +123,6 @@ func InitWithReset(c *Flags) func() {
 	return resetFunc
 }
 
-// VerifyTestnet checks for required testnet flag
-func VerifyTestnet(ctx *cli.Context) error {
-	if !ctx.Bool(cmd.E2EConfigFlag.Name) &&
-		!ctx.Bool(AltonaTestnet.Name) &&
-		!ctx.Bool(OnyxTestnet.Name) &&
-		!ctx.Bool(MedallaTestnet.Name) &&
-		!ctx.Bool(SpadinaTestnet.Name) &&
-		!ctx.Bool(ZinkenTestnet.Name) {
-		// temporary warning till next release
-		log.Warn("--<testnet> flag is not specified (default: medalla), this will become required from next release! ")
-		if err := ctx.Set(string(MedallaTestnet.Name), "true"); err != nil {
-			return errors.New("error setting default testnet flag")
-		}
-	}
-	return nil
-}
-
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
@@ -150,36 +131,39 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
+
 	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Node on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(OnyxTestnet.Name) {
+	} else if ctx.Bool(OnyxTestnet.Name) {
 		log.Warn("Running Node on Onyx Testnet")
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
-	}
-	if ctx.Bool(MedallaTestnet.Name) {
+	} else if ctx.Bool(MedallaTestnet.Name) {
 		log.Warn("Running Node on Medalla Testnet")
 		params.UseMedallaConfig()
 		params.UseMedallaNetworkConfig()
 		cfg.MedallaTestnet = true
-	}
-	if ctx.Bool(SpadinaTestnet.Name) {
+	} else if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
-	}
-	if ctx.Bool(ZinkenTestnet.Name) {
+	} else if ctx.Bool(ZinkenTestnet.Name) {
 		log.Warn("Running Node on Zinken Testnet")
 		params.UseZinkenConfig()
 		params.UseZinkenNetworkConfig()
 		cfg.ZinkenTestnet = true
+	} else {
+		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
 	}
+
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
@@ -321,31 +305,33 @@ func ConfigureSlasher(ctx *cli.Context) {
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(OnyxTestnet.Name) {
+	} else if ctx.Bool(OnyxTestnet.Name) {
 		log.Warn("Running Node on Onyx Testnet")
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
-	}
-	if ctx.Bool(MedallaTestnet.Name) {
+	} else if ctx.Bool(MedallaTestnet.Name) {
 		log.Warn("Running Node on Medalla Testnet")
 		params.UseMedallaConfig()
 		params.UseMedallaNetworkConfig()
 		cfg.MedallaTestnet = true
-	}
-	if ctx.Bool(SpadinaTestnet.Name) {
+	} else if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
-	}
-	if ctx.Bool(ZinkenTestnet.Name) {
+	} else if ctx.Bool(ZinkenTestnet.Name) {
 		log.Warn("Running Node on Zinken Testnet")
 		params.UseZinkenConfig()
 		params.UseZinkenNetworkConfig()
 		cfg.ZinkenTestnet = true
+	} else {
+		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
 	}
+
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
 		cfg.DisableLookback = true
@@ -363,31 +349,33 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(OnyxTestnet.Name) {
+	} else if ctx.Bool(OnyxTestnet.Name) {
 		log.Warn("Running Node on Onyx Testnet")
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
-	}
-	if ctx.Bool(MedallaTestnet.Name) {
+	} else if ctx.Bool(MedallaTestnet.Name) {
 		log.Warn("Running Node on Medalla Testnet")
 		params.UseMedallaConfig()
 		params.UseMedallaNetworkConfig()
 		cfg.MedallaTestnet = true
-	}
-	if ctx.Bool(SpadinaTestnet.Name) {
+	} else if ctx.Bool(SpadinaTestnet.Name) {
 		log.Warn("Running Node on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
-	}
-	if ctx.Bool(ZinkenTestnet.Name) {
+	} else if ctx.Bool(ZinkenTestnet.Name) {
 		log.Warn("Running Node on Zinken Testnet")
 		params.UseZinkenConfig()
 		params.UseZinkenNetworkConfig()
 		cfg.ZinkenTestnet = true
+	} else {
+		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
 	}
+
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true
 	} else {
