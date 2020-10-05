@@ -123,6 +123,7 @@ func InitWithReset(c *Flags) func() {
 	return resetFunc
 }
 
+// ConfigureTestnet sets the config according to specified testnet flag
 func ConfigureTestnet(ctx *cli.Context, cfg *Flags) {
 	if ctx.Bool(AltonaTestnet.Name) {
 		log.Warn("Running Validator on Altona Testnet")
