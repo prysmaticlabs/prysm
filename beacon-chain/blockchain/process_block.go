@@ -246,7 +246,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		if helpers.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(preState); err != nil {
-				return nil, nil, fmt.Errorf("could not handle epoch boundary state")
+				return nil, nil, fmt.Errorf("could not handle epoch boundary state: %v", err)
 			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()

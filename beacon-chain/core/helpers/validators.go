@@ -175,20 +175,28 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
+	if e != params.BeaconConfig().GenesisEpoch {
+		s, err := EndSlot(PrevEpoch(state))
+		if err != nil {
+			return 0, err
+		}
+		r, err := BlockRootAtSlot(state, s)
+		if err != nil {
+			return 0, err
+		}
+		proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
+		if err != nil {
+			return 0, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if proposerIndices != nil {
+			return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+		}
+		if err := UpdateProposerIndicesInCache(state, e); err != nil {
+			return 0, errors.Wrap(err, "could not update committee cache")
+		}
+	}
 
-	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not generate seed")
-	}
-	proposerIndices, err := committeeCache.ProposerIndices(seed)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not interface with committee cache")
-	}
-	if proposerIndices != nil {
-		return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
-	}
-
-	seed, err = Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
@@ -199,10 +207,6 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	indices, err := ActiveValidatorIndices(state, e)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices")
-	}
-
-	if err := UpdateProposerIndicesInCache(state, e); err != nil {
-		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
 	return ComputeProposerIndex(state, indices, seedWithSlotHash)

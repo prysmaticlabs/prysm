@@ -107,6 +107,30 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	}
 }
 
+func TestEpochEndSlot_OK(t *testing.T) {
+	tests := []struct {
+		epoch     uint64
+		startSlot uint64
+		error     bool
+	}{
+		{epoch: 0, startSlot: 1*params.BeaconConfig().SlotsPerEpoch - 1, error: false},
+		{epoch: 1, startSlot: 2*params.BeaconConfig().SlotsPerEpoch - 1, error: false},
+		{epoch: 10, startSlot: 11*params.BeaconConfig().SlotsPerEpoch - 1, error: false},
+		{epoch: 1 << 59, startSlot: 1 << 63, error: true},
+		{epoch: 1 << 60, startSlot: 1 << 63, error: true},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{Slot: tt.epoch}
+		ss, err := EndSlot(tt.epoch)
+		if !tt.error {
+			require.NoError(t, err)
+			assert.Equal(t, tt.startSlot, ss, "StartSlot(%d)", state.Slot)
+		} else {
+			require.ErrorContains(t, "start slot calculation overflow", err)
+		}
+	}
+}
+
 func TestIsEpochStart(t *testing.T) {
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 
