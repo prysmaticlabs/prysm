@@ -22,11 +22,11 @@ package featureconfig
 import (
 	"sync"
 
+	"errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"errors"
 )
 
 var log = logrus.WithField("prefix", "flags")
