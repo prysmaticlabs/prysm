@@ -123,30 +123,30 @@ func InitWithReset(c *Flags) func() {
 	return resetFunc
 }
 
-// ConfigureTestnet sets the config according to specified testnet flag
-func ConfigureTestnet(ctx *cli.Context, cfg *Flags) {
+// configureTestnet sets the config according to specified testnet flag
+func configureTestnet(ctx *cli.Context, cfg *Flags) {
 	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running Validator on Altona Testnet")
+		log.Warn("Running on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
 	} else if ctx.Bool(OnyxTestnet.Name) {
-		log.Warn("Running Node on Onyx Testnet")
+		log.Warn("Running on Onyx Testnet")
 		params.UseOnyxConfig()
 		params.UseOnyxNetworkConfig()
 		cfg.OnyxTestnet = true
 	} else if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running Node on Medalla Testnet")
+		log.Warn("Running on Medalla Testnet")
 		params.UseMedallaConfig()
 		params.UseMedallaNetworkConfig()
 		cfg.MedallaTestnet = true
 	} else if ctx.Bool(SpadinaTestnet.Name) {
-		log.Warn("Running Node on Spadina Testnet")
+		log.Warn("Running on Spadina Testnet")
 		params.UseSpadinaConfig()
 		params.UseSpadinaNetworkConfig()
 		cfg.SpadinaTestnet = true
 	} else if ctx.Bool(ZinkenTestnet.Name) {
-		log.Warn("Running Node on Zinken Testnet")
+		log.Warn("Running on Zinken Testnet")
 		params.UseZinkenConfig()
 		params.UseZinkenNetworkConfig()
 		cfg.ZinkenTestnet = true
