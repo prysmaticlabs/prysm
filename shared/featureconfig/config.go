@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"errors"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -133,8 +134,10 @@ func VerifyTestnet(ctx *cli.Context) error {
 		!ctx.Bool(SpadinaTestnet.Name) &&
 		!ctx.Bool(ZinkenTestnet.Name) {
 		// temporary warning till next release
-		log.Warn("--<testnet> flag is not specified, this will become required from next release!")
-		ctx.Set(string(MedallaTestnet.Name), "true")
+		log.Warn("--<testnet> flag is not specified (default: medalla), this will become required from next release! ")
+		if err := ctx.Set(string(MedallaTestnet.Name), "true"); err != nil {
+			errors.New("error setting default testnet flag")
+		}
 	}
 	return nil
 }
