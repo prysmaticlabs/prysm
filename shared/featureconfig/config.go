@@ -21,6 +21,7 @@ package featureconfig
 
 import (
 	"sync"
+
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
