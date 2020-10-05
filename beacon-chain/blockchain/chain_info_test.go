@@ -111,7 +111,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	c.head = &head{root: [32]byte{'A'}}
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, [32]byte{'A'}, r)
+	assert.Equal(t, [32]byte{'A'}, bytesutil.ToBytes32(r))
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
