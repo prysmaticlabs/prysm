@@ -31,7 +31,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 		accountsStore: &AccountStore{},
 	}
 	ctx := context.Background()
-	createdPubKey, err := dr.CreateAccount(ctx)
+	createdPubKey, _, err := dr.CreateAccount(ctx)
 	require.NoError(t, err)
 
 	// Ensure the keystore file was written to the wallet
@@ -77,7 +77,7 @@ func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
 	numAccounts := 5
 	ctx := context.Background()
 	for i := 0; i < numAccounts; i++ {
-		_, err := dr.CreateAccount(ctx)
+		_, _, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 	accounts, err := dr.FetchValidatingPublicKeys(ctx)
@@ -161,7 +161,7 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 	ctx := context.Background()
 	numAccounts := 10
 	for i := 0; i < numAccounts; i++ {
-		_, err := dr.CreateAccount(ctx)
+		_, _, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 
@@ -245,7 +245,7 @@ func TestDirectKeymanager_RefreshWalletPassword(t *testing.T) {
 	ctx := context.Background()
 	numAccounts := 5
 	for i := 0; i < numAccounts; i++ {
-		_, err := dr.CreateAccount(ctx)
+		_, _, err := dr.CreateAccount(ctx)
 		require.NoError(t, err)
 	}
 

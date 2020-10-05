@@ -187,5 +187,6 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	}
 
 	res, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.BHost.ID())
-	assert.Equal(t, int(1), res, "Peer wasn't penalised for providing a bad sequence number")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, res, "Peer wasn't penalised for providing a bad sequence number")
 }

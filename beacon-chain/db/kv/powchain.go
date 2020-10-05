@@ -2,9 +2,11 @@ package kv
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -14,7 +16,13 @@ func (kv *Store) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SavePowchainData")
 	defer span.End()
 
-	return kv.db.Update(func(tx *bolt.Tx) error {
+	if data == nil {
+		err := errors.New("cannot save nil eth1data")
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+
+	err := kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(powchainBucket)
 		enc, err := proto.Marshal(data)
 		if err != nil {
@@ -22,6 +30,8 @@ func (kv *Store) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) e
 		}
 		return bkt.Put(powchainDataKey, enc)
 	})
+	traceutil.AnnotateError(span, err)
+	return err
 }
 
 // PowchainData retrieves the powchain data.

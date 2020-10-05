@@ -83,7 +83,11 @@ func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*geth
 			Number: big.NewInt(0),
 		}, nil
 	}
-	return g.backend.Blockchain().GetHeaderByHash(hash), nil
+	header := g.backend.Blockchain().GetHeaderByHash(hash)
+	if header == nil {
+		return nil, errors.New("nil header returned")
+	}
+	return header, nil
 
 }
 
@@ -94,10 +98,16 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 			Time:   150,
 		}, nil
 	}
+	var header *gethTypes.Header
 	if number == nil {
-		return g.backend.Blockchain().CurrentHeader(), nil
+		header = g.backend.Blockchain().CurrentHeader()
+	} else {
+		header = g.backend.Blockchain().GetHeaderByNumber(number.Uint64())
 	}
-	return g.backend.Blockchain().GetHeaderByNumber(number.Uint64()), nil
+	if header == nil {
+		return nil, errors.New("nil header returned")
+	}
+	return header, nil
 }
 
 func (g *goodFetcher) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
@@ -319,25 +329,6 @@ func TestFollowBlock_OK(t *testing.T) {
 	assert.Equal(t, expectedHeight, h, "Unexpected block height")
 }
 
-func TestInitDataFromContract_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
-	})
-	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	web3Service = setDefaultMocks(web3Service)
-	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
-	require.NoError(t, err)
-
-	testAcc.Backend.Commit()
-	err = web3Service.initDataFromContract()
-	require.NoError(t, err, "Could not init from deposit contract")
-}
-
 func TestStatus(t *testing.T) {
 	now := time.Now()
 
@@ -377,4 +368,55 @@ func TestHandlePanic_OK(t *testing.T) {
 	web3Service.eth1DataFetcher = nil
 	web3Service.processBlockHeader(nil)
 	require.LogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
+}
+
+func TestLogTillGenesis_OK(t *testing.T) {
+	// Reset the var at the end of the test.
+	currPeriod := logPeriod
+	logPeriod = 1 * time.Second
+	defer func() {
+		logPeriod = currPeriod
+	}()
+
+	orgConfig := params.BeaconConfig().Copy()
+	cfg := params.BeaconConfig()
+	cfg.Eth1FollowDistance = 5
+	params.OverrideBeaconConfig(cfg)
+	defer func() {
+		params.OverrideBeaconConfig(orgConfig)
+	}()
+
+	orgNetworkConfig := params.BeaconNetworkConfig().Copy()
+	nCfg := params.BeaconNetworkConfig()
+	nCfg.ContractDeploymentBlock = 0
+	params.OverrideBeaconNetworkConfig(nCfg)
+	defer func() {
+		params.OverrideBeaconNetworkConfig(orgNetworkConfig)
+	}()
+
+	hook := logTest.NewGlobal()
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	beaconDB, _ := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	require.NoError(t, err)
+
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	for i := 0; i < 30; i++ {
+		testAcc.Backend.Commit()
+	}
+	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: 0}
+	// Spin off to a separate routine
+	go web3Service.run(web3Service.ctx.Done())
+	// Wait for 2 seconds so that the
+	// info is logged.
+	time.Sleep(2 * time.Second)
+	web3Service.cancel()
+	assert.LogsContain(t, hook, "Currently waiting for chainstart")
 }

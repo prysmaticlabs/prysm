@@ -3,7 +3,6 @@ package direct
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
@@ -208,7 +207,7 @@ func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
 // stores the generated keystore.json file in the wallet and additionally
 // generates withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, *ethpb.Deposit_Data, error) {
 	// Create a petname for an account from its public key and write its password to disk.
 	validatingKey := bls.RandKey()
 	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
@@ -216,7 +215,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, error) {
 	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, validatingKey.PublicKey().Marshal())
 	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create accounts keystore")
+		return nil, nil, errors.Wrap(err, "could not create accounts keystore")
 	}
 
 	// Generate a withdrawal key and confirm user
@@ -239,15 +238,18 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, error) {
 	// and write associated deposit data to disk.
 	tx, data, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate deposit transaction data")
+		return nil, nil, errors.Wrap(err, "could not generate deposit transaction data")
 	}
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
 		nil, /*forkVersion*/
 		nil, /*genesisValidatorsRoot*/
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
+		return nil, nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
 	}
 
 	// Log the deposit transaction data to the user.
@@ -260,10 +262,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, error) {
 	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(newStore, "", "\t")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
-		return nil, errors.Wrap(err, "could not write keystore file for accounts")
+		return nil, nil, errors.Wrap(err, "could not write keystore file for accounts")
 	}
 
 	log.WithFields(logrus.Fields{
@@ -272,9 +274,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, error) {
 
 	err = dr.initializeKeysCachesFromKeystore()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize keys caches")
+		return nil, nil, errors.Wrap(err, "failed to initialize keys caches")
 	}
-	return validatingKey.PublicKey().Marshal(), nil
+	return validatingKey.PublicKey().Marshal(), data, nil
 }
 
 // DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
@@ -385,13 +387,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-		// If the password fails for an individual account, we ask the user to input
-		// that individual account's password until it succeeds.
-		enc, password, err = askUntilPasswordConfirms(decryptor, keystoreFile)
-		if err != nil {
-			return errors.Wrap(err, "could not confirm password via prompt")
-		}
-		dr.wallet.SetPassword(password) // Write the correct password to the wallet.
+		return errors.Wrap(err, "wrong password for wallet entered")
 	} else if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
@@ -473,38 +469,4 @@ func (dr *Keymanager) createAccountsKeystore(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
-}
-
-func askUntilPasswordConfirms(
-	decryptor *keystorev4.Encryptor, keystore *v2keymanager.Keystore,
-) ([]byte, string, error) {
-	au := aurora.NewAurora(true)
-	// Loop asking for the password until the user enters it correctly.
-	var secretKey []byte
-	var password string
-	var err error
-	publicKey, err := hex.DecodeString(keystore.Pubkey)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "could not decode public key")
-	}
-	formattedPublicKey := fmt.Sprintf("%#x", bytesutil.Trunc(publicKey))
-	for {
-		password, err = promptutil.PasswordPrompt(
-			fmt.Sprintf("\nPlease try again, incorrect password for account %s", au.BrightGreen(formattedPublicKey)),
-			promptutil.NotEmpty,
-		)
-		if err != nil {
-			return nil, "", fmt.Errorf("could not read account password: %v", err)
-		}
-		secretKey, err = decryptor.Decrypt(keystore.Crypto, password)
-		if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-			fmt.Print(au.Red("Incorrect password entered, please try again"))
-			continue
-		}
-		if err != nil {
-			return nil, "", err
-		}
-		break
-	}
-	return secretKey, password, nil
 }

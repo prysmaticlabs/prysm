@@ -41,6 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -90,6 +91,9 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
+
+	// Warn if user's platform is not supported
+	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
@@ -435,6 +439,12 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
+	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
+	bRoot, epoch, err := convertWspInput(wsp)
+	if err != nil {
+		return err
+	}
+
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
 		BeaconDB:          b.db,
@@ -449,6 +459,8 @@ func (b *BeaconNode) registerBlockchainService() error {
 		ForkChoiceStore:   b.forkChoiceStore,
 		OpsService:        opsService,
 		StateGen:          b.stateGen,
+		WspBlockRoot:      bRoot,
+		WspEpoch:          epoch,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -497,6 +509,8 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
 		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
 	}
+
+	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
 	return b.services.RegisterService(web3Service)
 }
 
@@ -535,12 +549,6 @@ func (b *BeaconNode) registerSyncService() error {
 }
 
 func (b *BeaconNode) registerInitialSyncService() error {
-	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
-	bRoot, epoch, err := convertWspInput(wsp)
-	if err != nil {
-		return err
-	}
-
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -552,8 +560,6 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		P2P:           b.fetchP2P(),
 		StateNotifier: b,
 		BlockNotifier: b,
-		WspBlockRoot:  bRoot,
-		WspEpoch:      epoch,
 	})
 	return b.services.RegisterService(is)
 }

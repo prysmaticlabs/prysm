@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -70,6 +71,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		return nil, err
 	}
 	logrus.SetLevel(level)
+
+	// Warn if user's platform is not supported
+	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
@@ -174,6 +178,10 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 				return errors.Wrap(err, "could not open wallet")
 			}
 			s.wallet = w
+			log.WithFields(logrus.Fields{
+				"wallet":          w.AccountsDir(),
+				"keymanager-kind": w.KeymanagerKind().String(),
+			}).Info("Opened validator wallet")
 			keyManagerV2, err = w.InitializeKeymanager(
 				cliCtx.Context, false, /* skipMnemonicConfirm */
 			)
@@ -217,8 +225,10 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {
@@ -228,11 +238,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if err := s.registerClientService(keyManagerV1, keyManagerV2); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx); err != nil {
-		return err
-	}
-	if err := s.registerRPCGatewayService(cliCtx); err != nil {
-		return err
+	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
+		if err := s.registerRPCService(cliCtx); err != nil {
+			return err
+		}
+		if err := s.registerRPCGatewayService(cliCtx); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -282,8 +294,10 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {

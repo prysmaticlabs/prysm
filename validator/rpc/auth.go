@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -55,19 +56,25 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-	hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName))
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
-	}
-	// Compare the stored hashed password, with the hashed version of the password that was received.
-	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
-		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	if fileutil.FileExists(hashedPasswordPath) {
+		hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
+		}
+		// Compare the stored hashed password, with the hashed version of the password that was received.
+		if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
+			return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+		}
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
 		WalletDir:      defaultWalletPath,
 		WalletPassword: req.Password,
 	}); err != nil {
-		return nil, status.Error(codes.Internal, "Could not initialize wallet")
+		if strings.Contains(err.Error(), "invalid checksum") {
+			return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+		}
+		return nil, status.Errorf(codes.Internal, "Could not initialize wallet: %v", err)
 	}
 	return s.sendAuthResponse()
 }
@@ -104,12 +111,24 @@ func (s *Server) createTokenString() (string, uint64, error) {
 // Initialize a wallet and send it over a global feed.
 func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error {
 	// We first ensure the user has a wallet.
-	if err := wallet.Exists(cfg.WalletDir); err != nil {
-		if errors.Is(err, wallet.ErrNoWalletFound) {
-			return wallet.ErrNoWalletFound
-		}
-		return errors.Wrap(err, "could not check if wallet exists")
+	exists, err := wallet.Exists(cfg.WalletDir)
+	if err != nil {
+		return errors.Wrap(err, wallet.CheckExistsErrMsg)
 	}
+	if !exists {
+		return wallet.ErrNoWalletFound
+	}
+	valid, err := wallet.IsValid(cfg.WalletDir)
+	if err == wallet.ErrNoWalletFound {
+		return wallet.ErrNoWalletFound
+	}
+	if err != nil {
+		return errors.Wrap(err, wallet.CheckValidityErrMsg)
+	}
+	if !valid {
+		return errors.New(wallet.InvalidWalletErrMsg)
+	}
+
 	// We fire an event with the opened wallet over
 	// a global feed signifying wallet initialization.
 	w, err := wallet.OpenWallet(ctx, &wallet.Config{

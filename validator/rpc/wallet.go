@@ -2,11 +2,12 @@ package rpc
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
 	"path/filepath"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
@@ -22,11 +23,43 @@ import (
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
 
+const (
+	checkExistsErrMsg   = "Could not check if wallet exists"
+	checkValidityErrMsg = "Could not check if wallet is valid"
+	noWalletMsg         = "No wallet found at path"
+	invalidWalletMsg    = "Directory does not contain a valid wallet"
+)
+
+// HasWallet checks if a user has created a wallet before as well as whether or not
+// they have used the web UI before to set a wallet password.
+func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletResponse, error) {
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+	}
+	if !exists {
+		return &pb.HasWalletResponse{
+			WalletExists: false,
+		}, nil
+	}
+	return &pb.HasWalletResponse{
+		WalletExists: true,
+	}, nil
+}
+
 // CreateWallet via an API request, allowing a user to save a new
 // derived, direct, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
+	// Currently defaultWalletPath is used as the wallet directory and req's WalletPath is ignored for simplicity
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check for existing wallet: %v", err)
+	}
+	if exists {
+		return nil, status.Error(codes.AlreadyExists, "A wallet already exists at this location.")
+	}
 	switch req.Keymanager {
-	case pb.CreateWalletRequest_DIRECT:
+	case pb.KeymanagerKind_DIRECT:
 		// Needs to unmarshal the keystores from the requests.
 		if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
 			return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
@@ -69,7 +102,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return &pb.WalletResponse{
 			WalletPath: defaultWalletPath,
 		}, nil
-	case pb.CreateWalletRequest_DERIVED:
+	case pb.KeymanagerKind_DERIVED:
 		if req.NumAccounts < 1 {
 			return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
 		}
@@ -95,7 +128,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return &pb.WalletResponse{
 			WalletPath: defaultWalletPath,
 		}, nil
-	case pb.CreateWalletRequest_REMOTE:
+	case pb.KeymanagerKind_REMOTE:
 		return nil, status.Error(codes.Unimplemented, "Remote keymanager not yet supported")
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T not yet supported", req.Keymanager)
@@ -109,17 +142,54 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
-	err := wallet.Exists(defaultWalletPath)
-	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
+	}
+	if !exists {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
+	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
+		return &pb.WalletResponse{}, nil
+	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
+	}
+	if !valid {
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
+	}
+
+	if s.wallet == nil || s.keymanager == nil {
+		// If no wallet is found, we simply return an empty response.
+		return &pb.WalletResponse{}, nil
+	}
+	var keymanagerKind pb.KeymanagerKind
+	switch s.wallet.KeymanagerKind() {
+	case v2keymanager.Derived:
+		keymanagerKind = pb.KeymanagerKind_DERIVED
+	case v2keymanager.Direct:
+		keymanagerKind = pb.KeymanagerKind_DIRECT
+	case v2keymanager.Remote:
+		keymanagerKind = pb.KeymanagerKind_REMOTE
+	}
+	f, err := s.wallet.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not read keymanager config from disk: %v", err)
+	}
+	encoded, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not parse keymanager config: %v", err)
+	}
+	var config map[string]string
+	if err := json.Unmarshal(encoded, &config); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
 	}
 	return &pb.WalletResponse{
 		WalletPath:       defaultWalletPath,
-		KeymanagerConfig: nil, // Fill in by reading from disk.
+		KeymanagerKind:   keymanagerKind,
+		KeymanagerConfig: config,
 	}, nil
 }
 
@@ -145,12 +215,22 @@ func (s *Server) GenerateMnemonic(ctx context.Context, _ *ptypes.Empty) (*pb.Gen
 // ChangePassword allows changing a wallet password via the API as
 // an authenticated method.
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
-	err := wallet.Exists(defaultWalletPath)
-	if err != nil && errors.Is(err, wallet.ErrNoWalletFound) {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	exists, err := wallet.Exists(defaultWalletPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
+	}
+	if !exists {
+		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
+	}
+	valid, err := wallet.IsValid(defaultWalletPath)
+	if err == wallet.ErrNoWalletFound {
+		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
+		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
+	}
+	if !valid {
+		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 	if req.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")
@@ -165,6 +245,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid direct keymanager")
 		}
 		s.wallet.SetPassword(req.Password)
+		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not save hashed password: %v", err)
+		}
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
@@ -174,6 +257,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid derived keymanager")
 		}
 		s.wallet.SetPassword(req.Password)
+		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not save hashed password: %v", err)
+		}
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
@@ -181,4 +267,50 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Error(codes.Internal, "Cannot change password for remote keymanager")
 	}
 	return &ptypes.Empty{}, nil
+}
+
+// ImportKeystores allows importing new keystores via RPC into the wallet
+// which will be decrypted using the specified password .
+func (s *Server) ImportKeystores(
+	ctx context.Context, req *pb.ImportKeystoresRequest,
+) (*pb.ImportKeystoresResponse, error) {
+	if s.wallet == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
+	}
+	if s.wallet.KeymanagerKind() != v2keymanager.Direct {
+		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
+	}
+	if req.KeystoresPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
+	}
+	// Needs to unmarshal the keystores from the requests.
+	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
+		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
+	}
+	keystores := make([]*v2keymanager.Keystore, len(req.KeystoresImported))
+	importedPubKeys := make([][]byte, len(req.KeystoresImported))
+	for i := 0; i < len(req.KeystoresImported); i++ {
+		encoded := req.KeystoresImported[i]
+		keystore := &v2keymanager.Keystore{}
+		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
+		}
+		keystores[i] = keystore
+		pubKey, err := hex.DecodeString(keystore.Pubkey)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Not a valid BLS public key in keystore file: %v", err)
+		}
+		importedPubKeys[i] = pubKey
+	}
+	// Import the uploaded accounts.
+	if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
+		Wallet:          s.wallet,
+		Keystores:       keystores,
+		AccountPassword: req.KeystoresPassword,
+	}); err != nil {
+		return nil, err
+	}
+	return &pb.ImportKeystoresResponse{
+		ImportedPublicKeys: importedPubKeys,
+	}, nil
 }
