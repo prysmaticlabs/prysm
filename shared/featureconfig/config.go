@@ -123,17 +123,9 @@ func InitWithReset(c *Flags) func() {
 	return resetFunc
 }
 
-// ConfigureBeaconChain sets the global config based
-// on what flags are enabled for the beacon-chain client.
-func ConfigureBeaconChain(ctx *cli.Context) {
-	complainOnDeprecatedFlags(ctx)
-	cfg := &Flags{}
-	if ctx.Bool(devModeFlag.Name) {
-		enableDevModeFlags(ctx)
-	}
-
+func ConfigureTestnet(ctx *cli.Context, cfg *Flags) {
 	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running Node on Altona Testnet")
+		log.Warn("Running Validator on Altona Testnet")
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
@@ -163,6 +155,17 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		params.UseMedallaNetworkConfig()
 		cfg.MedallaTestnet = true
 	}
+}
+
+// ConfigureBeaconChain sets the global config based
+// on what flags are enabled for the beacon-chain client.
+func ConfigureBeaconChain(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
+	cfg := &Flags{}
+	if ctx.Bool(devModeFlag.Name) {
+		enableDevModeFlags(ctx)
+	}
+	ConfigureTestnet(ctx, cfg)
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -300,37 +303,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running Validator on Altona Testnet")
-		params.UseAltonaConfig()
-		params.UseAltonaNetworkConfig()
-		cfg.AltonaTestnet = true
-	} else if ctx.Bool(OnyxTestnet.Name) {
-		log.Warn("Running Node on Onyx Testnet")
-		params.UseOnyxConfig()
-		params.UseOnyxNetworkConfig()
-		cfg.OnyxTestnet = true
-	} else if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running Node on Medalla Testnet")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
-	} else if ctx.Bool(SpadinaTestnet.Name) {
-		log.Warn("Running Node on Spadina Testnet")
-		params.UseSpadinaConfig()
-		params.UseSpadinaNetworkConfig()
-		cfg.SpadinaTestnet = true
-	} else if ctx.Bool(ZinkenTestnet.Name) {
-		log.Warn("Running Node on Zinken Testnet")
-		params.UseZinkenConfig()
-		params.UseZinkenNetworkConfig()
-		cfg.ZinkenTestnet = true
-	} else {
-		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
-	}
+	ConfigureTestnet(ctx, cfg)
 
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
@@ -344,37 +317,7 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running Validator on Altona Testnet")
-		params.UseAltonaConfig()
-		params.UseAltonaNetworkConfig()
-		cfg.AltonaTestnet = true
-	} else if ctx.Bool(OnyxTestnet.Name) {
-		log.Warn("Running Node on Onyx Testnet")
-		params.UseOnyxConfig()
-		params.UseOnyxNetworkConfig()
-		cfg.OnyxTestnet = true
-	} else if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running Node on Medalla Testnet")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
-	} else if ctx.Bool(SpadinaTestnet.Name) {
-		log.Warn("Running Node on Spadina Testnet")
-		params.UseSpadinaConfig()
-		params.UseSpadinaNetworkConfig()
-		cfg.SpadinaTestnet = true
-	} else if ctx.Bool(ZinkenTestnet.Name) {
-		log.Warn("Running Node on Zinken Testnet")
-		params.UseZinkenConfig()
-		params.UseZinkenNetworkConfig()
-		cfg.ZinkenTestnet = true
-	} else {
-		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
-	}
+	ConfigureTestnet(ctx, cfg)
 
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true
