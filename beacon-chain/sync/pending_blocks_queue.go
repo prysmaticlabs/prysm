@@ -49,7 +49,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		return errors.Wrap(err, "could not validate pending slots")
 	}
 	slots := s.sortedPendingSlots()
-	parentRoots := [][32]byte{}
+	var parentRoots [][32]byte
 
 	span.AddAttributes(
 		trace.Int64Attribute("numSlots", int64(len(slots))),

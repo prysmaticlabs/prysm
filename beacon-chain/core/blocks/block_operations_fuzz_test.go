@@ -48,13 +48,13 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 
 func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	ba := []byte{}
+	var ba []byte
 	pubkey := [48]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}
-	p := []byte{}
-	s := []byte{}
-	d := []byte{}
+	var p []byte
+	var s []byte
+	var d []byte
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(&ba)
 		fuzzer.Fuzz(&pubkey)
@@ -100,7 +100,7 @@ func TestFuzzareEth1DataEqual_10000(t *testing.T) {
 func TestFuzzEth1DataHasEnoughSupport_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	eth1data := &eth.Eth1Data{}
-	stateVotes := []*eth.Eth1Data{}
+	var stateVotes []*eth.Eth1Data
 	for i := 0; i < 100000; i++ {
 		fuzzer.Fuzz(eth1data)
 		fuzzer.Fuzz(&stateVotes)

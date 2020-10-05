@@ -379,7 +379,7 @@ func TestService_BatchRootRequest(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := [][32]byte{}
+		var out [][32]byte
 		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
 		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
 		response := []*ethpb.SignedBeaconBlock{b2, b3, b4, b5}

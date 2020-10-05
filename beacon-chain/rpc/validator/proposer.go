@@ -559,7 +559,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 	}
 
 	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
-	depositData := [][]byte{}
+	var depositData [][]byte
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := dep.Data.HashTreeRoot()
 		if err != nil {

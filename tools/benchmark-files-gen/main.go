@@ -112,7 +112,7 @@ func generateMarshalledFullStateAndBlock() error {
 		NumAttestations: benchutil.AttestationsPerEpoch / slotsPerEpoch,
 	}
 
-	atts := []*ethpb.Attestation{}
+	var atts []*ethpb.Attestation
 	for i := slotOffset + 1; i < slotsPerEpoch+slotOffset; i++ {
 		attsForSlot, err := testutil.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
 		if err != nil {

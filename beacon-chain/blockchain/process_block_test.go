@@ -146,8 +146,8 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	bState := st.Copy()
 
-	blks := []*ethpb.SignedBeaconBlock{}
-	blkRoots := [][32]byte{}
+	var blks []*ethpb.SignedBeaconBlock
+	var blkRoots [][32]byte
 	var firstState *stateTrie.BeaconState
 	for i := 1; i < 10; i++ {
 		b, err := testutil.GenerateFullBlock(bState, keys, testutil.DefaultBlockGenConfig(), uint64(i))

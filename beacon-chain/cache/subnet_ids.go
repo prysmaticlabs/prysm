@@ -113,7 +113,7 @@ func (c *subnetIDs) GetAllSubnets() []uint64 {
 	defer c.subnetsLock.RUnlock()
 
 	itemsMap := c.persistentSubnets.Items()
-	committees := []uint64{}
+	var committees []uint64
 
 	for _, v := range itemsMap {
 		if v.Expired() {
