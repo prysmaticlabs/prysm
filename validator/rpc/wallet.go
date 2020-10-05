@@ -35,24 +35,12 @@ const (
 func (s *Server) HasWallet(_ context.Context, _ *ptypes.Empty) (*pb.HasWalletResponse, error) {
 	exists, err := wallet.Exists(defaultWalletPath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
+		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
 	}
 	if !exists {
 		return &pb.HasWalletResponse{
 			WalletExists: false,
 		}, nil
-	}
-	valid, err := wallet.IsValid(defaultWalletPath)
-	if err == wallet.ErrNoWalletFound {
-		return &pb.HasWalletResponse{
-			WalletExists: false,
-		}, nil
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
-	}
-	if !valid {
-		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 	return &pb.HasWalletResponse{
 		WalletExists: true,

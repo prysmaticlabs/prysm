@@ -143,6 +143,8 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 	}
 
 	if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+		// log.Fatalf will prevent defer from being called
+		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
 		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 	}

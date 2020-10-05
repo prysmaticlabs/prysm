@@ -27,7 +27,7 @@ var (
 func main() {
 	flag.Parse()
 
-	if len(*privateKey) == 0 {
+	if *privateKey == "" {
 		log.Fatal("No private key given")
 	}
 	dst, err := hex.DecodeString(*privateKey)

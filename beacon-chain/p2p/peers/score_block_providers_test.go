@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -180,7 +181,7 @@ func TestPeerScorer_BlockProvider_WeightSorted(t *testing.T) {
 
 	var pids []peer.ID
 	for i := uint64(0); i < 10; i++ {
-		pid := peer.ID(i)
+		pid := peer.ID(strconv.FormatUint(i, 10))
 		scorer.IncrementProcessedBlocks(pid, i*batchSize)
 		pids = append(pids, pid)
 	}

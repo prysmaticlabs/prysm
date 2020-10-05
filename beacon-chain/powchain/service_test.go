@@ -83,7 +83,11 @@ func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTy
 			Number: big.NewInt(0),
 		}, nil
 	}
-	return g.backend.Blockchain().GetHeaderByHash(hash), nil
+	header := g.backend.Blockchain().GetHeaderByHash(hash)
+	if header == nil {
+		return nil, errors.New("nil header returned")
+	}
+	return header, nil
 
 }
 
@@ -94,10 +98,16 @@ func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethT
 			Time:   150,
 		}, nil
 	}
+	var header *gethTypes.Header
 	if number == nil {
-		return g.backend.Blockchain().CurrentHeader(), nil
+		header = g.backend.Blockchain().CurrentHeader()
+	} else {
+		header = g.backend.Blockchain().GetHeaderByNumber(number.Uint64())
 	}
-	return g.backend.Blockchain().GetHeaderByNumber(number.Uint64()), nil
+	if header == nil {
+		return nil, errors.New("nil header returned")
+	}
+	return header, nil
 }
 
 func (g *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {

@@ -134,10 +134,8 @@ func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []b
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	root, err := signingData(func() ([32]byte, error) {
-		// utilize custom block hashing function
-		return blk.HashTreeRoot()
-	}, domain)
+	// utilize custom block hashing function
+	root, err := signingData(blk.HashTreeRoot, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
@@ -158,9 +156,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := signingData(func() ([32]byte, error) {
-		return blkHdr.HashTreeRoot()
-	}, domain)
+	root, err := signingData(blkHdr.HashTreeRoot, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}

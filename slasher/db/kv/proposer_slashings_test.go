@@ -134,9 +134,15 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		proposerSlashings, err := db.ProposalSlashingsByStatus(ctx, tt.ss)
 		require.NoError(t, err, "Failed to get proposer slashings")
 
+		var diff string
+		if len(proposerSlashings) > 0 {
+			diff, _ = messagediff.PrettyDiff(proposerSlashings[0], tt.ps)
+		} else {
+			diff, _ = messagediff.PrettyDiff(nil, tt.ps)
+		}
+		t.Log(diff)
+
 		if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
-			diff, _ := messagediff.PrettyDiff(proposerSlashings[0], tt.ps)
-			t.Log(diff)
 			t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", tt.ps, proposerSlashings)
 		}
 	}

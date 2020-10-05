@@ -55,14 +55,11 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 		slot := uint64(randFunc())
 		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}}
 		// append twice
-		blks = append(blks, newBlk)
-		blks = append(blks, newBlk)
+		blks = append(blks, newBlk, newBlk)
 
 		// append twice
 		root := bytesutil.ToBytes32(bytesutil.Bytes32(slot))
-		roots = append(roots, root)
-		roots = append(roots, root)
-
+		roots = append(roots, root, root)
 	}
 
 	r := &Service{}
