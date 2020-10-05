@@ -50,8 +50,11 @@ type Validator interface {
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
-	defer v.Done()
+	cleanup := v.Done
+	defer cleanup()
 	if err := v.WaitForWalletInitialization(ctx); err != nil {
+		// log.Fatalf will prevent defer from being called
+		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
 	}
 	if featureconfig.Get().SlasherProtection {

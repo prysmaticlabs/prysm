@@ -601,9 +601,9 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	})
 
 	for i := 0; i <= maxPeers+100; i++ {
-		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
-		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
-		p.SetChainState(peer.ID(i), &pb.Status{
+		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
+		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
+		p.SetChainState(peer.ID(rune(i)), &pb.Status{
 			FinalizedEpoch: 10,
 		})
 	}
@@ -624,9 +624,9 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 
 	peerSlots := []uint64{32, 32, 32, 32, 235, 233, 258, 268, 270}
 	for i, headSlot := range peerSlots {
-		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
-		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
-		p.SetChainState(peer.ID(i), &pb.Status{
+		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
+		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
+		p.SetChainState(peer.ID(rune(i)), &pb.Status{
 			HeadSlot: headSlot,
 		})
 	}
