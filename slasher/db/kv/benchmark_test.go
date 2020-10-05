@@ -2,13 +2,11 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -18,8 +16,6 @@ const (
 func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 	ctx := context.Background()
 	sigBytes := [2]byte{}
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
 	db := setupDB(b)
 	es := &types.EpochStore{}
 
@@ -38,8 +34,6 @@ func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 }
 
 func BenchmarkStore_EpochSpans(b *testing.B) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
 	db := setupDB(b)
 	ctx := context.Background()
 	sigBytes := [2]byte{}

@@ -2,11 +2,9 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/urfave/cli/v2"
 )
 
 type publicKeyTestStruct struct {
@@ -34,8 +32,7 @@ func init() {
 }
 
 func TestNilDBValidatorPublicKey(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
+
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -47,8 +44,7 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 }
 
 func TestSavePubKey(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
+
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -64,8 +60,7 @@ func TestSavePubKey(t *testing.T) {
 }
 
 func TestDeletePublicKey(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
+
 	db := setupDB(t)
 	ctx := context.Background()
 
