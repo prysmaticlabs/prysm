@@ -348,7 +348,9 @@ func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVo
 			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
 		}
 	}
-
+	if voteCount == nil || len(voteCount) == 0 {
+		return eth1DataAggregatedVote{}
+	}
 	currentVote := voteCount[0]
 	for _, aggregatedVote := range voteCount[1:] {
 		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
