@@ -51,7 +51,7 @@ func TestCreateListener(t *testing.T) {
 	s := &Service{
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port), LocalIP: ipAddr.String()},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port), LocalIP: ipAddr.String()},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -91,6 +91,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		cfg := &Config{
 			Discv5BootStrapAddr: []string{bootNode.String()},
 			UDPPort:             uint(port),
+			LocalIP:             ipAddr.String(),
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
