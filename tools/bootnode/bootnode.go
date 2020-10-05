@@ -22,7 +22,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
