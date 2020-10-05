@@ -20,11 +20,11 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
+	"sync"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"sync"
 )
 
 var log = logrus.WithField("prefix", "flags")
