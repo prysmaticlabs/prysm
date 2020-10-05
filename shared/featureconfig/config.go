@@ -132,9 +132,9 @@ func VerifyTestnet(ctx *cli.Context) error {
 		!ctx.Bool(MedallaTestnet.Name) &&
 		!ctx.Bool(SpadinaTestnet.Name) &&
 		!ctx.Bool(ZinkenTestnet.Name) {
-			// temporary warning till next release
-			log.Warn("--<testnet> flag is not specified, this will become required from next release!")
-			ctx.Set(string(MedallaTestnet.Name), "true")
+		// temporary warning till next release
+		log.Warn("--<testnet> flag is not specified, this will become required from next release!")
+		ctx.Set(string(MedallaTestnet.Name), "true")
 	}
 	return nil
 }
