@@ -15,7 +15,7 @@ import (
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	messagehandler.SafelyHandleMessage(nil, func(_ context.Context, _ proto.Message) error {
+	messagehandler.SafelyHandleMessage(context.Background(), func(_ context.Context, _ proto.Message) error {
 		panic("bad!")
 		return nil
 	}, &ethpb.BeaconBlock{})
@@ -26,7 +26,7 @@ func TestSafelyHandleMessage(t *testing.T) {
 func TestSafelyHandleMessage_NoData(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	messagehandler.SafelyHandleMessage(nil, func(_ context.Context, _ proto.Message) error {
+	messagehandler.SafelyHandleMessage(context.Background(), func(_ context.Context, _ proto.Message) error {
 		panic("bad!")
 		return nil
 	}, nil)
