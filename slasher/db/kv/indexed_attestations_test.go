@@ -64,7 +64,7 @@ func init() {
 func TestHasIndexedAttestation_NilDB(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	hasIdxAtt, err := db.HasIndexedAttestation(ctx, tests[0].idxAtt)
@@ -75,7 +75,7 @@ func TestHasIndexedAttestation_NilDB(t *testing.T) {
 func TestSaveIndexedAttestation(t *testing.T) {
 	app := &cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -313,7 +313,7 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
-			db := setupDB(t, cli.NewContext(&app, set, nil))
+			db := setupDB(t)
 			ctx := context.Background()
 
 			require.NoError(t, db.SaveIndexedAttestations(ctx, tt.attsInDB), "Save indexed attestation failed")
@@ -471,7 +471,7 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
-			db := setupDB(t, cli.NewContext(&app, set, nil))
+			db := setupDB(t)
 			ctx := context.Background()
 
 			require.NoError(t, db.SaveIndexedAttestations(ctx, tt.attsInDB), "Save indexed attestation failed")
@@ -653,7 +653,7 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := &cli.App{}
 			set := flag.NewFlagSet("test", 0)
-			db := setupDB(t, cli.NewContext(app, set, nil))
+			db := setupDB(t)
 			ctx := context.Background()
 
 			require.NoError(t, db.SaveIndexedAttestations(ctx, tt.attsInDB), "Save indexed attestation failed")
@@ -680,7 +680,7 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 func TestHasIndexedAttestation(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -701,7 +701,7 @@ func TestHasIndexedAttestation(t *testing.T) {
 func TestPruneHistoryIndexedAttestation(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range tests {

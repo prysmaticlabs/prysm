@@ -14,7 +14,7 @@ import (
 )
 
 // GetPeer returns the data known about the peer defined by the provided peer id.
-func (ds *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*pbrpc.DebugPeerResponse, error) {
+func (ds *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*pbrpc.DebugPeerResponse, error) {
 	pid, err := peer.Decode(peerReq.PeerId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Unable to parse provided peer id: %v", err)
@@ -24,7 +24,7 @@ func (ds *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*pbr
 
 // ListPeers returns all peers known to the host node, irregardless of if they are connected/
 // disconnected.
-func (ds *Server) ListPeers(ctx context.Context, _ *types.Empty) (*pbrpc.DebugPeerResponses, error) {
+func (ds *Server) ListPeers(_ context.Context, _ *types.Empty) (*pbrpc.DebugPeerResponses, error) {
 	responses := []*pbrpc.DebugPeerResponse{}
 	for _, pid := range ds.PeersFetcher.Peers().All() {
 		resp, err := ds.getPeer(pid)

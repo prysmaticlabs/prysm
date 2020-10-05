@@ -28,7 +28,7 @@ var (
 
 // Signup to authenticate access to the validator RPC API using bcrypt and
 // a sufficiently strong password check.
-func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+func (s *Server) Signup(_ context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	// First, we check if the validator already has a password. In this case,
 	// the user should NOT be able to signup and the function will return an error.
 	if fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)) {

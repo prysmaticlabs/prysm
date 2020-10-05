@@ -214,7 +214,7 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 }
 
 // MarshalOptionsFile returns a marshaled options file for a keymanager.
-func MarshalOptionsFile(ctx context.Context, opts *KeymanagerOpts) ([]byte, error) {
+func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(opts, "", "\t")
 }
 
@@ -224,7 +224,7 @@ func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 }
 
 // NextAccountNumber managed by the derived keymanager.
-func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
+func (dr *Keymanager) NextAccountNumber() uint64 {
 	return dr.seedCfg.NextAccount
 }
 
@@ -246,7 +246,7 @@ func (dr *Keymanager) WriteEncryptedSeedToWallet(ctx context.Context, mnemonic s
 }
 
 // ValidatingAccountNames for the derived keymanager.
-func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, error) {
+func (dr *Keymanager) ValidatingAccountNames(_ context.Context) ([]string, error) {
 	dr.lock.RLock()
 	names := make([]string, len(dr.publicKeysCache))
 	for i, pubKey := range dr.publicKeysCache {
@@ -336,7 +336,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) ([
 }
 
 // Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+func (dr *Keymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	rawPubKey := req.PublicKey
 	if rawPubKey == nil {
 		return nil, errors.New("nil public key in request")
@@ -351,7 +351,7 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 }
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
-func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (dr *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	dr.lock.RLock()
 	keys := dr.publicKeysCache
 	result := make([][48]byte, len(keys))
@@ -361,7 +361,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // FetchWithdrawalPublicKeys fetches the list of withdrawal public keys from keymanager
-func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (dr *Keymanager) FetchWithdrawalPublicKeys(_ context.Context) ([][48]byte, error) {
 	publicKeys := make([][48]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)

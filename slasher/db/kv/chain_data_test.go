@@ -14,7 +14,7 @@ import (
 func TestChainHead(t *testing.T) {
 	app := &cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {

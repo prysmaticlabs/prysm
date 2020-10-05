@@ -145,7 +145,7 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	return network
 }
 
-func (h *handler) httpHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	write := func(w io.Writer, b []byte) {
 		if _, err := w.Write(b); err != nil {

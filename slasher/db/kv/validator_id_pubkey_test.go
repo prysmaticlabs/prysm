@@ -36,7 +36,7 @@ func init() {
 func TestNilDBValidatorPublicKey(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	validatorID := uint64(1)
@@ -49,7 +49,7 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 func TestSavePubKey(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range pkTests {
@@ -66,7 +66,7 @@ func TestSavePubKey(t *testing.T) {
 func TestDeletePublicKey(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range pkTests {

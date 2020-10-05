@@ -17,7 +17,7 @@ import (
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	ps := &ethpb.ProposerSlashing{
@@ -53,7 +53,7 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 func TestStore_SaveProposerSlashing(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -149,7 +149,7 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -250,7 +250,7 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 func TestStore_SaveProposerSlashings(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	ps := []*ethpb.ProposerSlashing{

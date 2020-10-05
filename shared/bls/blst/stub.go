@@ -13,7 +13,7 @@ func (s SecretKey) PublicKey() iface.PublicKey {
 }
 
 // Sign -- stub
-func (s SecretKey) Sign(msg []byte) iface.Signature {
+func (s SecretKey) Sign(_ []byte) iface.Signature {
 	panic("blst is only supported on linux amd64")
 }
 
@@ -36,7 +36,7 @@ func (p PublicKey) Copy() iface.PublicKey {
 }
 
 // Aggregate -- stub
-func (p PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
+func (p PublicKey) Aggregate(_ iface.PublicKey) iface.PublicKey {
 	panic("blst is only supported on linux amd64")
 }
 
@@ -44,17 +44,17 @@ func (p PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
 type Signature struct{}
 
 // Verify -- stub
-func (s Signature) Verify(pubKey iface.PublicKey, msg []byte) bool {
+func (s Signature) Verify(_ iface.PublicKey, _ []byte) bool {
 	panic("blst is only supported on linux amd64")
 }
 
 // AggregateVerify -- stub
-func (s Signature) AggregateVerify(pubKeys []iface.PublicKey, msgs [][32]byte) bool {
+func (s Signature) AggregateVerify(_ []iface.PublicKey, _ [][32]byte) bool {
 	panic("blst is only supported on linux amd64")
 }
 
 // FastAggregateVerify -- stub
-func (s Signature) FastAggregateVerify(pubKeys []iface.PublicKey, msg [32]byte) bool {
+func (s Signature) FastAggregateVerify(_ []iface.PublicKey, _ [32]byte) bool {
 	panic("blst is only supported on linux amd64")
 }
 

@@ -16,7 +16,7 @@ import (
 // in the function input, encrypts them using the specified password,
 // and returns their respective EIP-2335 keystores.
 func (dr *Keymanager) ExtractKeystores(
-	ctx context.Context, publicKeys []bls.PublicKey, password string,
+	_ context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*v2keymanager.Keystore, error) {
 	encryptor := keystorev4.New()
 	keystores := make([]*v2keymanager.Keystore, len(publicKeys))

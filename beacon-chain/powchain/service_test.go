@@ -74,7 +74,7 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
-func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error) {
+func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
@@ -87,7 +87,7 @@ func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*geth
 
 }
 
-func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethTypes.Header, error) {
 	if g.backend == nil {
 		return &gethTypes.Header{
 			Number: big.NewInt(15),
@@ -100,7 +100,7 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 	return g.backend.Blockchain().GetHeaderByNumber(number.Uint64()), nil
 }
 
-func (g *goodFetcher) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
+func (g *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
 	return nil, nil
 }
 

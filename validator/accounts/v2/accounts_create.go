@@ -66,7 +66,7 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 		if !ok {
 			return errors.New("not a derived keymanager")
 		}
-		startNum := km.NextAccountNumber(ctx)
+		startNum := km.NextAccountNumber()
 		if cfg.NumAccounts == 1 {
 			if _, err := km.CreateAccount(ctx, true /*logAccountInfo*/); err != nil {
 				return errors.Wrap(err, "could not create account in wallet")

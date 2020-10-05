@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func malign(pos token.Pos, str *types.Struct) error {
+func malign(_ token.Pos, str *types.Struct) error {
 	wordSize := int64(8)
 	maxAlign := int64(8)
 	switch build.Default.GOARCH {

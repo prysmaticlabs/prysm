@@ -17,7 +17,7 @@ import (
 func TestNilDBHistoryBlkHdr(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	slot := uint64(1)
@@ -33,7 +33,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 func TestSaveHistoryBlkHdr(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -67,7 +67,7 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 func TestDeleteHistoryBlkHdr(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -105,7 +105,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 func TestHasHistoryBlkHdr(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -142,7 +142,7 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 func TestPruneHistoryBlkHdr(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {

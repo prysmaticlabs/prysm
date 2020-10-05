@@ -26,6 +26,7 @@ import (
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "direct-keymanager-v2")
@@ -101,7 +102,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 // NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
-func NewInteropKeymanager(ctx context.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
+func NewInteropKeymanager(_ context.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		publicKeysCache:     make([][48]byte, numValidatorKeys),
 		secretKeysCache:     make(map[[48]byte]bls.SecretKey, numValidatorKeys),
@@ -142,7 +143,7 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 }
 
 // MarshalOptionsFile returns a marshaled options file for a keymanager.
-func MarshalOptionsFile(ctx context.Context, opts *KeymanagerOpts) ([]byte, error) {
+func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(opts, "", "\t")
 }
 
@@ -326,6 +327,9 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
+	defer span.End()
+
 	dr.lock.RLock()
 	keys := dr.publicKeysCache
 	result := make([][48]byte, len(keys))
@@ -336,6 +340,9 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 // Sign signs a message using a validator key.
 func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	ctx, span := trace.StartSpan(ctx, "keymanager.Sign")
+	defer span.End()
+
 	publicKey := req.PublicKey
 	if publicKey == nil {
 		return nil, errors.New("nil public key in request")
@@ -410,7 +417,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 }
 
 func (dr *Keymanager) createAccountsKeystore(
-	ctx context.Context,
+	_ context.Context,
 	privateKeys [][]byte,
 	publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {

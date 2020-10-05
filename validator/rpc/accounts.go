@@ -20,7 +20,7 @@ import (
 )
 
 // CreateAccount allows creation of a new account in a user's wallet via RPC.
-func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest) (*pb.DepositDataResponse, error) {
+func (s *Server) CreateAccount(ctx context.Context, _ *pb.CreateAccountRequest) (*pb.DepositDataResponse, error) {
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
@@ -54,7 +54,7 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 
 // ListAccounts allows retrieval of validating keys and their petnames
 // for a user's wallet via RPC.
-func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) (*pb.ListAccountsResponse, error) {
+func (s *Server) ListAccounts(ctx context.Context, _ *pb.ListAccountsRequest) (*pb.ListAccountsResponse, error) {
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}

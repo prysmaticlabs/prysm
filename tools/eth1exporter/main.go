@@ -120,7 +120,7 @@ func ToEther(o *big.Int) *big.Float {
 }
 
 // MetricsHTTP - HTTP response handler for /metrics.
-func MetricsHTTP(w http.ResponseWriter, r *http.Request) {
+func MetricsHTTP(w http.ResponseWriter, _ *http.Request) {
 	var allOut []string
 	total := big.NewFloat(0)
 	for _, v := range allWatching {
