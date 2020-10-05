@@ -144,4 +144,3 @@ func GenerateDepositTransaction(
 	}
 	return tx, depositData, nil
 }
-
