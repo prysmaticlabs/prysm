@@ -1,0 +1,13 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["types.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//shared/params:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+    ],
+)

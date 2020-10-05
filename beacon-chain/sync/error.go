@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -74,10 +75,7 @@ func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pc
 
 func createErrorResponse(code byte, reason string, encoder p2p.EncodingProvider) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
-	resp := &pb.ErrorResponse{
-		Message: []byte(reason),
-	}
-	if _, err := encoder.Encoding().EncodeWithMaxLength(buf, resp); err != nil {
+	if _, err := encoder.Encoding().EncodeWithMaxLength(buf, types.ErrorMessage(reason)); err != nil {
 		return nil, err
 	}
 

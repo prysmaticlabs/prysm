@@ -10,16 +10,17 @@ import (
 	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	codeClientShutdown uint64 = iota
+	codeClientShutdown types.SSZUint64 = iota
 	codeWrongNetwork
 	codeGenericError
 )
 
-var goodByes = map[uint64]string{
+var goodByes = map[types.SSZUint64]string{
 	codeClientShutdown: "client shutdown",
 	codeWrongNetwork:   "irrelevant network",
 	codeGenericError:   "fault/error",
@@ -38,7 +39,7 @@ func (s *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	}()
 	SetRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*uint64)
+	m, ok := msg.(*types.SSZUint64)
 	if !ok {
 		return fmt.Errorf("wrong message type for goodbye, got %T, wanted *uint64", msg)
 	}
@@ -52,7 +53,7 @@ func (s *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	return s.p2p.Disconnect(stream.Conn().RemotePeer())
 }
 
-func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id peer.ID) error {
+func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.SSZUint64, id peer.ID) error {
 	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
 		log.WithFields(logrus.Fields{
 			"error": err,
@@ -65,7 +66,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id 
 	return nil
 }
 
-func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {
+func (s *Service) sendGoodByeMessage(ctx context.Context, code types.SSZUint64, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -83,7 +84,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.I
 	return nil
 }
 
-func goodbyeMessage(num uint64) string {
+func goodbyeMessage(num types.SSZUint64) string {
 	reason, ok := goodByes[num]
 	if ok {
 		return reason
