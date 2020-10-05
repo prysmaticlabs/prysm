@@ -25,7 +25,7 @@ func passwordReaderFunc(file *os.File) ([]byte, error) {
 }
 
 // PasswordReader has passwordReaderFunc as the default but can be changed for testing purposes.
-var PasswordReader func(file *os.File) ([]byte, error) = passwordReaderFunc
+var PasswordReader = passwordReaderFunc
 
 // ValidatePrompt requests the user for text and expects the user to fulfill the provided validation function.
 func ValidatePrompt(r io.Reader, promptText string, validateFunc func(string) error) (string, error) {
