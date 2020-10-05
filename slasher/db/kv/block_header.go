@@ -48,6 +48,7 @@ func (db *Store) BlockHeaders(ctx context.Context, slot uint64, validatorID uint
 }
 
 // HasBlockHeader accepts a slot and validator id and returns true if the block header exists.
+//noinspection GoUnreachableCode
 func (db *Store) HasBlockHeader(ctx context.Context, slot uint64, validatorID uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.HasBlockHeader")
 	defer span.End()
@@ -55,7 +56,8 @@ func (db *Store) HasBlockHeader(ctx context.Context, slot uint64, validatorID ui
 	var hasBlockHeader bool
 	if err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
+		for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); //noinspection GoUnreachableCode,GoUnreachableCode,GoUnreachableCode
+		k, _ = c.Next() {
 			hasBlockHeader = true
 			return nil
 		}

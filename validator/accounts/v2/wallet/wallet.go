@@ -55,10 +55,6 @@ var (
 	ErrNoWalletFound = errors.New(
 		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
 	)
-	// ErrWalletExists is an error returned when a wallet already exists in the path provided.
-	ErrWalletExists = errors.New("you already have a wallet at the specified path. You can " +
-		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
-	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[v2keymanager.Kind]string{
 		v2keymanager.Derived: "HD Wallet (Recommended)",
