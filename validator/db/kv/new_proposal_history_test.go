@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -144,33 +143,38 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 	pubkey := [48]byte{3}
 	ctx := context.Background()
 	db := setupDB(t, [][48]byte{pubkey})
-	tests := []struct {
-		slot uint64
-	}{
-		{
-			slot: 0,
-		},
-		{
-			slot: 100,
-		},
-		{
-			slot: 10000,
-		},
-		{
-			slot: 105011,
-		},
-	}
-	for _, tt := range tests {
-		slotBitlist := make(bitfield.Bitlist, params.BeaconConfig().SlotsPerEpoch/8+1)
-		slotBitlist.SetBitAt(tt.slot%params.BeaconConfig().SlotsPerEpoch, true)
-		err := db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(tt.slot), slotBitlist)
+	proposedSlots := make(map[uint64]bool)
+	proposedSlots[0] = true
+	proposedSlots[1] = true
+	proposedSlots[20] = true
+	proposedSlots[31] = true
+	proposedSlots[32] = true
+	proposedSlots[33] = true
+	proposedSlots[1023] = true
+	proposedSlots[1024] = true
+	proposedSlots[1025] = true
+	lastIndex := 1025 + params.BeaconConfig().SlotsPerEpoch
+
+	for slot := range proposedSlots {
+		slotBitlist, err := db.ProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot))
+		require.NoError(t, err)
+		slotBitlist.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
+		err = db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot), slotBitlist)
 		require.NoError(t, err)
 	}
 	err := db.ImportProposalHistory(ctx)
 	require.NoError(t, err)
-	for _, tt := range tests {
-		root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], tt.slot)
+
+	for slot := uint64(0); slot <= lastIndex; slot++ {
+		if _, ok := proposedSlots[slot]; ok {
+			root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
+			require.NoError(t, err)
+			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root, "slot: %d", slot)
+			continue
+		}
+		root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
 		require.NoError(t, err)
-		require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root)
+		require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), root)
 	}
+
 }
