@@ -91,6 +91,7 @@ func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle s
 	return s.subscribeWithBase(base, s.addDigestToTopic(topic), validator, handle)
 }
 
+// TODO(7437): Refactor this method to remove unused arg "base".
 func (s *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
 	topic += s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
