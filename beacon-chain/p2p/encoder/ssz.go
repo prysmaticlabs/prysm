@@ -26,6 +26,10 @@ var bufWriterPool = new(sync.Pool)
 // can be constantly reused.
 var bufReaderPool = new(sync.Pool)
 
+var bytesBufferPool = new(sync.Pool)
+
+const snappyMaxBlockLength = 65536
+
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
 // with snappy compression (if enabled).
 type SszNetworkEncoder struct{}
@@ -108,40 +112,48 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	if err != nil {
 		return err
 	}
-	if msgLen > params.BeaconNetworkConfig().MaxChunkSize {
-		return fmt.Errorf(
-			"remaining bytes %d goes over the provided max limit of %d",
-			msgLen,
-			params.BeaconNetworkConfig().MaxChunkSize,
-		)
-	}
-	r = newBufferedReader(r)
-	defer bufReaderPool.Put(r)
-
-	maxLen, err := e.MaxLength(int(msgLen))
+	maxLength, err := e.MaxLength(int(params.BeaconNetworkConfig().MaxChunkSize))
 	if err != nil {
 		return err
 	}
+	if msgLen > uint64(maxLength) {
+		return fmt.Errorf(
+			"remaining bytes %d goes over the provided max limit of %d",
+			msgLen,
+			maxLength,
+		)
+	}
+	limitedRdr := io.LimitReader(r, int64(msgLen))
+	r = newBufferedReader(limitedRdr)
+	defer bufReaderPool.Put(r)
 
-	b := make([]byte, maxLen)
-	numOfBytes := 0
+	// No way to predict decompressed sizes, so we take the max block size as an
+	// initial buffer.
+	b := [snappyMaxBlockLength]byte{}
+	decompressedSlice := make([]byte, 0, 0)
 	// Read all bytes from stream to handle multiple
 	// framed chunks. Required if reading objects which
 	// are larger than 65 kb.
-	for numOfBytes < int(msgLen) {
-		readBytes, err := r.Read(b[numOfBytes:])
+	for {
+		readBytes, err := r.Read(b[:])
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return err
 		}
-		numOfBytes += readBytes
+		decompressedChunk := make([]byte, readBytes)
+		copy(decompressedChunk, b[:readBytes])
+		decompressedSlice = append(decompressedSlice, decompressedChunk...)
 	}
-	if numOfBytes != int(msgLen) {
-		return errors.Errorf("decompressed data has an unexpected length, wanted %d but got %d", msgLen, numOfBytes)
+	castedRdr, ok := limitedRdr.(*io.LimitedReader)
+	if !ok {
+		return errors.Errorf("got unexpected reader type %T", limitedRdr)
 	}
-	return e.doDecode(b[:numOfBytes], to)
+	if castedRdr.N != 0 {
+		return errors.Errorf("decompressed data has an unexpected length, %d bytes not read", castedRdr.N)
+	}
+	return e.doDecode(decompressedSlice, to)
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
