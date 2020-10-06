@@ -188,10 +188,10 @@ func (s *Service) createLocalNode(
 	// In the event we have a zero ip passed in, we
 	// instead persist the loopback ip in the
 	// localnode entry.
-	switch ipAddr {
-	case net.IPv4zero:
+	switch {
+	case ipAddr.Equal(net.IPv4zero):
 		ipAddr = net.ParseIP("127.0.0.1")
-	case net.IPv6zero:
+	case ipAddr.Equal(net.IPv6zero):
 		ipAddr = net.IPv6loopback
 	default:
 		// do nothing
