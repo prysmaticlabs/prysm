@@ -37,7 +37,7 @@ func TestGetLatestEpochWritten(t *testing.T) {
 	ctx := context.Background()
 	ha := newAttestationHistoryArray(0)
 	ha[0] = 28
-	lew, err := getLatestEpochWritten(ctx, ha)
+	lew, err := ha.getLatestEpochWritten(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(28), lew)
 }
@@ -45,7 +45,7 @@ func TestGetLatestEpochWritten(t *testing.T) {
 func TestSetLatestEpochWritten(t *testing.T) {
 	ctx := context.Background()
 	ha := newAttestationHistoryArray(0)
-	lew, err := setLatestEpochWritten(ctx, ha, 2828282828)
+	lew, err := ha.setLatestEpochWritten(ctx, 2828282828)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2828282828), bytesutil.FromBytes8(lew[:latestEpochWrittenSize]))
 }
@@ -53,13 +53,13 @@ func TestSetLatestEpochWritten(t *testing.T) {
 func TestGetTargetData(t *testing.T) {
 	ctx := context.Background()
 	ha := newAttestationHistoryArray(0)
-	td, err := getTargetData(ctx, ha, 0)
+	td, err := ha.getTargetData(ctx, 0)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &HistoryData{
 		Source:      0,
 		SigningRoot: bytesutil.PadTo([]byte{}, 32),
 	}, td)
-	_, err = getTargetData(ctx, ha, 1)
+	_, err = ha.getTargetData(ctx, 1)
 	require.ErrorContains(t, "is smaller then the requested target location", err)
 }
 
@@ -67,7 +67,7 @@ func TestSetTargetData(t *testing.T) {
 	ctx := context.Background()
 	type testStruct struct {
 		name        string
-		enc         []byte
+		enc         encHistoryData
 		target      uint64
 		source      uint64
 		signingRoot []byte
@@ -105,8 +105,8 @@ func TestSetTargetData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			enc, err := setTargetData(ctx,
-				tt.enc, tt.target,
+			enc, err := tt.enc.setTargetData(ctx,
+				tt.target,
 				&HistoryData{
 					Source:      tt.source,
 					SigningRoot: tt.signingRoot,
@@ -150,8 +150,8 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	setAttHistoryForPubKeys := make(map[[48]byte]encHistoryData)
 	clean := newAttestationHistoryArray(0)
 	for i, pubKey := range pubkeys {
-		enc, err := setTargetData(ctx,
-			clean, 10,
+		enc, err := clean.setTargetData(ctx,
+			10,
 			&HistoryData{
 				Source:      uint64(i),
 				SigningRoot: []byte{1, 2, 3},

@@ -38,8 +38,11 @@ type HistoryData struct {
 // encapsulated history data
 type encHistoryData []byte
 
-func (hd encHistoryData) assertSize() error { // pointer receiver will also work
-	if len(hd) == 0 || len(hd) < minimalSize || (len(hd)-minimalSize)%historySize != 0 {
+func (hd encHistoryData) assertSize() error {
+	if hd == nil || len(hd) < minimalSize {
+		return fmt.Errorf("encapsulated data size: %d is smaller then minimal size: %d", len(hd), minimalSize)
+	}
+	if (len(hd)-minimalSize)%historySize != 0 {
 		return fmt.Errorf("encapsulated data size: %d is not a multiple of entry size: %d", len(hd), historySize)
 	}
 	return nil
@@ -50,54 +53,54 @@ func newAttestationHistoryArray(target uint64) encHistoryData {
 	return enc
 }
 
-func getLatestEpochWritten(ctx context.Context, data encHistoryData) (uint64, error) {
-	if err := data.assertSize(); err != nil {
+func (hd encHistoryData) getLatestEpochWritten(ctx context.Context) (uint64, error) {
+	if err := hd.assertSize(); err != nil {
 		return 0, err
 	}
-	return bytesutil.FromBytes8(data[:latestEpochWrittenSize]), nil
+	return bytesutil.FromBytes8(hd[:latestEpochWrittenSize]), nil
 }
 
-func setLatestEpochWritten(ctx context.Context, data encHistoryData, latestEpochWritten uint64) ([]byte, error) {
-	if err := data.assertSize(); err != nil {
+func (hd encHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (encHistoryData, error) {
+	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
-	copy(data[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten))
-	return data, nil
+	copy(hd[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten))
+	return hd, nil
 }
 
-func getTargetData(ctx context.Context, data encHistoryData, target uint64) (*HistoryData, error) {
-	if err := data.assertSize(); err != nil {
+func (hd encHistoryData) getTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
+	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
 	// cursor for the location to read target epoch from.
 	// modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
-	if uint64(len(data)) < cursor+historySize {
-		return nil, fmt.Errorf("encapsulated data size: %d is smaller then the requested target location: %d", len(data), cursor+historySize)
+	if uint64(len(hd)) < cursor+historySize {
+		return nil, fmt.Errorf("encapsulated data size: %d is smaller then the requested target location: %d", len(hd), cursor+historySize)
 	}
 	history := &HistoryData{}
 
-	history.Source = bytesutil.FromBytes8(data[cursor : cursor+sourceSize])
+	history.Source = bytesutil.FromBytes8(hd[cursor : cursor+sourceSize])
 	sr := make([]byte, 32)
-	copy(data[cursor+sourceSize:cursor+historySize], sr)
+	copy(hd[cursor+sourceSize:cursor+historySize], sr)
 	history.SigningRoot = sr
 	return history, nil
 }
 
-func setTargetData(ctx context.Context, data encHistoryData, target uint64, historyData *HistoryData) ([]byte, error) {
-	if err := data.assertSize(); err != nil {
+func (hd encHistoryData) setTargetData(ctx context.Context, target uint64, historyData *HistoryData) ([]byte, error) {
+	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
 	// cursor for the location to write target epoch to.
 	// modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
-	if uint64(len(data)) < cursor+historySize {
-		ext := make([]byte, cursor+historySize-uint64(len(data)))
-		data = append(data, ext...)
+	if uint64(len(hd)) < cursor+historySize {
+		ext := make([]byte, cursor+historySize-uint64(len(hd)))
+		hd = append(hd, ext...)
 	}
-	copy(data[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
-	copy(data[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
-	return data, nil
+	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
+	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
+	return hd, nil
 }
 
 // AttestationHistoryNewForPubKeys accepts an array of validator public keys and returns a mapping of corresponding attestation history.
