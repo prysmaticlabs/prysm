@@ -226,7 +226,6 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
-	cfg.LocalIP = ipAddr.String()
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
@@ -261,14 +260,12 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		h, pkey, ipAddr := createHost(t, port+i)
 		cfg.UDPPort = uint(port + i)
 		cfg.TCPPort = uint(port + i)
-		cfg.LocalIP = ipAddr.String()
 		s := &Service{
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
 			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
-		require.NoError(t, err)
 		// Set for 2nd peer
 		if i == 2 {
 			s.dv5Listener = listener
