@@ -1,4 +1,4 @@
-package peers
+package scorers
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -36,7 +37,7 @@ const (
 type BlockProviderScorer struct {
 	ctx    context.Context
 	config *BlockProviderScorerConfig
-	store  *peerDataStore
+	store  *data.Store
 	// maxScore is a cached value for maximum attainable block provider score.
 	// It is calculated, on startup, as following: (processedBlocksCap / batchSize) * batchWeight.
 	maxScore float64
@@ -62,7 +63,7 @@ type BlockProviderScorerConfig struct {
 
 // newBlockProviderScorer creates block provider scoring service.
 func newBlockProviderScorer(
-	ctx context.Context, store *peerDataStore, config *BlockProviderScorerConfig) *BlockProviderScorer {
+	ctx context.Context, store *data.Store, config *BlockProviderScorerConfig) *BlockProviderScorer {
 	if config == nil {
 		config = &BlockProviderScorerConfig{}
 	}
@@ -106,14 +107,14 @@ func (s *BlockProviderScorer) Score(pid peer.ID) float64 {
 // score is a lock-free version of Score.
 func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 	score := float64(0)
-	peerData, ok := s.store.peers[pid]
+	peerData, ok := s.store.PeerData(pid)
 	// Boost score of new peers or peers that haven't been accessed for too long.
-	if !ok || time.Since(peerData.blockProviderUpdated) >= s.config.StalePeerRefreshInterval {
+	if !ok || time.Since(peerData.BlockProviderUpdated) >= s.config.StalePeerRefreshInterval {
 		return s.maxScore
 	}
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	if batchSize > 0 {
-		processedBatches := float64(peerData.processedBlocks / batchSize)
+		processedBatches := float64(peerData.ProcessedBlocks / batchSize)
 		score += processedBatches * s.config.ProcessedBatchWeight
 	}
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
@@ -133,14 +134,12 @@ func (s *BlockProviderScorer) IncrementProcessedBlocks(pid peer.ID, cnt uint64) 
 	if cnt <= 0 {
 		return
 	}
-	if _, ok := s.store.peers[pid]; !ok {
-		s.store.peers[pid] = &peerData{}
-	}
-	if s.store.peers[pid].processedBlocks+cnt > s.config.ProcessedBlocksCap {
-		cnt = s.config.ProcessedBlocksCap - s.store.peers[pid].processedBlocks
+	peerData := s.store.PeerDataGetOrCreate(pid)
+	if peerData.ProcessedBlocks+cnt > s.config.ProcessedBlocksCap {
+		cnt = s.config.ProcessedBlocksCap - peerData.ProcessedBlocks
 	}
 	if cnt > 0 {
-		s.store.peers[pid].processedBlocks += cnt
+		peerData.ProcessedBlocks += cnt
 	}
 }
 
@@ -154,13 +153,11 @@ func (s *BlockProviderScorer) Touch(pid peer.ID, t ...time.Time) {
 
 // touch is a lock-free version of Touch.
 func (s *BlockProviderScorer) touch(pid peer.ID, t ...time.Time) {
-	if _, ok := s.store.peers[pid]; !ok {
-		s.store.peers[pid] = &peerData{}
-	}
+	peerData := s.store.PeerDataGetOrCreate(pid)
 	if len(t) == 1 {
-		s.store.peers[pid].blockProviderUpdated = t[0]
+		peerData.BlockProviderUpdated = t[0]
 	} else {
-		s.store.peers[pid].blockProviderUpdated = timeutils.Now()
+		peerData.BlockProviderUpdated = timeutils.Now()
 	}
 }
 
@@ -173,8 +170,8 @@ func (s *BlockProviderScorer) ProcessedBlocks(pid peer.ID) uint64 {
 
 // processedBlocks is a lock-free version of ProcessedBlocks.
 func (s *BlockProviderScorer) processedBlocks(pid peer.ID) uint64 {
-	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.processedBlocks
+	if peerData, ok := s.store.PeerData(pid); ok {
+		return peerData.ProcessedBlocks
 	}
 	return 0
 }
@@ -186,11 +183,11 @@ func (s *BlockProviderScorer) Decay() {
 	s.store.Lock()
 	defer s.store.Unlock()
 
-	for _, peerData := range s.store.peers {
-		if peerData.processedBlocks > s.config.Decay {
-			peerData.processedBlocks -= s.config.Decay
+	for _, peerData := range s.store.Peers() {
+		if peerData.ProcessedBlocks > s.config.Decay {
+			peerData.ProcessedBlocks -= s.config.Decay
 		} else {
-			peerData.processedBlocks = 0
+			peerData.ProcessedBlocks = 0
 		}
 	}
 }
