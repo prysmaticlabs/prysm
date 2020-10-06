@@ -46,7 +46,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(pubKey)
 		if err != nil {
-			return fmt.Errorf("couldnt create bucket for public key %#x", pubKey)
+			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 		}
 		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot), signingRoot); err != nil {
 			return err
