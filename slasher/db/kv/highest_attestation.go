@@ -97,6 +97,9 @@ func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hi
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	// write in it
 	set[highest.ValidatorId] = highest
