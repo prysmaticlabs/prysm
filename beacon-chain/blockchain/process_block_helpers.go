@@ -271,6 +271,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 		if err == nil {
 			return r, nil
 		}
+		log.Warnf("Could not look up ancestor using fork choice store. Trying DB: %v")
 	}
 
 	signed, err := s.beaconDB.Block(ctx, r)
