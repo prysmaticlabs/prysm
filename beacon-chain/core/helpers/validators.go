@@ -175,7 +175,7 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
-	if e != params.BeaconConfig().GenesisEpoch {
+	if e > params.BeaconConfig().GenesisEpoch {
 		s, err := EndSlot(PrevEpoch(state))
 		if err != nil {
 			return 0, err
