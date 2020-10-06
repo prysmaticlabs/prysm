@@ -123,7 +123,11 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 			maxLength,
 		)
 	}
-	limitedRdr := io.LimitReader(r, int64(msgLen))
+	msgMax, err := e.MaxLength(int(msgLen))
+	if err != nil {
+		return err
+	}
+	limitedRdr := io.LimitReader(r, int64(msgMax))
 	r = newBufferedReader(limitedRdr)
 	defer bufReaderPool.Put(r)
 
@@ -131,6 +135,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	// initial buffer.
 	b := [snappyMaxBlockLength]byte{}
 	decompressedSlice := make([]byte, 0, 0)
+	prevReadBytes := 0
 	// Read all bytes from stream to handle multiple
 	// framed chunks. Required if reading objects which
 	// are larger than 65 kb.
@@ -143,15 +148,9 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 			return err
 		}
 		decompressedChunk := make([]byte, readBytes)
-		copy(decompressedChunk, b[:readBytes])
+		copy(decompressedChunk, b[prevReadBytes:readBytes])
+		prevReadBytes = readBytes
 		decompressedSlice = append(decompressedSlice, decompressedChunk...)
-	}
-	castedRdr, ok := limitedRdr.(*io.LimitedReader)
-	if !ok {
-		return errors.Errorf("got unexpected reader type %T", limitedRdr)
-	}
-	if castedRdr.N != 0 {
-		return errors.Errorf("decompressed data has an unexpected length, %d bytes not read", castedRdr.N)
 	}
 	return e.doDecode(decompressedSlice, to)
 }
