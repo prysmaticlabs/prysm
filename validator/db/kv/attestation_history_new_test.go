@@ -130,7 +130,7 @@ func TestAttestationHistoryForPubKeysNew_EmptyVals(t *testing.T) {
 	historyForPubKeys, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
-	cleanAttHistoryForPubKeys := make(map[[48]byte][]byte)
+	cleanAttHistoryForPubKeys := make(map[[48]byte]EncHistoryData)
 	clean := newAttestationHistoryArray(0)
 	for _, pubKey := range pubkeys {
 		cleanAttHistoryForPubKeys[pubKey] = clean
