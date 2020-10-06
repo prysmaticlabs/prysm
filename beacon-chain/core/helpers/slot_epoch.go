@@ -85,6 +85,9 @@ func StartSlot(epoch uint64) (uint64, error) {
 // EndSlot returns the last slot number of the
 // current epoch.
 func EndSlot(epoch uint64) (uint64, error) {
+	if epoch == math.MaxUint64 {
+		return 0, errors.New("start slot calculation overflows")
+	}
 	slot, err := mathutil.Mul64(epoch+1, params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		return slot, errors.Wrap(err, "start slot calculation overflows")
