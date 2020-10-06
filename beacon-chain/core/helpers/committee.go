@@ -351,7 +351,7 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
 	// The cache uses the block root at the last epoch slot as key. (e.g. for epoch 1, the key is root at slot 31)
 	// Which is the reason why we skip genesis epoch.
-	if epoch == params.BeaconConfig().GenesisEpoch {
+	if epoch <= params.BeaconConfig().GenesisEpoch {
 		return nil
 	}
 
