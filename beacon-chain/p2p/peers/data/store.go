@@ -62,8 +62,18 @@ func NewStore(ctx context.Context, config *StoreConfig) *Store {
 
 // PeerData returns data associated with a given peer, if any.
 func (s *Store) PeerData(pid peer.ID) (*PeerData, bool) {
-	data, ok := s.peers[pid]
-	return data, ok
+	peerData, ok := s.peers[pid]
+	return peerData, ok
+}
+
+// PeerDataGetOrCreate returns data associated with a given peer.
+// If no data has been associated yet, newly created and associated data object is returned.
+func (s *Store) PeerDataGetOrCreate(pid peer.ID) *PeerData {
+	if peerData, ok := s.peers[pid]; ok {
+		return peerData
+	}
+	s.peers[pid] = &PeerData{}
+	return s.peers[pid]
 }
 
 // SetPeerData updates data associated with a given peer.
@@ -71,7 +81,17 @@ func (s *Store) SetPeerData(pid peer.ID, data *PeerData) {
 	s.peers[pid] = data
 }
 
+// DeletePeerData removes data associated with a given peer.
+func (s *Store) DeletePeerData(pid peer.ID) {
+	delete(s.peers, pid)
+}
+
 // Peers returns map of peer data objects.
 func (s *Store) Peers() map[peer.ID]*PeerData {
 	return s.peers
+}
+
+// Config exposes store configuration params.
+func (s *Store) Config() *StoreConfig {
+	return s.config
 }
