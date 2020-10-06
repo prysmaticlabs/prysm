@@ -10,6 +10,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -119,32 +120,36 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 			params.BeaconNetworkConfig().MaxChunkSize,
 		)
 	}
-	msgMax, err := e.MaxLength(int(msgLen))
+	_, err = e.MaxLength(int(msgLen))
 	if err != nil {
 		return err
 	}
-	limitedRdr := io.LimitReader(r, int64(msgMax))
-	r = newBufferedReader(limitedRdr)
+	//limitedRdr := io.LimitReader(r, int64(msgMax))
+	r = newBufferedReader(r)
 	defer bufReaderPool.Put(r)
 
-	// No way to predict decompressed sizes, so we take the max block size as an
-	// initial buffer.
-	b := [snappyMaxBlockLength]byte{}
+	bufferBound := mathutil.Min(msgLen, snappyMaxBlockLength)
+	buf := make([]byte, bufferBound)
 	decompressedSlice := make([]byte, 0, 0)
+	totalBytes := 0
 	// Read all bytes from stream to handle multiple
 	// framed chunks. Required if reading objects which
 	// are larger than 65 kb.
-	for {
-		readBytes, err := r.Read(b[:])
+	for totalBytes < int(msgLen) {
+		readBytes, err := r.Read(buf)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return err
 		}
+		totalBytes += readBytes
 		decompressedChunk := make([]byte, readBytes)
-		copy(decompressedChunk, b[:readBytes])
+		copy(decompressedChunk, buf[:readBytes])
 		decompressedSlice = append(decompressedSlice, decompressedChunk...)
+	}
+	if totalBytes != int(msgLen) {
+		return errors.Errorf("decompressed data has an unexpected length, wanted %d but got %d", msgLen, totalBytes)
 	}
 	return e.doDecode(decompressedSlice, to)
 }
