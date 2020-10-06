@@ -120,12 +120,12 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 			params.BeaconNetworkConfig().MaxChunkSize,
 		)
 	}
-	_, err = e.MaxLength(int(msgLen))
+	msgMax, err := e.MaxLength(int(msgLen))
 	if err != nil {
 		return err
 	}
-	//limitedRdr := io.LimitReader(r, int64(msgMax))
-	r = newBufferedReader(r)
+	limitedRdr := io.LimitReader(r, int64(msgMax))
+	r = newBufferedReader(limitedRdr)
 	defer bufReaderPool.Put(r)
 
 	bufferBound := mathutil.Min(msgLen, snappyMaxBlockLength)
