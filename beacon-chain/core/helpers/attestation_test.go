@@ -18,27 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-func TestAttestation_SlotSignature(t *testing.T) {
-	priv := bls.RandKey()
-	pub := priv.PublicKey()
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
-		Validators: []*ethpb.Validator{{PublicKey: pub.Marshal()}},
-		Fork: &pb.Fork{
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			Epoch:           0,
-		},
-		Slot: 100,
-	})
-	require.NoError(t, err)
-	slot := uint64(101)
-
-	sig, err := helpers.SlotSignature(state, slot, priv)
-	require.NoError(t, err)
-	require.NoError(t, helpers.ComputeDomainVerifySigningRoot(state, 0, helpers.CurrentEpoch(state), slot,
-		params.BeaconConfig().DomainBeaconAttester, sig.Marshal()))
-}
-
 func TestAttestation_IsAggregator(t *testing.T) {
 	t.Run("aggregator", func(t *testing.T) {
 		beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
