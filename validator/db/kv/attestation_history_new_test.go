@@ -23,13 +23,14 @@ func TestNewAttestationHistoryArray(t *testing.T) {
 }
 
 func TestSizeChecks(t *testing.T) {
-	require.ErrorContains(t, "is smaller then minimal size", sizeChecks([]byte{}))
-	require.NoError(t, sizeChecks([]byte{0, 1, 2, 3, 4, 5, 6, 7}))
-	require.ErrorContains(t, "is not a multiple of entry size", sizeChecks([]byte{0, 1, 2, 3, 4, 5, 6, 7, 8}))
-	require.NoError(t, sizeChecks(newAttestationHistoryArray(0)))
-	require.NoError(t, sizeChecks(newAttestationHistoryArray(1)))
-	require.NoError(t, sizeChecks(newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod)))
-	require.NoError(t, sizeChecks(newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod-1)))
+
+	require.ErrorContains(t, "is smaller then minimal size", encHistoryData{}.assertSize())
+	require.NoError(t, encHistoryData{0, 1, 2, 3, 4, 5, 6, 7}.assertSize())
+	require.ErrorContains(t, "is not a multiple of entry size", encHistoryData{0, 1, 2, 3, 4, 5, 6, 7, 8}.assertSize())
+	require.NoError(t, newAttestationHistoryArray(0).assertSize())
+	require.NoError(t, newAttestationHistoryArray(1).assertSize())
+	require.NoError(t, newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod).assertSize())
+	require.NoError(t, newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod-1).assertSize())
 }
 
 func TestGetLatestEpochWritten(t *testing.T) {
@@ -146,7 +147,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	_, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
-	setAttHistoryForPubKeys := make(map[[48]byte][]byte)
+	setAttHistoryForPubKeys := make(map[[48]byte]encHistoryData)
 	clean := newAttestationHistoryArray(0)
 	for i, pubKey := range pubkeys {
 		enc, err := setTargetData(ctx,
