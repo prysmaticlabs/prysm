@@ -32,7 +32,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port), LocalIP: ipAddr.String()},
+		cfg:                   &Config{UDPPort: uint(port)},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -51,7 +51,6 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 		port = 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
-		cfg.LocalIP = ipAddr.String()
 
 		// We give every peer a different genesis validators root, which
 		// will cause each peer to have a different ForkDigest, preventing
@@ -117,7 +116,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port), LocalIP: ipAddr.String()},
+		cfg:                   &Config{UDPPort: uint(port)},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -137,7 +136,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		port = 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
-		cfg.LocalIP = ipAddr.String()
 
 		c := params.BeaconConfig()
 		nextForkEpoch := uint64(i)

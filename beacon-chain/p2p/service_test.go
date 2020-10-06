@@ -132,7 +132,6 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
-	cfg.LocalIP = ipAddr.String()
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
@@ -165,7 +164,6 @@ func TestListenForNewNodes(t *testing.T) {
 		h, pkey, ipAddr := createHost(t, port+i)
 		cfg.UDPPort = uint(port + i)
 		cfg.TCPPort = uint(port + i)
-		cfg.LocalIP = ipAddr.String()
 		s := &Service{
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
