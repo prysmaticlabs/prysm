@@ -1,10 +1,11 @@
-package peers
+package scorers
 
 import (
 	"context"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 type BadResponsesScorer struct {
 	ctx    context.Context
 	config *BadResponsesScorerConfig
-	store  *peerDataStore
+	store  *data.Store
 }
 
 // BadResponsesScorerConfig holds configuration parameters for bad response scoring service.
@@ -36,7 +37,7 @@ type BadResponsesScorerConfig struct {
 
 // newBadResponsesScorer creates new bad responses scoring service.
 func newBadResponsesScorer(
-	ctx context.Context, store *peerDataStore, config *BadResponsesScorerConfig) *BadResponsesScorer {
+	ctx context.Context, store *data.Store, config *BadResponsesScorerConfig) *BadResponsesScorer {
 	if config == nil {
 		config = &BadResponsesScorerConfig{}
 	}
@@ -67,12 +68,12 @@ func (s *BadResponsesScorer) Score(pid peer.ID) float64 {
 // score is a lock-free version of ScoreBadResponses.
 func (s *BadResponsesScorer) score(pid peer.ID) float64 {
 	score := float64(0)
-	peerData, ok := s.store.peers[pid]
+	peerData, ok := s.store.PeerData(pid)
 	if !ok {
 		return score
 	}
-	if peerData.badResponses > 0 {
-		score = float64(peerData.badResponses) / float64(s.config.Threshold)
+	if peerData.BadResponses > 0 {
+		score = float64(peerData.BadResponses) / float64(s.config.Threshold)
 		score = score * s.config.Weight
 	}
 	return score
@@ -92,10 +93,10 @@ func (s *BadResponsesScorer) Count(pid peer.ID) (int, error) {
 
 // count is a lock-free version of Count.
 func (s *BadResponsesScorer) count(pid peer.ID) (int, error) {
-	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.badResponses, nil
+	if peerData, ok := s.store.PeerData(pid); ok {
+		return peerData.BadResponses, nil
 	}
-	return -1, ErrPeerUnknown
+	return -1, data.ErrPeerUnknown
 }
 
 // Increment increments the number of bad responses we have received from the given remote peer.
@@ -104,13 +105,14 @@ func (s *BadResponsesScorer) Increment(pid peer.ID) {
 	s.store.Lock()
 	defer s.store.Unlock()
 
-	if _, ok := s.store.peers[pid]; !ok {
-		s.store.peers[pid] = &peerData{
-			badResponses: 1,
-		}
+	peerData, ok := s.store.PeerData(pid)
+	if !ok {
+		s.store.SetPeerData(pid, &data.PeerData{
+			BadResponses: 1,
+		})
 		return
 	}
-	s.store.peers[pid].badResponses++
+	peerData.BadResponses++
 }
 
 // IsBadPeer states if the peer is to be considered bad.
@@ -123,8 +125,8 @@ func (s *BadResponsesScorer) IsBadPeer(pid peer.ID) bool {
 
 // isBadPeer is lock-free version of IsBadPeer.
 func (s *BadResponsesScorer) isBadPeer(pid peer.ID) bool {
-	if peerData, ok := s.store.peers[pid]; ok {
-		return peerData.badResponses >= s.config.Threshold
+	if peerData, ok := s.store.PeerData(pid); ok {
+		return peerData.BadResponses >= s.config.Threshold
 	}
 	return false
 }
@@ -135,7 +137,7 @@ func (s *BadResponsesScorer) BadPeers() []peer.ID {
 	defer s.store.RUnlock()
 
 	badPeers := make([]peer.ID, 0)
-	for pid := range s.store.peers {
+	for pid := range s.store.Peers() {
 		if s.isBadPeer(pid) {
 			badPeers = append(badPeers, pid)
 		}
@@ -150,9 +152,9 @@ func (s *BadResponsesScorer) Decay() {
 	s.store.Lock()
 	defer s.store.Unlock()
 
-	for _, peerData := range s.store.peers {
-		if peerData.badResponses > 0 {
-			peerData.badResponses--
+	for _, peerData := range s.store.Peers() {
+		if peerData.BadResponses > 0 {
+			peerData.BadResponses--
 		}
 	}
 }
