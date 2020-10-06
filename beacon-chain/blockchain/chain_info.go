@@ -97,6 +97,9 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 
 // HeadSlot returns the slot of the head of the chain.
 func (s *Service) HeadSlot() uint64 {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	if !s.hasHeadState() {
 		return 0
 	}
@@ -106,6 +109,9 @@ func (s *Service) HeadSlot() uint64 {
 
 // HeadRoot returns the root of the head of the chain.
 func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	if s.headRoot() != params.BeaconConfig().ZeroHash {
 		r := s.headRoot()
 		return r[:], nil
@@ -131,6 +137,9 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
 func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	if s.hasHeadState() {
 		return s.headBlock(), nil
 	}
@@ -144,6 +153,8 @@ func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, erro
 func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.HeadState")
 	defer span.End()
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
 
 	ok := s.hasHeadState()
 	span.AddAttributes(trace.BoolAttribute("cache_hit", ok))
@@ -157,6 +168,9 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
 func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	if !s.hasHeadState() {
 		return []uint64{}, nil
 	}
@@ -165,6 +179,9 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]ui
 
 // HeadSeed returns the seed from the head view of a given epoch.
 func (s *Service) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	if !s.hasHeadState() {
 		return [32]byte{}, nil
 	}
@@ -174,6 +191,9 @@ func (s *Service) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) 
 
 // HeadGenesisValidatorRoot returns genesis validator root of the head state.
 func (s *Service) HeadGenesisValidatorRoot() [32]byte {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	if !s.hasHeadState() {
 		return [32]byte{}
 	}

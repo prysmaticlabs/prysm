@@ -29,7 +29,11 @@ func TestMain(m *testing.M) {
 	defer func() {
 		flags.Init(resetFlags)
 	}()
-	os.Exit(m.Run())
+	code := m.Run()
+	// os.Exit will prevent defer from being called
+	resetCfg()
+	flags.Init(resetFlags)
+	os.Exit(code)
 }
 
 // roundScore returns score rounded in accordance with the score manager's rounding factor.
