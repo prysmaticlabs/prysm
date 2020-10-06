@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
-	"github.com/wercker/journalhook"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
+	"github.com/wercker/journalhook"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
