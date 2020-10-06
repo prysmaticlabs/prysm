@@ -228,11 +228,17 @@ func (s *Service) headGenesisValidatorRoot() [32]byte {
 	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
-// Returns true if head state exists.
-func (s *Service) hasHeadState() bool {
+// HasHeadState returns true if head state exists.
+func (s *Service) HasHeadState() bool {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
+	return s.hasHeadState()
+}
+
+// Returns true if head state exists.
+// This is the lock free version.
+func (s *Service) hasHeadState() bool {
 	return s.head != nil && s.head.state != nil
 }
 

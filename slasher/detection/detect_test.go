@@ -184,6 +184,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			attsl, err := db.AttesterSlashings(ctx, status.Active)
+			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(attsl), "Didnt save slashing to db")
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
@@ -334,6 +335,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			savedSlashings, err := db.AttesterSlashings(ctx, status.Active)
+			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(savedSlashings), "Did not save slashing to db")
 
 			for _, ss := range slashings {
@@ -539,6 +541,7 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			require.NoError(t, err)
 			assert.DeepEqual(t, tt.slashing, slashing)
 			savedSlashings, err := db.ProposalSlashingsByStatus(ctx, status.Active)
+			require.NoError(t, err)
 			if tt.slashing != nil {
 				require.Equal(t, 1, len(savedSlashings), "Did not save slashing to db")
 			}

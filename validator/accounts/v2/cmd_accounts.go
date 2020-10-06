@@ -30,6 +30,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -50,6 +51,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -69,6 +71,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -94,6 +97,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -115,6 +119,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -142,6 +147,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)

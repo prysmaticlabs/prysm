@@ -110,8 +110,8 @@ func TestDecrypt(t *testing.T) {
 
 	// We capture the results of stdout to check the public key and private keys
 	// were both printed to stdout.
-	assert.Equal(t, strings.Contains(stringOutput, keystore.Pubkey), true)
-	assert.Equal(t, strings.Contains(stringOutput, fmt.Sprintf("%#x", privKey.Marshal())), true)
+	assert.Equal(t, true, strings.Contains(stringOutput, keystore.Pubkey))
+	assert.Equal(t, true, strings.Contains(stringOutput, fmt.Sprintf("%#x", privKey.Marshal())))
 }
 
 func TestEncrypt(t *testing.T) {
@@ -143,9 +143,6 @@ func TestEncrypt(t *testing.T) {
 	stringOutput := string(out)
 
 	// We capture the results of stdout to check the public key was printed to stdout.
-	assert.Equal(
-		t,
-		strings.Contains(stringOutput, fmt.Sprintf("%x", privKey.PublicKey().Marshal())),
-		true,
-	)
+	res := strings.Contains(stringOutput, fmt.Sprintf("%x", privKey.PublicKey().Marshal()))
+	assert.Equal(t, true, res)
 }
