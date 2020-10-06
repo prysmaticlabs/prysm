@@ -91,8 +91,8 @@ func (hd EncHistoryData) setTargetData(ctx context.Context, target uint64, histo
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
-	// cursor for the location to write target epoch to.
-	// modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
+	// Cursor for the location to write target epoch to.
+	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
 	if uint64(len(hd)) < cursor+historySize {
 		ext := make([]byte, cursor+historySize-uint64(len(hd)))
