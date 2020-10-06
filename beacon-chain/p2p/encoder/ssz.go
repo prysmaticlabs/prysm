@@ -112,15 +112,11 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	if err != nil {
 		return err
 	}
-	maxLength, err := e.MaxLength(int(params.BeaconNetworkConfig().MaxChunkSize))
-	if err != nil {
-		return err
-	}
-	if msgLen > uint64(maxLength) {
+	if msgLen > uint64(int(params.BeaconNetworkConfig().MaxChunkSize)) {
 		return fmt.Errorf(
 			"remaining bytes %d goes over the provided max limit of %d",
 			msgLen,
-			maxLength,
+			params.BeaconNetworkConfig().MaxChunkSize,
 		)
 	}
 	msgMax, err := e.MaxLength(int(msgLen))
@@ -135,7 +131,6 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	// initial buffer.
 	b := [snappyMaxBlockLength]byte{}
 	decompressedSlice := make([]byte, 0, 0)
-	prevReadBytes := 0
 	// Read all bytes from stream to handle multiple
 	// framed chunks. Required if reading objects which
 	// are larger than 65 kb.
@@ -148,8 +143,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 			return err
 		}
 		decompressedChunk := make([]byte, readBytes)
-		copy(decompressedChunk, b[prevReadBytes:readBytes])
-		prevReadBytes = readBytes
+		copy(decompressedChunk, b[:readBytes])
 		decompressedSlice = append(decompressedSlice, decompressedChunk...)
 	}
 	return e.doDecode(decompressedSlice, to)
