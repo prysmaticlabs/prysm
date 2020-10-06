@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -68,7 +68,7 @@ func TestScorers_BadResponses_Count(t *testing.T) {
 
 	pid := peer.ID("peer1")
 	_, err := scorer.BadResponsesScorer().Count(pid)
-	assert.ErrorContains(t, data.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	peerStatuses.Add(nil, pid, nil, network.DirUnknown)
 	count, err := scorer.BadResponsesScorer().Count(pid)

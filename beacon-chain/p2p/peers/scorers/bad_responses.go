@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 type BadResponsesScorer struct {
 	ctx    context.Context
 	config *BadResponsesScorerConfig
-	store  *data.Store
+	store  *peerdata.Store
 }
 
 // BadResponsesScorerConfig holds configuration parameters for bad response scoring service.
@@ -37,7 +37,7 @@ type BadResponsesScorerConfig struct {
 
 // newBadResponsesScorer creates new bad responses scoring service.
 func newBadResponsesScorer(
-	ctx context.Context, store *data.Store, config *BadResponsesScorerConfig) *BadResponsesScorer {
+	ctx context.Context, store *peerdata.Store, config *BadResponsesScorerConfig) *BadResponsesScorer {
 	if config == nil {
 		config = &BadResponsesScorerConfig{}
 	}
@@ -96,7 +96,7 @@ func (s *BadResponsesScorer) count(pid peer.ID) (int, error) {
 	if peerData, ok := s.store.PeerData(pid); ok {
 		return peerData.BadResponses, nil
 	}
-	return -1, data.ErrPeerUnknown
+	return -1, peerdata.ErrPeerUnknown
 }
 
 // Increment increments the number of bad responses we have received from the given remote peer.
@@ -107,7 +107,7 @@ func (s *BadResponsesScorer) Increment(pid peer.ID) {
 
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
-		s.store.SetPeerData(pid, &data.PeerData{
+		s.store.SetPeerData(pid, &peerdata.PeerData{
 			BadResponses: 1,
 		})
 		return

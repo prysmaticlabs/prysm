@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 )
 
 // ScoreRoundingFactor defines how many digits to keep in decimal part.
@@ -16,7 +16,7 @@ const ScoreRoundingFactor = 10000
 // Service manages peer scorers that are used to calculate overall peer score.
 type Service struct {
 	ctx     context.Context
-	store   *data.Store
+	store   *peerdata.Store
 	scorers struct {
 		badResponsesScorer  *BadResponsesScorer
 		blockProviderScorer *BlockProviderScorer
@@ -30,7 +30,7 @@ type Config struct {
 }
 
 // NewService provides fully initialized peer scoring service.
-func NewService(ctx context.Context, store *data.Store, config *Config) *Service {
+func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Service {
 	s := &Service{
 		ctx:   ctx,
 		store: store,

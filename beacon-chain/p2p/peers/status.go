@@ -34,7 +34,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,7 +43,7 @@ import (
 
 const (
 	// PeerDisconnected means there is no connection to the peer.
-	PeerDisconnected data.PeerConnectionState = iota
+	PeerDisconnected peerdata.PeerConnectionState = iota
 	// PeerDisconnecting means there is an on-going attempt to disconnect from the peer.
 	PeerDisconnecting
 	// PeerConnected means the peer has an active connection.
@@ -59,7 +59,7 @@ const maxLimitBuffer = 150
 type Status struct {
 	ctx     context.Context
 	scorers *scorers.Service
-	store   *data.Store
+	store   *peerdata.Store
 }
 
 // StatusConfig represents peer status service params.
@@ -72,7 +72,7 @@ type StatusConfig struct {
 
 // NewStatus creates a new status entity.
 func NewStatus(ctx context.Context, config *StatusConfig) *Status {
-	store := data.NewStore(ctx, &data.StoreConfig{
+	store := peerdata.NewStore(ctx, &peerdata.StoreConfig{
 		MaxPeers: maxLimitBuffer + config.PeerLimit,
 	})
 	return &Status{
@@ -107,7 +107,7 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 		}
 		return
 	}
-	peerData := &data.PeerData{
+	peerData := &peerdata.PeerData{
 		Address:   address,
 		Direction: direction,
 		// Peers start disconnected; state will be updated when the handshake process begins.
@@ -128,7 +128,7 @@ func (p *Status) Address(pid peer.ID) (ma.Multiaddr, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.Address, nil
 	}
-	return nil, data.ErrPeerUnknown
+	return nil, peerdata.ErrPeerUnknown
 }
 
 // Direction returns the direction of the given remote peer.
@@ -140,7 +140,7 @@ func (p *Status) Direction(pid peer.ID) (network.Direction, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.Direction, nil
 	}
-	return network.DirUnknown, data.ErrPeerUnknown
+	return network.DirUnknown, peerdata.ErrPeerUnknown
 }
 
 // ENR returns the enr for the corresponding peer id.
@@ -151,7 +151,7 @@ func (p *Status) ENR(pid peer.ID) (*enr.Record, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.Enr, nil
 	}
-	return nil, data.ErrPeerUnknown
+	return nil, peerdata.ErrPeerUnknown
 }
 
 // SetChainState sets the chain state of the given remote peer.
@@ -174,7 +174,7 @@ func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.ChainState, nil
 	}
-	return nil, data.ErrPeerUnknown
+	return nil, peerdata.ErrPeerUnknown
 }
 
 // IsActive checks if a peers is active and returns the result appropriately.
@@ -204,7 +204,7 @@ func (p *Status) Metadata(pid peer.ID) (*pb.MetaData, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return proto.Clone(peerData.MetaData).(*pb.MetaData), nil
 	}
-	return nil, data.ErrPeerUnknown
+	return nil, peerdata.ErrPeerUnknown
 }
 
 // CommitteeIndices retrieves the committee subnets the peer is subscribed to.
@@ -218,7 +218,7 @@ func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 		}
 		return retrieveIndicesFromBitfield(peerData.MetaData.Attnets), nil
 	}
-	return nil, data.ErrPeerUnknown
+	return nil, peerdata.ErrPeerUnknown
 }
 
 // SubscribedToSubnet retrieves the peers subscribed to the given
@@ -245,7 +245,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 }
 
 // SetConnectionState sets the connection state of the given remote peer.
-func (p *Status) SetConnectionState(pid peer.ID, state data.PeerConnectionState) {
+func (p *Status) SetConnectionState(pid peer.ID, state peerdata.PeerConnectionState) {
 	p.store.Lock()
 	defer p.store.Unlock()
 
@@ -255,14 +255,14 @@ func (p *Status) SetConnectionState(pid peer.ID, state data.PeerConnectionState)
 
 // ConnectionState gets the connection state of the given remote peer.
 // This will error if the peer does not exist.
-func (p *Status) ConnectionState(pid peer.ID) (data.PeerConnectionState, error) {
+func (p *Status) ConnectionState(pid peer.ID) (peerdata.PeerConnectionState, error) {
 	p.store.RLock()
 	defer p.store.RUnlock()
 
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.ConnState, nil
 	}
-	return PeerDisconnected, data.ErrPeerUnknown
+	return PeerDisconnected, peerdata.ErrPeerUnknown
 }
 
 // ChainStateLastUpdated gets the last time the chain state of the given remote peer was updated.
@@ -274,7 +274,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.ChainStateLastUpdated, nil
 	}
-	return timeutils.Now(), data.ErrPeerUnknown
+	return timeutils.Now(), peerdata.ErrPeerUnknown
 }
 
 // IsBad states if the peer is to be considered bad.
@@ -387,7 +387,7 @@ func (p *Status) Prune() {
 		return
 	}
 
-	notBadPeer := func(peerData *data.PeerData) bool {
+	notBadPeer := func(peerData *peerdata.PeerData) bool {
 		return peerData.BadResponses < p.scorers.BadResponsesScorer().Params().Threshold
 	}
 	type peerResp struct {

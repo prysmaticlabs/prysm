@@ -9,7 +9,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -37,7 +37,7 @@ const (
 type BlockProviderScorer struct {
 	ctx    context.Context
 	config *BlockProviderScorerConfig
-	store  *data.Store
+	store  *peerdata.Store
 	// maxScore is a cached value for maximum attainable block provider score.
 	// It is calculated, on startup, as following: (processedBlocksCap / batchSize) * batchWeight.
 	maxScore float64
@@ -63,7 +63,7 @@ type BlockProviderScorerConfig struct {
 
 // newBlockProviderScorer creates block provider scoring service.
 func newBlockProviderScorer(
-	ctx context.Context, store *data.Store, config *BlockProviderScorerConfig) *BlockProviderScorer {
+	ctx context.Context, store *peerdata.Store, config *BlockProviderScorerConfig) *BlockProviderScorer {
 	if config == nil {
 		config = &BlockProviderScorerConfig{}
 	}

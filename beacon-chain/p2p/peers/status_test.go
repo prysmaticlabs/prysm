@@ -11,7 +11,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -140,22 +140,22 @@ func TestErrUnknownPeer(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = p.Address(id)
-	assert.ErrorContains(t, data.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.Direction(id)
-	assert.ErrorContains(t, data.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.ChainState(id)
-	assert.ErrorContains(t, data.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.ConnectionState(id)
-	assert.ErrorContains(t, data.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.ChainStateLastUpdated(id)
-	assert.ErrorContains(t, data.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.Scorers().BadResponsesScorer().Count(id)
-	assert.ErrorContains(t, data.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 }
 
 func TestPeerCommitteeIndices(t *testing.T) {
@@ -669,7 +669,7 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 }
 
 // addPeer is a helper to add a peer with a given connection state)
-func addPeer(t *testing.T, p *peers.Status, state data.PeerConnectionState) peer.ID {
+func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
 	// Set up some peers with different states
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)
