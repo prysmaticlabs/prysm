@@ -32,7 +32,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
@@ -42,12 +41,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-// PeerConnectionState is the state of the connection.
-type PeerConnectionState ethpb.ConnectionState
-
 const (
 	// PeerDisconnected means there is no connection to the peer.
-	PeerDisconnected PeerConnectionState = iota
+	PeerDisconnected data.PeerConnectionState = iota
 	// PeerDisconnecting means there is an on-going attempt to disconnect from the peer.
 	PeerDisconnecting
 	// PeerConnected means the peer has an active connection.
@@ -249,7 +245,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 }
 
 // SetConnectionState sets the connection state of the given remote peer.
-func (p *Status) SetConnectionState(pid peer.ID, state PeerConnectionState) {
+func (p *Status) SetConnectionState(pid peer.ID, state data.PeerConnectionState) {
 	p.store.Lock()
 	defer p.store.Unlock()
 
@@ -259,7 +255,7 @@ func (p *Status) SetConnectionState(pid peer.ID, state PeerConnectionState) {
 
 // ConnectionState gets the connection state of the given remote peer.
 // This will error if the peer does not exist.
-func (p *Status) ConnectionState(pid peer.ID) (PeerConnectionState, error) {
+func (p *Status) ConnectionState(pid peer.ID) (data.PeerConnectionState, error) {
 	p.store.RLock()
 	defer p.store.RUnlock()
 

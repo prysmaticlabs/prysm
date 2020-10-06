@@ -669,7 +669,7 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 }
 
 // addPeer is a helper to add a peer with a given connection state)
-func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) peer.ID {
+func addPeer(t *testing.T, p *peers.Status, state data.PeerConnectionState) peer.ID {
 	// Set up some peers with different states
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)

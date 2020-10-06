@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -18,6 +18,9 @@ var (
 	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
 	ErrPeerUnknown = errors.New("peer unknown")
 )
+
+// PeerConnectionState is the state of the connection.
+type PeerConnectionState ethpb.ConnectionState
 
 // StoreConfig holds peer store parameters.
 type StoreConfig struct {
@@ -39,7 +42,7 @@ type PeerData struct {
 	// Network related data.
 	Address   ma.Multiaddr
 	Direction network.Direction
-	ConnState peers.PeerConnectionState
+	ConnState PeerConnectionState
 	Enr       *enr.Record
 	// Chain related data.
 	ChainState            *pb.Status
