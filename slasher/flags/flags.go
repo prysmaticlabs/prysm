@@ -63,5 +63,4 @@ var (
 		Usage: "Sets the highest attestation cache size.",
 		Value: 3000,
 	}
-
 )

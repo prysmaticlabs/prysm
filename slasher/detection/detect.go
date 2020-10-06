@@ -3,6 +3,7 @@ package detection
 import (
 	"bytes"
 	"context"
+
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 
 	"github.com/pkg/errors"
@@ -218,11 +219,6 @@ func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.Indexed
 		incomingAtt.Data.Target.Epoch > prevAtt.Data.Target.Epoch
 }
 
-
-
-
-
-
 // UpdateHighestAttestation updates to the db the highest source and target attestations for a each validator
 func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	for _, idx := range att.AttestingIndices {
@@ -233,8 +229,8 @@ func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Inde
 		if h == nil { // create default
 			h = &slashpb.HighestAttestation{
 				HighestSourceEpoch: 0,
-				HighestTargetEpoch:0,
-				ValidatorId: idx,
+				HighestTargetEpoch: 0,
+				ValidatorId:        idx,
 			}
 			//createDefault
 		}

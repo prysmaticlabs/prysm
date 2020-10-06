@@ -43,7 +43,7 @@ func (c *HighestAttestationCache) Set(setKey uint64, highest *slashpb.HighestAtt
 	if ok {
 		set[highest.ValidatorId] = highest
 	} else {
-		set = map[uint64]*slashpb.HighestAttestation {
+		set = map[uint64]*slashpb.HighestAttestation{
 			highest.ValidatorId: highest,
 		}
 		c.cache.Add(setKey, set)

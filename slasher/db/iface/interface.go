@@ -5,8 +5,9 @@ package iface
 
 import (
 	"context"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"io"
+
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"

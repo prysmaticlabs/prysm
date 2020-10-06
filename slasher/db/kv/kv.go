@@ -25,13 +25,13 @@ type Store struct {
 	flatSpanCache           *cache.EpochFlatSpansCache
 	highestAttestationCache *cache.HighestAttestationCache
 	spanCacheEnabled        bool
-	highestAttCacheEnabled 	bool
+	highestAttCacheEnabled  bool
 }
 
 // Config options for the slasher db.
 type Config struct {
 	// SpanCacheSize determines the span map cache size.
-	SpanCacheSize int
+	SpanCacheSize               int
 	HighestAttestationCacheSize int
 }
 

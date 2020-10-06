@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -77,8 +78,6 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*s
 func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SavePubKey")
 	defer span.End()
-
-
 
 	if db.highestAttCacheEnabled {
 		db.highestAttestationCache.Set(highestAttSetkey(highest.ValidatorId), highest)

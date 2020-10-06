@@ -170,7 +170,7 @@ func (s *SlasherNode) startDB() error {
 	dbPath := path.Join(baseDir, slasherDBName)
 	spanCacheSize := s.cliCtx.Int(flags.SpanCacheSize.Name)
 	highestAttCacheSize := s.cliCtx.Int(flags.HighestAttCacheSize.Name)
-	cfg := &kv.Config{SpanCacheSize: spanCacheSize, HighestAttestationCacheSize:highestAttCacheSize}
+	cfg := &kv.Config{SpanCacheSize: spanCacheSize, HighestAttestationCacheSize: highestAttCacheSize}
 	log.Infof("Span cache size has been set to: %d", spanCacheSize)
 	d, err := db.NewDB(dbPath, cfg)
 	if err != nil {
