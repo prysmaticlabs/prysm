@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation_history.go",
+        "attestation_history_new.go",
         "db.go",
         "manage.go",
         "new_proposal_history.go",
@@ -30,6 +31,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestation_history_new_test.go",
         "attestation_history_test.go",
         "db_test.go",
         "manage_test.go",
