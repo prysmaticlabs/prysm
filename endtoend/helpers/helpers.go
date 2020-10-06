@@ -171,10 +171,13 @@ func writeURLRespAtPath(url string, filePath string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
+
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
