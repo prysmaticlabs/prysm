@@ -1,4 +1,4 @@
-package peers
+package scorers
 
 import (
 	"context"
@@ -6,31 +6,32 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/data"
 )
 
 // ScoreRoundingFactor defines how many digits to keep in decimal part.
 // This parameter is used in math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor.
 const ScoreRoundingFactor = 10000
 
-// PeerScorerManager keeps track of peer scorers that are used to calculate overall peer score.
-type PeerScorerManager struct {
+// Service manages peer scorers that are used to calculate overall peer score.
+type Service struct {
 	ctx     context.Context
-	store   *peerDataStore
+	store   *data.Store
 	scorers struct {
 		badResponsesScorer  *BadResponsesScorer
 		blockProviderScorer *BlockProviderScorer
 	}
 }
 
-// PeerScorerConfig holds configuration parameters for scoring service.
-type PeerScorerConfig struct {
+// Config holds configuration parameters for scoring service.
+type Config struct {
 	BadResponsesScorerConfig  *BadResponsesScorerConfig
 	BlockProviderScorerConfig *BlockProviderScorerConfig
 }
 
-// newPeerScorerManager provides fully initialized peer scoring service.
-func newPeerScorerManager(ctx context.Context, store *peerDataStore, config *PeerScorerConfig) *PeerScorerManager {
-	mgr := &PeerScorerManager{
+// NewService provides fully initialized peer scoring service.
+func NewService(ctx context.Context, store *data.Store, config *Config) *Service {
+	mgr := &Service{
 		ctx:   ctx,
 		store: store,
 	}
@@ -42,22 +43,22 @@ func newPeerScorerManager(ctx context.Context, store *peerDataStore, config *Pee
 }
 
 // BadResponsesScorer exposes bad responses scoring service.
-func (m *PeerScorerManager) BadResponsesScorer() *BadResponsesScorer {
+func (m *Service) BadResponsesScorer() *BadResponsesScorer {
 	return m.scorers.badResponsesScorer
 }
 
 // BlockProviderScorer exposes block provider scoring service.
-func (m *PeerScorerManager) BlockProviderScorer() *BlockProviderScorer {
+func (m *Service) BlockProviderScorer() *BlockProviderScorer {
 	return m.scorers.blockProviderScorer
 }
 
 // Score returns calculated peer score across all tracked metrics.
-func (m *PeerScorerManager) Score(pid peer.ID) float64 {
+func (m *Service) Score(pid peer.ID) float64 {
 	m.store.RLock()
 	defer m.store.RUnlock()
 
 	score := float64(0)
-	if _, ok := m.store.peers[pid]; !ok {
+	if _, ok := m.store.PeerData(pid); !ok {
 		return 0
 	}
 	score += m.scorers.badResponsesScorer.score(pid)
@@ -66,7 +67,7 @@ func (m *PeerScorerManager) Score(pid peer.ID) float64 {
 }
 
 // loop handles background tasks.
-func (m *PeerScorerManager) loop(ctx context.Context) {
+func (m *Service) loop(ctx context.Context) {
 	decayBadResponsesStats := time.NewTicker(m.scorers.badResponsesScorer.Params().DecayInterval)
 	defer decayBadResponsesStats.Stop()
 	decayBlockProviderStats := time.NewTicker(m.scorers.blockProviderScorer.Params().DecayInterval)
