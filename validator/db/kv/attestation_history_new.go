@@ -87,7 +87,7 @@ func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*His
 	return history, nil
 }
 
-func (hd EncHistoryData) setTargetData(ctx context.Context, target uint64, historyData *HistoryData) ([]byte, error) {
+func (hd EncHistoryData) setTargetData(ctx context.Context, target uint64, historyData *HistoryData) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
