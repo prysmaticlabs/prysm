@@ -3,9 +3,33 @@ package types
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
+
+func TestSSZUint64_Limit(t *testing.T) {
+	sszType := SSZUint64(0)
+	serializedObj := [7]byte{}
+	require.ErrorContains(t, "expected buffer with length", sszType.UnmarshalSSZ(serializedObj[:]))
+}
+func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
+	fixedRoots := make([][32]byte, 0, 0)
+	for i := uint64(0); i < params.BeaconNetworkConfig().MaxRequestBlocks+100; i++ {
+		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
+	}
+	req := BeaconBlockByRootsReq(fixedRoots)
+
+	_, err := req.MarshalSSZ()
+	require.ErrorContains(t, "beacon block by roots request exceeds max size", err)
+
+	buf := make([]byte, 0)
+	for _, rt := range fixedRoots {
+		buf = append(buf, rt[:]...)
+	}
+	req2 := BeaconBlockByRootsReq(nil)
+	require.ErrorContains(t, "expected buffer with length of upto", req2.UnmarshalSSZ(buf))
+}
 
 func TestRoundTripSerialization(t *testing.T) {
 	roundTripTestSSZUint64(t)
@@ -37,14 +61,12 @@ func roundTripTestBlocksByRootReq(t *testing.T) {
 	require.NoError(t, err)
 	newVal := BeaconBlockByRootsReq(nil)
 
-	err = newVal.UnmarshalSSZ(marshalledObj)
-	require.NoError(t, err)
+	require.NoError(t, newVal.UnmarshalSSZ(marshalledObj))
 	assert.DeepEqual(t, [][32]byte(newVal), fixedRoots)
 }
 
 func roundTripTestErrorMessage(t *testing.T) {
 	errMsg := []byte{'e', 'r', 'r', 'o', 'r'}
-
 	sszErr := make(ErrorMessage, len(errMsg))
 	copy(sszErr, errMsg)
 
@@ -52,7 +74,6 @@ func roundTripTestErrorMessage(t *testing.T) {
 	require.NoError(t, err)
 	newVal := ErrorMessage(nil)
 
-	err = newVal.UnmarshalSSZ(marshalledObj)
-	require.NoError(t, err)
+	require.NoError(t, newVal.UnmarshalSSZ(marshalledObj))
 	assert.DeepEqual(t, []byte(newVal), errMsg)
 }

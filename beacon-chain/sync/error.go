@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -54,14 +53,12 @@ func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (ui
 
 	// Set response deadline, when reading error message.
 	SetStreamReadDeadline(stream, params.BeaconNetworkConfig().RespTimeout)
-	msg := &pb.ErrorResponse{
-		Message: []byte{},
-	}
+	msg := &types.ErrorMessage{}
 	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
 		return 0, "", err
 	}
 
-	return b[0], string(msg.Message), nil
+	return b[0], string(*msg), nil
 }
 
 func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream, encoder p2p.EncodingProvider) {
@@ -75,7 +72,8 @@ func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pc
 
 func createErrorResponse(code byte, reason string, encoder p2p.EncodingProvider) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
-	if _, err := encoder.Encoding().EncodeWithMaxLength(buf, types.ErrorMessage(reason)); err != nil {
+	errMsg := types.ErrorMessage(reason)
+	if _, err := encoder.Encoding().EncodeWithMaxLength(buf, &errMsg); err != nil {
 		return nil, err
 	}
 
@@ -94,14 +92,12 @@ func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEnc
 		return 0, "", nil
 	}
 
-	msg := &pb.ErrorResponse{
-		Message: []byte{},
-	}
+	msg := &types.ErrorMessage{}
 	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
 		return 0, "", err
 	}
 
-	return b[0], string(msg.Message), nil
+	return b[0], string(*msg), nil
 }
 
 // only returns true for errors that are valid (no resets or expectedEOF errors).

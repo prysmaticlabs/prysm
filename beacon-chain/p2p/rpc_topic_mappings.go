@@ -31,7 +31,7 @@ var RPCTopicMappings = map[string]interface{}{
 	RPCStatusTopic:        new(pb.Status),
 	RPCGoodByeTopic:       new(types.SSZUint64),
 	RPCBlocksByRangeTopic: new(pb.BeaconBlocksByRangeRequest),
-	RPCBlocksByRootTopic:  types.BeaconBlockByRootsReq{},
+	RPCBlocksByRootTopic:  new(types.BeaconBlockByRootsReq),
 	RPCPingTopic:          new(types.SSZUint64),
 	RPCMetaDataTopic:      new(interface{}),
 }

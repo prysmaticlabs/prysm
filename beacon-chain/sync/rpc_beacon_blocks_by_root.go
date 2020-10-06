@@ -19,7 +19,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.p2p.Send(ctx, blockRoots, p2p.RPCBlocksByRootTopic, id)
+	stream, err := s.p2p.Send(ctx, &blockRoots, p2p.RPCBlocksByRootTopic, id)
 	if err != nil {
 		return err
 	}
@@ -67,10 +67,11 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_root")
 
-	blockRoots, ok := msg.(types.BeaconBlockByRootsReq)
+	rawMsg, ok := msg.(*types.BeaconBlockByRootsReq)
 	if !ok {
 		return errors.New("message is not type [][32]byte")
 	}
+	blockRoots := *rawMsg
 	if err := s.rateLimiter.validateRequest(stream, uint64(len(blockRoots))); err != nil {
 		return err
 	}
