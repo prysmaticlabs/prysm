@@ -1,7 +1,9 @@
 // Package peers provides information about peers at the eth2 protocol level.
-// "Protocol level" is the level above the network level, so this layer never sees or interacts with (for example) hosts that are
-// uncontactable due to being down, firewalled, etc.  Instead, this works with peers that are contactable but may or may not be of
-// the correct fork version, not currently required due to the number of current connections, etc.
+//
+// "Protocol level" is the level above the network level, so this layer never sees or interacts with
+// (for example) hosts that are uncontactable due to being down, firewalled, etc. Instead, this works
+// with peers that are contactable but may or may not be of the correct fork version, not currently
+// required due to the number of current connections, etc.
 //
 // A peer can have one of a number of states:
 //
@@ -15,8 +17,9 @@
 // - active if we are connecting or connected
 // - inactive if we are disconnecting or disconnected
 //
-// Peer information is persistent for the run of the service.  This allows for collection of useful long-term statistics such as
-// number of bad responses obtained from the peer, giving the basis for decisions to not talk to known-bad peers.
+// Peer information is persistent for the run of the service. This allows for collection of useful
+// long-term statistics such as number of bad responses obtained from the peer, giving the basis for
+// decisions to not talk to known-bad peers (by de-scoring them).
 package peers
 
 import (
