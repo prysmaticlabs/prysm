@@ -35,7 +35,7 @@ type HistoryData struct {
 	SigningRoot []byte
 }
 
-// EncHistoryData encapsulated history data
+// EncHistoryData encapsulated history data.
 type EncHistoryData []byte
 
 func (hd EncHistoryData) assertSize() error {
