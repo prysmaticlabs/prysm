@@ -24,9 +24,9 @@ func TestNewAttestationHistoryArray(t *testing.T) {
 
 func TestSizeChecks(t *testing.T) {
 
-	require.ErrorContains(t, "is smaller then minimal size", encHistoryData{}.assertSize())
-	require.NoError(t, encHistoryData{0, 1, 2, 3, 4, 5, 6, 7}.assertSize())
-	require.ErrorContains(t, "is not a multiple of entry size", encHistoryData{0, 1, 2, 3, 4, 5, 6, 7, 8}.assertSize())
+	require.ErrorContains(t, "is smaller then minimal size", EncHistoryData{}.assertSize())
+	require.NoError(t, EncHistoryData{0, 1, 2, 3, 4, 5, 6, 7}.assertSize())
+	require.ErrorContains(t, "is not a multiple of entry size", EncHistoryData{0, 1, 2, 3, 4, 5, 6, 7, 8}.assertSize())
 	require.NoError(t, newAttestationHistoryArray(0).assertSize())
 	require.NoError(t, newAttestationHistoryArray(1).assertSize())
 	require.NoError(t, newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod).assertSize())
@@ -67,7 +67,7 @@ func TestSetTargetData(t *testing.T) {
 	ctx := context.Background()
 	type testStruct struct {
 		name        string
-		enc         encHistoryData
+		enc         EncHistoryData
 		target      uint64
 		source      uint64
 		signingRoot []byte
@@ -147,7 +147,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	_, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
-	setAttHistoryForPubKeys := make(map[[48]byte]encHistoryData)
+	setAttHistoryForPubKeys := make(map[[48]byte]EncHistoryData)
 	clean := newAttestationHistoryArray(0)
 	for i, pubKey := range pubkeys {
 		enc, err := clean.setTargetData(ctx,

@@ -35,10 +35,10 @@ type HistoryData struct {
 	SigningRoot []byte
 }
 
-// encapsulated history data
-type encHistoryData []byte
+// EncHistoryData encapsulated history data
+type EncHistoryData []byte
 
-func (hd encHistoryData) assertSize() error {
+func (hd EncHistoryData) assertSize() error {
 	if hd == nil || len(hd) < minimalSize {
 		return fmt.Errorf("encapsulated data size: %d is smaller then minimal size: %d", len(hd), minimalSize)
 	}
@@ -48,19 +48,19 @@ func (hd encHistoryData) assertSize() error {
 	return nil
 }
 
-func newAttestationHistoryArray(target uint64) encHistoryData {
-	enc := make(encHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
+func newAttestationHistoryArray(target uint64) EncHistoryData {
+	enc := make(EncHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
 	return enc
 }
 
-func (hd encHistoryData) getLatestEpochWritten(ctx context.Context) (uint64, error) {
+func (hd EncHistoryData) getLatestEpochWritten(ctx context.Context) (uint64, error) {
 	if err := hd.assertSize(); err != nil {
 		return 0, err
 	}
 	return bytesutil.FromBytes8(hd[:latestEpochWrittenSize]), nil
 }
 
-func (hd encHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (encHistoryData, error) {
+func (hd EncHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (hd encHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochW
 	return hd, nil
 }
 
-func (hd encHistoryData) getTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
+func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (hd encHistoryData) getTargetData(ctx context.Context, target uint64) (*His
 	return history, nil
 }
 
-func (hd encHistoryData) setTargetData(ctx context.Context, target uint64, historyData *HistoryData) ([]byte, error) {
+func (hd EncHistoryData) setTargetData(ctx context.Context, target uint64, historyData *HistoryData) ([]byte, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -104,16 +104,16 @@ func (hd encHistoryData) setTargetData(ctx context.Context, target uint64, histo
 }
 
 // AttestationHistoryNewForPubKeys accepts an array of validator public keys and returns a mapping of corresponding attestation history.
-func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]encHistoryData, error) {
+func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeys")
 	defer span.End()
 
 	if len(publicKeys) == 0 {
-		return make(map[[48]byte]encHistoryData), nil
+		return make(map[[48]byte]EncHistoryData), nil
 	}
 
 	var err error
-	attestationHistoryForVals := make(map[[48]byte]encHistoryData)
+	attestationHistoryForVals := make(map[[48]byte]EncHistoryData)
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		for _, key := range publicKeys {
@@ -135,7 +135,7 @@ func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicK
 }
 
 // SaveAttestationHistoryNewForPubKeys saves the attestation histories for the requested validator public keys.
-func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]encHistoryData) error {
+func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]EncHistoryData) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeys")
 	defer span.End()
 
