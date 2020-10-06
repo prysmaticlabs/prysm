@@ -13,6 +13,7 @@ func TestSSZUint64_Limit(t *testing.T) {
 	serializedObj := [7]byte{}
 	require.ErrorContains(t, "expected buffer with length", sszType.UnmarshalSSZ(serializedObj[:]))
 }
+
 func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 	fixedRoots := make([][32]byte, 0, 0)
 	for i := uint64(0); i < params.BeaconNetworkConfig().MaxRequestBlocks+100; i++ {
@@ -29,6 +30,13 @@ func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 	}
 	req2 := BeaconBlockByRootsReq(nil)
 	require.ErrorContains(t, "expected buffer with length of upto", req2.UnmarshalSSZ(buf))
+}
+
+func TestErrorResponse_Limit(t *testing.T) {
+	fixedRoots := make([][32]byte, 0, 0)
+	for i := uint64(0); i < params.BeaconNetworkConfig().MaxRequestBlocks+100; i++ {
+		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
+	}
 }
 
 func TestRoundTripSerialization(t *testing.T) {
