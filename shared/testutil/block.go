@@ -52,7 +52,12 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 					DepositRoot: make([]byte, 32),
 					BlockHash:   make([]byte, 32),
 				},
-				Graffiti: make([]byte, 32),
+				Graffiti:          make([]byte, 32),
+				Attestations:      []*ethpb.Attestation{},
+				AttesterSlashings: []*ethpb.AttesterSlashing{},
+				Deposits:          []*ethpb.Deposit{},
+				ProposerSlashings: []*ethpb.ProposerSlashing{},
+				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
 			},
 		},
 		Signature: make([]byte, 96),
@@ -360,7 +365,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 	}
 
 	targetRoot := make([]byte, 32)
-	headRoot := make([]byte, 32)
+	var headRoot []byte
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {

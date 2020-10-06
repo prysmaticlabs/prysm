@@ -11,7 +11,6 @@ import (
 // GetBeaconNodeConnection retrieves the current beacon node connection
 // information, as well as its sync status.
 func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (*pb.NodeConnectionResponse, error) {
-	genesis, err := s.genesisFetcher.GenesisInfo(ctx)
 	syncStatus, err := s.syncChecker.Syncing(ctx)
 	if err != nil || s.validatorService.Status() != nil {
 		return &pb.NodeConnectionResponse{
@@ -20,6 +19,10 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (
 			Connected:          false,
 			Syncing:            false,
 		}, nil
+	}
+	genesis, err := s.genesisFetcher.GenesisInfo(ctx)
+	if err != nil {
+		return nil, err
 	}
 	return &pb.NodeConnectionResponse{
 		GenesisTime:            uint64(time.Unix(genesis.GenesisTime.Seconds, 0).Unix()),

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -80,35 +79,53 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 }
 
 func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
-
+	helpers.ClearCache()
 	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
-	setupValidators(t, db, 1)
-	headState, err := db.HeadState(ctx)
+	count := 100
+	validators := make([]*ethpb.Validator, 0, count)
+	for i := 0; i < count; i++ {
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		withdrawalCred := make([]byte, 32)
+		binary.LittleEndian.PutUint64(pubKey, uint64(i))
+		validators = append(validators, &ethpb.Validator{
+			PublicKey:             pubKey,
+			WithdrawalCredentials: withdrawalCred,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+			ActivationEpoch:       0,
+		})
+	}
+
+	blk := testutil.NewBeaconBlock().Block
+	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
-	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
-	gRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, db.SaveState(ctx, headState, gRoot))
+	s := testutil.NewBeaconState()
+	require.NoError(t, s.SetValidators(validators))
+	require.NoError(t, db.SaveState(ctx, s, blockRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
 
 	bs := &Server{
-		BeaconDB:           db,
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: s,
+		},
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, sc),
 	}
 
-	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
-	if _, err := bs.ListValidatorAssignments(
-		context.Background(),
-		&ethpb.ListValidatorAssignmentsRequest{
-			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
-		},
-	); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
+	wanted := fmt.Sprintf("page start %d >= list %d", 500, count)
+	_, err = bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
+		PageToken:   strconv.Itoa(2),
+		QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{Genesis: true},
+	})
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {

@@ -86,6 +86,7 @@
     "only_files": {
       "beacon-chain/.*": "",
       "shared/.*": "",
+      "slasher/.*": "",
       "validator/.*": ""
     },
     "exclude_files": {
@@ -120,6 +121,16 @@
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
       "tools/analyzers/slicedirect/testdata/slice.go": "Analyzer testdata has to break rules"
+    }
+  },
+  "ineffassign": {
+    "only_files": {
+      "beacon-chain/.*": "",
+      "shared/.*": "",
+      "slasher/.*": "",
+      "validator/.*": ""
+    },
+    "exclude_files": {
     }
   }
 }
