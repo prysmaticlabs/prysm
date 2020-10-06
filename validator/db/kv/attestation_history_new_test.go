@@ -71,7 +71,7 @@ func TestSetTargetData(t *testing.T) {
 		target      uint64
 		source      uint64
 		signingRoot []byte
-		expected    []byte
+		expected    EncHistoryData
 		error       string
 	}
 	tests := []testStruct{
