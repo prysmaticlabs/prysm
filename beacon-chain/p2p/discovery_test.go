@@ -57,7 +57,7 @@ func TestCreateListener(t *testing.T) {
 	require.NoError(t, err)
 	defer listener.Close()
 
-	assert.Equal(t, true, listener.Self().IP().Equal(ipAddr), "IP address is not the expected type")
+	assert.Equal(t, true, listener.Self().IP().Equal(net.ParseIP("127.0.0.1")), "IP address is not the expected type")
 	assert.Equal(t, port, listener.Self().UDP(), "Incorrect port number")
 
 	pubkey := listener.Self().Pubkey()
