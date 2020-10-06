@@ -218,7 +218,9 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if headBlk == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
-	if bc.headRoot() == params.BeaconConfig().ZeroHash {
+	r, err := bc.HeadRoot(ctx)
+	require.NoError(t, err)
+	if bytesutil.ToBytes32(r) == params.BeaconConfig().ZeroHash {
 		t.Error("Canonical root for slot 0 can't be zeros after initialize beacon chain")
 	}
 }
