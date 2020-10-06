@@ -69,6 +69,8 @@ func getTargetData(ctx context.Context, data encHistoryData, target uint64) (*Hi
 	if err := data.assertSize(); err != nil {
 		return nil, err
 	}
+	// cursor for the location to read target epoch from.
+	// modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
 	if uint64(len(data)) < cursor+historySize {
 		return nil, fmt.Errorf("encapsulated data size: %d is smaller then the requested target location: %d", len(data), cursor+historySize)
@@ -86,6 +88,8 @@ func setTargetData(ctx context.Context, data encHistoryData, target uint64, hist
 	if err := data.assertSize(); err != nil {
 		return nil, err
 	}
+	// cursor for the location to write target epoch to.
+	// modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
 	if uint64(len(data)) < cursor+historySize {
 		ext := make([]byte, cursor+historySize-uint64(len(data)))
