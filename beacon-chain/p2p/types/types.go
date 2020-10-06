@@ -21,8 +21,7 @@ func (s *SSZUint64) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 func (s *SSZUint64) MarshalSSZ() ([]byte, error) {
-	buf := make([]byte, s.SizeSSZ())
-	marshalledObj := ssz.MarshalUint64(buf, uint64(*s))
+	marshalledObj := ssz.MarshalUint64([]byte{}, uint64(*s))
 	return marshalledObj, nil
 }
 
