@@ -118,6 +118,7 @@ func TestEpochEndSlot_OK(t *testing.T) {
 		{epoch: 10, startSlot: 11*params.BeaconConfig().SlotsPerEpoch - 1, error: false},
 		{epoch: 1 << 59, startSlot: 1 << 63, error: true},
 		{epoch: 1 << 60, startSlot: 1 << 63, error: true},
+		{epoch: math.MaxUint64, startSlot:0, error: true},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.epoch}
