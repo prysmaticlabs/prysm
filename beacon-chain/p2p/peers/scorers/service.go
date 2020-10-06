@@ -31,54 +31,54 @@ type Config struct {
 
 // NewService provides fully initialized peer scoring service.
 func NewService(ctx context.Context, store *data.Store, config *Config) *Service {
-	mgr := &Service{
+	s := &Service{
 		ctx:   ctx,
 		store: store,
 	}
-	mgr.scorers.badResponsesScorer = newBadResponsesScorer(ctx, store, config.BadResponsesScorerConfig)
-	mgr.scorers.blockProviderScorer = newBlockProviderScorer(ctx, store, config.BlockProviderScorerConfig)
-	go mgr.loop(mgr.ctx)
+	s.scorers.badResponsesScorer = newBadResponsesScorer(ctx, store, config.BadResponsesScorerConfig)
+	s.scorers.blockProviderScorer = newBlockProviderScorer(ctx, store, config.BlockProviderScorerConfig)
+	go s.loop(s.ctx)
 
-	return mgr
+	return s
 }
 
 // BadResponsesScorer exposes bad responses scoring service.
-func (m *Service) BadResponsesScorer() *BadResponsesScorer {
-	return m.scorers.badResponsesScorer
+func (s *Service) BadResponsesScorer() *BadResponsesScorer {
+	return s.scorers.badResponsesScorer
 }
 
 // BlockProviderScorer exposes block provider scoring service.
-func (m *Service) BlockProviderScorer() *BlockProviderScorer {
-	return m.scorers.blockProviderScorer
+func (s *Service) BlockProviderScorer() *BlockProviderScorer {
+	return s.scorers.blockProviderScorer
 }
 
 // Score returns calculated peer score across all tracked metrics.
-func (m *Service) Score(pid peer.ID) float64 {
-	m.store.RLock()
-	defer m.store.RUnlock()
+func (s *Service) Score(pid peer.ID) float64 {
+	s.store.RLock()
+	defer s.store.RUnlock()
 
 	score := float64(0)
-	if _, ok := m.store.PeerData(pid); !ok {
+	if _, ok := s.store.PeerData(pid); !ok {
 		return 0
 	}
-	score += m.scorers.badResponsesScorer.score(pid)
-	score += m.scorers.blockProviderScorer.score(pid)
+	score += s.scorers.badResponsesScorer.score(pid)
+	score += s.scorers.blockProviderScorer.score(pid)
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
 // loop handles background tasks.
-func (m *Service) loop(ctx context.Context) {
-	decayBadResponsesStats := time.NewTicker(m.scorers.badResponsesScorer.Params().DecayInterval)
+func (s *Service) loop(ctx context.Context) {
+	decayBadResponsesStats := time.NewTicker(s.scorers.badResponsesScorer.Params().DecayInterval)
 	defer decayBadResponsesStats.Stop()
-	decayBlockProviderStats := time.NewTicker(m.scorers.blockProviderScorer.Params().DecayInterval)
+	decayBlockProviderStats := time.NewTicker(s.scorers.blockProviderScorer.Params().DecayInterval)
 	defer decayBlockProviderStats.Stop()
 
 	for {
 		select {
 		case <-decayBadResponsesStats.C:
-			m.scorers.badResponsesScorer.Decay()
+			s.scorers.badResponsesScorer.Decay()
 		case <-decayBlockProviderStats.C:
-			m.scorers.blockProviderScorer.Decay()
+			s.scorers.blockProviderScorer.Decay()
 		case <-ctx.Done():
 			return
 		}
