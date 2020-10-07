@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"reflect"
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
@@ -32,6 +33,11 @@ func (dr *Keymanager) ImportKeystores(
 		privKeyBytes, pubKeyBytes, importsPassword, err = dr.attemptDecryptKeystore(decryptor, keystores[i], importsPassword)
 		if err != nil {
 			return err
+		}
+		for j := 0; j < i; j++ {
+			if reflect.DeepEqual(pubKeyBytes, pubKeys[j]) {
+				return fmt.Errorf("Duplicated key found: %#x", pubKeyBytes)
+			}
 		}
 		privKeys[i] = privKeyBytes
 		pubKeys[i] = pubKeyBytes
