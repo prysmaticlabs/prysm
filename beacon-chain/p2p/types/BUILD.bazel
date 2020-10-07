@@ -18,6 +18,7 @@ go_test(
     srcs = ["types_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
     ],
