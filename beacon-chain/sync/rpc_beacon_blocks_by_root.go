@@ -69,7 +69,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 
 	rawMsg, ok := msg.(*types.BeaconBlockByRootsReq)
 	if !ok {
-		return errors.New("message is not type [][32]byte")
+		return errors.New("message is not type BeaconBlockByRootsReq")
 	}
 	blockRoots := *rawMsg
 	if err := s.rateLimiter.validateRequest(stream, uint64(len(blockRoots))); err != nil {
