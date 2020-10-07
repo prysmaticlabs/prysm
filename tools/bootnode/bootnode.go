@@ -125,11 +125,23 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
 	}
+	var bindIP net.IP
+	var networkVersion string
+	switch {
+	case ip.To16() != nil:
+		bindIP = net.IPv6zero
+		networkVersion = "udp6"
+	case ip.To4() != nil:
+		bindIP = net.IPv4zero
+		networkVersion = "udp4"
+	default:
+		log.Fatalf("Valid ip address not provided instead %s was provided", ipAddr)
+	}
 	udpAddr := &net.UDPAddr{
-		IP:   ip,
+		IP:   bindIP,
 		Port: port,
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
