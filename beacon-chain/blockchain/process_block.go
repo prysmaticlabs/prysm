@@ -122,14 +122,14 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 		// Update deposit cache.
 		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
-		//log.Errorf("onBlock before: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
+		/*log.Errorf("onBlock before: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
 		log.Errorf("Deposits in block: %d", len(signed.Block.Body.Deposits))
 		for _, d := range signed.Block.Body.Deposits {
 			s.depositCache.RemovePendingDeposit(ctx, d)
 			// Proof was used to verify the deposit during state transition and can be now safely removed to save space.
-			// d.Proof = nil
+			d.Proof = nil
 		}
-		//log.Errorf("onBlock after: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
+		log.Errorf("onBlock after: %d", len(s.depositCache.PendingDeposits(ctx, nil)))*/
 	}
 
 	defer reportAttestationInclusion(b)
@@ -246,6 +246,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	var set *bls.SignatureSet
 	boundaries := make(map[[32]byte]*stateTrie.BeaconState)
 	for i, b := range blks {
+		/*		deps := len(b.Block.Body.Deposits)
+				if deps > 0 {
+					log.Errorf("Deposits in block: %d", deps)
+				}*/
 		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, err
@@ -282,6 +286,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
 		return nil, nil, err
 	}
+
 	return fCheckpoints, jCheckpoints, nil
 }
 
@@ -316,14 +321,14 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		//log.Errorf("batch before: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
+		/*log.Errorf("batch before: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
 		log.Errorf("Deposits in block: %d", len(signed.Block.Body.Deposits))
 		for _, d := range b.Body.Deposits {
 			s.depositCache.RemovePendingDeposit(ctx, d)
 			// Proof was used to verify the deposit during state transition and can be now safely removed to save space.
-			// d.Proof = nil
+			d.Proof = nil
 		}
-		//log.Errorf("batch after: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
+		log.Errorf("batch after: %d", len(s.depositCache.PendingDeposits(ctx, nil)))*/
 	}
 	return nil
 }
