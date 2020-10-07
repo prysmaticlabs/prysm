@@ -36,7 +36,7 @@ func (dr *Keymanager) ImportKeystores(
 		}
 		for j := 0; j < i; j++ {
 			if reflect.DeepEqual(pubKeyBytes, pubKeys[j]) {
-				return fmt.Errorf("Duplicated key found: %#x", pubKeyBytes)
+				return fmt.Errorf("duplicated key found: %#x", pubKeyBytes)
 			}
 		}
 		privKeys[i] = privKeyBytes
