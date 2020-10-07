@@ -150,7 +150,6 @@ go_test(
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/testing:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
