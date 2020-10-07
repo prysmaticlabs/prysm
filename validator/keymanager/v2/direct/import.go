@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"reflect"
+	"strings"
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
