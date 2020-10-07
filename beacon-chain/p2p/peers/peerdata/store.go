@@ -30,6 +30,8 @@ type StoreConfig struct {
 // Store is a container for various peer related data (both protocol and app level).
 // Container implements RWMutex, so data access can be restricted on the container level. This allows
 // different components rely on the very same peer map container.
+// Note: access to data is controlled by clients i.e. client code is responsible for locking/unlocking
+// the mutex when accessing data.
 type Store struct {
 	sync.RWMutex
 	ctx    context.Context
@@ -64,6 +66,7 @@ func NewStore(ctx context.Context, config *StoreConfig) *Store {
 }
 
 // PeerData returns data associated with a given peer, if any.
+// Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) PeerData(pid peer.ID) (*PeerData, bool) {
 	peerData, ok := s.peers[pid]
 	return peerData, ok
@@ -71,6 +74,7 @@ func (s *Store) PeerData(pid peer.ID) (*PeerData, bool) {
 
 // PeerDataGetOrCreate returns data associated with a given peer.
 // If no data has been associated yet, newly created and associated data object is returned.
+// Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) PeerDataGetOrCreate(pid peer.ID) *PeerData {
 	if peerData, ok := s.peers[pid]; ok {
 		return peerData
@@ -80,16 +84,19 @@ func (s *Store) PeerDataGetOrCreate(pid peer.ID) *PeerData {
 }
 
 // SetPeerData updates data associated with a given peer.
+// Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) SetPeerData(pid peer.ID, data *PeerData) {
 	s.peers[pid] = data
 }
 
 // DeletePeerData removes data associated with a given peer.
+// Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) DeletePeerData(pid peer.ID) {
 	delete(s.peers, pid)
 }
 
 // Peers returns map of peer data objects.
+// Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) Peers() map[peer.ID]*PeerData {
 	return s.peers
 }
