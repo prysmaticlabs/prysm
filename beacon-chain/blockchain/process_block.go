@@ -125,7 +125,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err != nil {
 			return errors.Wrap(err, "could not fetch finalized state")
 		}
-		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount))
+		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount-1))
 	}
 
 	defer reportAttestationInclusion(b)
