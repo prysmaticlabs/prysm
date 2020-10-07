@@ -1164,6 +1164,8 @@ github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0 h1:vBrH5icPPSeb14cdShA7/P2PB
 github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0/go.mod h1:X9kYUH/E5YMqFMZ4xL6MJanABUkJGaH/yPZRT2o+yYA=
 github.com/wealdtech/go-indexer v1.0.0 h1:/S4rfWQbSOnnYmwnvuTVatDibZ8o1s9bmTCHO16XINg=
 github.com/wealdtech/go-indexer v1.0.0/go.mod h1:u1cjsbsOXsm5jzJDyLmZY7GsrdX8KYXKBXkZcAmk3Zg=
+github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3 h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=
+github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3/go.mod h1:XCsSkdKK4gwBMNrOCZWww0pX6AOt+2gYc5Z6jBRrNVg=
 github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 h1:EKhdznlJHPMoKr0XTrX+IlJs1LH3lyx2nfr1dOlZ79k=
 github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1/go.mod h1:8UvriyWtv5Q5EOgjHaSseUEdkQfvwFv1I/In/O2M9gc=
 github.com/whyrusleeping/go-logging v0.0.0-20170515211332-0457bb6b88fc/go.mod h1:bopw91TMyo8J3tvftk8xmU2kPmlrt4nScJQZU2hE5EM=
