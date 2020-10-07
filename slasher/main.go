@@ -19,7 +19,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
-	"github.com/wercker/journalhook"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
