@@ -95,6 +95,26 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Signature: make([]byte, 96),
 			},
 		},
+		{
+			name: "Valid indices with length of 2",
+			att: &eth.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2},
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: make([]byte, 96),
+			},
+		},
+		{
+			name: "Valid indices with length of 1",
+			att: &eth.IndexedAttestation{
+				AttestingIndices: []uint64{1},
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: make([]byte, 96),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,6 +135,24 @@ func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = attestationutil.AttestingIndices(bf, committee)
+	}
+}
+
+func BenchmarkIsValidAttestationIndices(b *testing.B) {
+	indices := make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee)
+	for i := 0; i < len(indices); i++ {
+		indices[i] = uint64(i)
+	}
+	att := &eth.IndexedAttestation{
+		AttestingIndices: indices,
+		Data: &eth.AttestationData{
+			Target: &eth.Checkpoint{},
+		},
+		Signature: make([]byte, 96),
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = attestationutil.IsValidAttestationIndices(context.Background(), att)
 	}
 }
 
