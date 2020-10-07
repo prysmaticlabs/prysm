@@ -12,7 +12,7 @@ service Wallet {
             get: "/v2/validator/wallet/exists"
         };
     }
-    rpc CreateWallet(CreateWalletRequest) returns (WalletResponse) {
+    rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/create",
             body: "*"
@@ -128,6 +128,11 @@ message CreateWalletRequest {
     string remote_key_path = 10;
     // Path to ca.crt for secure TLS connections to a remote signer server.
     string remote_ca_crt_path = 11;
+}
+
+message CreateWalletResponse {
+   WalletResponse wallet = 1;
+   DepositDataResponse accounts_created = 2;
 }
 
 message EditWalletConfigRequest {
