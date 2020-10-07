@@ -228,8 +228,9 @@ message NodeConnectionResponse {
 }
 
 message ChangePasswordRequest {
-    string password = 1;
-    string password_confirmation = 2;
+    string current_password = 1;
+    string password = 2;
+    string password_confirmation = 3;
 }
 
 message HasWalletResponse {

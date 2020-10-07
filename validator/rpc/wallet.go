@@ -9,6 +9,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -251,6 +253,20 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	}
 	if !valid {
 		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
+	}
+	if req.CurrentPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Current wallet password cannot be empty")
+	}
+	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	if !fileutil.FileExists(hashedPasswordPath) {
+		return nil, status.Error(codes.FailedPrecondition, "Could not compare password from disk")
+	}
+	hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "Could not retrieve hashed password from disk")
+	}
+	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.CurrentPassword)); err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Incorrect wallet password")
 	}
 	if req.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")
