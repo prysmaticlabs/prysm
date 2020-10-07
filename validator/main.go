@@ -323,8 +323,6 @@ contract in order to activate the validator client`,
 			logrus.SetFormatter(f)
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-		case "journald":
-			journalhook.Enable()
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

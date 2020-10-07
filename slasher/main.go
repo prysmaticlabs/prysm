@@ -110,8 +110,6 @@ func main() {
 			logrus.SetFormatter(joonix.NewFormatter())
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-		case "journald":
-			journalhook.Enable()
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}
