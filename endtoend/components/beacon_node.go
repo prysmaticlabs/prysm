@@ -51,7 +51,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 		fmt.Sprintf("--bootstrap-node=%s", enr),
-		"--verbosity=debug",
+		"--verbosity=trace",
 		"--force-clear-db",
 		"--e2e-config",
 	}
