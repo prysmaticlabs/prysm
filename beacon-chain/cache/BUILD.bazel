@@ -15,7 +15,7 @@ go_library(
         "skip_slot_cache.go",
         "state_summary.go",
         "subnet_ids.go",
-        "proposer_indices.go"
+        "proposer_indices_type.go",
     ] + select({
         "//fuzz:fuzzing_enabled": [
             "committee_disabled.go",

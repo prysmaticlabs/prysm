@@ -3,23 +3,12 @@
 package cache
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"k8s.io/client-go/tools/cache"
 )
-
-// ErrNotProposerIndices will be returned when a cache object is not a pointer to
-// a ProposerIndices struct.
-var ErrNotProposerIndices = errors.New("object is not a proposer indices struct")
-
-// ProposerIndices defines the cached struct for proposer indices.
-type ProposerIndices struct {
-	BlockRoot       [32]byte
-	ProposerIndices []uint64
-}
 
 var (
 	// maxProposerIndicesCacheSize defines the max number of proposer indices on per block root basis can cache.
