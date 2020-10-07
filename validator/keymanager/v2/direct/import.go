@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
@@ -34,16 +33,20 @@ func (dr *Keymanager) ImportKeystores(
 		if err != nil {
 			return err
 		}
-		for j := 0; j < i; j++ {
-			if reflect.DeepEqual(pubKeyBytes, pubKeys[j]) {
-				return fmt.Errorf("duplicated key found: %#x", pubKeyBytes)
-			}
-		}
 		privKeys[i] = privKeyBytes
 		pubKeys[i] = pubKeyBytes
 		if err := bar.Add(1); err != nil {
 			return errors.Wrap(err, "could not add to progress bar")
 		}
+	}
+	foundKey := map[string]bool{}
+	var strKey string
+	for j := range pubKeys {
+		strKey = hex.EncodeToString(pubKeys[j])
+		if foundKey[strKey] == true {
+			return fmt.Errorf("duplicated key found: %#x", pubKeys[j])
+		}
+		foundKey[strKey] = true
 	}
 	// Write the accounts to disk into a single keystore.
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
