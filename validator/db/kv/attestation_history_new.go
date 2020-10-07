@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
@@ -148,5 +149,59 @@ func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, his
 		}
 		return nil
 	})
+	return err
+}
+
+// ImportOldAttestationFormat import old attestation format data into the new attestation format
+func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.ImportOldAttestationFormat")
+	defer span.End()
+	var allKeys [][]byte
+
+	if err := store.db.View(func(tx *bolt.Tx) error {
+
+		attestationsBucket := tx.Bucket(historicAttestationsBucket)
+		if err := attestationsBucket.ForEach(func(pubKey, _ []byte) error {
+			pubKeyCopy := make([]byte, len(pubKey))
+			copy(pubKeyCopy, pubKey)
+			allKeys = append(allKeys, pubKeyCopy)
+			return nil
+		}); err != nil {
+			return errors.Wrapf(err, "could not retrieve attestations for source in %s", store.databasePath)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+	allKeys = removeDuplicateKeys(allKeys)
+	var keys [][48]byte
+	for _, key := range allKeys {
+		var k [48]byte
+		copy(k[:], key)
+		keys = append(keys, k)
+	}
+	attMap, err := store.AttestationHistoryForPubKeys(ctx, keys)
+	if err != nil {
+		return errors.Wrapf(err, "could not retrieve data for public keys %v", allKeys)
+	}
+	dataMap := make(map[[48]byte]EncHistoryData)
+	for key, atts := range attMap {
+		dataMap[key] = newAttestationHistoryArray(atts.LatestEpochWritten)
+		dataMap[key], err = dataMap[key].setLatestEpochWritten(ctx, atts.LatestEpochWritten)
+		if err != nil {
+			return err
+		}
+		for target, source := range atts.TargetToSource {
+			dataMap[key], err = dataMap[key].setTargetData(ctx, target, &HistoryData{
+				Source:      source,
+				SigningRoot: []byte{1},
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	err = store.SaveAttestationHistoryNewForPubKeys(ctx, dataMap)
 	return err
 }

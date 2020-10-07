@@ -166,3 +166,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, setAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
+
+func TestStore_ImportOldAttestationFormat(t *testing.T) {
+
+}
