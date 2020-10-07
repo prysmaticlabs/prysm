@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = ["store.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
