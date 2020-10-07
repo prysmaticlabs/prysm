@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestAttestingIndices(t *testing.T) {
@@ -152,7 +153,9 @@ func BenchmarkIsValidAttestationIndices(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = attestationutil.IsValidAttestationIndices(context.Background(), att)
+		if err := attestationutil.IsValidAttestationIndices(context.Background(), att); err != nil {
+			require.NoError(b, err)
+		}
 	}
 }
 
