@@ -15,6 +15,11 @@ var (
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
+	// MedallaTestnet flag for the multiclient eth2 testnet.
+	MedallaTestnet = &cli.BoolFlag{
+		Name:  "medalla",
+		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
+	}
 	// SpadinaTestnet flag for the multiclient eth2 testnet.
 	SpadinaTestnet = &cli.BoolFlag{
 		Name:  "spadina",
@@ -514,11 +519,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedMedallaTestnet = &cli.BoolFlag{
-		Name:   "medalla",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableAccountsV2 = &cli.BoolFlag{
 		Name:   "enable-accounts-v2",
 		Usage:  deprecatedUsage,
@@ -636,7 +636,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
-	deprecatedMedallaTestnet,
 	deprecatedEnableAccountsV2,
 	deprecatedCustomGenesisDelay,
 	deprecatedNewBeaconStateLocks,
@@ -657,6 +656,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
+	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
 	disableAccountsV2,
@@ -668,6 +668,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
 	AltonaTestnet,
 	OnyxTestnet,
+	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
 }...)
@@ -703,6 +704,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
+	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
 	disableBatchBlockVerify,
