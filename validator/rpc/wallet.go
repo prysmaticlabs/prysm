@@ -49,7 +49,7 @@ func (s *Server) HasWallet(_ context.Context, _ *ptypes.Empty) (*pb.HasWalletRes
 
 // CreateWallet via an API request, allowing a user to save a new
 // derived, direct, or remote wallet.
-func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.WalletResponse, error) {
+func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	// Currently defaultWalletPath is used as the wallet directory and req's WalletPath is ignored for simplicity
 	exists, err := wallet.Exists(defaultWalletPath)
 	if err != nil {
@@ -99,8 +99,11 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		return &pb.WalletResponse{
-			WalletPath: defaultWalletPath,
+		return &pb.CreateWalletResponse{
+			Wallet: &pb.WalletResponse{
+				WalletPath:     defaultWalletPath,
+				KeymanagerKind: pb.KeymanagerKind_DIRECT,
+			},
 		}, nil
 	case pb.KeymanagerKind_DERIVED:
 		if req.NumAccounts < 1 {
@@ -109,7 +112,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if req.Mnemonic == "" {
 			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
 		}
-		_, err := v2.RecoverWallet(ctx, &v2.RecoverWalletConfig{
+		_, depositData, err := v2.RecoverWallet(ctx, &v2.RecoverWalletConfig{
 			WalletDir:      defaultWalletPath,
 			WalletPassword: req.WalletPassword,
 			Mnemonic:       req.Mnemonic,
@@ -125,8 +128,25 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		return &pb.WalletResponse{
-			WalletPath: defaultWalletPath,
+
+		depositDataList := make([]*pb.DepositDataResponse_DepositData, len(depositData))
+		for i, item := range depositData {
+			data, err := v2.DepositDataJSON(item)
+			if err != nil {
+				return nil, err
+			}
+			depositDataList[i] = &pb.DepositDataResponse_DepositData{
+				Data: data,
+			}
+		}
+		return &pb.CreateWalletResponse{
+			Wallet: &pb.WalletResponse{
+				WalletPath:     defaultWalletPath,
+				KeymanagerKind: pb.KeymanagerKind_DERIVED,
+			},
+			AccountsCreated: &pb.DepositDataResponse{
+				DepositDataList: depositDataList,
+			},
 		}, nil
 	case pb.KeymanagerKind_REMOTE:
 		return nil, status.Error(codes.Unimplemented, "Remote keymanager not yet supported")

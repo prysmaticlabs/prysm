@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type fakeAddr int
@@ -52,6 +53,32 @@ func (resp *testResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return fakeNetConn{strings.NewReader(""), resp.brw}, rw, nil
 }
 
+func TestLogStreamServer_DisallowsNonLocalhostOrigin(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ss := NewLogStreamServer()
+	br := bufio.NewReader(strings.NewReader(""))
+	buf := new(bytes.Buffer)
+	bw := bufio.NewWriter(buf)
+	rw := httptest.NewRecorder()
+	resp := &testResponseWriter{
+		brw:            bufio.NewReadWriter(br, bw),
+		ResponseWriter: rw,
+	}
+	req := &http.Request{
+		Method: "GET",
+		Host:   "externalsource",
+		Header: http.Header{
+			"Upgrade":               []string{"websocket"},
+			"Connection":            []string{"upgrade"},
+			"Sec-Websocket-Key":     []string{"dGhlIHNhbXBsZSBub25jZQ=="},
+			"Sec-Websocket-Version": []string{"13"},
+		},
+	}
+	ss.Handler(resp, req)
+	require.NoError(t, resp.brw.Flush())
+	require.LogsContain(t, hook, "origin not allowed")
+}
+
 func TestLogStreamServer_BackfillsMessages(t *testing.T) {
 	ss := NewLogStreamServer()
 	msgs := [][]byte{
@@ -74,6 +101,7 @@ func TestLogStreamServer_BackfillsMessages(t *testing.T) {
 	}
 	req := &http.Request{
 		Method: "GET",
+		Host:   "localhost",
 		Header: http.Header{
 			"Upgrade":               []string{"websocket"},
 			"Connection":            []string{"upgrade"},
@@ -82,8 +110,8 @@ func TestLogStreamServer_BackfillsMessages(t *testing.T) {
 		},
 	}
 
-	go ss.Handler(resp, req)
-	time.Sleep(50 * time.Millisecond)
+	ss.Handler(resp, req)
+	go ss.sendLogsToClients()
 	require.NoError(t, resp.brw.Flush())
 	dst, err := ioutil.ReadAll(buf)
 	require.NoError(t, err)

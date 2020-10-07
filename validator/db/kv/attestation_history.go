@@ -14,6 +14,7 @@ import (
 func unmarshalAttestationHistory(ctx context.Context, enc []byte) (*slashpb.AttestationHistory, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.unmarshalAttestationHistory")
 	defer span.End()
+
 	history := &slashpb.AttestationHistory{}
 	if err := proto.Unmarshal(enc, history); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")

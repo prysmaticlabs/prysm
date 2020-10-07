@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,8 +29,8 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 	if m.peers == nil {
 		m.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 			PeerLimit: 30,
-			ScorerParams: &peers.PeerScorerConfig{
-				BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+			ScorerParams: &scorers.Config{
+				BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 					Threshold: 5,
 				},
 			},
