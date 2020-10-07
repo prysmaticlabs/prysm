@@ -24,6 +24,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -55,8 +56,8 @@ func NewTestP2P(t *testing.T) *TestP2P {
 
 	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: 5,
 			},
 		},

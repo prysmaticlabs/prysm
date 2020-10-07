@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
@@ -157,7 +158,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		}),
 	}
 
@@ -322,7 +323,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		}),
 	}
 
@@ -337,7 +338,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		}),
 	}
 
