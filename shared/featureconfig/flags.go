@@ -670,6 +670,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	OnyxTestnet,
 	MedallaTestnet,
 	SpadinaTestnet,
+	ZinkenTestnet,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.

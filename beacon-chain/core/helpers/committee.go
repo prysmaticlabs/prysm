@@ -19,6 +19,7 @@ import (
 )
 
 var committeeCache = cache.NewCommitteesCache()
+var proposerIndicesCache = cache.NewProposerIndicesCache()
 
 // SlotCommitteeCount returns the number of crosslink committees of a slot. The
 // active validator count is provided as an argument rather than a direct implementation
@@ -348,6 +349,12 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
+	// The cache uses the block root at the last epoch slot as key. (e.g. for epoch 1, the key is root at slot 31)
+	// Which is the reason why we skip genesis epoch.
+	if epoch <= params.BeaconConfig().GenesisEpoch {
+		return nil
+	}
+
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return err
@@ -356,12 +363,18 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return err
 	}
-	// The committee cache uses attester domain seed as key.
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	s, err := EndSlot(PrevEpoch(state))
 	if err != nil {
 		return err
 	}
-	if err := committeeCache.AddProposerIndicesList(seed, proposerIndices); err != nil {
+	r, err := BlockRootAtSlot(state, s)
+	if err != nil {
+		return err
+	}
+	if err := proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
+		BlockRoot:       bytesutil.ToBytes32(r),
+		ProposerIndices: proposerIndices,
+	}); err != nil {
 		return err
 	}
 
@@ -371,6 +384,7 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 // ClearCache clears the committee cache
 func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
+	proposerIndicesCache = cache.NewProposerIndicesCache()
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
