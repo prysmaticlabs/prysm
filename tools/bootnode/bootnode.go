@@ -128,7 +128,7 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	var bindIP net.IP
 	var networkVersion string
 	switch {
-	case ip.To16() != nil:
+	case ip.To16() != nil && ip.To4() == nil:
 		bindIP = net.IPv6zero
 		networkVersion = "udp6"
 	case ip.To4() != nil:
