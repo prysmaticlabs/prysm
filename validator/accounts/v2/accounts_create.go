@@ -6,6 +6,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -88,4 +91,34 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}
 	return nil
+}
+
+// DepositDataJSON creates a raw map to match the deposit_data.json file format
+// from the official eth2.0-deposit-cli https://github.com/ethereum/eth2.0-deposit-cli.
+// The reason we utilize this map is to ensure we match the format of
+// the eth2 deposit cli, which utilizes snake case and hex strings to represent binary data.
+// Our gRPC gateway instead uses camel case and base64, which is why we use this workaround.
+func DepositDataJSON(depositData *ethpb.Deposit_Data) (map[string]string, error) {
+	depositMessage := &pb.DepositMessage{
+		Pubkey:                depositData.PublicKey,
+		WithdrawalCredentials: depositData.WithdrawalCredentials,
+		Amount:                depositData.Amount,
+	}
+	depositMessageRoot, err := depositMessage.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	depositDataRoot, err := depositData.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	data := make(map[string]string)
+	data["pubkey"] = fmt.Sprintf("%x", depositData.PublicKey)
+	data["withdrawal_credentials"] = fmt.Sprintf("%x", depositData.WithdrawalCredentials)
+	data["amount"] = fmt.Sprintf("%d", depositData.Amount)
+	data["signature"] = fmt.Sprintf("%x", depositData.Signature)
+	data["deposit_message_root"] = fmt.Sprintf("%x", depositMessageRoot)
+	data["deposit_data_root"] = fmt.Sprintf("%x", depositDataRoot)
+	data["fork_version"] = fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion)
+	return data, nil
 }
