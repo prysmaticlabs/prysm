@@ -2,6 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 # gazelle:ignore committee_disabled.go
+# gazelle:ignore proposer_indices_disabled.go
 go_library(
     name = "go_default_library",
     srcs = [
@@ -18,9 +19,11 @@ go_library(
     ] + select({
         "//fuzz:fuzzing_enabled": [
             "committee_disabled.go",
+            "proposer_indices_disabled.go"
         ],
         "//conditions:default": [
             "committee.go",
+            "proposer_indices.go",
         ],
     }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
