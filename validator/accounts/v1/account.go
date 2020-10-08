@@ -217,10 +217,10 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 		if err != nil {
 			return path, passphrase, errors.Wrap(err, "could not read input path")
 		}
-		if text = strings.Replace(text, "\n", "", -1); text != "" {
+		if text = strings.ReplaceAll(text, "\n", ""); text != "" {
 			path = text
 		}
-		if text = strings.Replace(text, "\r", "", -1); text != "" {
+		if text = strings.ReplaceAll(text, "\r", ""); text != "" {
 			path = text
 		}
 	}
