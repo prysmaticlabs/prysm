@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
@@ -109,7 +110,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					}
 
 					// If peer hasn't sent a status request, we disconnect with them
-					if _, err := s.peers.ChainState(remotePeer); err == peers.ErrPeerUnknown {
+					if _, err := s.peers.ChainState(remotePeer); err == peerdata.ErrPeerUnknown {
 						disconnectFromPeer()
 						return
 					}

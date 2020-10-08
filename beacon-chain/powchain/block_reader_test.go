@@ -13,7 +13,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -66,12 +65,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	assert.Equal(t, web3Service.latestEth1Data.BlockHeight, header.Number.Uint64())
 	assert.Equal(t, hexutil.Encode(web3Service.latestEth1Data.BlockHash), header.Hash().Hex())
 	assert.Equal(t, web3Service.latestEth1Data.BlockTime, header.Time)
-
-	headerInfoExistsInCache, info, err := web3Service.headerCache.HeaderInfoByHash(bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
-	require.NoError(t, err)
-	assert.Equal(t, true, headerInfoExistsInCache, "Expected block info to exist in cache")
-	assert.Equal(t, bytesutil.ToBytes32(info.Hash[:]), bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
-
 }
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {

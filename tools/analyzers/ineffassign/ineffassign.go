@@ -1,60 +1,9 @@
 package ineffassign
 
 import (
-	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
 )
-
-// The core of this code originates here: https://github.com/gordonklaus/ineffassign and was
-// adapted for our workflow (the original source code is under the MIT license).
-// If you need a standalone CLI ineffassign runner, please, use the one above.
-func walkPath(root string) bool {
-	lintFailed := false
-	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Printf("Error during filesystem walk: %v\n", err)
-			return nil
-		}
-		if !strings.HasSuffix(path, ".go") {
-			return nil
-		}
-		fset, _, ineff := checkPath(path)
-		for _, id := range ineff {
-			fmt.Printf("%s: ineffectual assignment to %s\n", fset.Position(id.Pos()), id.Name)
-			lintFailed = true
-		}
-		return nil
-	})
-	if err != nil {
-		return false
-	}
-	return lintFailed
-}
-
-func checkPath(path string) (*token.FileSet, []*ast.CommentGroup, []*ast.Ident) {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-	if err != nil {
-		return nil, nil, nil
-	}
-
-	bld := &builder{vars: map[*ast.Object]*variable{}}
-	bld.walk(f)
-
-	chk := &checker{vars: bld.vars, seen: map[*block]bool{}}
-	for _, b := range bld.roots {
-		chk.check(b)
-	}
-	sort.Sort(chk.ineff)
-
-	return fset, f.Comments, chk.ineff
-}
 
 type builder struct {
 	roots     []*block

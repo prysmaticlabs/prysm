@@ -677,6 +677,9 @@ func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if b.state.Validators[idx] == nil {
+		return [48]byte{}
+	}
 	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 
