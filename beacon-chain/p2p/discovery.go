@@ -99,7 +99,7 @@ func (s *Service) createListener(
 ) (*discover.UDPv5, error) {
 	// Listen to all network interfaces
 	// for both ip protocols.
-	networkVersion := ""
+	var networkVersion string
 	// BindIP is used to specify the ip
 	// on which we will bind our listener on
 	// by default we will listen to all interfaces.
