@@ -27,7 +27,7 @@ func TestWebHandler(t *testing.T) {
 		{
 			name: "bad route",
 			requestURI: "/foobar_bad",
-			wantStatus: 404,
+			wantStatus: 200,
 		},
 	}
 

@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -313,6 +314,9 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
+	if err := s.registerWebService(cliCtx); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -427,6 +431,12 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		allowedOrigins,
 	)
 	return s.services.RegisterService(gatewaySrv)
+}
+
+func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
+	webAddress := ":3000" // TODO: Get from flag value
+	srv := web.NewServer(webAddress)
+	return s.services.RegisterService(srv)
 }
 
 // Selects the key manager depending on the options provided by the user.

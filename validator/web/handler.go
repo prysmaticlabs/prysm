@@ -27,7 +27,13 @@ var webHandler = func(res http.ResponseWriter, req *http.Request) {
 		if _, err := res.Write(d); err != nil {
 			log.WithError(err).Error("Failed to write http response")
 		}
-	} else {
+	// Serve index.html as default.
+	} else if d, ok := site[path.Join(prefix, "index.html")]; ok {
+		res.WriteHeader(200)
+		if _, err := res.Write(d); err != nil {
+			log.WithError(err).Error("Failed to write http response")
+		}
+	} else { // If index.html is not present, serve 404.
 		res.WriteHeader(404)
 		if _, err := res.Write([]byte("Not found")); err != nil {
 			log.WithError(err).Error("Failed to write http response")
