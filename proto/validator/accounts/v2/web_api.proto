@@ -18,6 +18,11 @@ service Wallet {
             body: "*"
         };
     }
+    rpc DefaultWalletPath(google.protobuf.Empty) returns (DefaultWalletResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/wallet/default",
+        };
+    }
     rpc EditConfig(EditWalletConfigRequest) returns (WalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/config/edit",
@@ -131,8 +136,12 @@ message CreateWalletRequest {
 }
 
 message CreateWalletResponse {
-   WalletResponse wallet = 1;
-   DepositDataResponse accounts_created = 2;
+    WalletResponse wallet = 1;
+    DepositDataResponse accounts_created = 2;
+}
+
+message DefaultWalletResponse {
+    string wallet_dir = 1;
 }
 
 message EditWalletConfigRequest {
@@ -205,6 +214,7 @@ message AccountRequest {
 
 message AuthRequest {
     string password = 1;
+    string wallet_dir = 2;
 }
 
 message AuthResponse {
