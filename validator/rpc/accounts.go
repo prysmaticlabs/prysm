@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -218,34 +217,14 @@ func (s *Server) DeleteAccounts(
 
 func createAccountWithDepositData(ctx context.Context, km accountCreator) (*pb.DepositDataResponse_DepositData, error) {
 	// Create a new validator account using the specified keymanager.
-	pubKey, depositData, err := km.CreateAccount(ctx)
+	_, depositData, err := km.CreateAccount(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create account in wallet")
 	}
-	depositMessage := &pb.DepositMessage{
-		Pubkey:                pubKey,
-		WithdrawalCredentials: depositData.WithdrawalCredentials,
-		Amount:                depositData.Amount,
-	}
-	depositMessageRoot, err := depositMessage.HashTreeRoot()
+	data, err := v2.DepositDataJSON(depositData)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not create deposit data JSON")
 	}
-	depositDataRoot, err := depositData.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	// The reason we utilize this map is to ensure we match the format of
-	// the eth2 deposit cli, which utilizes snake case and hex strings to represent binary data.
-	// Our gRPC gateway instead uses camel case and base64, which is why we use this workaround.
-	data := make(map[string]string)
-	data["pubkey"] = fmt.Sprintf("%x", pubKey)
-	data["withdrawal_credentials"] = fmt.Sprintf("%x", depositData.WithdrawalCredentials)
-	data["amount"] = fmt.Sprintf("%d", depositData.Amount)
-	data["signature"] = fmt.Sprintf("%x", depositData.Signature)
-	data["deposit_message_root"] = fmt.Sprintf("%x", depositMessageRoot)
-	data["deposit_data_root"] = fmt.Sprintf("%x", depositDataRoot)
-	data["fork_version"] = fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion)
 	return &pb.DepositDataResponse_DepositData{
 		Data: data,
 	}, nil

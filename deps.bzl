@@ -3630,9 +3630,3 @@ def prysm_deps():
         sum = "h1:tYH07UPoQt0OCQdgWWMgYHy3/a9bcxNpBIysykNIP7I=",
         version = "v2.20.5+incompatible",
     )
-    go_repository(
-        name = "com_github_wercker_journalhook",
-        importpath = "github.com/wercker/journalhook",
-        sum = "h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=",
-        version = "v0.0.0-20180428041537-5d0a5ae867b3",
-    )

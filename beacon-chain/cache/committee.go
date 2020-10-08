@@ -104,35 +104,6 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 	return nil
 }
 
-// AddProposerIndicesList updates the committee shuffled list with proposer indices.
-func (c *CommitteeCache) AddProposerIndicesList(seed [32]byte, indices []uint64) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
-		return err
-	}
-	if !exists {
-		committees := &Committees{ProposerIndices: indices}
-		if err := c.CommitteeCache.Add(committees); err != nil {
-			return err
-		}
-	} else {
-		committees, ok := obj.(*Committees)
-		if !ok {
-			return ErrNotCommittee
-		}
-		committees.ProposerIndices = indices
-		if err := c.CommitteeCache.Add(committees); err != nil {
-			return err
-		}
-	}
-
-	trim(c.CommitteeCache, maxCommitteesCacheSize)
-	return nil
-}
-
 // ActiveIndices returns the active indices of a given seed stored in cache.
 func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]uint64, error) {
 	c.lock.RLock()
@@ -179,30 +150,6 @@ func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
 	}
 
 	return len(item.SortedIndices), nil
-}
-
-// ProposerIndices returns the proposer indices of a given seed.
-func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
-		return nil, err
-	}
-
-	if exists {
-		CommitteeCacheHit.Inc()
-	} else {
-		CommitteeCacheMiss.Inc()
-		return nil, nil
-	}
-
-	item, ok := obj.(*Committees)
-	if !ok {
-		return nil, ErrNotCommittee
-	}
-
-	return item.ProposerIndices, nil
 }
 
 // HasEntry returns true if the committee cache has a value.
