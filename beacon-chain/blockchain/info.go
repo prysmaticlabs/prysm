@@ -34,7 +34,12 @@ const template = `<html>
 
 // TreeHandler is a handler to serve /tree page in metrics.
 func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
-	if s.headState(r.Context()) == nil {
+	headState, err := s.HeadState(r.Context())
+	if err != nil {
+		log.WithError(err).Error("Could not get head state")
+		return
+	}
+	if headState == nil {
 		if _, err := w.Write([]byte("Unavailable during initial syncing")); err != nil {
 			log.WithError(err).Error("Failed to render p2p info page")
 		}
@@ -47,7 +52,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 	graph.Attr("labeljust", "l")
 
 	dotNodes := make([]*dot.Node, len(nodes))
-	avgBalance := uint64(averageBalance(s.headState(r.Context()).Balances()))
+	avgBalance := uint64(averageBalance(headState.Balances()))
 
 	for i := len(nodes) - 1; i >= 0; i-- {
 		// Construct label for each node.
@@ -63,7 +68,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 			dotN = graph.Node(index).Box().Attr("label", label)
 		}
 
-		if nodes[i].Slot() == s.headSlot() &&
+		if nodes[i].Slot() == s.HeadSlot() &&
 			nodes[i].BestDescendant() == ^uint64(0) &&
 			nodes[i].Parent() != ^uint64(0) {
 			dotN = dotN.Attr("color", "green")
