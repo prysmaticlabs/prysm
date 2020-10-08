@@ -58,7 +58,7 @@ func TestGetTargetData(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, &HistoryData{
 		Source:      0,
-		SigningRoot: bytesutil.PadTo([]byte{1}, 32),
+		SigningRoot: bytesutil.PadTo([]byte{}, 32),
 	}, td)
 	_, err = ha.getTargetData(ctx, 1)
 	require.ErrorContains(t, "is smaller then the requested target location", err)
@@ -114,11 +114,15 @@ func TestSetTargetData(t *testing.T) {
 				})
 			if tt.error == "" {
 				require.NoError(t, err)
-
-			} else {
-				assert.ErrorContains(t, tt.error, err)
+				td, err := enc.getTargetData(ctx, tt.target)
+				require.NoError(t, err)
+				require.DeepEqual(t, bytesutil.PadTo(tt.signingRoot, 32), td.SigningRoot)
+				require.Equal(t, tt.source, td.Source)
+				return
 			}
+			assert.ErrorContains(t, tt.error, err)
 			require.DeepEqual(t, tt.expected, enc)
+
 		})
 	}
 
