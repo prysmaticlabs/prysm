@@ -434,7 +434,7 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
-	webAddress := ":3000" // TODO: Get from flag value
+	webAddress := ":4242" // TODO: Get from flag value
 	srv := web.NewServer(webAddress)
 	return s.services.RegisterService(srv)
 }

@@ -118,7 +118,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200",
+		Value: "http://localhost:4242",
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{

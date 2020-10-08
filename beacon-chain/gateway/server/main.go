@@ -20,7 +20,7 @@ var (
 	port                    = flag.Int("port", 8000, "Port to serve on")
 	host                    = flag.String("host", "127.0.0.1", "Host to serve on")
 	debug                   = flag.Bool("debug", false, "Enable debug logging")
-	allowedOrigins          = flag.String("corsdomain", "", "A comma separated list of CORS domains to allow")
+	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
 	enableDebugRPCEndpoints = flag.Bool("enable-debug-rpc-endpoints", false, "Enable debug rpc endpoints such as /eth/v1alpha1/beacon/state")
 	grpcMaxMsgSize          = flag.Int("grpc-max-msg-size", 1<<22, "Integer to define max recieve message call size")
 )
