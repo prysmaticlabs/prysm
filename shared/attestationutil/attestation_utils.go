@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -154,20 +153,10 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
 		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}
-	set := make(map[uint64]bool, len(indices))
-	setIndices := make([]uint64, 0, len(indices))
-	for _, i := range indices {
-		if ok := set[i]; ok {
-			continue
+	for i := 1; i < len(indices); i++ {
+		if indices[i-1] >= indices[i] {
+			return errors.New("attesting indices is not uniquely sorted")
 		}
-		setIndices = append(setIndices, i)
-		set[i] = true
-	}
-	sort.SliceStable(setIndices, func(i, j int) bool {
-		return setIndices[i] < setIndices[j]
-	})
-	if !reflect.DeepEqual(setIndices, indices) {
-		return errors.New("attesting indices is not uniquely sorted")
 	}
 	return nil
 }
