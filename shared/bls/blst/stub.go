@@ -1,5 +1,4 @@
-// +build darwin,amd64 windows,amd64 linux,amd64 linux,arm64
-// +build !blst_enabled
+// +build darwin windows !blst_enabled
 
 package blst
 
