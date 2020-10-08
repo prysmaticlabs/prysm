@@ -83,7 +83,7 @@ func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*His
 
 	history.Source = bytesutil.FromBytes8(hd[cursor : cursor+sourceSize])
 	sr := make([]byte, 32)
-	copy(hd[cursor+sourceSize:cursor+historySize], sr)
+	copy(sr, hd[cursor+sourceSize:cursor+historySize])
 	history.SigningRoot = sr
 	return history, nil
 }
@@ -159,7 +159,6 @@ func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 	var allKeys [][]byte
 
 	if err := store.db.View(func(tx *bolt.Tx) error {
-
 		attestationsBucket := tx.Bucket(historicAttestationsBucket)
 		if err := attestationsBucket.ForEach(func(pubKey, _ []byte) error {
 			pubKeyCopy := make([]byte, len(pubKey))
