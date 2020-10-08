@@ -22,7 +22,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 	numOfVals := state.NumValidators()
 	// Guard against an out-of-bounds using validator balance precompute.
-	if len(vp) != numOfVals || len(vp) != state.BalancesLength() {
+	if uint64(len(vp)) != numOfVals || len(vp) != state.BalancesLength() {
 		return state, errors.New("precomputed registries not the same length as state registries")
 	}
 
@@ -35,7 +35,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
 	validatorBals := state.Balances()
-	for i := 0; i < numOfVals; i++ {
+	for i := uint64(0); i < numOfVals; i++ {
 		vp[i].BeforeEpochTransitionBalance = validatorBals[i]
 
 		// Compute the post balance of the validator after accounting for the
