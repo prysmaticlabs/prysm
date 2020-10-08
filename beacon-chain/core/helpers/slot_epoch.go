@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/pkg/errors"
@@ -80,6 +81,19 @@ func StartSlot(epoch uint64) (uint64, error) {
 		return slot, errors.Errorf("start slot calculation overflows: %v", err)
 	}
 	return slot, nil
+}
+
+// EndSlot returns the last slot number of the
+// current epoch.
+func EndSlot(epoch uint64) (uint64, error) {
+	if epoch == math.MaxUint64 {
+		return 0, errors.New("start slot calculation overflows")
+	}
+	slot, err := StartSlot(epoch + 1)
+	if err != nil {
+		return 0, err
+	}
+	return slot - 1, nil
 }
 
 // IsEpochStart returns true if the given slot number is an epoch starting slot

@@ -1,4 +1,4 @@
-package peers_test
+package scorers_test
 
 import (
 	"context"
@@ -9,10 +9,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-func TestPeerScorer_PeerScorerManager_Init(t *testing.T) {
+func TestScorers_Service_Init(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -21,36 +22,36 @@ func TestPeerScorer_PeerScorerManager_Init(t *testing.T) {
 	t.Run("default config", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit:    30,
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		})
 
 		t.Run("bad responses scorer", func(t *testing.T) {
 			params := peerStatuses.Scorers().BadResponsesScorer().Params()
-			assert.Equal(t, peers.DefaultBadResponsesThreshold, params.Threshold, "Unexpected threshold value")
-			assert.Equal(t, peers.DefaultBadResponsesWeight, params.Weight, "Unexpected weight value")
-			assert.Equal(t, peers.DefaultBadResponsesDecayInterval, params.DecayInterval, "Unexpected decay interval value")
+			assert.Equal(t, scorers.DefaultBadResponsesThreshold, params.Threshold, "Unexpected threshold value")
+			assert.Equal(t, scorers.DefaultBadResponsesWeight, params.Weight, "Unexpected weight value")
+			assert.Equal(t, scorers.DefaultBadResponsesDecayInterval, params.DecayInterval, "Unexpected decay interval value")
 		})
 
 		t.Run("block providers scorer", func(t *testing.T) {
 			params := peerStatuses.Scorers().BlockProviderScorer().Params()
-			assert.Equal(t, peers.DefaultBlockProviderProcessedBatchWeight, params.ProcessedBatchWeight)
-			assert.Equal(t, peers.DefaultBlockProviderProcessedBlocksCap, params.ProcessedBlocksCap)
-			assert.Equal(t, peers.DefaultBlockProviderDecayInterval, params.DecayInterval)
-			assert.Equal(t, peers.DefaultBlockProviderDecay, params.Decay)
-			assert.Equal(t, peers.DefaultBlockProviderStalePeerRefreshInterval, params.StalePeerRefreshInterval)
+			assert.Equal(t, scorers.DefaultBlockProviderProcessedBatchWeight, params.ProcessedBatchWeight)
+			assert.Equal(t, scorers.DefaultBlockProviderProcessedBlocksCap, params.ProcessedBlocksCap)
+			assert.Equal(t, scorers.DefaultBlockProviderDecayInterval, params.DecayInterval)
+			assert.Equal(t, scorers.DefaultBlockProviderDecay, params.Decay)
+			assert.Equal(t, scorers.DefaultBlockProviderStalePeerRefreshInterval, params.StalePeerRefreshInterval)
 		})
 	})
 
 	t.Run("explicit config", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit: 30,
-			ScorerParams: &peers.PeerScorerConfig{
-				BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+			ScorerParams: &scorers.Config{
+				BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 					Threshold:     2,
 					Weight:        -1,
 					DecayInterval: 1 * time.Minute,
 				},
-				BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+				BlockProviderScorerConfig: &scorers.BlockProviderScorerConfig{
 					ProcessedBatchWeight:     0.2,
 					ProcessedBlocksCap:       batchSize * 5,
 					DecayInterval:            1 * time.Minute,
@@ -79,13 +80,13 @@ func TestPeerScorer_PeerScorerManager_Init(t *testing.T) {
 	})
 }
 
-func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
+func TestScorers_Service_Score(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 
-	peerScores := func(s *peers.PeerScorerManager, pids []peer.ID) map[string]float64 {
+	peerScores := func(s *scorers.Service, pids []peer.ID) map[string]float64 {
 		scores := make(map[string]float64, len(pids))
 		for _, pid := range pids {
 			scores[string(pid)] = s.Score(pid)
@@ -93,7 +94,7 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 		return scores
 	}
 
-	pack := func(scorer *peers.PeerScorerManager, s1, s2, s3 float64) map[string]float64 {
+	pack := func(scorer *scorers.Service, s1, s2, s3 float64) map[string]float64 {
 		return map[string]float64{
 			"peer1": roundScore(s1),
 			"peer2": roundScore(s2),
@@ -101,14 +102,14 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 		}
 	}
 
-	setupScorer := func() (*peers.PeerScorerManager, []peer.ID) {
+	setupScorer := func() (*scorers.Service, []peer.ID) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 			PeerLimit: 30,
-			ScorerParams: &peers.PeerScorerConfig{
-				BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+			ScorerParams: &scorers.Config{
+				BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 					Threshold: 5,
 				},
-				BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+				BlockProviderScorerConfig: &scorers.BlockProviderScorerConfig{
 					Decay: 64,
 				},
 			},
@@ -125,7 +126,7 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 
 	t.Run("no peer registered", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		})
 		s := peerStatuses.Scorers()
 		assert.Equal(t, 0.0, s.BadResponsesScorer().Score("peer1"))
@@ -208,19 +209,19 @@ func TestPeerScorer_PeerScorerManager_Score(t *testing.T) {
 	})
 }
 
-func TestPeerScorer_PeerScorerManager_loop(t *testing.T) {
+func TestScorers_Service_loop(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold:     5,
 				Weight:        -0.5,
 				DecayInterval: 50 * time.Millisecond,
 			},
-			BlockProviderScorerConfig: &peers.BlockProviderScorerConfig{
+			BlockProviderScorerConfig: &scorers.BlockProviderScorerConfig{
 				DecayInterval: 25 * time.Millisecond,
 				Decay:         64,
 			},
