@@ -12,6 +12,25 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+// ExportPrivateKeys retrieves the secret keys for the specified public
+// keys in the function input.
+func (dr *Keymanager) ExportPrivateKeys(
+	publicKeys []bls.PublicKey) ([][]byte, error) {
+	pubKeys := make([][]byte, len(publicKeys))
+	for i, pk := range publicKeys {
+		pubKeyBytes := pk.Marshal()
+		secretKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
+		if !ok {
+			return nil, fmt.Errorf(
+				"secret key for public key %#x not found in cache",
+				pubKeyBytes,
+			)
+		}
+		pubKeys[i] = secretKey.Marshal()
+	}
+	return pubKeys, nil
+}
+
 // ExtractKeystores retrieves the secret keys for specified public keys
 // in the function input, encrypts them using the specified password,
 // and returns their respective EIP-2335 keystores.

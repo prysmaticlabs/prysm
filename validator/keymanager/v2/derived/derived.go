@@ -359,6 +359,25 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	return result, nil
 }
 
+// FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
+func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][]byte, error) {
+	dr.lock.RLock()
+	privKeys := make([][]byte, len(dr.secretKeysCache))
+	pubKeys,err := dr.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve public keys")
+	}
+	for i, pk := range pubKeys {
+		seckey, ok := dr.secretKeysCache[pk]
+		if !ok {
+			return nil, errors.New("Could not fetch private key")
+		}
+		privKeys[i] = seckey.Marshal()
+	}
+	dr.lock.RUnlock()
+	return privKeys, nil
+}
+
 // FetchWithdrawalPublicKeys fetches the list of withdrawal public keys from keymanager
 func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte, error) {
 	publicKeys := make([][48]byte, 0)
@@ -366,11 +385,25 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
 		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create validating key for account %d", i)
+			return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", i)
 		}
 		publicKeys = append(publicKeys, bytesutil.ToBytes48(withdrawalKey.PublicKey().Marshal()))
 	}
 	return publicKeys, nil
+}
+
+// FetchWithdrawalPrivateKeys fetches the list of withdrawal private keys from the keymanager.
+func (dr *Keymanager) FetchWithdrawalPrivateKeys(ctx context.Context) ([][]byte, error) {
+	privKeys := make([][]byte, 0)
+	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
+		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
+		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", i)
+		}
+		privKeys = append(privKeys, withdrawalKey.Marshal())
+	}
+	return privKeys, nil
 }
 
 // DepositDataForAccount with a given index returns the RLP encoded eth1 deposit transaction data.

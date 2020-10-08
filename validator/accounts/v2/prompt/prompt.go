@@ -27,6 +27,8 @@ const (
 	SelectAccountsBackupPromptText = "Select the account(s) you wish to backup"
 	// SelectAccountsDepositPromptText --
 	SelectAccountsDepositPromptText = "Select the validating public keys you wish to submit deposits for"
+	// SelectAccountsPrivateKeysExportText --
+	SelectAccountsPrivateKeysExportText = "Select the account(s) for which you want to extract the private key"
 	// SelectAccountsVoluntaryExitPromptText --
 	SelectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
 )

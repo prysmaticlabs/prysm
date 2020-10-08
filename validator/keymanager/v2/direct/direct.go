@@ -335,6 +335,25 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	return result, nil
 }
 
+// FetchValidatingPrivateKeys fetches the list of private keys from the secret keys cache
+func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][]byte, error) {
+	dr.lock.RLock()
+	privKeys := make([][]byte, len(dr.secretKeysCache))
+	pubKeys,err := dr.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve public keys")
+	}
+	for i, pk := range pubKeys {
+		seckey, ok := dr.secretKeysCache[pk]
+		if !ok {
+			return nil, errors.New("Could not fetch private key")
+		}
+		privKeys[i] = seckey.Marshal()
+	}
+	dr.lock.RUnlock()
+	return privKeys, nil
+}
+
 // Sign signs a message using a validator key.
 func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	publicKey := req.PublicKey
