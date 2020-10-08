@@ -174,13 +174,7 @@ func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 		return err
 	}
 	allKeys = removeDuplicateKeys(allKeys)
-	var keys [][48]byte
-	for _, key := range allKeys {
-		var k [48]byte
-		copy(k[:], key[:])
-		keys = append(keys, k)
-	}
-	attMap, err := store.AttestationHistoryForPubKeys(ctx, keys)
+	attMap, err := store.AttestationHistoryForPubKeys(ctx, allKeys)
 	if err != nil {
 		return errors.Wrapf(err, "could not retrieve data for public keys %v", allKeys)
 	}
