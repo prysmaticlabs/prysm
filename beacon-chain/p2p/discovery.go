@@ -100,12 +100,16 @@ func (s *Service) createListener(
 	// Listen to all network interfaces
 	// for both ip protocols.
 	networkVersion := ""
+	// BindIP is used to specify the ip
+	// on which we will bind our listener on
+	// by default we will listen to all interfaces.
+	var bindIP net.IP
 	if ipAddr.To4() != nil {
 		networkVersion = "udp4"
-		ipAddr = net.IPv4zero
+		bindIP = net.IPv4zero
 	} else {
 		networkVersion = "udp6"
-		ipAddr = net.IPv6zero
+		bindIP = net.IPv6zero
 	}
 
 	// If local ip is specified then use that instead.
@@ -114,9 +118,10 @@ func (s *Service) createListener(
 		if ipAddr == nil {
 			return nil, errors.New("invalid local ip provided")
 		}
+		bindIP = ipAddr
 	}
 	udpAddr := &net.UDPAddr{
-		IP:   ipAddr,
+		IP:   bindIP,
 		Port: int(s.cfg.UDPPort),
 	}
 	conn, err := net.ListenUDP(networkVersion, udpAddr)
@@ -126,7 +131,7 @@ func (s *Service) createListener(
 
 	localNode, err := s.createLocalNode(
 		privKey,
-		udpAddr.IP,
+		ipAddr,
 		int(s.cfg.UDPPort),
 		int(s.cfg.TCPPort),
 	)
@@ -185,17 +190,7 @@ func (s *Service) createLocalNode(
 		return nil, errors.Wrap(err, "could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
-	// In the event we have a zero ip passed in, we
-	// instead persist the loopback ip in the
-	// localnode entry.
-	switch {
-	case ipAddr.Equal(net.IPv4zero):
-		ipAddr = net.ParseIP("127.0.0.1")
-	case ipAddr.Equal(net.IPv6zero):
-		ipAddr = net.IPv6loopback
-	default:
-		// do nothing
-	}
+
 	ipEntry := enr.IP(ipAddr)
 	udpEntry := enr.UDP(udpPort)
 	tcpEntry := enr.TCP(tcpPort)
