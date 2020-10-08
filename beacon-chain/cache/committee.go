@@ -129,7 +129,7 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]uint64, error) {
 }
 
 // ActiveIndicesCount returns the active indices count of a given seed stored in cache.
-func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
+func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
@@ -149,7 +149,7 @@ func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
 		return 0, ErrNotCommittee
 	}
 
-	return len(item.SortedIndices), nil
+	return uint64(len(item.SortedIndices)), nil
 }
 
 // HasEntry returns true if the committee cache has a value.
