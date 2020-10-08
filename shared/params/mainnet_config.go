@@ -92,9 +92,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BaseRewardFactor:               64,
 	WhistleBlowerRewardQuotient:    512,
 	ProposerRewardQuotient:         8,
-	InactivityPenaltyQuotient:      1 << 24,
-	MinSlashingPenaltyQuotient:     32,
-	ProportionalSlashingMultiplier: 3,
+	InactivityPenaltyQuotient:      67108864,
+	MinSlashingPenaltyQuotient:     128,
+	ProportionalSlashingMultiplier: 1,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
