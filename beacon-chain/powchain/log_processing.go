@@ -118,7 +118,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		if s.requestingOldLogs {
 			return errors.New("received incorrect merkle index")
 		}
-		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
+		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, index-1); err != nil {
 			return errors.Wrap(err, "could not get correct merkle index")
 		}
 
@@ -371,7 +371,7 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 
 // requestMissingLogs requests any logs that were missed by requesting from previous blocks
 // until the current block(exclusive).
-func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
+func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex uint64) error {
 	// Prevent this method from being called recursively
 	s.requestingOldLogs = true
 	defer func() {
