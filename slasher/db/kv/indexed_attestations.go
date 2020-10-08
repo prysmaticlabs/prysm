@@ -165,7 +165,7 @@ func (db *Store) DeleteIndexedAttestation(ctx context.Context, idxAttestation *e
 func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneAttHistory")
 	defer span.End()
-	pruneFromEpoch := int64(currentEpoch) - int64(pruningEpochAge)
+	pruneFromEpoch := currentEpoch - pruningEpochAge
 	if pruneFromEpoch <= 0 {
 		return nil
 	}
@@ -173,7 +173,7 @@ func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch uint64, pruni
 	return db.update(func(tx *bolt.Tx) error {
 		attBucket := tx.Bucket(historicIndexedAttestationsBucket)
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
-		max := bytesutil.Bytes8(uint64(pruneFromEpoch))
+		max := bytesutil.Bytes8(pruneFromEpoch)
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := attBucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
