@@ -92,7 +92,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			},
 			check: func(t *testing.T, s *Service) {
 				var n int
-				for i := uint64(0); int(i) < genesis.NumValidators(); i++ {
+				for i := uint64(0); i < genesis.NumValidators(); i++ {
 					if s.exitPool.HasBeenIncluded(i) {
 						n++
 					}
