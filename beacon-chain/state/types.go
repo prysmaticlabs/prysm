@@ -74,7 +74,7 @@ var fieldMap map[fieldIndex]dataType
 // releases their reference to the field value, they must decrement the refs. Likewise whenever a
 // copy is performed then the state must increment the refs counter.
 type reference struct {
-	refs uint
+	refs uint64
 	lock sync.RWMutex
 }
 
@@ -152,7 +152,7 @@ type ReadOnlyValidator struct {
 	validator *ethpb.Validator
 }
 
-func (r *reference) Refs() uint {
+func (r *reference) Refs() uint64 {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.refs
