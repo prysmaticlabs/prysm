@@ -41,6 +41,7 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 	ss := &Server{
 		keymanager: km,
 		wallet:     w,
+		walletDir:  defaultWalletPath,
 	}
 	// First we import accounts into the wallet.
 	encryptor := keystorev4.New()
@@ -174,6 +175,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
+		walletDir:             defaultWalletPath,
 	}
 	// We attempt to create the wallet.
 	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
@@ -210,9 +212,12 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	ss := &Server{}
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
 	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
-		Password: "",
+		CurrentPassword: strongPass,
+		Password:        "",
 	})
 	assert.ErrorContains(t, noWalletMsg, err)
 	// We attempt to create the wallet.
@@ -231,10 +236,12 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	ss.walletInitialized = true
 	ss.keymanager = km
 	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
-		Password: "",
+		CurrentPassword: strongPass,
+		Password:        "",
 	})
 	assert.ErrorContains(t, "cannot be empty", err)
 	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		CurrentPassword:      strongPass,
 		Password:             "abc",
 		PasswordConfirmation: "def",
 	})
@@ -245,6 +252,7 @@ func TestServer_ChangePassword_DirectKeymanager(t *testing.T) {
 	ss, _ := createDirectWalletWithAccounts(t, 1)
 	newPassword := "NewPassw0rdz%%%%pass"
 	_, err := ss.ChangePassword(context.Background(), &pb.ChangePasswordRequest{
+		CurrentPassword:      ss.wallet.Password(),
 		Password:             newPassword,
 		PasswordConfirmation: newPassword,
 	})
@@ -269,12 +277,15 @@ func TestServer_ChangePassword_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
-	ss := &Server{}
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
 	ss.wallet = w
 	ss.walletInitialized = true
 	ss.keymanager = km
 	newPassword := "NewPassw0rdz%%%%pass"
 	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		CurrentPassword:      strongPass,
 		Password:             newPassword,
 		PasswordConfirmation: newPassword,
 	})
@@ -287,7 +298,9 @@ func TestServer_HasWallet(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	ss := &Server{}
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
 	// First delete the created folder and check the response
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	resp, err := ss.HasWallet(ctx, &ptypes.Empty{})

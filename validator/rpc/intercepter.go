@@ -70,7 +70,7 @@ func (s *Server) authorize(ctx context.Context) error {
 	token := strings.Split(authHeader[0], "Bearer ")[1]
 	_, err := jwt.Parse(token, checkParsedKey)
 	if err != nil {
-		return status.Error(codes.Unauthenticated, "Could not parse JWT token")
+		return status.Errorf(codes.Unauthenticated, "Could not parse JWT token: %v", err)
 	}
 	return nil
 }
