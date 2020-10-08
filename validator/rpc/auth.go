@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	tokenExpiryLength = 20 * time.Minute
+	tokenExpiryLength = time.Hour
 	hashCost          = 8
 )
 
@@ -30,9 +30,9 @@ var (
 // a sufficiently strong password check.
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	// First, we check if the validator already has a password. In this case,
-	// the user should NOT be able to signup and the function will return an error.
+	// the user should be logged in as normal.
 	if fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)) {
-		return nil, status.Error(codes.PermissionDenied, "Validator already has a password set, cannot signup")
+		return s.Login(ctx, req)
 	}
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.

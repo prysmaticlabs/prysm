@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -70,7 +69,7 @@ func (s *Server) authorize(ctx context.Context) error {
 	token := strings.Split(authHeader[0], "Bearer ")[1]
 	_, err := jwt.Parse(token, checkParsedKey)
 	if err != nil {
-		return errors.Wrap(err, "Could not parse JWT token")
+		return status.Error(codes.Unauthenticated, "Could not parse JWT token")
 	}
 	return nil
 }
