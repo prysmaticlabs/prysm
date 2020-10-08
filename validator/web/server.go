@@ -1,40 +1,49 @@
 package web
 
 import (
-	"fmt"
-	"log"
+	"context"
 	"net/http"
-	"net/url"
-	"path"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/shared"
+	log "github.com/sirupsen/logrus"
 )
 
-const prefix = "external/prysm_web_ui"
+var _ = shared.Service(&Server{})
 
-func Run() {
-	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		u, err := url.ParseRequestURI(req.RequestURI)
-		if err != nil {
-			panic(err)
+type Server struct {
+	http *http.Server
+}
+
+func NewServer(addr string) *Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", webHandler)
+
+	return &Server{
+		http: &http.Server{
+			Addr:    addr,
+			Handler: mux,
+		},
+	}
+}
+
+// Start the web server.
+func (s *Server) Start() {
+	go func() {
+		if err := s.http.ListenAndServe(); err != nil {
+			log.WithError(err).Error("Failed to start validator web server")
 		}
-		p := u.Path
-		if p == "/" {
-			p = "/index.html"
-		}
-		p = path.Join(prefix, p)
+	}()
+}
 
-		// DEBUG: Print the path.
-		fmt.Println(p)
+// Stop the web server gracefully with 1s timeout.
+func (s *Server) Stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	return s.http.Shutdown(ctx)
+}
 
-		if d, ok := site[p]; ok {
-			res.WriteHeader(200)
-			if _, err := res.Write(d); err != nil {
-				panic(err)
-			}
-		} else {
-			res.WriteHeader(404)
-		}
-
-	})
-
-	log.Fatal(http.ListenAndServe(":3000", nil))
+// Status check for web server. Always returns nil.
+func (s *Server) Status() error {
+	return nil
 }
