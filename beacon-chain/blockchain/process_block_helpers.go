@@ -258,20 +258,35 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	ctx, span := trace.StartSpan(ctx, "forkChoice.ancestor")
 	defer span.End()
 
-	// Stop recursive ancestry lookup if context is cancelled.
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
 	r := bytesutil.ToBytes32(root)
 	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
 	// This is most optimal outcome.
-	if s.forkChoiceStore.HasParent(r) {
-		r, err := s.forkChoiceStore.AncestorRoot(ctx, r, slot)
-		if err == nil {
-			return r, nil
+	ar, err := s.ancestorByForkChoiceStore(ctx, r, slot)
+	if err != nil {
+		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
+		// This is the second line of defense for retrieving ancestor root.
+		ar, err = s.ancestorByDB(ctx, r, slot)
+		if err != nil {
+			return nil, err
 		}
-		log.Warnf("Could not look up ancestor using fork choice store. Trying DB: %v")
+	}
+
+	return ar, nil
+}
+
+// This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
+func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	if s.forkChoiceStore.HasParent(r) {
+		return nil, errors.New("Could not find root in fork choice store")
+	}
+	return s.forkChoiceStore.AncestorRoot(ctx, r, slot)
+}
+
+// This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	// Stop recursive ancestry lookup if context is cancelled.
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	signed, err := s.beaconDB.Block(ctx, r)
@@ -288,10 +303,10 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	}
 	b := signed.Block
 	if b.Slot == slot || b.Slot < slot {
-		return root, nil
+		return r[:], nil
 	}
 
-	return s.ancestor(ctx, b.ParentRoot, slot)
+	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot), slot)
 }
 
 // This updates justified check point in store, if the new justified is later than stored justified or
