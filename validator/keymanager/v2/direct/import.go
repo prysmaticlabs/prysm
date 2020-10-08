@@ -40,11 +40,10 @@ func (dr *Keymanager) ImportKeystores(
 		}
 	}
 	foundKey := map[string]bool{}
-	var strKey string
-	for j := range pubKeys {
-		strKey = hex.EncodeToString(pubKeys[j])
-		if foundKey[strKey] == true {
-			return fmt.Errorf("duplicated key found: %#x", pubKeys[j])
+	for i := range pubKeys {
+		strKey := hex.EncodeToString(pubKeys[i])
+		if foundKey[strKey] {
+			return fmt.Errorf("duplicated key found: %#x", pubKeys[i])
 		}
 		foundKey[strKey] = true
 	}
