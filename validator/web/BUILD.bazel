@@ -2,9 +2,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
 
+# gazelle:ignore site_data.go
 go_library(
     name = "go_default_library",
     srcs = [
+        "doc.go",
         "handler.go",
         "server.go",
         ":site_data",  # keep

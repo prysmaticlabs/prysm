@@ -314,10 +314,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
-	if err := s.registerWebService(cliCtx); err != nil {
-		return err
-	}
-	return nil
+	return s.registerWebService(cliCtx)
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
@@ -434,7 +431,9 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
-	webAddress := "127.0.0.1:4242" // TODO: Get from flag value
+	host := cliCtx.String(flags.WebHostFlag.Name)
+	port := cliCtx.Uint64(flags.WebPortFlag.Name)
+	webAddress := fmt.Sprintf("%s:%d", host, port)
 	srv := web.NewServer(webAddress)
 	return s.services.RegisterService(srv)
 }
