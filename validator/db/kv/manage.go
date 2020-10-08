@@ -147,7 +147,7 @@ func createSplitTargetStores(
 	}()
 
 	for _, pubKeyProposals := range allProposals {
-		dirName := hex.EncodeToString(pubKeyProposals.PubKey[:12])
+		dirName := hex.EncodeToString(pubKeyProposals.PubKey[:])[:12]
 		path := filepath.Join(targetDirectory, dirName)
 		newStore, err := NewKVStore(path, [][48]byte{})
 		if err != nil {
@@ -191,7 +191,7 @@ func createSplitTargetStores(
 			}
 		}
 		if !hasMatchingProposals {
-			dirName := hex.EncodeToString(pubKeyAttestations.PubKey[:12])
+			dirName := hex.EncodeToString(pubKeyAttestations.PubKey[:])[:12]
 			path := filepath.Join(targetDirectory, dirName)
 			newStore, err := NewKVStore(path, [][48]byte{})
 			if err != nil {
