@@ -65,12 +65,12 @@ func (store *Store) ImportProposalHistory(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.ImportProposalHistory")
 	defer span.End()
 
-	var allKeys [][]byte
+	var allKeys [][48]byte
 	err := store.db.View(func(tx *bolt.Tx) error {
 		proposalsBucket := tx.Bucket(historicProposalsBucket)
 		if err := proposalsBucket.ForEach(func(pubKey, _ []byte) error {
-			pubKeyCopy := make([]byte, len(pubKey))
-			copy(pubKeyCopy, pubKey)
+			var pubKeyCopy [48]byte
+			copy(pubKeyCopy[:], pubKey)
 			allKeys = append(allKeys, pubKeyCopy)
 			return nil
 		}); err != nil {
@@ -100,7 +100,7 @@ func (store *Store) ImportProposalHistory(ctx context.Context) error {
 	err = store.db.Update(func(tx *bolt.Tx) error {
 		newProposalsBucket := tx.Bucket(newhistoricProposalsBucket)
 		for _, pr := range prs {
-			valBucket, err := newProposalsBucket.CreateBucketIfNotExists(pr.PubKey)
+			valBucket, err := newProposalsBucket.CreateBucketIfNotExists(pr.PubKey[:])
 			if err != nil {
 				return errors.Wrap(err, "could not could not create bucket for public key")
 			}
