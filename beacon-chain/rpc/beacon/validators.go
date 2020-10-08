@@ -269,7 +269,7 @@ func (bs *Server) ListValidators(
 				return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 			}
 			validatorList = append(validatorList, &ethpb.Validators_ValidatorContainer{
-				Index:     uint64(i),
+				Index:     i,
 				Validator: val,
 			})
 		}
@@ -350,9 +350,9 @@ func (bs *Server) GetValidator(
 	}
 	pk48 := bytesutil.ToBytes48(pubKey)
 	for i := uint64(0); i < headState.NumValidators(); i++ {
-		keyFromState := headState.PubkeyAtIndex(uint64(i))
+		keyFromState := headState.PubkeyAtIndex(i)
 		if keyFromState == pk48 {
-			return headState.ValidatorAtIndex(uint64(i))
+			return headState.ValidatorAtIndex(i)
 		}
 	}
 	return nil, status.Error(codes.NotFound, "No validator matched filter criteria")
