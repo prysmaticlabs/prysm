@@ -210,19 +210,14 @@ func (h *stateRootHasher) validatorRoot(hasher htrutils.HashFn, validator *ethpb
 		} else {
 			slashBuf[0] = uint8(0)
 		}
-		fieldRoots = append(fieldRoots, slashBuf)
-
-		// Activation eligibility epoch.
-		fieldRoots = append(fieldRoots, activationEligibilityBuf)
-
-		// Activation epoch.
-		fieldRoots = append(fieldRoots, activationBuf)
-
-		// Exit epoch.
-		fieldRoots = append(fieldRoots, exitBuf)
-
-		// Withdrawable epoch.
-		fieldRoots = append(fieldRoots, withdrawalBuf)
+		fieldRoots = append(
+			fieldRoots,
+			slashBuf,
+			activationEligibilityBuf,
+			activationBuf,
+			exitBuf,
+			withdrawalBuf,
+		)
 	}
 
 	valRoot, err := htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
