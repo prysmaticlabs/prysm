@@ -274,7 +274,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 
 // assertRefCount checks whether reference count for a given state
 // at a given index is equal to expected amount.
-func assertRefCount(t *testing.T, b *BeaconState, idx fieldIndex, want uint) {
+func assertRefCount(t *testing.T, b *BeaconState, idx fieldIndex, want uint64) {
 	if cnt := b.sharedFieldReferences[idx].refs; cnt != want {
 		t.Errorf("Unexpected count of references for index %d, want: %v, got: %v", idx, want, cnt)
 	}
