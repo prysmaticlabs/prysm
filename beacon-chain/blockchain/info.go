@@ -52,7 +52,6 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 	graph.Attr("labeljust", "l")
 
 	dotNodes := make([]*dot.Node, len(nodes))
-	// TODO: Safe?
 	avgBalance := uint64(averageBalance(headState.Balances()))
 
 	for i := len(nodes) - 1; i >= 0; i-- {
