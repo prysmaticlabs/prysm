@@ -28,7 +28,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 			return fmt.Errorf("validator history empty for public key %#x", publicKey)
 		}
 		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
-		if sr == nil || len(sr) == 0 {
+		if len(sr) == 0 {
 			return nil
 		}
 		copy(signingRoot, sr)
