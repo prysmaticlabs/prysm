@@ -31,7 +31,7 @@ var (
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	// First, we check if the validator already has a password. In this case,
 	// the user should be logged in as normal.
-	if fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)) {
+	if fileutil.FileExists(filepath.Join(s.walletDir, wallet.HashedPasswordFileName)) {
 		return s.Login(ctx, req)
 	}
 	// We check the strength of the password to ensure it is high-entropy,
@@ -43,9 +43,9 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate hashed password")
 	}
-	hashFilePath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	hashFilePath := filepath.Join(s.walletDir, wallet.HashedPasswordFileName)
 	// Write the config file to disk.
-	if err := os.MkdirAll(defaultWalletPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(s.walletDir, os.ModePerm); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
@@ -56,7 +56,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	hashedPasswordPath := filepath.Join(s.walletDir, wallet.HashedPasswordFileName)
 	if fileutil.FileExists(hashedPasswordPath) {
 		hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
 		if err != nil {
@@ -68,7 +68,7 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 		}
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
-		WalletDir:      defaultWalletPath,
+		WalletDir:      s.walletDir,
 		WalletPassword: req.Password,
 	}); err != nil {
 		if strings.Contains(err.Error(), "invalid checksum") {

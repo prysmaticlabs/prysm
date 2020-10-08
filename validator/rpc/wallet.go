@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -22,8 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
 
 const (
 	checkExistsErrMsg   = "Could not check if wallet exists"
@@ -35,7 +32,7 @@ const (
 // HasWallet checks if a user has created a wallet before as well as whether or not
 // they have used the web UI before to set a wallet password.
 func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletResponse, error) {
-	exists, err := wallet.Exists(defaultWalletPath)
+	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if wallet exists: %v", err)
 	}
@@ -53,7 +50,7 @@ func (s *Server) HasWallet(ctx context.Context, _ *ptypes.Empty) (*pb.HasWalletR
 // derived, direct, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	// Currently defaultWalletPath is used as the wallet directory and req's WalletPath is ignored for simplicity
-	exists, err := wallet.Exists(defaultWalletPath)
+	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check for existing wallet: %v", err)
 	}
@@ -77,7 +74,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
-				WalletDir:      defaultWalletPath,
+				WalletDir:      s.walletDir,
 				KeymanagerKind: v2keymanager.Direct,
 				WalletPassword: req.WalletPassword,
 			},
@@ -95,7 +92,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
-			WalletDir:      defaultWalletPath,
+			WalletDir:      s.walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
@@ -103,7 +100,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
-				WalletPath:     defaultWalletPath,
+				WalletPath:     s.walletDir,
 				KeymanagerKind: pb.KeymanagerKind_DIRECT,
 			},
 		}, nil
@@ -115,7 +112,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
 		}
 		_, depositData, err := v2.RecoverWallet(ctx, &v2.RecoverWalletConfig{
-			WalletDir:      defaultWalletPath,
+			WalletDir:      s.walletDir,
 			WalletPassword: req.WalletPassword,
 			Mnemonic:       req.Mnemonic,
 			NumAccounts:    int64(req.NumAccounts),
@@ -124,7 +121,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
-			WalletDir:      defaultWalletPath,
+			WalletDir:      s.walletDir,
 			KeymanagerKind: v2keymanager.Direct,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
@@ -143,7 +140,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
-				WalletPath:     defaultWalletPath,
+				WalletPath:     s.walletDir,
 				KeymanagerKind: pb.KeymanagerKind_DERIVED,
 			},
 			AccountsCreated: &pb.DepositDataResponse{
@@ -164,7 +161,7 @@ func (s *Server) EditConfig(ctx context.Context, req *pb.EditWalletConfigRequest
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
 func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
-	exists, err := wallet.Exists(defaultWalletPath)
+	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
 	}
@@ -172,7 +169,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
-	valid, err := wallet.IsValid(defaultWalletPath)
+	valid, err := wallet.IsValid(s.walletDir)
 	if err == wallet.ErrNoWalletFound {
 		return &pb.WalletResponse{}, nil
 	}
@@ -209,7 +206,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
 	}
 	return &pb.WalletResponse{
-		WalletPath:       defaultWalletPath,
+		WalletPath:       s.walletDir,
 		KeymanagerKind:   keymanagerKind,
 		KeymanagerConfig: config,
 	}, nil
@@ -237,14 +234,14 @@ func (s *Server) GenerateMnemonic(ctx context.Context, _ *ptypes.Empty) (*pb.Gen
 // ChangePassword allows changing a wallet password via the API as
 // an authenticated method.
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
-	exists, err := wallet.Exists(defaultWalletPath)
+	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
 	}
 	if !exists {
 		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
-	valid, err := wallet.IsValid(defaultWalletPath)
+	valid, err := wallet.IsValid(s.walletDir)
 	if err == wallet.ErrNoWalletFound {
 		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
@@ -257,7 +254,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	if req.CurrentPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Current wallet password cannot be empty")
 	}
-	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	hashedPasswordPath := filepath.Join(s.walletDir, wallet.HashedPasswordFileName)
 	if !fileutil.FileExists(hashedPasswordPath) {
 		return nil, status.Error(codes.FailedPrecondition, "Could not compare password from disk")
 	}
