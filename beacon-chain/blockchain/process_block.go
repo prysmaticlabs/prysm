@@ -102,6 +102,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	// Update finalized check point.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+		log.Error("Update finalized epoch")
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
@@ -121,19 +122,17 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		}
 
 		// Update deposit cache.
-		/*log.Errorf("onBlock before: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
-		log.Errorf("Deposits in block: %d", len(signed.Block.Body.Deposits))
-		for _, d := range signed.Block.Body.Deposits {
-			s.depositCache.RemovePendingDeposit(ctx, d)
-			// Proof was used to verify the deposit during state transition and can be now safely removed to save space.
-			d.Proof = nil
-		}
-		log.Errorf("onBlock after: %d", len(s.depositCache.PendingDeposits(ctx, nil)))*/
 		finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not fetch finalized state")
 		}
 		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount-1))
+		c := s.depositCache.AllDepositContainers(ctx)
+		for _, d := range c {
+			if uint64(d.Index) <= finalizedState.Eth1Data().DepositCount-1 && d.Deposit.Proof != nil {
+				d.Deposit.Proof = nil
+			}
+		}
 	}
 
 	defer reportAttestationInclusion(b)
