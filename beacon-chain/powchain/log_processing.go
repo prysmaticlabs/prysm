@@ -109,11 +109,11 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
 	index := binary.LittleEndian.Uint64(merkleTreeIndex)
-	if int64(index) <= s.lastReceivedMerkleIndex {
+	if index <= s.lastReceivedMerkleIndex {
 		return nil
 	}
 
-	if int64(index) != s.lastReceivedMerkleIndex+1 {
+	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
 		if s.requestingOldLogs {
 			return errors.New("received incorrect merkle index")
@@ -123,7 +123,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		}
 
 	}
-	s.lastReceivedMerkleIndex = int64(index)
+	s.lastReceivedMerkleIndex = index
 
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
@@ -253,9 +253,9 @@ func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 // updates the deposit trie with the data from each individual log.
 func (s *Service) processPastLogs(ctx context.Context) error {
 	currentBlockNum := s.latestEth1Data.LastRequestedBlock
-	deploymentBlock := int64(params.BeaconNetworkConfig().ContractDeploymentBlock)
-	if uint64(deploymentBlock) > currentBlockNum {
-		currentBlockNum = uint64(deploymentBlock)
+	deploymentBlock := params.BeaconNetworkConfig().ContractDeploymentBlock
+	if deploymentBlock > currentBlockNum {
+		currentBlockNum = deploymentBlock
 	}
 	// To store all blocks.
 	headersMap := make(map[uint64]*gethTypes.Header)
@@ -285,7 +285,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 	for currentBlockNum < latestFollowHeight {
 		// stop requesting, if we have all the logs
-		if logCount == uint64(s.lastReceivedMerkleIndex+1) {
+		if logCount == s.lastReceivedMerkleIndex+1 {
 			break
 		}
 		start := currentBlockNum
@@ -300,7 +300,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			FromBlock: big.NewInt(int64(start)),
 			ToBlock:   big.NewInt(int64(end)),
 		}
-		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
+		remainingLogs := logCount - s.lastReceivedMerkleIndex + 1
 		// only change the end block if the remaining logs are below the required log limit.
 		if remainingLogs < depositlogRequestLimit && end >= latestFollowHeight {
 			query.ToBlock = big.NewInt(int64(latestFollowHeight))

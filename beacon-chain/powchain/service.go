@@ -142,7 +142,7 @@ type Service struct {
 	chainStartData          *protodb.ChainStartData
 	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
 	depositCache            *depositcache.DepositCache
-	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
+	lastReceivedMerkleIndex uint64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
 }
@@ -211,7 +211,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			}
 		}
 		s.latestEth1Data = eth1Data.CurrentEth1Data
-		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
+		s.lastReceivedMerkleIndex = uint64(len(s.depositTrie.Items()) - 1)
 		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
 			return nil, errors.Wrap(err, "could not initialize caches")
 		}
