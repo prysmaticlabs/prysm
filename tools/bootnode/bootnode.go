@@ -92,7 +92,7 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	ipAddr, err := iputils.ExternalIPv4()
+	ipAddr, err := iputils.ExternalIP()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,11 +131,11 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	case ip.To16() != nil && ip.To4() == nil:
 		bindIP = net.IPv6zero
 		networkVersion = "udp6"
-		ip = net.ParseIP("127.0.0.1")
+		ip = net.IPv6loopback
 	case ip.To4() != nil:
 		bindIP = net.IPv4zero
 		networkVersion = "udp4"
-		ip = net.IPv6loopback
+		ip = net.ParseIP("127.0.0.1")
 	default:
 		log.Fatalf("Valid ip address not provided instead %s was provided", ipAddr)
 	}
