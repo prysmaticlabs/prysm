@@ -684,14 +684,14 @@ func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
 }
 
 // NumValidators returns the size of the validator registry.
-func (b *BeaconState) NumValidators() int {
+func (b *BeaconState) NumValidators() uint64 {
 	if !b.HasInnerState() {
 		return 0
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return len(b.state.Validators)
+	return uint64(len(b.state.Validators))
 }
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.

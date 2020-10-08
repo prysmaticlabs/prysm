@@ -104,7 +104,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	for _, index := range filteredIndices[start:end] {
-		if index >= uint64(requestedState.NumValidators()) {
+		if index >= requestedState.NumValidators() {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, requestedState.NumValidators())
 		}

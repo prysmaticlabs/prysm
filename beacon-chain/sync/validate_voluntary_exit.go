@@ -52,7 +52,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationIgnore
 	}
 
-	if exit.Exit.ValidatorIndex >= uint64(headState.NumValidators()) {
+	if exit.Exit.ValidatorIndex >= headState.NumValidators() {
 		return pubsub.ValidationReject
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)

@@ -263,7 +263,7 @@ func (bs *Server) ListValidators(
 	})
 
 	if len(req.PublicKeys) == 0 && len(req.Indices) == 0 {
-		for i := 0; i < reqState.NumValidators(); i++ {
+		for i := uint64(0); i < reqState.NumValidators(); i++ {
 			val, err := reqState.ValidatorAtIndex(uint64(i))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
@@ -338,7 +338,7 @@ func (bs *Server) GetValidator(
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	if requestingIndex {
-		if index >= uint64(headState.NumValidators()) {
+		if index >= headState.NumValidators() {
 			return nil, status.Errorf(
 				codes.OutOfRange,
 				"Requesting index %d, but there are only %d validators",
@@ -349,7 +349,7 @@ func (bs *Server) GetValidator(
 		return headState.ValidatorAtIndex(index)
 	}
 	pk48 := bytesutil.ToBytes48(pubKey)
-	for i := 0; i < headState.NumValidators(); i++ {
+	for i := uint64(0); i < headState.NumValidators(); i++ {
 		keyFromState := headState.PubkeyAtIndex(uint64(i))
 		if keyFromState == pk48 {
 			return headState.ValidatorAtIndex(uint64(i))

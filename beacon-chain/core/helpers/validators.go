@@ -245,7 +245,7 @@ func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64,
 			return 0, err
 		}
 		candidateIndex = activeIndices[candidateIndex]
-		if candidateIndex >= uint64(bState.NumValidators()) {
+		if candidateIndex >= bState.NumValidators() {
 			return 0, errors.New("active index out of range")
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
