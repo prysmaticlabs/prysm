@@ -66,23 +66,28 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return nil, status.Errorf(codes.Internal, "Could not check for existing wallet: %v", err)
 	}
 	if exists {
-		return nil, status.Error(codes.AlreadyExists, "A wallet already exists at this location.")
+		if err := s.initializeWallet(ctx, &wallet.Config{
+			WalletDir:      walletDir,
+			WalletPassword: req.WalletPassword,
+		}); err != nil {
+			return nil, err
+		}
+		keymanagerKind := pb.KeymanagerKind_DIRECT
+		switch s.wallet.KeymanagerKind() {
+		case v2keymanager.Derived:
+			keymanagerKind = pb.KeymanagerKind_DERIVED
+		case v2keymanager.Remote:
+			keymanagerKind = pb.KeymanagerKind_REMOTE
+		}
+		return &pb.CreateWalletResponse{
+			Wallet: &pb.WalletResponse{
+				WalletPath:     walletDir,
+				KeymanagerKind: keymanagerKind,
+			},
+		}, nil
 	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
-		// Needs to unmarshal the keystores from the requests.
-		if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
-			return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
-		}
-		keystores := make([]*v2keymanager.Keystore, len(req.KeystoresImported))
-		for i := 0; i < len(req.KeystoresImported); i++ {
-			encoded := req.KeystoresImported[i]
-			keystore := &v2keymanager.Keystore{}
-			if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
-			}
-			keystores[i] = keystore
-		}
 		w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
@@ -94,12 +99,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if err != nil {
 			return nil, err
 		}
-		// Import the uploaded accounts.
-		if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
-			Wallet:          w,
-			Keystores:       keystores,
-			AccountPassword: req.KeystoresPassword,
-		}); err != nil {
+		if err := w.SaveHashedPassword(ctx); err != nil {
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{

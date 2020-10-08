@@ -120,19 +120,15 @@ message CreateWalletRequest {
     string mnemonic = 4;
     // Number of accounts.
     uint64 num_accounts = 5;
-    // JSON-encoded keystore files to import during wallet creation.
-    repeated string keystores_imported = 6;
-    // Password to unlock imported keystore files.
-    string keystores_password = 7;
 
     // Remote address such as host.example.com:4000 for a gRPC remote signer server.
-    string remote_addr = 8;
+    string remote_addr = 6;
     // Path to client.crt for secure TLS connections to a remote signer server.
-    string remote_crt_path = 9;
+    string remote_crt_path = 7;
     // Path to client.key for secure TLS connections to a remote signer server.
-    string remote_key_path = 10;
+    string remote_key_path = 8;
     // Path to ca.crt for secure TLS connections to a remote signer server.
-    string remote_ca_crt_path = 11;
+    string remote_ca_crt_path = 9;
 }
 
 message CreateWalletResponse {

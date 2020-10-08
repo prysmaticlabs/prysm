@@ -83,21 +83,24 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
+		walletDir:             defaultWalletPath,
 	}
 	req := &pb.CreateWalletRequest{
-		WalletPath:        localWalletDir,
-		Keymanager:        pb.KeymanagerKind_DIRECT,
-		WalletPassword:    strongPass,
-		KeystoresPassword: strongPass,
+		WalletPath:     localWalletDir,
+		Keymanager:     pb.KeymanagerKind_DIRECT,
+		WalletPassword: strongPass,
 	}
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
 	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err := s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "No keystores included for import", err)
+	require.NoError(t, err)
 
-	req.KeystoresImported = []string{"badjson"}
-	_, err = s.CreateWallet(ctx, req)
+	importReq := &pb.ImportKeystoresRequest{
+		KeystoresPassword: strongPass,
+		KeystoresImported: []string{"badjson"},
+	}
+	_, err = s.ImportKeystores(ctx, importReq)
 	require.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
 
 	encryptor := keystorev4.New()
@@ -120,8 +123,8 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		require.NoError(t, err)
 		keystores[i] = string(encodedFile)
 	}
-	req.KeystoresImported = keystores
-	_, err = s.CreateWallet(ctx, req)
+	importReq.KeystoresImported = keystores
+	_, err = s.ImportKeystores(ctx, importReq)
 	require.NoError(t, err)
 }
 
@@ -155,10 +158,6 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
-
-	// Now trying to create a wallet where a previous wallet already exists.  We expect an error.
-	_, err = s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "wallet already exists at this location", err)
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
