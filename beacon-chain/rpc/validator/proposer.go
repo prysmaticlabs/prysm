@@ -232,9 +232,9 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 	}
 	eth1DataNotification = false
 
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
-	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
+	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
+	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
+	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
 	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, earliestValidTime)
 	if err != nil {
