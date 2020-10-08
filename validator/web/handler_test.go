@@ -13,21 +13,31 @@ func TestWebHandler(t *testing.T) {
 		name string
 		requestURI string
 		wantStatus int
+		wantContentType string
 	}{
 		{
 			name: "base route",
 			requestURI: "/",
 			wantStatus: 200,
+			wantContentType: "text/html; charset=utf-8",
 		},
 		{
 			name: "index.html",
 			requestURI: "/index.html",
 			wantStatus: 200,
+			wantContentType: "text/html; charset=utf-8",
 		},
 		{
 			name: "bad route",
 			requestURI: "/foobar_bad",
+			wantStatus: 200, // Serves index.html by default.
+			wantContentType: "text/html; charset=utf-8",
+		},
+		{
+			name: "favicon.ico",
+			requestURI: "/favicon.ico",
 			wantStatus: 200,
+			wantContentType: "image/vnd.microsoft.icon",
 		},
 	}
 
@@ -37,6 +47,7 @@ func TestWebHandler(t *testing.T) {
 			res := httptest.NewRecorder()
 			webHandler(res, req)
 			assert.Equal(t, tt.wantStatus, res.Result().StatusCode)
+			assert.Equal(t, tt.wantContentType, res.Result().Header.Get("Content-Type"))
 		})
 	}
 }

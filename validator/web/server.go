@@ -30,7 +30,7 @@ func NewServer(addr string) *Server {
 // Start the web server.
 func (s *Server) Start() {
 	go func() {
-		log.Info("Running prysm web UI at http://localhost:4242") // TODO: use real URL.
+		log.WithField("address", s.http.Addr).Info("Starting Prysm web UI")
 		if err := s.http.ListenAndServe(); err != nil {
 			log.WithError(err).Error("Failed to start validator web server")
 		}
