@@ -206,15 +206,15 @@ func TestStore_ImportOldAttestationFormat(t *testing.T) {
 	require.NoError(t, err)
 	for pk, encHis := range attHis {
 		his, ok := attestationHistory[pk]
-		require.Equal(t, true, ok)
+		require.Equal(t, true, ok, "Missing public key in the original data")
 		lew, err := encHis.getLatestEpochWritten(ctx)
-		require.NoError(t, err)
-		require.Equal(t, his.LatestEpochWritten, lew)
+		require.NoError(t, err, "Failed to get latest epoch written")
+		require.Equal(t, his.LatestEpochWritten, lew, "LatestEpochWritten is not equal to the source data value")
 		for target, source := range his.TargetToSource {
 			hd, err := encHis.getTargetData(ctx, target)
-			require.NoError(t, err)
-			require.Equal(t, source, hd.Source)
-			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), hd.SigningRoot)
+			require.NoError(t, err, "Failed to get target data for epoch: %d", target)
+			require.Equal(t, source, hd.Source, "Source epoch is different")
+			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), hd.SigningRoot, "Signing root differs in imported data")
 		}
 	}
 }
