@@ -1,0 +1,24 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "server.go",
+        ":site_data",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/validator/web",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_sirupsen_logrus//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)
+
+go_embed_data(
+    name = "site_data",
+    srcs = [
+        "@prysm_web_ui//:site",
+    ],
+    var = "site",
+)
