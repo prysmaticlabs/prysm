@@ -234,27 +234,41 @@ func (s *Service) registerHandlers() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	for !s.chainStarted {
+	for {
 		select {
 		case event := <-stateChannel:
-			if event.Type == statefeed.Initialized {
+			switch event.Type {
+			case statefeed.Initialized:
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.InitializedData")
 					return
 				}
-				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+				startTime := data.StartTime
+				log.WithField("starttime", startTime).Debug("Received state initialized event")
 
-				// Register respective rpc and pubsub handlers at state initialized event.
+				// Register respective rpc handlers at state initialized event.
 				s.registerRPCHandlers()
+				// Wait for chainstart in separate routine.
+				go func() {
+					if startTime.After(timeutils.Now()) {
+						time.Sleep(timeutils.Until(startTime))
+					}
+					log.WithField("starttime", startTime).Debug("Chain started in sync service")
+					s.chainStarted = true
+				}()
+			case statefeed.Synced:
+				_, ok := event.Data.(*statefeed.SyncedData)
+				if !ok {
+					log.Error("Event feed data is not type *statefeed.SyncedData")
+					return
+				}
+				// Register respective pubsub handlers at state synced event.
 				s.registerSubscribers()
 
-				if data.StartTime.After(timeutils.Now()) {
-					stateSub.Unsubscribe()
-					time.Sleep(timeutils.Until(data.StartTime))
-				}
-				log.WithField("starttime", data.StartTime).Debug("Chain started in sync service")
-				s.chainStarted = true
+				// Exit once we received the synced event.
+				stateSub.Unsubscribe()
+				return
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
