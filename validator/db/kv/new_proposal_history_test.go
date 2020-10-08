@@ -176,5 +176,4 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), root)
 	}
-
 }
