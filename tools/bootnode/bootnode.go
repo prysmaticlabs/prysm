@@ -131,9 +131,11 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	case ip.To16() != nil && ip.To4() == nil:
 		bindIP = net.IPv6zero
 		networkVersion = "udp6"
+		ip = net.ParseIP("127.0.0.1")
 	case ip.To4() != nil:
 		bindIP = net.IPv4zero
 		networkVersion = "udp4"
+		ip = net.IPv6loopback
 	default:
 		log.Fatalf("Valid ip address not provided instead %s was provided", ipAddr)
 	}
