@@ -156,13 +156,13 @@ func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, his
 func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.ImportOldAttestationFormat")
 	defer span.End()
-	var allKeys [][]byte
+	var allKeys [][48]byte
 
 	if err := store.db.View(func(tx *bolt.Tx) error {
 		attestationsBucket := tx.Bucket(historicAttestationsBucket)
 		if err := attestationsBucket.ForEach(func(pubKey, _ []byte) error {
-			pubKeyCopy := make([]byte, len(pubKey))
-			copy(pubKeyCopy, pubKey)
+			var pubKeyCopy [48]byte
+			copy(pubKeyCopy[:], pubKey)
 			allKeys = append(allKeys, pubKeyCopy)
 			return nil
 		}); err != nil {
@@ -177,7 +177,7 @@ func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 	var keys [][48]byte
 	for _, key := range allKeys {
 		var k [48]byte
-		copy(k[:], key)
+		copy(k[:], key[:])
 		keys = append(keys, k)
 	}
 	attMap, err := store.AttestationHistoryForPubKeys(ctx, keys)
