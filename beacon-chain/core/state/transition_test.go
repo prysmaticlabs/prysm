@@ -151,7 +151,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	set, beaconState, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
+	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
 	assert.NoError(t, err)
 	verified, err := set.Verify()
 	assert.NoError(t, err)

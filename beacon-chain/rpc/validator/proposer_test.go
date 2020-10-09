@@ -1685,7 +1685,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("second")
-		if bytes.Compare(hash, expectedHash) != 0 {
+		if !bytes.Equal(hash, expectedHash) {
 			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 		}
 	})
@@ -1717,7 +1717,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("earliest")
-		if bytes.Compare(hash, expectedHash) != 0 {
+		if !bytes.Equal(hash, expectedHash) {
 			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 		}
 	})
@@ -1754,7 +1754,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "first")
-		if bytes.Compare(hash, expectedHash) != 0 {
+		if !bytes.Equal(hash, expectedHash) {
 			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 		}
 	})
@@ -1794,7 +1794,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("eth1data")
-		if bytes.Compare(hash, expectedHash) != 0 {
+		if !bytes.Equal(hash, expectedHash) {
 			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 		}
 	})
