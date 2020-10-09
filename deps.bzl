@@ -3631,6 +3631,12 @@ def prysm_deps():
         version = "v2.20.5+incompatible",
     )
     go_repository(
+        name = "com_github_wadey_gocovmerge",
+        importpath = "github.com/wadey/gocovmerge",
+        sum = "h1:W0LEBv82YCGEtcmPA3uNZBI33/qF//HAAs3MawDjRa0=",
+        version = "v0.0.0-20160331181800-b5bfa59ec0ad",
+    )
+    go_repository(
         name = "com_github_wercker_journalhook",
         importpath = "github.com/wercker/journalhook",
         sum = "h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=",

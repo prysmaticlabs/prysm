@@ -146,7 +146,7 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		}
 		t.Log(diff)
 
-		if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
+		if len(proposerSlashings) == 0 || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
 			t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", tt.ps, proposerSlashings)
 		}
 	}
