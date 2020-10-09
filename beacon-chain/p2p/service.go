@@ -168,7 +168,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		ScorerParams: &scorers.Config{
 			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold:     maxBadResponses,
-				Weight:        -100,
 				DecayInterval: time.Hour,
 			},
 		},
