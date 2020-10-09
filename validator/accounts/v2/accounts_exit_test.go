@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 func TestExitAccountsCli_Ok(t *testing.T) {
@@ -110,6 +111,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
+	direct.ResetCaches()
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,

@@ -28,6 +28,7 @@ import (
 )
 
 func TestImport_Noninteractive(t *testing.T) {
+	direct.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -89,6 +90,7 @@ func TestImport_Noninteractive(t *testing.T) {
 }
 
 func TestImport_Noninteractive_RandomName(t *testing.T) {
+	direct.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -150,6 +152,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 }
 
 func TestImport_Noninteractive_Filepath(t *testing.T) {
+	direct.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -207,6 +210,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 }
 
 func TestImport_SortByDerivationPath(t *testing.T) {
+	direct.ResetCaches()
 	type test struct {
 		name  string
 		input []string

@@ -85,6 +85,14 @@ type Keymanager struct {
 	seed              []byte
 }
 
+// ResetCaches for the keymanager.
+func ResetCaches() {
+	lock.Lock()
+	orderedPublicKeys = make([][48]byte, 0)
+	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	lock.Unlock()
+}
+
 // DefaultKeymanagerOpts for a derived keymanager implementation.
 func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{

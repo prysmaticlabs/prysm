@@ -81,6 +81,14 @@ type SetupConfig struct {
 	Mnemonic            string
 }
 
+// ResetCaches for the keymanager.
+func ResetCaches() {
+	lock.Lock()
+	orderedPublicKeys = make([][48]byte, 0)
+	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	lock.Unlock()
+}
+
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{

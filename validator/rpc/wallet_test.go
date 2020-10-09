@@ -39,9 +39,10 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
-		keymanager: km,
-		wallet:     w,
-		walletDir:  defaultWalletPath,
+		keymanager:            km,
+		wallet:                w,
+		walletDir:             defaultWalletPath,
+		walletInitializedFeed: new(event.Feed),
 	}
 	// First we import accounts into the wallet.
 	encryptor := keystorev4.New()
@@ -400,6 +401,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_ImportKeystores_OK(t *testing.T) {
+	direct.ResetCaches()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
@@ -417,8 +419,9 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
-		keymanager: km,
-		wallet:     w,
+		keymanager:            km,
+		wallet:                w,
+		walletInitializedFeed: new(event.Feed),
 	}
 
 	// Create 3 keystores.
