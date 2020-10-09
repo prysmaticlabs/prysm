@@ -352,9 +352,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 
 	if currentState != nil && currentState.Eth1DepositIndex() > 0 {
-		//log.Errorf("processPastLogs - before pruning: %d (deposit index: %d)", len(s.depositCache.PendingDeposits(ctx, nil)), currentState.Eth1DepositIndex())
 		s.depositCache.PrunePendingDeposits(ctx, int64(currentState.Eth1DepositIndex()))
-		//log.Errorf("processPastLogs - after pruning: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
 	}
 
 	return nil

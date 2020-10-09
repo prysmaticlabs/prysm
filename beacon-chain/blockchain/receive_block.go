@@ -114,8 +114,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
-	//log.Errorf("ReceiveBlockBatch start: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
-
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
 	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
@@ -150,8 +148,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
 		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 	}
-
-	//log.Errorf("ReceiveBlockBatch end: %d", len(s.depositCache.PendingDeposits(ctx, nil)))
 
 	return nil
 }
