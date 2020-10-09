@@ -357,6 +357,7 @@ func (s *Server) ImportKeystores(
 	}); err != nil {
 		return nil, err
 	}
+	s.walletInitializedFeed.Send(s.wallet)
 	return &pb.ImportKeystoresResponse{
 		ImportedPublicKeys: importedPubKeys,
 	}, nil

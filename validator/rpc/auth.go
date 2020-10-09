@@ -161,6 +161,14 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	s.keymanager = km
 	s.wallet = w
 	s.walletDir = cfg.WalletDir
-	s.walletInitializedFeed.Send(w)
+
+	// Only send over feed if we have validating keys.
+	validatingPublicKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not check for validating public keys")
+	}
+	if len(validatingPublicKeys) > 0 {
+		s.walletInitializedFeed.Send(w)
+	}
 	return nil
 }
