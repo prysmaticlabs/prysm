@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"google.golang.org/grpc"
 )
@@ -129,12 +128,15 @@ func main() {
 					Description: `creates a new validator account keystore containing private keys for Ethereum 2.0 -
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
-					Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+					Flags: cmd.WrapFlags(append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
 						[]cli.Flag{
 							flags.KeystorePathFlag,
 							flags.PasswordFlag,
 							cmd.ChainConfigFileFlag,
-						}...),
+						}...)),
+					Before: func(cliCtx *cli.Context) error {
+						return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+					},
 					Action: func(cliCtx *cli.Context) error {
 						featureconfig.ConfigureValidator(cliCtx)
 
@@ -157,9 +159,12 @@ contract in order to activate the validator client`,
 				{
 					Name:        "keys",
 					Description: `lists the private keys for 'keystore' keymanager keys`,
-					Flags: []cli.Flag{
+					Flags: cmd.WrapFlags([]cli.Flag{
 						flags.KeystorePathFlag,
 						flags.PasswordFlag,
+					}),
+					Before: func(cliCtx *cli.Context) error {
+						return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 					},
 					Action: func(cliCtx *cli.Context) error {
 						keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
@@ -175,7 +180,7 @@ contract in order to activate the validator client`,
 				{
 					Name:        "status",
 					Description: `list the validator status for existing validator keys`,
-					Flags: []cli.Flag{
+					Flags: cmd.WrapFlags([]cli.Flag{
 						cmd.GrpcMaxCallRecvMsgSizeFlag,
 						flags.BeaconRPCProviderFlag,
 						flags.CertFlag,
@@ -184,6 +189,9 @@ contract in order to activate the validator client`,
 						flags.GrpcRetryDelayFlag,
 						flags.KeyManager,
 						flags.KeyManagerOpts,
+					}),
+					Before: func(cliCtx *cli.Context) error {
+						return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 					},
 					Action: func(cliCtx *cli.Context) error {
 						var err error
@@ -223,9 +231,12 @@ contract in order to activate the validator client`,
 				{
 					Name:        "change-password",
 					Description: "changes password for all keys located in a keystore",
-					Flags: []cli.Flag{
+					Flags: cmd.WrapFlags([]cli.Flag{
 						flags.KeystorePathFlag,
 						flags.PasswordFlag,
+					}),
+					Before: func(cliCtx *cli.Context) error {
+						return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 					},
 					Action: func(cliCtx *cli.Context) error {
 						keystorePath, oldPassword, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
@@ -252,9 +263,12 @@ contract in order to activate the validator client`,
 				{
 					Name:        "merge",
 					Description: "merges data from several validator databases into a new validator database",
-					Flags: []cli.Flag{
+					Flags: cmd.WrapFlags([]cli.Flag{
 						flags.SourceDirectories,
 						flags.TargetDirectory,
+					}),
+					Before: func(cliCtx *cli.Context) error {
+						return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 					},
 					Action: func(cliCtx *cli.Context) error {
 						passedSources := cliCtx.String(flags.SourceDirectories.Name)
@@ -273,9 +287,12 @@ contract in order to activate the validator client`,
 				{
 					Name:        "split",
 					Description: "splits one validator database into several databases - one for each public key",
-					Flags: []cli.Flag{
+					Flags: cmd.WrapFlags([]cli.Flag{
 						flags.SourceDirectory,
 						flags.TargetDirectory,
+					}),
+					Before: func(cliCtx *cli.Context) error {
+						return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 					},
 					Action: func(cliCtx *cli.Context) error {
 						source := cliCtx.String(flags.SourceDirectory.Name)
@@ -297,11 +314,11 @@ contract in order to activate the validator client`,
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
-		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
-			if err := altsrc.InitInputSourceWithContext(appFlags, altsrc.NewYamlSourceFromFlagFunc(cmd.ConfigFileFlag.Name))(ctx); err != nil {
-				return err
-			}
+		// Load any flags from file, if specified.
+		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
+			return err
 		}
+
 		flags.ComplainOnDeprecatedFlags(ctx)
 
 		format := ctx.String(cmd.LogFormat.Name)
