@@ -15,7 +15,6 @@ go_library(
         "//fuzz:__pkg__",
     ],
     deps = [
-        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

@@ -3,6 +3,7 @@ package encoder
 import (
 	"fmt"
 	"io"
+	"math"
 	"sync"
 
 	fastssz "github.com/ferranbt/fastssz"
