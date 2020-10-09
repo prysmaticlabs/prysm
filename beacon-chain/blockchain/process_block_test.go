@@ -562,6 +562,43 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	}
 }
 
+func TestAncestor_CanUseForkchoice(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b100 := testutil.NewBeaconBlock()
+	b100.Block.Slot = 100
+	b100.Block.ParentRoot = r1[:]
+	r100, err := b100.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b200 := testutil.NewBeaconBlock()
+	b200.Block.Slot = 200
+	b200.Block.ParentRoot = r100[:]
+	r200, err := b200.Block.HashTreeRoot()
+	require.NoError(t, err)
+	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
+		beaconBlock := testutil.NewBeaconBlock()
+		beaconBlock.Block.Slot = b.Block.Slot
+		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), [32]byte{}, 0, 0)) // Saves blocks to fork choice store.
+	}
+
+	r, err := service.ancestor(context.Background(), r200[:], 150)
+	require.NoError(t, err)
+	if bytesutil.ToBytes32(r) != r100 {
+		t.Error("Did not get correct root")
+	}
+}
+
 func TestAncestor_CanUseDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
@@ -589,7 +626,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		require.NoError(t, db.SaveBlock(context.Background(), beaconBlock))
+		require.NoError(t, db.SaveBlock(context.Background(), beaconBlock)) // Saves blocks to DB.
 	}
 
 	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 200, r200, r200, [32]byte{}, 0, 0))

@@ -276,7 +276,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 
 // This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
 func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
-	if s.forkChoiceStore.HasParent(r) {
+	if !s.forkChoiceStore.HasParent(r) {
 		return nil, errors.New("could not find root in fork choice store")
 	}
 	return s.forkChoiceStore.AncestorRoot(ctx, r, slot)
