@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -313,7 +314,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
-	return nil
+	return s.registerWebService(cliCtx)
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
@@ -431,6 +432,14 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	return s.services.RegisterService(gatewaySrv)
 }
 
+func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
+	host := cliCtx.String(flags.WebHostFlag.Name)
+	port := cliCtx.Uint64(flags.WebPortFlag.Name)
+	webAddress := fmt.Sprintf("%s:%d", host, port)
+	srv := web.NewServer(webAddress)
+	return s.services.RegisterService(srv)
+}
+
 // Selects the key manager depending on the options provided by the user.
 func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
 	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
@@ -517,6 +526,9 @@ func clearDB(dataDir string, force bool) error {
 		valDB, err := kv.NewKVStore(dataDir, nil)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		}
+		if err := valDB.Close(); err != nil {
+			return errors.Wrapf(err, "could not close DB in dir %s", dataDir)
 		}
 
 		log.Warning("Removing database")
