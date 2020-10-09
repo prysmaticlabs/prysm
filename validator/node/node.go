@@ -516,6 +516,7 @@ func clearDB(dataDir string, force bool) error {
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}
+		valDB.Close()
 
 		log.Warning("Removing database")
 		if err := valDB.ClearDB(); err != nil {
