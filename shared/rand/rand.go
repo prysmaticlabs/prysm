@@ -37,7 +37,7 @@ import (
 
 type source struct{}
 
-var _ = mrand.Source64(&source{})
+var _ mrand.Source64 = (*source)(nil)
 
 // Seed does nothing when crypto/rand is used as source.
 func (s *source) Seed(seed int64) {}
