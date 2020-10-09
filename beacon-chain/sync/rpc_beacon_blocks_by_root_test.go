@@ -134,7 +134,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	})
 
 	p1.Connect(p2)
-	require.NoError(t, r.sendRecentBeaconBlocksRequest(context.Background(), expectedRoots, p2.PeerID()))
+	require.NoError(t, r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")

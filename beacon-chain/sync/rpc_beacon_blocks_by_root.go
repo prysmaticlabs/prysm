@@ -15,11 +15,11 @@ import (
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
-func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots types.BeaconBlockByRootsReq, id peer.ID) error {
+func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.p2p.Send(ctx, &blockRoots, p2p.RPCBlocksByRootTopic, id)
+	stream, err := s.p2p.Send(ctx, blockRoots, p2p.RPCBlocksByRootTopic, id)
 	if err != nil {
 		return err
 	}
@@ -28,7 +28,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
-	for i := 0; i < len(blockRoots); i++ {
+	for i := 0; i < len(*blockRoots); i++ {
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
 		if err == io.EOF {
