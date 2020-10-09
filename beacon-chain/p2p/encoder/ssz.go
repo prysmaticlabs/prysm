@@ -108,7 +108,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	if err != nil {
 		return err
 	}
-	if msgLen > uint64(int(params.BeaconNetworkConfig().MaxChunkSize)) {
+	if msgLen > params.BeaconNetworkConfig().MaxChunkSize {
 		return fmt.Errorf(
 			"remaining bytes %d goes over the provided max limit of %d",
 			msgLen,
