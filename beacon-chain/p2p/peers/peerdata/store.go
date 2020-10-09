@@ -47,10 +47,10 @@ type PeerData struct {
 	ConnState PeerConnectionState
 	Enr       *enr.Record
 	// Chain related data.
-	ChainState            *pb.Status
 	MetaData              *pb.MetaData
+	ChainState            *pb.Status
 	ChainStateLastUpdated time.Time
-	// Scorers related data.
+	// Scorers internal data.
 	BadResponses         int
 	ProcessedBlocks      uint64
 	BlockProviderUpdated time.Time
