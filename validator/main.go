@@ -29,7 +29,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
-	"github.com/wercker/journalhook"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"google.golang.org/grpc"
 )
@@ -83,6 +82,8 @@ var appFlags = []cli.Flag{
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
+	flags.WebHostFlag,
+	flags.WebPortFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -323,8 +324,6 @@ contract in order to activate the validator client`,
 			logrus.SetFormatter(f)
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-		case "journald":
-			journalhook.Enable()
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}
