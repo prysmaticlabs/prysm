@@ -42,6 +42,7 @@ build:kafka_enabled --define kafka_enabled=true
 build:kafka_enabled --define gotags=kafka_enabled
 
 build:blst_enabled --define blst_enabled=true
+build:blst_enabled --define gotags=blst_enabled
 
 # Release flags
 build:release --workspace_status_command=./scripts/workspace_status.sh
