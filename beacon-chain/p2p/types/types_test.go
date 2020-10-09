@@ -15,7 +15,7 @@ func TestSSZUint64_Limit(t *testing.T) {
 }
 
 func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
-	fixedRoots := make([][32]byte, 0, 0)
+	fixedRoots := make([][32]byte, 0)
 	for i := uint64(0); i < params.BeaconNetworkConfig().MaxRequestBlocks+100; i++ {
 		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
 	}
@@ -33,10 +33,14 @@ func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 }
 
 func TestErrorResponse_Limit(t *testing.T) {
-	fixedRoots := make([][32]byte, 0, 0)
-	for i := uint64(0); i < params.BeaconNetworkConfig().MaxRequestBlocks+100; i++ {
-		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
+	errorMessage := make([]byte, 0)
+	// Provide a message of size 6400 bytes.
+	for i := uint64(0); i < 200; i++ {
+		byteArr := [32]byte{byte(i)}
+		errorMessage = append(errorMessage, byteArr[:]...)
 	}
+	errMsg := ErrorMessage{}
+	require.ErrorContains(t, "expected buffer with length of upto", errMsg.UnmarshalSSZ(errorMessage))
 }
 
 func TestRoundTripSerialization(t *testing.T) {
@@ -59,7 +63,7 @@ func roundTripTestSSZUint64(t *testing.T) {
 }
 
 func roundTripTestBlocksByRootReq(t *testing.T) {
-	fixedRoots := make([][32]byte, 0, 0)
+	fixedRoots := make([][32]byte, 0)
 	for i := 0; i < 200; i++ {
 		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
 	}
