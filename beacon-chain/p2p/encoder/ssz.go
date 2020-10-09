@@ -143,7 +143,7 @@ func (e SszNetworkEncoder) ProtocolSuffix() string {
 // chunk of data.
 func (e SszNetworkEncoder) MaxLength(length uint64) (int, error) {
 	// Defensive check to prevent potential issues when casting to int64.
-	if length >= 1<<63 {
+	if length > math.MaxInt64 {
 		return 0, errors.Errorf("invalid length provided: %d", length)
 	}
 	maxLen := snappy.MaxEncodedLen(int(length))
