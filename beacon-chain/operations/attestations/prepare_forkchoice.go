@@ -95,11 +95,7 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 		return err
 	}
 
-	if err := s.pool.SaveForkchoiceAttestations(aggregatedAtts); err != nil {
-		return err
-	}
-
-	return nil
+	return s.pool.SaveForkchoiceAttestations(aggregatedAtts)
 }
 
 // This checks if the attestation has previously been aggregated for fork choice

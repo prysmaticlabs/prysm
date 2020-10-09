@@ -310,10 +310,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	if !attestationutil.CheckPointIsEqual(s.justifiedCheckpt, state.CurrentJustifiedCheckpoint()) {
 		if state.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-				return err
-			}
-			return nil
+			return s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
