@@ -721,7 +721,7 @@ func (s *Service) logTillChainStart() {
 	}
 
 	log.WithFields(logrus.Fields{
-		"Extra validators needed":   valNeeded,
+		"Extra validators needed":  valNeeded,
 		"Time till eth1 threshold": fmt.Sprintf("%s", time.Duration(secondsLeft)*time.Second),
 	}).Infof("Currently waiting for chainstart")
 }
