@@ -41,7 +41,15 @@ func (s *Service) maintainPeerStatuses() {
 					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
 				}
-				if s.p2p.Peers().IsBad(id) {
+				// Disconnect from peers returning incomprehensible/unprocessable data.
+				if s.p2p.Peers().Scorers().BadResponsesScorer().IsBadPeer(id) {
+					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
+						log.Debugf("Error when disconnecting with bad peer: %v", err)
+					}
+					return
+				}
+				// Disconnect from peers that have failed validation on their previous status requests.
+				if s.p2p.Peers().Scorers().PeerStatusScorer().IsBadPeer(id) {
 					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
 						log.Debugf("Error when disconnecting with bad peer: %v", err)
 					}
@@ -64,8 +72,8 @@ func (s *Service) maintainPeerStatuses() {
 	})
 }
 
-// resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
-// in which case we attempt a resync using the initial sync method to catch up.
+// resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers
+// by more than an epoch, in which case we attempt a resync using the initial sync method to catch up.
 func (s *Service) resyncIfBehind() {
 	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
 	// Run sixteen times per epoch.
