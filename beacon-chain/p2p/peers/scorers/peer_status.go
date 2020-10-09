@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-var _ = Scorer(&PeerStatusScorer{})
+var _ Scorer = (*PeerStatusScorer)(nil)
 
 // PeerStatusScorer represents scorer that evaluates peers based on their statuses.
 // Peer statuses are updated by regularly polling peers (see sync/rpc_status.go).
