@@ -108,22 +108,22 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// This can happen sometimes when we receive the same log twice from the
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
-	index := binary.LittleEndian.Uint64(merkleTreeIndex)
-	if int64(index) <= s.lastReceivedMerkleIndex {
+	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex))
+	if index <= s.lastReceivedMerkleIndex {
 		return nil
 	}
 
-	if int64(index) != s.lastReceivedMerkleIndex+1 {
+	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
 		if s.requestingOldLogs {
 			return errors.New("received incorrect merkle index")
 		}
-		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
+		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, index-1); err != nil {
 			return errors.Wrap(err, "could not get correct merkle index")
 		}
 
 	}
-	s.lastReceivedMerkleIndex = int64(index)
+	s.lastReceivedMerkleIndex = index
 
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
@@ -162,7 +162,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	s.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
+	s.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
@@ -176,7 +176,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
+		s.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{

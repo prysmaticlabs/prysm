@@ -119,7 +119,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	defer dc.depositsLock.Unlock()
 
 	depositTrie := dc.finalizedDeposits.Deposits
-	insertIndex := dc.finalizedDeposits.MerkleTrieIndex + 1
+	insertIndex := int(dc.finalizedDeposits.MerkleTrieIndex + 1)
 	for _, d := range dc.deposits {
 		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
 			continue
@@ -132,7 +132,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return
 		}
-		depositTrie.Insert(depHash[:], int(insertIndex))
+		depositTrie.Insert(depHash[:], insertIndex)
 		insertIndex++
 	}
 
