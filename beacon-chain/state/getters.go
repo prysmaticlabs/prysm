@@ -845,7 +845,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
-func (b *BeaconState) RandaoMixesLength() uint64 {
+func (b *BeaconState) RandaoMixesLength() int {
 	if !b.HasInnerState() {
 		return 0
 	}
@@ -861,7 +861,7 @@ func (b *BeaconState) RandaoMixesLength() uint64 {
 
 // randaoMixesLength returns the length of the randao mixes slice.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixesLength() uint64 {
+func (b *BeaconState) randaoMixesLength() int {
 	if !b.HasInnerState() {
 		return 0
 	}
@@ -869,7 +869,7 @@ func (b *BeaconState) randaoMixesLength() uint64 {
 		return 0
 	}
 
-	return uint64(len(b.state.RandaoMixes))
+	return len(b.state.RandaoMixes)
 }
 
 // Slashings of validators on the beacon chain.
