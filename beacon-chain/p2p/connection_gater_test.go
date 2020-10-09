@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -26,8 +27,8 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	}
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 0,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: 3,
 			},
 		},
@@ -95,8 +96,8 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	}
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 1,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: 3,
 			},
 		},

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -135,5 +136,44 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 			require.NoError(t, err, "Failed to get proposal history")
 			require.DeepEqual(t, signedRoot, sr, "Unexpected difference in bytes for epoch %d", slot)
 		}
+	}
+}
+
+func TestStore_ImportProposalHistory(t *testing.T) {
+	pubkey := [48]byte{3}
+	ctx := context.Background()
+	db := setupDB(t, [][48]byte{pubkey})
+	proposedSlots := make(map[uint64]bool)
+	proposedSlots[0] = true
+	proposedSlots[1] = true
+	proposedSlots[20] = true
+	proposedSlots[31] = true
+	proposedSlots[32] = true
+	proposedSlots[33] = true
+	proposedSlots[1023] = true
+	proposedSlots[1024] = true
+	proposedSlots[1025] = true
+	lastIndex := 1025 + params.BeaconConfig().SlotsPerEpoch
+
+	for slot := range proposedSlots {
+		slotBitlist, err := db.ProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot))
+		require.NoError(t, err)
+		slotBitlist.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
+		err = db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot), slotBitlist)
+		require.NoError(t, err)
+	}
+	err := db.ImportProposalHistory(ctx)
+	require.NoError(t, err)
+
+	for slot := uint64(0); slot <= lastIndex; slot++ {
+		if _, ok := proposedSlots[slot]; ok {
+			root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
+			require.NoError(t, err)
+			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root, "slot: %d", slot)
+			continue
+		}
+		root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
+		require.NoError(t, err)
+		require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), root)
 	}
 }

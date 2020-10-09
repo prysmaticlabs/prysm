@@ -106,7 +106,6 @@ require (
 	github.com/wealdtech/go-eth2-wallet-nd/v2 v2.3.0
 	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.16.1
 	github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0
-	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4
 	go.opencensus.io v0.22.4

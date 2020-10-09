@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
-	"github.com/wercker/journalhook"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -110,8 +109,6 @@ func main() {
 			logrus.SetFormatter(joonix.NewFormatter())
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-		case "journald":
-			journalhook.Enable()
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}
