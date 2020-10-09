@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "bad_responses.go",
         "block_providers.go",
+        "peer_status.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers",
@@ -13,6 +14,7 @@ go_library(
     deps = [
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/timeutils:go_default_library",
