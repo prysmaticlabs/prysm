@@ -186,7 +186,7 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
@@ -194,6 +194,7 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(cliCtx.Context))
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.

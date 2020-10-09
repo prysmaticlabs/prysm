@@ -37,7 +37,7 @@ func TestWebHandler(t *testing.T) {
 			name:            "favicon.ico",
 			requestURI:      "/favicon.ico",
 			wantStatus:      200,
-			wantContentType: "image/vnd.microsoft.icon",
+			wantContentType: "image/x-icon",
 		},
 	}
 

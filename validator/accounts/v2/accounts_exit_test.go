@@ -71,14 +71,15 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		// Flag required for ExitAccounts to work.
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
-	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: "Passwordz0320$",
+			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(cliCtx.Context))
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	validatingPublicKeys, keymanager, err := prepareWallet(cliCtx)

@@ -59,6 +59,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(cliCtx.Context))
 
 	// We attempt to import accounts.
 	require.NoError(t, ImportAccountsCli(cliCtx))

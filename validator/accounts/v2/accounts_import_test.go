@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -52,6 +53,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(context.Background()))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -112,6 +114,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(context.Background()))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -173,6 +176,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(context.Background()))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -298,6 +302,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, wallet.SaveHashedPassword(context.Background()))
 	keymanager, err := direct.NewKeymanager(
 		cliCtx.Context,
 		&direct.SetupConfig{
@@ -306,7 +311,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet))
+	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
 
 	// We re-instantiate the keymanager and check we now have 1 public key.
 	keymanager, err = direct.NewKeymanager(

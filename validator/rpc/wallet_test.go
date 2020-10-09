@@ -85,6 +85,11 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
 	}
+	_, err := s.Signup(ctx, &pb.AuthRequest{
+		Password:  strongPass,
+		WalletDir: defaultWalletPath,
+	})
+	require.NoError(t, err)
 	req := &pb.CreateWalletRequest{
 		WalletPath:     localWalletDir,
 		Keymanager:     pb.KeymanagerKind_DIRECT,
@@ -93,7 +98,7 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
 	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
-	_, err := s.CreateWallet(ctx, req)
+	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
 
 	importReq := &pb.ImportKeystoresRequest{
@@ -238,7 +243,7 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 		CurrentPassword: strongPass,
 		Password:        "",
 	})
-	assert.ErrorContains(t, "cannot be empty", err)
+	assert.ErrorContains(t, "Could not validate wallet password", err)
 	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
 		CurrentPassword:      strongPass,
 		Password:             "abc",

@@ -90,7 +90,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
-		_, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
 				KeymanagerKind: v2keymanager.Direct,
@@ -99,6 +99,9 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			SkipMnemonicConfirm: true,
 		})
 		if err != nil {
+			return nil, err
+		}
+		if err := w.SaveHashedPassword(ctx); err != nil {
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
