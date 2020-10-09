@@ -59,10 +59,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id 
 			"peer":  id,
 		}).Debug("Could not send goodbye message to peer")
 	}
-	if err := s.p2p.Disconnect(id); err != nil {
-		return err
-	}
-	return nil
+	return s.p2p.Disconnect(id)
 }
 
 func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {
