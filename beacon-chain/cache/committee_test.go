@@ -78,13 +78,13 @@ func TestCommitteeCache_ActiveCount(t *testing.T) {
 	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
 	count, err := cache.ActiveIndicesCount(item.Seed)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), count, "Expected active count not to exist in empty cache")
+	assert.Equal(t, 0, count, "Expected active count not to exist in empty cache")
 
 	require.NoError(t, cache.AddCommitteeShuffledList(item))
 
 	count, err = cache.ActiveIndicesCount(item.Seed)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(len(item.SortedIndices)), count)
+	assert.Equal(t, len(item.SortedIndices), count)
 }
 
 func TestCommitteeCache_CanRotate(t *testing.T) {
