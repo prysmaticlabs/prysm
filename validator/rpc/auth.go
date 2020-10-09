@@ -160,7 +160,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 	s.keymanager = km
 	s.wallet = w
-	s.walletInitializedFeed.Send(w)
 	s.walletDir = cfg.WalletDir
+	s.walletInitializedFeed.Send(w)
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
@@ -88,7 +89,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
-		w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		_, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
 				KeymanagerKind: v2keymanager.Direct,
@@ -97,9 +98,6 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			SkipMnemonicConfirm: true,
 		})
 		if err != nil {
-			return nil, err
-		}
-		if err := w.SaveHashedPassword(ctx); err != nil {
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
@@ -282,6 +280,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	if req.Password != req.PasswordConfirmation {
 		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
 	}
+	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
+	}
 	switch s.wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
 		km, ok := s.keymanager.(*direct.Keymanager)
@@ -321,7 +322,8 @@ func (s *Server) ImportKeystores(
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
-	if s.wallet.KeymanagerKind() != v2keymanager.Direct {
+	keymanager, ok := s.keymanager.(*direct.Keymanager)
+	if !ok {
 		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
 	}
 	if req.KeystoresPassword == "" {
@@ -348,7 +350,7 @@ func (s *Server) ImportKeystores(
 	}
 	// Import the uploaded accounts.
 	if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
-		Wallet:          s.wallet,
+		Keymanager:      keymanager,
 		Keystores:       keystores,
 		AccountPassword: req.KeystoresPassword,
 	}); err != nil {
