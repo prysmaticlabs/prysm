@@ -11,10 +11,12 @@ import (
 
 var _ = shared.Service(&Server{})
 
+// Server for the Prysm Web UI.
 type Server struct {
 	http *http.Server
 }
 
+// NewServer creates a server service for the Prysm web UI.
 func NewServer(addr string) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", webHandler)
