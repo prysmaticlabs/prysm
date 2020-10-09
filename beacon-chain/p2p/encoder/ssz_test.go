@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
+	"math"
 	"testing"
-
-	"github.com/golang/snappy"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -129,14 +129,20 @@ func TestSszNetworkEncoder_NegativeMaxLength(t *testing.T) {
 	assert.ErrorContains(t, "max encoded length is negative", err)
 }
 
+func TestSszNetworkEncoder_MaxInt64(t *testing.T) {
+	e := &encoder.SszNetworkEncoder{}
+	length, err := e.MaxLength(math.MaxInt64 + 1)
+
+	assert.Equal(t, 0, length, "Received non zero length on bad message length")
+	assert.ErrorContains(t, "invalid length provided", err)
+}
+
 func TestSszNetworkEncoder_DecodeWithBadSnappyStream(t *testing.T) {
 	st := newBadSnappyStream()
 	e := &encoder.SszNetworkEncoder{}
 	decoded := new(pb.Fork)
 	err := e.DecodeWithMaxLength(st, decoded)
-	// Limited reader will lead to snappy complaining
-	// about corrupt inputs.
-	assert.ErrorContains(t, snappy.ErrCorrupt.Error(), err)
+	assert.ErrorContains(t, io.EOF.Error(), err)
 }
 
 type badSnappyStream struct {

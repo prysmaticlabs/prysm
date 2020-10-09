@@ -10,7 +10,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -26,10 +25,6 @@ var bufWriterPool = new(sync.Pool)
 // This pool defines the sync pool for our buffered snappy readers, so that they
 // can be constantly reused.
 var bufReaderPool = new(sync.Pool)
-
-var bytesBufferPool = new(sync.Pool)
-
-const snappyMaxBlockLength = 65536
 
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
 // with snappy compression (if enabled).
@@ -120,7 +115,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 			params.BeaconNetworkConfig().MaxChunkSize,
 		)
 	}
-	msgMax, err := e.MaxLength(int(msgLen))
+	msgMax, err := e.MaxLength(msgLen)
 	if err != nil {
 		return err
 	}
@@ -128,30 +123,15 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	r = newBufferedReader(limitedRdr)
 	defer bufReaderPool.Put(r)
 
-	bufferBound := mathutil.Min(msgLen, snappyMaxBlockLength)
-	buf := make([]byte, bufferBound)
-	decompressedSlice := make([]byte, 0, 0)
-	totalBytes := 0
-	// Read all bytes from stream to handle multiple
-	// framed chunks. Required if reading objects which
-	// are larger than 65 kb.
-	for totalBytes < int(msgLen) {
-		readBytes, err := r.Read(buf)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		totalBytes += readBytes
-		decompressedChunk := make([]byte, readBytes)
-		copy(decompressedChunk, buf[:readBytes])
-		decompressedSlice = append(decompressedSlice, decompressedChunk...)
+	buf := make([]byte, msgLen)
+	// Returns an error if less than msgLen bytes
+	// are read. This ensures we read exactly the
+	// required amount.
+	_, err = io.ReadFull(r, buf)
+	if err != nil {
+		return err
 	}
-	if totalBytes != int(msgLen) {
-		return errors.Errorf("decompressed data has an unexpected length, wanted %d but got %d", msgLen, totalBytes)
-	}
-	return e.doDecode(decompressedSlice, to)
+	return e.doDecode(buf, to)
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
@@ -161,8 +141,12 @@ func (e SszNetworkEncoder) ProtocolSuffix() string {
 
 // MaxLength specifies the maximum possible length of an encoded
 // chunk of data.
-func (e SszNetworkEncoder) MaxLength(length int) (int, error) {
-	maxLen := snappy.MaxEncodedLen(length)
+func (e SszNetworkEncoder) MaxLength(length uint64) (int, error) {
+	// Defensive check to prevent potential issues when casting to int64.
+	if length >= 1<<63 {
+		return 0, errors.Errorf("invalid length provided: %d", length)
+	}
+	maxLen := snappy.MaxEncodedLen(int(length))
 	if maxLen < 0 {
 		return 0, errors.Errorf("max encoded length is negative: %d", maxLen)
 	}
