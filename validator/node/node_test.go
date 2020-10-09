@@ -36,8 +36,9 @@ func TestNode_Builds(t *testing.T) {
 	context := cli.NewContext(&app, set, nil)
 
 	require.NoError(t, v1.NewValidatorAccount(dir, "1234"), "Could not create validator account")
-	_, err := NewValidatorClient(context)
+	valClient, err := NewValidatorClient(context)
 	require.NoError(t, err, "Failed to create ValidatorClient")
+	valClient.db.Close()
 }
 
 // TestClearDB tests clearing the database
