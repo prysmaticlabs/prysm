@@ -29,6 +29,14 @@ type Config struct {
 	BlockProviderScorerConfig *BlockProviderScorerConfig
 }
 
+// Scorer defines minimum set of methods every peer scorer must expose.
+type Scorer interface {
+	Score(pid peer.ID) float64
+	IsBadPeer(pid peer.ID) bool
+	BadPeers() []peer.ID
+	Decay()
+}
+
 // NewService provides fully initialized peer scoring service.
 func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Service {
 	s := &Service{

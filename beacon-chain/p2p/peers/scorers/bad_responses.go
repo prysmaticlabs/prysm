@@ -18,6 +18,8 @@ const (
 	DefaultBadResponsesDecayInterval = time.Hour
 )
 
+var _ = Scorer(&BadResponsesScorer{})
+
 // BadResponsesScorer represents bad responses scoring service.
 type BadResponsesScorer struct {
 	ctx    context.Context
@@ -65,7 +67,7 @@ func (s *BadResponsesScorer) Score(pid peer.ID) float64 {
 	return s.score(pid)
 }
 
-// score is a lock-free version of ScoreBadResponses.
+// score is a lock-free version of Score.
 func (s *BadResponsesScorer) score(pid peer.ID) float64 {
 	score := float64(0)
 	peerData, ok := s.store.PeerData(pid)
@@ -131,7 +133,7 @@ func (s *BadResponsesScorer) isBadPeer(pid peer.ID) bool {
 	return false
 }
 
-// BadPeers returns the peers that are bad.
+// BadPeers returns the peers that are considered bad.
 func (s *BadResponsesScorer) BadPeers() []peer.ID {
 	s.store.RLock()
 	defer s.store.RUnlock()

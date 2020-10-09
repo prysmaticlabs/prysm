@@ -33,6 +33,8 @@ const (
 	DefaultBlockProviderStalePeerRefreshInterval = 5 * time.Minute
 )
 
+var _ = Scorer(&BlockProviderScorer{})
+
 // BlockProviderScorer represents block provider scoring service.
 type BlockProviderScorer struct {
 	ctx    context.Context
@@ -174,6 +176,24 @@ func (s *BlockProviderScorer) processedBlocks(pid peer.ID) uint64 {
 		return peerData.ProcessedBlocks
 	}
 	return 0
+}
+
+// IsBadPeer states if the peer is to be considered bad.
+// Block provider scorer cannot guarantee that lower score of a peer is indeed a sign of a bad peer.
+// Therefore this scorer never marks peers as bad, and relies on scores to probabilistically sort
+// out low-scorers (see WeightSorted method).
+func (s *BlockProviderScorer) IsBadPeer(pid peer.ID) bool {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return false
+}
+
+// BadPeers returns the peers that are considered bad.
+// No peers are considered bad by block providers scorer.
+func (s *BlockProviderScorer) BadPeers() []peer.ID {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return []peer.ID{}
 }
 
 // Decay updates block provider counters by decaying them.
