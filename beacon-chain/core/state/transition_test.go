@@ -665,7 +665,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 	leaf, err := deposit.Data.HashTreeRoot()
 	require.NoError(b, err)
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(b, err, "Could not generate trie")
 	proof, err := depositTrie.MerkleProof(0)
 	require.NoError(b, err, "Could not generate proof")

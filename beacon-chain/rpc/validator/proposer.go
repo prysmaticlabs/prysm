@@ -567,7 +567,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 	}
 
 	var err error
-	depositTrie, err = trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err = trieutil.GenerateTrieFromItems(depositData, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
 	}

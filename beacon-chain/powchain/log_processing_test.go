@@ -535,7 +535,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	web3Service.preGenesisState = genSt
 	require.NoError(t, web3Service.preGenesisState.SetEth1Data(&ethpb.Eth1Data{}))
 	web3Service.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	web3Service.depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	web3Service.depositTrie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
