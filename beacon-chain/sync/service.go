@@ -265,9 +265,6 @@ func (s *Service) registerHandlers() {
 				}
 				// Register respective pubsub handlers at state synced event.
 				s.registerSubscribers()
-
-				// Exit once we received the synced event.
-				stateSub.Unsubscribe()
 				return
 			}
 		case <-s.ctx.Done():
