@@ -30,7 +30,7 @@ var (
 // a sufficiently strong password check.
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
-	if req.WalletDir != "" {
+	if strings.TrimSpace(req.WalletDir) != "" {
 		walletDir = req.WalletDir
 	}
 	// First, we check if the validator already has a password. In this case,
@@ -61,7 +61,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
-	if req.WalletDir != "" {
+	if strings.TrimSpace(req.WalletDir) != "" {
 		walletDir = req.WalletDir
 	}
 	// We check the strength of the password to ensure it is high-entropy,

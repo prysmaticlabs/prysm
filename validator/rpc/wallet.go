@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -59,7 +60,7 @@ func (s *Server) DefaultWalletPath(ctx context.Context, _ *ptypes.Empty) (*pb.De
 // derived, direct, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
-	if req.WalletPath != "" {
+	if strings.TrimSpace(req.WalletPath) != "" {
 		walletDir = req.WalletPath
 	}
 	exists, err := wallet.Exists(walletDir)
@@ -273,9 +274,6 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	}
 	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.CurrentPassword)); err != nil {
 		return nil, status.Error(codes.Unauthenticated, "Incorrect wallet password")
-	}
-	if req.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "Password cannot be empty")
 	}
 	if req.Password != req.PasswordConfirmation {
 		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
