@@ -190,7 +190,7 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: "Passwordz0320$",
+			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)

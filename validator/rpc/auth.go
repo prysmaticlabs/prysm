@@ -145,6 +145,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 
 	// We fire an event with the opened wallet over
 	// a global feed signifying wallet initialization.
+	n
 	w, err := wallet.OpenWallet(ctx, &wallet.Config{
 		WalletDir:      cfg.WalletDir,
 		WalletPassword: cfg.WalletPassword,
