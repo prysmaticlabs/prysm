@@ -271,12 +271,9 @@ func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *eth
 		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
-	if err := helpers.ComputeDomainVerifySigningRoot(bs, validatorIndex,
-		helpers.SlotToEpoch(data.Slot), data.Slot, params.BeaconConfig().DomainSelectionProof, proof); err != nil {
-		return err
-	}
-
-	return nil
+	domain := params.BeaconConfig().DomainSelectionProof
+	epoch := helpers.SlotToEpoch(data.Slot)
+	return helpers.ComputeDomainVerifySigningRoot(bs, validatorIndex, epoch, data.Slot, domain, proof)
 }
 
 // This verifies aggregator signature over the signed aggregate and proof object.
