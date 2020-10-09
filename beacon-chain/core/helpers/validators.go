@@ -111,7 +111,7 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 		return 0, errors.Wrap(err, "could not interface with committee cache")
 	}
 	if activeCount != 0 && state.Slot() != 0 {
-		return activeCount, nil
+		return uint64(activeCount), nil
 	}
 
 	count := uint64(0)
