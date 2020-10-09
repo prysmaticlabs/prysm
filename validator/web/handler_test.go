@@ -9,34 +9,34 @@ import (
 )
 
 func TestWebHandler(t *testing.T) {
-	tests := []struct{
-		name string
-		requestURI string
-		wantStatus int
+	tests := []struct {
+		name            string
+		requestURI      string
+		wantStatus      int
 		wantContentType string
 	}{
 		{
-			name: "base route",
-			requestURI: "/",
-			wantStatus: 200,
+			name:            "base route",
+			requestURI:      "/",
+			wantStatus:      200,
 			wantContentType: "text/html; charset=utf-8",
 		},
 		{
-			name: "index.html",
-			requestURI: "/index.html",
-			wantStatus: 200,
+			name:            "index.html",
+			requestURI:      "/index.html",
+			wantStatus:      200,
 			wantContentType: "text/html; charset=utf-8",
 		},
 		{
-			name: "bad route",
-			requestURI: "/foobar_bad",
-			wantStatus: 200, // Serves index.html by default.
+			name:            "bad route",
+			requestURI:      "/foobar_bad",
+			wantStatus:      200, // Serves index.html by default.
 			wantContentType: "text/html; charset=utf-8",
 		},
 		{
-			name: "favicon.ico",
-			requestURI: "/favicon.ico",
-			wantStatus: 200,
+			name:            "favicon.ico",
+			requestURI:      "/favicon.ico",
+			wantStatus:      200,
 			wantContentType: "image/vnd.microsoft.icon",
 		},
 	}

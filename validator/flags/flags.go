@@ -293,12 +293,12 @@ var (
 		Value: false,
 	}
 	WebHostFlag = &cli.StringFlag{
-		Name: "web-host",
+		Name:  "web-host",
 		Usage: "The host address which to serve the Prysm web UI",
 		Value: "127.0.0.1",
 	}
 	WebPortFlag = &cli.Uint64Flag{
-		Name: "web-port",
+		Name:  "web-port",
 		Usage: "The host port which to serve the Prysm web UI",
 		Value: 4242,
 	}
