@@ -185,7 +185,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not retrieve genesis state: %v", err)
 		}
-		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, gState.NumValidators())
+		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()))
 
 		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(s.ctx)
 		if err != nil {
@@ -266,7 +266,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	// We start a counter to genesis, if needed.
-	go slotutil.CountdownToGenesis(ctx, genesisTime, initializedState.NumValidators())
+	go slotutil.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()))
 
 	// We send out a state initialized event to the rest of the services
 	// running in the beacon node.
