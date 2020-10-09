@@ -32,6 +32,7 @@ go_test(
     srcs = [
         "config_test.go",
         "helpers_test.go",
+        "flags_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
