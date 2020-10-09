@@ -192,6 +192,7 @@ func (s *Service) waitForStateInitialization() {
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 				s.genesisChan <- data.StartTime
+				return
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")

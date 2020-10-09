@@ -333,6 +333,7 @@ func TestService_processBlock(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		StateNotifier: &mock.MockStateNotifier{},
 	})
 	ctx := context.Background()
 	genesis := makeGenesisTime(32)
@@ -392,6 +393,7 @@ func TestService_processBlockBatch(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		StateNotifier: &mock.MockStateNotifier{},
 	})
 	ctx := context.Background()
 	genesis := makeGenesisTime(32)
