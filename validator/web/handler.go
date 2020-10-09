@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const prefix = "external/prysm_web_ui"

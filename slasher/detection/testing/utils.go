@@ -4,7 +4,6 @@ package testing
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
@@ -45,9 +44,4 @@ func genRandomByteArray(length int) ([]byte, error) {
 	randGen := rand.NewDeterministicGenerator()
 	_, err := randGen.Read(blk)
 	return blk, err
-}
-
-// StartSlot returns the first slot of a given epoch.
-func StartSlot(epoch uint64) uint64 {
-	return epoch * params.BeaconConfig().SlotsPerEpoch
 }
