@@ -15,10 +15,9 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(&app, set, nil)
 
-	_ = ioutil.WriteFile("flags_test.yaml", []byte("testflag: 100"), 0666)
-	defer os.Remove("flags_test.yaml")
+	assert.NoError(t, ioutil.WriteFile("flags_test.yaml", []byte("testflag: 100"), 0666))
 
-	_ = set.Parse([]string{"test-command", "--" + ConfigFileFlag.Name, "flags_test.yaml"})
+	assert.NoError(t, set.Parse([]string{"test-command", "--" + ConfigFileFlag.Name, "flags_test.yaml"}))
 	command := &cli.Command{
 		Name: "test-command",
 		Flags: WrapFlags([]cli.Flag{
@@ -39,4 +38,5 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 		},
 	}
 	assert.NoError(t, command.Run(context))
+	assert.NoError(t, os.Remove("flags_test.yaml"))
 }
