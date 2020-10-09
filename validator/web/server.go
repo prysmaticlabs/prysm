@@ -6,10 +6,14 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
-	log "github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/shared/browser"
+	"github.com/sirupsen/logrus"
 )
 
-var _ = shared.Service(&Server{})
+var (
+	_   = shared.Service(&Server{})
+	log = logrus.WithField("prefix", "prysm-web")
+)
 
 // Server for the Prysm Web UI.
 type Server struct {
@@ -37,6 +41,16 @@ func (s *Server) Start() {
 			log.WithError(err).Error("Failed to start validator web server")
 		}
 	}()
+	time.Sleep(time.Second * 1)
+	cmd, err := browser.Command("http://" + s.http.Addr)
+	if err != nil {
+		log.WithError(err).Errorf("Could not open Prysm web UI in browser")
+		return
+	}
+	if err := cmd.Run(); err != nil {
+		log.WithError(err).Errorf("Could not open Prysm web UI in browser")
+		return
+	}
 }
 
 // Stop the web server gracefully with 1s timeout.
