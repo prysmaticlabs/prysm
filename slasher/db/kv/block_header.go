@@ -116,11 +116,11 @@ func (db *Store) DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.Signe
 func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneBlockHistory")
 	defer span.End()
-	pruneTill := currentEpoch - pruningEpochAge
+	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)
 	if pruneTill <= 0 {
 		return nil
 	}
-	pruneTillSlot := pruneTill * params.BeaconConfig().SlotsPerEpoch
+	pruneTillSlot := uint64(pruneTill) * params.BeaconConfig().SlotsPerEpoch
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
