@@ -516,6 +516,15 @@ func TestCurrentSlot_HandlesOverflow(t *testing.T) {
 	slot := svc.CurrentSlot()
 	require.Equal(t, uint64(0), slot, "Unexpected slot")
 }
+func TestAncestorByDB_CtxErr(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	service, err := NewService(ctx, &Config{})
+	require.NoError(t, err)
+
+	cancel()
+	_, err = service.ancestorByDB(ctx, [32]byte{}, 0)
+	require.ErrorContains(t, "context canceled", err)
+}
 
 func TestAncestor_HandleSkipSlot(t *testing.T) {
 	ctx := context.Background()
