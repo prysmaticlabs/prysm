@@ -1902,3 +1902,86 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	}
 	assert.DeepEqual(t, wanted, res, "Unexpected response")
 }
+
+func Test_validatorStatus(t *testing.T) {
+	tests := []struct {
+		name      string
+		validator *ethpb.Validator
+		epoch     uint64
+		want      ethpb.ValidatorStatus
+	}{
+		{
+			name:      "Unknown",
+			validator: nil,
+			epoch:     0,
+			want:      ethpb.ValidatorStatus_UNKNOWN_STATUS,
+		},
+		{
+			name: "Deposited",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(1),
+			},
+			epoch: 0,
+			want:  ethpb.ValidatorStatus_DEPOSITED,
+		},
+		{
+			name: "Pending",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(1),
+			},
+			epoch: 0,
+			want:  ethpb.ValidatorStatus_PENDING,
+		},
+		{
+			name: "Active",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch: 0,
+			want:  ethpb.ValidatorStatus_ACTIVE,
+		},
+		{
+			name: "Slashed",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  uint64(5),
+				Slashed:                    true,
+			},
+			epoch: 4,
+			want:  ethpb.ValidatorStatus_SLASHING,
+		},
+		{
+			name: "Exiting",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  uint64(5),
+				Slashed:                    false,
+			},
+			epoch: 4,
+			want:  ethpb.ValidatorStatus_EXITING,
+		},
+		{
+			name: "Exiting",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  uint64(3),
+				Slashed:                    false,
+			},
+			epoch: 4,
+			want:  ethpb.ValidatorStatus_EXITED,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := validatorStatus(tt.validator, tt.epoch); got != tt.want {
+				t.Errorf("validatorStatus() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
