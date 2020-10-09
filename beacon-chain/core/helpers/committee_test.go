@@ -630,7 +630,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 }
 
 func TestUpdateProposerIndicesInCache_CouldNotGetActiveIndices(t *testing.T) {
-	err := UpdateProposerIndicesInCache(&beaconstate.BeaconState{}, 0)
+	err := UpdateProposerIndicesInCache(&beaconstate.BeaconState{}, 1)
 	want := "nil inner state"
 	require.ErrorContains(t, want, err)
 }

@@ -23,6 +23,7 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -164,8 +165,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: int(s.cfg.MaxPeers),
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold:     maxBadResponses,
 				Weight:        -100,
 				DecayInterval: time.Hour,
