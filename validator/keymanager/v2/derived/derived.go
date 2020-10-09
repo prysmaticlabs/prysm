@@ -363,7 +363,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][]byte, error) {
 	dr.lock.RLock()
 	privKeys := make([][]byte, len(dr.secretKeysCache))
-	pubKeys,err := dr.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
