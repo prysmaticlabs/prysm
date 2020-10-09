@@ -3637,6 +3637,12 @@ def prysm_deps():
         version = "v0.0.0-20160331181800-b5bfa59ec0ad",
     )
     go_repository(
+        name = "com_github_google_shlex",
+        importpath = "github.com/google/shlex",
+        sum = "h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=",
+        version = "v0.0.0-20191202100458-e7afc7fbc510",
+    )
+    go_repository(
         name = "com_github_wercker_journalhook",
         importpath = "github.com/wercker/journalhook",
         sum = "h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=",
