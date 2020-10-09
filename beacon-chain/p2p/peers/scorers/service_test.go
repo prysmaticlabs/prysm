@@ -118,7 +118,7 @@ func TestScorers_Service_Score(t *testing.T) {
 			peerStatuses.Add(nil, pid, nil, network.DirUnknown)
 			// Not yet used peer gets boosted score.
 			startScore := s.BlockProviderScorer().MaxScore()
-			assert.Equal(t, startScore/float64(s.Count()), s.Score(pid), "Unexpected score for not yet used peer")
+			assert.Equal(t, startScore/float64(s.ActiveScorersCount()), s.Score(pid), "Unexpected score for not yet used peer")
 		}
 		return s, pids
 	}
@@ -136,8 +136,8 @@ func TestScorers_Service_Score(t *testing.T) {
 	t.Run("bad responses score", func(t *testing.T) {
 		s, pids := setupScorer()
 		// Peers start with boosted start score (new peers are boosted by block provider).
-		startScore := s.BlockProviderScorer().MaxScore() / float64(s.Count())
-		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.Count())
+		startScore := s.BlockProviderScorer().MaxScore() / float64(s.ActiveScorersCount())
+		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.ActiveScorersCount())
 
 		// Update peers' stats and test the effect on peer order.
 		s.BadResponsesScorer().Increment("peer2")
@@ -191,8 +191,8 @@ func TestScorers_Service_Score(t *testing.T) {
 		s, _ := setupScorer()
 		s1 := s.BlockProviderScorer()
 		s2 := s.BadResponsesScorer()
-		batchWeight := s1.Params().ProcessedBatchWeight / float64(s.Count())
-		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.Count())
+		batchWeight := s1.Params().ProcessedBatchWeight / float64(s.ActiveScorersCount())
+		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.ActiveScorersCount())
 
 		// Full score, no penalty.
 		s1.IncrementProcessedBlocks("peer1", batchSize*5)

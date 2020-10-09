@@ -17,6 +17,7 @@ const ScoreRoundingFactor = 10000
 const (
 	scorerBadResponses  scorerID = "*scorers.BadResponsesScorer"
 	scorerBlockProvider scorerID = "*scorers.BlockProviderScorer"
+	scorerPeerStatus    scorerID = "*scorers.PeerStatusScorer"
 )
 
 // scorerID is used to distinguish between different scorers.
@@ -43,6 +44,7 @@ type Service struct {
 type Config struct {
 	BadResponsesScorerConfig  *BadResponsesScorerConfig
 	BlockProviderScorerConfig *BlockProviderScorerConfig
+	PeerStatusScorerConfig    *PeerStatusScorerConfig
 }
 
 // NewService provides fully initialized peer scoring service.
@@ -54,8 +56,9 @@ func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Ser
 		weights: make(map[scorerID]float64),
 	}
 	// Register scorers.
-	s.registerScorer(newBadResponsesScorer(ctx, store, config.BadResponsesScorerConfig), 0.5)
-	s.registerScorer(newBlockProviderScorer(ctx, store, config.BlockProviderScorerConfig), 0.5)
+	s.registerScorer(newBadResponsesScorer(ctx, store, config.BadResponsesScorerConfig), 1.0)
+	s.registerScorer(newBlockProviderScorer(ctx, store, config.BlockProviderScorerConfig), 1.0)
+	s.registerScorer(newPeerStatusScorer(ctx, store, config.PeerStatusScorerConfig), 0.0)
 
 	// Start background tasks.
 	go s.loop(s.ctx)
@@ -73,9 +76,20 @@ func (s *Service) BlockProviderScorer() *BlockProviderScorer {
 	return s.scorers[scorerBlockProvider].(*BlockProviderScorer)
 }
 
-// Count returns number of registered scorers.
-func (s *Service) Count() int {
-	return len(s.scorers)
+// PeerStatusScorer exposes peer chain status scoring service.
+func (s *Service) PeerStatusScorer() *PeerStatusScorer {
+	return s.scorers[scorerPeerStatus].(*PeerStatusScorer)
+}
+
+// Count returns number of scorers that can affect score (have non-zero weight).
+func (s *Service) ActiveScorersCount() int {
+	cnt := 0
+	for _, w := range s.weights {
+		if w > 0 {
+			cnt++
+		}
+	}
+	return cnt
 }
 
 // Score returns calculated peer score across all tracked metrics.
