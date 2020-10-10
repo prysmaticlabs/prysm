@@ -7,6 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -273,37 +274,37 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 	case "head":
 		blk, err = bs.HeadFetcher.HeadBlock(ctx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve head block: %v", err)
+			return nil, errors.Wrap(err, "could not retrieve head block")
 		}
 		if blk == nil {
-			return nil, status.Errorf(codes.Internal, "No head block was found")
+			return nil, errors.New("no head block was found")
 		}
 	case "finalized":
 		finalized, err := bs.BeaconDB.FinalizedCheckpoint(ctx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve finalized checkpoint: %v", err)
+			return nil, errors.Wrap(err, "could not retrieve finalized checkpoint")
 		}
 		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get finalized block from db")
+			return nil, errors.New("could not get finalized block from db")
 		}
 		if blk == nil {
-			return nil, status.Errorf(codes.Internal, "Could not find finalized block")
+			return nil, errors.New("could not find finalized block")
 		}
 	case "genesis":
 		blk, err = bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
+			return nil, errors.Wrap(err, "could not retrieve blocks for genesis slot")
 		}
 		if blk == nil {
-			return nil, status.Error(codes.Internal, "Could not find genesis block")
+			return nil, errors.Wrap(err, "could not find genesis block")
 		}
 	default:
 		if len(blockId) == 32 {
 			blk, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(blockId))
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
+				return nil, errors.Wrap(err, "could not retrieve block")
 			}
 			if blk == nil {
 				return nil, nil
@@ -313,7 +314,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 			fmt.Println(slot)
 			blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", slot, err)
+				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
 			}
 
 			numBlks := len(blks)
@@ -329,11 +330,11 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 func v1alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
 	marshaledBlk, err := alphaBlk.Marshal()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not marshal block: %v", err)
+		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v1Block := &ethpb.SignedBeaconBlock{}
 	if err := proto.Unmarshal(marshaledBlk, v1Block); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not unmarshal block: %v", err)
+		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1Block, nil
 }
@@ -341,11 +342,11 @@ func v1alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBe
 func v1ToV1alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
 	marshaledBlk, err := alphaBlk.Marshal()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not marshal block: %v", err)
+		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v1alpha1Block := &ethpb_alpha.SignedBeaconBlock{}
 	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not unmarshal block: %v", err)
+		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1alpha1Block, nil
 }

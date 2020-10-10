@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/golang/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -51,6 +53,13 @@ func fillDBTestBlocks(t *testing.T, ctx context.Context, db db.Database) (*ethpb
 		blkContainers[i] = &ethpb_alpha.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
+	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
+	summary := &ethereum_beacon_p2p_v1.StateSummary{
+		Root: headRoot[:],
+		Slot: blkContainers[len(blks)-1].Block.Block.Slot,
+	}
+	require.NoError(t, db.SaveStateSummary(ctx, summary))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, headRoot))
 	return genBlk, blkContainers
 }
 
@@ -274,6 +283,33 @@ func TestServer_GetBlock_Genesis(t *testing.T) {
 	require.NoError(t, err)
 
 	marshaledBlk, err := genBlk.Block.Marshal()
+	require.NoError(t, err)
+	v1Block := &ethpb.BeaconBlock{}
+	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
+
+	if !reflect.DeepEqual(block.Data.Message, v1Block) {
+		t.Error("Expected blocks to equal")
+	}
+}
+
+func TestServer_GetBlock_Head(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	bs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{DB: db},
+	}
+
+	_, blkContainers := fillDBTestBlocks(t, ctx, db)
+
+	// Should throw an error if more than one blk returned.
+	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
+		BlockId: []byte("head"),
+	})
+	require.NoError(t, err)
+
+	marshaledBlk, err := blkContainers[len(blkContainers)-1].Block.Marshal()
 	require.NoError(t, err)
 	v1Block := &ethpb.BeaconBlock{}
 	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
