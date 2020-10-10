@@ -16,7 +16,6 @@ var log = logrus.WithField("prefix", "gateway")
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
-	conn           *grpc.ClientConn
 	ctx            context.Context
 	cancel         context.CancelFunc
 	gatewayAddr    string
@@ -81,8 +80,6 @@ func (g *Gateway) Start() {
 			return
 		}
 	}()
-
-	return
 }
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.

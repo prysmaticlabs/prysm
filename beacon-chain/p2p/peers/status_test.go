@@ -11,6 +11,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -21,8 +23,8 @@ func TestStatus(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -35,8 +37,8 @@ func TestPeerExplicitAdd(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -76,8 +78,8 @@ func TestPeerNoENR(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -100,8 +102,8 @@ func TestPeerNoOverwriteENR(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -127,8 +129,8 @@ func TestErrUnknownPeer(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -138,30 +140,30 @@ func TestErrUnknownPeer(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = p.Address(id)
-	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.Direction(id)
-	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.ChainState(id)
-	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.ConnectionState(id)
-	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.ChainStateLastUpdated(id)
-	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 
 	_, err = p.Scorers().BadResponsesScorer().Count(id)
-	assert.ErrorContains(t, peers.ErrPeerUnknown.Error(), err)
+	assert.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
 }
 
 func TestPeerCommitteeIndices(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -197,8 +199,8 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -241,8 +243,8 @@ func TestPeerImplicitAdd(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -264,8 +266,8 @@ func TestPeerChainState(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -299,8 +301,8 @@ func TestPeerBadResponses(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -349,8 +351,8 @@ func TestAddMetaData(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -378,8 +380,8 @@ func TestPeerConnectionStatuses(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -420,8 +422,8 @@ func TestPrune(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -471,8 +473,8 @@ func TestPrune(t *testing.T) {
 func TestTrimmedOrderedPeers(t *testing.T) {
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: 1,
 			},
 		},
@@ -541,8 +543,8 @@ func TestBestPeer(t *testing.T) {
 	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -593,17 +595,17 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	maxPeers := 10
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
 	})
 
 	for i := 0; i <= maxPeers+100; i++ {
-		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
-		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
-		p.SetChainState(peer.ID(i), &pb.Status{
+		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
+		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
+		p.SetChainState(peer.ID(rune(i)), &pb.Status{
 			FinalizedEpoch: 10,
 		})
 	}
@@ -615,8 +617,8 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 func TestStatus_BestNonFinalized(t *testing.T) {
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: 2,
 			},
 		},
@@ -624,9 +626,9 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 
 	peerSlots := []uint64{32, 32, 32, 32, 235, 233, 258, 268, 270}
 	for i, headSlot := range peerSlots {
-		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
-		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
-		p.SetChainState(peer.ID(i), &pb.Status{
+		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
+		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
+		p.SetChainState(peer.ID(rune(i)), &pb.Status{
 			HeadSlot: headSlot,
 		})
 	}
@@ -641,8 +643,8 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
 			},
 		},
@@ -667,7 +669,7 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 }
 
 // addPeer is a helper to add a peer with a given connection state)
-func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) peer.ID {
+func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
 	// Set up some peers with different states
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)

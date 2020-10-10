@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var _ = Ticker(&SlotTicker{})
+var _ Ticker = (*SlotTicker)(nil)
 
 func TestSlotTicker(t *testing.T) {
 	ticker := &SlotTicker{
@@ -131,8 +131,6 @@ func TestGetSlotTickerWithOffset_OK(t *testing.T) {
 				t.Fatal("Expected normal ticker to tick first")
 			}
 			firstTicked = 1
-			break
 		}
 	}
-
 }

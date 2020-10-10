@@ -6,7 +6,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -66,7 +65,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 	if err != nil {
 		return [32]byte{}, err
 	}
-	container := &p2ppb.SigningData{
+	container := &pb.SigningData{
 		ObjectRoot: objRoot[:],
 		Domain:     domain,
 	}
@@ -134,10 +133,8 @@ func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []b
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	root, err := signingData(func() ([32]byte, error) {
-		// utilize custom block hashing function
-		return blk.HashTreeRoot()
-	}, domain)
+	// utilize custom block hashing function
+	root, err := signingData(blk.HashTreeRoot, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
@@ -158,9 +155,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := signingData(func() ([32]byte, error) {
-		return blkHdr.HashTreeRoot()
-	}, domain)
+	root, err := signingData(blkHdr.HashTreeRoot, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}

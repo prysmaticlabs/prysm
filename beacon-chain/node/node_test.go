@@ -1,13 +1,17 @@
 package node
 
 import (
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"path/filepath"
 	"testing"
 
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -16,7 +20,7 @@ import (
 )
 
 // Ensure BeaconNode implements interfaces.
-var _ = statefeed.Notifier(&BeaconNode{})
+var _ statefeed.Notifier = (*BeaconNode)(nil)
 
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
@@ -64,4 +68,26 @@ func TestBootStrapNodeFile(t *testing.T) {
 	assert.Equal(t, sampleNode0[2:], nodeList[0], "Unexpected nodes")
 	assert.Equal(t, sampleNode1[2:], nodeList[1], "Unexpected nodes")
 	assert.Equal(t, sampleNode2[2:], nodeList[2], "Unexpected nodes")
+}
+
+// TestClearDB tests clearing the database
+func TestClearDB(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random number for file path")
+	tmp := filepath.Join(testutil.TempDir(), fmt.Sprintf("datadirtest%d", randPath))
+	require.NoError(t, os.RemoveAll(tmp))
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String("datadir", tmp, "node data directory")
+	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
+
+	context := cli.NewContext(&app, set, nil)
+	_, err = NewBeaconNode(context)
+	require.NoError(t, err)
+
+	require.LogsContain(t, hook, "Removing database")
+	require.NoError(t, os.RemoveAll(tmp))
 }

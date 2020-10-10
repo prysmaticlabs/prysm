@@ -53,10 +53,7 @@ func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []by
 		if err := valBucket.Put(bytesutil.Bytes8(epoch), slotBits); err != nil {
 			return err
 		}
-		if err := pruneProposalHistory(valBucket, epoch); err != nil {
-			return err
-		}
-		return nil
+		return pruneProposalHistory(valBucket, epoch)
 	})
 	return err
 }

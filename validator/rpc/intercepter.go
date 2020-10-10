@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -17,10 +16,11 @@ import (
 // authentication from our API.
 var (
 	noAuthPaths = map[string]bool{
-		"/ethereum.validator.accounts.v2.Auth/Signup":             true,
-		"/ethereum.validator.accounts.v2.Auth/Login":              true,
-		"/ethereum.validator.accounts.v2.Wallet/HasWallet":        true,
-		"/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic": true,
+		"/ethereum.validator.accounts.v2.Auth/Signup":              true,
+		"/ethereum.validator.accounts.v2.Auth/Login":               true,
+		"/ethereum.validator.accounts.v2.Wallet/HasWallet":         true,
+		"/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic":  true,
+		"/ethereum.validator.accounts.v2.Wallet/DefaultWalletPath": true,
 	}
 	authLock sync.RWMutex
 )
@@ -70,7 +70,7 @@ func (s *Server) authorize(ctx context.Context) error {
 	token := strings.Split(authHeader[0], "Bearer ")[1]
 	_, err := jwt.Parse(token, checkParsedKey)
 	if err != nil {
-		return errors.Wrap(err, "Could not parse JWT token")
+		return status.Errorf(codes.Unauthenticated, "Could not parse JWT token: %v", err)
 	}
 	return nil
 }
