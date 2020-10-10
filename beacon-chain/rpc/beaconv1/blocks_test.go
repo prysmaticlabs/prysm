@@ -47,7 +47,7 @@ func fillDBTestBlocks(t *testing.T, ctx context.Context, db db.Database) (*ethpb
 		att2.Data.Slot = i
 		att2.Data.CommitteeIndex = i + 1
 		b.Block.Body.Attestations = []*ethpb_alpha.Attestation{att1, att2}
-		root, err := b.Block.HashTreeRoot()
+		root, err := b.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = b
 		blkContainers[i] = &ethpb_alpha.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
@@ -297,19 +297,23 @@ func TestServer_GetBlock_Head(t *testing.T) {
 	ctx := context.Background()
 
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{DB: db},
+		BeaconDB: db,
 	}
 
 	_, blkContainers := fillDBTestBlocks(t, ctx, db)
 
+	headBlock := blkContainers[len(blkContainers)-1]
+	bs = &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
+	}
 	// Should throw an error if more than one blk returned.
 	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
 		BlockId: []byte("head"),
 	})
 	require.NoError(t, err)
 
-	marshaledBlk, err := blkContainers[len(blkContainers)-1].Block.Marshal()
+	marshaledBlk, err := headBlock.Block.Block.Marshal()
 	require.NoError(t, err)
 	v1Block := &ethpb.BeaconBlock{}
 	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
