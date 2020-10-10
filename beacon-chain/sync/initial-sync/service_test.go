@@ -14,6 +14,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -32,6 +33,7 @@ func TestService_InitStartStop(t *testing.T) {
 	tests := []struct {
 		name         string
 		assert       func()
+		methodRuns   func(fd *event.Feed)
 		chainService func() *mock.ChainService
 	}{
 		{
@@ -45,7 +47,7 @@ func TestService_InitStartStop(t *testing.T) {
 			chainService: func() *mock.ChainService {
 				// Set to future time (genesis time hasn't arrived yet).
 				st := testutil.NewBeaconState()
-				require.NoError(t, st.SetGenesisTime(uint64(time.Unix(4113849600, 0).Unix())))
+
 				return &mock.ChainService{
 					State: st,
 					FinalizedCheckPoint: &eth.Checkpoint{
@@ -53,9 +55,19 @@ func TestService_InitStartStop(t *testing.T) {
 					},
 				}
 			},
+			methodRuns: func(fd *event.Feed) {
+				// Send valid event.
+				fd.Send(&feed.Event{
+					Type: statefeed.Initialized,
+					Data: &statefeed.InitializedData{
+						StartTime:             time.Unix(4113849600, 0),
+						GenesisValidatorsRoot: make([]byte, 32),
+					},
+				})
+			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Genesis time has not arrived - not syncing")
-				assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
+				assert.LogsContain(t, hook, "Waiting for state to be initialized")
 			},
 		},
 		{
@@ -63,7 +75,6 @@ func TestService_InitStartStop(t *testing.T) {
 			chainService: func() *mock.ChainService {
 				// Set to nearby slot.
 				st := testutil.NewBeaconState()
-				require.NoError(t, st.SetGenesisTime(uint64(time.Now().Add(-5*time.Minute).Unix())))
 				return &mock.ChainService{
 					State: st,
 					FinalizedCheckPoint: &eth.Checkpoint{
@@ -71,10 +82,20 @@ func TestService_InitStartStop(t *testing.T) {
 					},
 				}
 			},
+			methodRuns: func(fd *event.Feed) {
+				// Send valid event.
+				fd.Send(&feed.Event{
+					Type: statefeed.Initialized,
+					Data: &statefeed.InitializedData{
+						StartTime:             time.Now().Add(-5 * time.Minute),
+						GenesisValidatorsRoot: make([]byte, 32),
+					},
+				})
+			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Chain started within the last epoch - not syncing")
 				assert.LogsDoNotContain(t, hook, "Genesis time has not arrived - not syncing")
-				assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
+				assert.LogsContain(t, hook, "Waiting for state to be initialized")
 			},
 		},
 		{
@@ -83,7 +104,6 @@ func TestService_InitStartStop(t *testing.T) {
 				// Set to some future slot, and then make sure that current head matches it.
 				st := testutil.NewBeaconState()
 				futureSlot := uint64(27354)
-				require.NoError(t, st.SetGenesisTime(uint64(makeGenesisTime(futureSlot).Unix())))
 				require.NoError(t, st.SetSlot(futureSlot))
 				return &mock.ChainService{
 					State: st,
@@ -92,19 +112,33 @@ func TestService_InitStartStop(t *testing.T) {
 					},
 				}
 			},
+			methodRuns: func(fd *event.Feed) {
+				futureSlot := uint64(27354)
+				// Send valid event.
+				fd.Send(&feed.Event{
+					Type: statefeed.Initialized,
+					Data: &statefeed.InitializedData{
+						StartTime:             makeGenesisTime(futureSlot),
+						GenesisValidatorsRoot: make([]byte, 32),
+					},
+				})
+			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Starting initial chain sync...")
 				assert.LogsContain(t, hook, "Already synced to the current chain head")
 				assert.LogsDoNotContain(t, hook, "Chain started within the last epoch - not syncing")
 				assert.LogsDoNotContain(t, hook, "Genesis time has not arrived - not syncing")
-				assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
+				assert.LogsContain(t, hook, "Waiting for state to be initialized")
 			},
 		},
 	}
 
 	p := p2pt.NewTestP2P(t)
 	connectPeers(t, p, []*peerData{}, p.Peers())
-	for _, tt := range tests {
+	for i, tt := range tests {
+		if i == 0 {
+			continue
+		}
 		t.Run(tt.name, func(t *testing.T) {
 			defer hook.Reset()
 			ctx, cancel := context.WithCancel(context.Background())
@@ -114,12 +148,18 @@ func TestService_InitStartStop(t *testing.T) {
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
+			// Initialize feed
+			notifier := &mock.MockStateNotifier{}
 			s := NewService(ctx, &Config{
 				P2P:           p,
 				Chain:         mc,
-				StateNotifier: mc.StateNotifier(),
+				StateNotifier: notifier,
 			})
+			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
+			if tt.methodRuns != nil {
+				tt.methodRuns(notifier.StateFeed())
+			}
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -127,14 +167,15 @@ func TestService_InitStartStop(t *testing.T) {
 				s.Start()
 				wg.Done()
 			}()
+
 			go func() {
 				// Allow to exit from test (on no head loop waiting for head is started).
 				// In most tests, this is redundant, as Start() already exited.
-				time.AfterFunc(500*time.Millisecond, func() {
+				time.AfterFunc(3*time.Second, func() {
 					cancel()
 				})
 			}()
-			if testutil.WaitTimeout(wg, time.Second*2) {
+			if testutil.WaitTimeout(wg, time.Second*4) {
 				t.Fatalf("Test should have exited by now, timed out")
 			}
 			tt.assert()
@@ -153,28 +194,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		return s
 	}
 
-	t.Run("head state exists", func(t *testing.T) {
-		defer hook.Reset()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		mc := &mock.ChainService{
-			State: testutil.NewBeaconState(),
-			FinalizedCheckPoint: &eth.Checkpoint{
-				Epoch: 0,
-			},
-		}
-		s := newService(ctx, mc)
-
-		expectedGenesisTime := time.Unix(25000, 0)
-		var receivedGenesisTime time.Time
-		require.NoError(t, mc.State.SetGenesisTime(uint64(expectedGenesisTime.Unix())))
-		receivedGenesisTime, err := s.waitForStateInitialization()
-		assert.NoError(t, err)
-		assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
-		assert.LogsDoNotContain(t, hook, "Waiting for state to be initialized")
-	})
-
 	t.Run("no state and context close", func(t *testing.T) {
 		defer hook.Reset()
 		ctx, cancel := context.WithCancel(context.Background())
@@ -184,8 +203,9 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			_, err := s.waitForStateInitialization()
-			assert.ErrorContains(t, "context closed", err)
+			go s.waitForStateInitialization()
+			currTime := <-s.genesisChan
+			assert.Equal(t, true, currTime.IsZero())
 			wg.Done()
 		}()
 		go func() {
@@ -213,9 +233,9 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			var err error
-			receivedGenesisTime, err = s.waitForStateInitialization()
-			assert.NoError(t, err)
+			go s.waitForStateInitialization()
+			receivedGenesisTime = <-s.genesisChan
+			assert.Equal(t, false, receivedGenesisTime.IsZero())
 			wg.Done()
 		}()
 		go func() {
@@ -241,6 +261,46 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		}
 		assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
 		assert.LogsContain(t, hook, "Event feed data is not type *statefeed.InitializedData")
+		assert.LogsContain(t, hook, "Waiting for state to be initialized")
+		assert.LogsContain(t, hook, "Received state initialized event")
+		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
+	})
+
+	t.Run("no state and state init event received and service start", func(t *testing.T) {
+		defer hook.Reset()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		s := newService(ctx, &mock.ChainService{})
+		// Initialize mock feed
+		_ = s.stateNotifier.StateFeed()
+
+		expectedGenesisTime := time.Now().Add(60 * time.Second)
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			s.waitForStateInitialization()
+			wg.Done()
+		}()
+
+		wg.Add(1)
+		go func() {
+			time.AfterFunc(500*time.Millisecond, func() {
+				// Send valid event.
+				s.stateNotifier.StateFeed().Send(&feed.Event{
+					Type: statefeed.Initialized,
+					Data: &statefeed.InitializedData{
+						StartTime:             expectedGenesisTime,
+						GenesisValidatorsRoot: make([]byte, 32),
+					},
+				})
+			})
+			s.Start()
+			wg.Done()
+		}()
+
+		if testutil.WaitTimeout(wg, time.Second*3) {
+			t.Fatalf("Test should have exited by now, timed out")
+		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
 		assert.LogsContain(t, hook, "Received state initialized event")
 		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
