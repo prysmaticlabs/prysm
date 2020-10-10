@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 )
 
-
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
 var _ accountCreator = (*mockAccountCreator)(nil)
 
