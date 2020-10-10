@@ -253,8 +253,8 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			require.NoError(t, err)
 			m := &pubsub.Message{
 				Message: &pubsubpb.Message{
-					Data:     buf.Bytes(),
-					TopicIDs: []string{tt.topic},
+					Data:  buf.Bytes(),
+					Topic: &tt.topic,
 				},
 			}
 			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept
@@ -498,8 +498,8 @@ func TestService_validateCommitteeIndexBeaconAttestationUseCheckptCache(t *testi
 			require.NoError(t, err)
 			m := &pubsub.Message{
 				Message: &pubsubpb.Message{
-					Data:     buf.Bytes(),
-					TopicIDs: []string{tt.topic},
+					Data:  buf.Bytes(),
+					Topic: &tt.topic,
 				},
 			}
 			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept
