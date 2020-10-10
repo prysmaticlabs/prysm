@@ -48,7 +48,7 @@ func IntersectionUint64(s ...[]uint64) []uint64 {
 	for i, num := 1, len(s); i < num; i++ {
 		for _, k := range s[i] {
 			// Increment and check only if item is present in both, and no increment has happened yet.
-			if _, found := m[k]; found && (i-m[k]) == 0 {
+			if _, found := m[k]; found && i == m[k] {
 				m[k]++
 				if m[k] == num {
 					intersect = append(intersect, k)
@@ -163,7 +163,7 @@ func IntersectionInt64(s ...[]int64) []int64 {
 	}
 	for i, num := 1, len(s); i < num; i++ {
 		for _, k := range s[i] {
-			if _, found := m[k]; found && (i-m[k]) == 0 {
+			if _, found := m[k]; found && i == m[k] {
 				m[k]++
 				if m[k] == num {
 					intersect = append(intersect, k)
@@ -269,7 +269,7 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 	}
 	for i, num := 1, len(s); i < num; i++ {
 		for _, k := range s[i] {
-			if _, found := m[string(k)]; found && (i-m[string(k)]) == 0 {
+			if _, found := m[string(k)]; found && i == m[string(k)] {
 				m[string(k)]++
 				if m[string(k)] == num {
 					inter = append(inter, k)
