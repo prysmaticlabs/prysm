@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -1232,7 +1231,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
-	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	headState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:            helpers.ActivationExitEpoch(0),
@@ -1330,7 +1329,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
-	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	headState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:       0,
@@ -1425,7 +1424,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*pbp2p.PendingAttestation{{
+	atts := []*pb.PendingAttestation{{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: make([]byte, 32),
 			Source: &ethpb.Checkpoint{
