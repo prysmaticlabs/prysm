@@ -293,7 +293,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	vs := &Server{
 		Ctx:         ctx,
 		BeaconDB:    db,
@@ -339,8 +339,17 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 			Data: &statefeed.ReorgData{OldSlot: params.BeaconConfig().SlotsPerEpoch, NewSlot: 0},
 		})
 	}
-	<-exitRoutine
-	cancel()
+	for {
+		select {
+		case <-exitRoutine:
+			cancel()
+			return
+		case <-ctx.Done():
+			t.Error(ctx.Err())
+			return
+		}
+	}
+
 }
 
 func TestAssignValidatorToSubnet(t *testing.T) {
