@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,9 +15,9 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(&app, set, nil)
 
-	assert.NoError(t, ioutil.WriteFile("flags_test.yaml", []byte("testflag: 100"), 0666))
+	require.NoError(t, ioutil.WriteFile("flags_test.yaml", []byte("testflag: 100"), 0666))
 
-	assert.NoError(t, set.Parse([]string{"test-command", "--" + ConfigFileFlag.Name, "flags_test.yaml"}))
+	require.NoError(t, set.Parse([]string{"test-command", "--" + ConfigFileFlag.Name, "flags_test.yaml"}))
 	command := &cli.Command{
 		Name: "test-command",
 		Flags: WrapFlags([]cli.Flag{
@@ -33,10 +33,10 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 			return LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 		},
 		Action: func(cliCtx *cli.Context) error {
-			assert.Equal(t, 100, cliCtx.Int("testflag"))
+			require.Equal(t, 100, cliCtx.Int("testflag"))
 			return nil
 		},
 	}
-	assert.NoError(t, command.Run(context))
-	assert.NoError(t, os.Remove("flags_test.yaml"))
+	require.NoError(t, command.Run(context))
+	require.NoError(t, os.Remove("flags_test.yaml"))
 }
