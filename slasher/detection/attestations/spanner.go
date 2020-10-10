@@ -35,7 +35,7 @@ var (
 // TODO(#5040): Remove lookback and handle min spans properly.
 const epochLookback = 128
 
-var _ = iface.SpanDetector(&SpanDetector{})
+var _ iface.SpanDetector = (*SpanDetector)(nil)
 
 // SpanDetector defines a struct which can detect slashable
 // attestation offenses by tracking validator min-max

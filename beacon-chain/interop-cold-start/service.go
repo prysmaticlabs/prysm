@@ -22,9 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-var _ = shared.Service(&Service{})
-var _ = depositcache.DepositFetcher(&Service{})
-var _ = powchain.ChainStartFetcher(&Service{})
+var _ shared.Service = (*Service)(nil)
+var _ depositcache.DepositFetcher = (*Service)(nil)
+var _ powchain.ChainStartFetcher = (*Service)(nil)
 
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
