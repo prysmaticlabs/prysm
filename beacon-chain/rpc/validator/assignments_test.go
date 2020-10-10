@@ -339,10 +339,10 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 			Data: &statefeed.ReorgData{OldSlot: params.BeaconConfig().SlotsPerEpoch, NewSlot: 0},
 		})
 	}
+	defer cancel()
 	for {
 		select {
 		case <-exitRoutine:
-			cancel()
 			return
 		case <-ctx.Done():
 			t.Error(ctx.Err())
