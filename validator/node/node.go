@@ -400,6 +400,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
 		ValDB:                 s.db,
 		Host:                  rpcHost,
@@ -409,6 +410,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		SyncChecker:           vs,
 		GenesisFetcher:        vs,
 		NodeGatewayEndpoint:   nodeGatewayEndpoint,
+		WalletDir:             walletDir,
 	})
 	return s.services.RegisterService(server)
 }

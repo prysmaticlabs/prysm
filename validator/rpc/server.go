@@ -37,6 +37,7 @@ type Config struct {
 	CertFlag              string
 	KeyFlag               string
 	ValDB                 db.Database
+	WalletDir             string
 	ValidatorService      *client.ValidatorService
 	SyncChecker           client.SyncChecker
 	GenesisFetcher        client.GenesisFetcher
@@ -61,6 +62,7 @@ type Server struct {
 	validatorService      *client.ValidatorService
 	syncChecker           client.SyncChecker
 	genesisFetcher        client.GenesisFetcher
+	walletDir             string
 	wallet                *v2.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
@@ -81,6 +83,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorService:      cfg.ValidatorService,
 		syncChecker:           cfg.SyncChecker,
 		genesisFetcher:        cfg.GenesisFetcher,
+		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
