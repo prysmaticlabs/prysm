@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-var _ = shared.Service(&Service{})
+var _ shared.Service = (*Service)(nil)
 
 const rangeLimit = 1024
 const seenBlockSize = 1000

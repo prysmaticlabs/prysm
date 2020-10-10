@@ -20,7 +20,7 @@ import (
 )
 
 // Ensure BeaconNode implements interfaces.
-var _ = statefeed.Notifier(&BeaconNode{})
+var _ statefeed.Notifier = (*BeaconNode)(nil)
 
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
