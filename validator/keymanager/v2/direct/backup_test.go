@@ -12,15 +12,16 @@ import (
 )
 
 func TestDirectKeymanager_ExtractKeystores(t *testing.T) {
-	dr := &Keymanager{
-		secretKeysCache: make(map[[48]byte]bls.SecretKey),
-	}
+	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	lock.Lock()
+	dr := &Keymanager{}
 	validatingKeys := make([]bls.SecretKey, 10)
 	for i := 0; i < len(validatingKeys); i++ {
 		secretKey := bls.RandKey()
 		validatingKeys[i] = secretKey
-		dr.secretKeysCache[bytesutil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
+		secretKeysCache[bytesutil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
 	}
+	lock.Unlock()
 	ctx := context.Background()
 	password := "password"
 
