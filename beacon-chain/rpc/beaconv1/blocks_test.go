@@ -63,7 +63,6 @@ func TestServer_GetBlockHeader_Slot(t *testing.T) {
 	}
 	_, blkContainers := fillDBTestBlocks(t, ctx, db)
 
-	// Should throw an error if more than one blk returned.
 	header, err := bs.GetBlockHeader(ctx, &ethpb.BlockRequest{
 		BlockId: bytesutil.ToBytes(30, 8),
 	})
@@ -81,6 +80,22 @@ func TestServer_GetBlockHeader_Slot(t *testing.T) {
 	if !reflect.DeepEqual(header.Data.Header.Message, v1BlockHdr.Header) {
 		t.Error("Expected blocks to equal")
 	}
+}
+
+func TestServer_GetBlockHeader_Slot_Empty(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	bs := &Server{
+		BeaconDB: db,
+	}
+	_, _ = fillDBTestBlocks(t, ctx, db)
+
+	// Should throw an error no block is found.
+	_, err := bs.GetBlockHeader(ctx, &ethpb.BlockRequest{
+		BlockId: bytesutil.ToBytes(105, 8),
+	})
+	require.ErrorContains(t, "Could not find", err)
 }
 
 func TestServer_ListBlockHeaders_Slot(t *testing.T) {
@@ -229,6 +244,32 @@ func TestServer_GetBlock_GenesisRoot(t *testing.T) {
 	// Should throw an error if more than one blk returned.
 	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
 		BlockId: root[:],
+	})
+	require.NoError(t, err)
+
+	marshaledBlk, err := genBlk.Block.Marshal()
+	require.NoError(t, err)
+	v1Block := &ethpb.BeaconBlock{}
+	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
+
+	if !reflect.DeepEqual(block.Data.Message, v1Block) {
+		t.Error("Expected blocks to equal")
+	}
+}
+
+func TestServer_GetBlock_Genesis(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	bs := &Server{
+		BeaconDB: db,
+	}
+
+	genBlk, _ := fillDBTestBlocks(t, ctx, db)
+
+	// Should throw an error if more than one blk returned.
+	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
+		BlockId: []byte("genesis"),
 	})
 	require.NoError(t, err)
 
