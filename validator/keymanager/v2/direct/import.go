@@ -39,6 +39,14 @@ func (dr *Keymanager) ImportKeystores(
 			return errors.Wrap(err, "could not add to progress bar")
 		}
 	}
+	foundKey := map[string]bool{}
+	for i := range pubKeys {
+		strKey := string(pubKeys[i])
+		if foundKey[strKey] {
+			return fmt.Errorf("duplicated key found: %#x", pubKeys[i])
+		}
+		foundKey[strKey] = true
+	}
 	// Write the accounts to disk into a single keystore.
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
