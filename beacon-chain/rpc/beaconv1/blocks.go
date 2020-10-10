@@ -36,15 +36,15 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	marshaledBlkHdr, err := blkHdr.Marshal()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not marshal block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not marshal block header: %v", err)
 	}
 	v1BlockHdr := &ethpb.SignedBeaconBlockHeader{}
 	if err := proto.Unmarshal(marshaledBlkHdr, v1BlockHdr); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not unmarshal block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not unmarshal block header: %v", err)
 	}
 	root, err := v1BlockHdr.HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not unmarshal block header: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 	}
 
 	return &ethpb.BlockHeaderResponse{
@@ -89,15 +89,15 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 		}
 		marshaledBlkHdr, err := blkHdr.Marshal()
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not marshal block header: %v", err)
 		}
 		v1BlockHdr := &ethpb.SignedBeaconBlockHeader{}
 		if err := proto.Unmarshal(marshaledBlkHdr, v1BlockHdr); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not unmarshal block: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not unmarshal block header: %v", err)
 		}
 		root, err := v1BlockHdr.Header.HashTreeRoot()
 		if err != nil {
-
+			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
 		blkHdrs[i] = &ethpb.BlockHeaderContainer{
 			Root: root[:],
