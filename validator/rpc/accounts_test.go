@@ -23,8 +23,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 )
 
+
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
-var _ = accountCreator(&mockAccountCreator{})
+var _ accountCreator = (*mockAccountCreator)(nil)
 
 type mockAccountCreator struct {
 	data   *ethpb.Deposit_Data

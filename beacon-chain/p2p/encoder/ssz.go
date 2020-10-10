@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var _ = NetworkEncoding(&SszNetworkEncoder{})
+var _ NetworkEncoding = (*SszNetworkEncoder)(nil)
 
 // MaxGossipSize allowed for gossip messages.
 var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib

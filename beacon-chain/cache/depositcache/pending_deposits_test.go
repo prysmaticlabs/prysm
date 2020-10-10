@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-var _ = PendingDepositsFetcher(&DepositCache{})
+var _ PendingDepositsFetcher = (*DepositCache)(nil)
 
 func TestInsertPendingDeposit_OK(t *testing.T) {
 	dc := DepositCache{}
