@@ -330,11 +330,7 @@ func (s *Service) Stop() error {
 	}
 
 	// Save initial sync cached blocks to the DB before stop.
-	if err := s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks()); err != nil {
-		return err
-	}
-
-	return nil
+	return s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
 
 // Status always returns nil unless there is an error condition that causes

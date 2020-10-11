@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,15 +44,84 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
-		valBucket := bucket.Bucket(pubKey)
-		if valBucket == nil {
-			return fmt.Errorf("validator history is empty for validator %#x", pubKey)
+		valBucket, err := bucket.CreateBucketIfNotExists(pubKey)
+		if err != nil {
+			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 		}
 		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot), signingRoot); err != nil {
 			return err
 		}
-		if err := pruneProposalHistoryBySlot(valBucket, slot); err != nil {
-			return err
+		return pruneProposalHistoryBySlot(valBucket, slot)
+	})
+	return err
+}
+
+// ImportProposalHistory accepts a validator public key and returns the corresponding signing root.
+// Returns nil if there is no proposal history for the validator at this slot.
+func (store *Store) ImportProposalHistory(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.ImportProposalHistory")
+	defer span.End()
+
+	var allKeys [][]byte
+	err := store.db.View(func(tx *bolt.Tx) error {
+		proposalsBucket := tx.Bucket(historicProposalsBucket)
+		if err := proposalsBucket.ForEach(func(pubKey, _ []byte) error {
+			pubKeyCopy := make([]byte, len(pubKey))
+			copy(pubKeyCopy, pubKey)
+			allKeys = append(allKeys, pubKeyCopy)
+			return nil
+		}); err != nil {
+			return errors.Wrapf(err, "could not retrieve proposals for source in %s", store.databasePath)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	allKeys = removeDuplicateKeys(allKeys)
+	var prs []*pubKeyProposals
+	err = store.db.View(func(tx *bolt.Tx) error {
+		proposalsBucket := tx.Bucket(historicProposalsBucket)
+		for _, pk := range allKeys {
+			pr, err := getPubKeyProposals(pk, proposalsBucket)
+			prs = append(prs, pr)
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve public key old proposals format")
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	err = store.db.Update(func(tx *bolt.Tx) error {
+		newProposalsBucket := tx.Bucket(newhistoricProposalsBucket)
+		for _, pr := range prs {
+			valBucket, err := newProposalsBucket.CreateBucketIfNotExists(pr.PubKey)
+			if err != nil {
+				return errors.Wrap(err, "could not could not create bucket for public key")
+			}
+			for _, epochProposals := range pr.Proposals {
+				// Adding an extra byte for the bitlist length.
+				slotBitlist := make(bitfield.Bitlist, params.BeaconConfig().SlotsPerEpoch/8+1)
+				slotBits := epochProposals.Proposals
+				if len(slotBits) == 0 {
+					continue
+				}
+				copy(slotBitlist, slotBits)
+				for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+					if slotBitlist.BitAt(i) {
+						ss, err := helpers.StartSlot(bytesutil.FromBytes8(epochProposals.Epoch))
+						if err != nil {
+							return err
+						}
+						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(ss+i), []byte{1}); err != nil {
+							return err
+						}
+					}
+				}
+			}
+
 		}
 		return nil
 	})

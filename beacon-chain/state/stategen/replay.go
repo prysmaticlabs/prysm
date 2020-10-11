@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -16,7 +15,7 @@ import (
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
-func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
+func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
 
@@ -230,7 +229,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 // This finds the last saved state in DB from searching backwards from input slot,
 // it returns the block root of the block which was used to produce the state.
 // This is used by both hot and cold state management.
-func (s *State) lastSavedState(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+func (s *State) lastSavedState(ctx context.Context, slot uint64) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedState")
 	defer span.End()
 

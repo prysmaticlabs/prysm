@@ -27,10 +27,10 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = ChainStartFetcher(&Service{})
-var _ = ChainInfoFetcher(&Service{})
-var _ = POWBlockFetcher(&Service{})
-var _ = Chain(&Service{})
+var _ ChainStartFetcher = (*Service)(nil)
+var _ ChainInfoFetcher = (*Service)(nil)
+var _ POWBlockFetcher = (*Service)(nil)
+var _ Chain = (*Service)(nil)
 
 type goodLogger struct {
 	backend *backends.SimulatedBackend

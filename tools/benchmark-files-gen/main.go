@@ -77,10 +77,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes, 0644); err != nil {
-		return err
-	}
-	return nil
+	return ioutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes, 0644)
 }
 
 func generateMarshalledFullStateAndBlock() error {
@@ -167,10 +164,8 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes, 0644); err != nil {
-		return err
-	}
-	return nil
+
+	return ioutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes, 0644)
 }
 
 func generate2FullEpochState() error {
@@ -204,10 +199,8 @@ func generate2FullEpochState() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes, 0644); err != nil {
-		return err
-	}
-	return nil
+
+	return ioutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes, 0644)
 }
 
 func genesisBeaconState() (*stateTrie.BeaconState, error) {

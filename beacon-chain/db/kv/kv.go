@@ -17,7 +17,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var _ = iface.Database(&Store{})
+var _ iface.Database = (*Store)(nil)
 
 const (
 	// VotesCacheSize with 1M validators will be 8MB.

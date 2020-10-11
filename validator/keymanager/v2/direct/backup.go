@@ -18,11 +18,13 @@ import (
 func (dr *Keymanager) ExtractKeystores(
 	_ context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*v2keymanager.Keystore, error) {
+	lock.Lock()
+	defer lock.Unlock()
 	encryptor := keystorev4.New()
 	keystores := make([]*v2keymanager.Keystore, len(publicKeys))
 	for i, pk := range publicKeys {
 		pubKeyBytes := pk.Marshal()
-		secretKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
+		secretKey, ok := secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
 		if !ok {
 			return nil, fmt.Errorf(
 				"secret key for public key %#x not found in cache",

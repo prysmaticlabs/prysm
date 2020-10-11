@@ -37,11 +37,8 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	if err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveState(ctx, fs, root32); err != nil {
-		return err
-	}
 
-	return nil
+	return s.beaconDB.SaveState(ctx, fs, root32)
 }
 
 // SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the

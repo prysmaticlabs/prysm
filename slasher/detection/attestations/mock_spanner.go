@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
-var _ = iface.SpanDetector(&MockSpanDetector{})
+var _ iface.SpanDetector = (*MockSpanDetector)(nil)
 
 // MockSpanDetector defines a struct which can detect slashable
 // attestation offenses by tracking validator min-max

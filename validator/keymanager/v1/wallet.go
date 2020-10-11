@@ -85,7 +85,7 @@ func NewWallet(input string) (KeyManager, string, error) {
 	ctx := context.Background()
 	for _, path := range opts.Accounts {
 		parts := strings.Split(path, "/")
-		if len(parts[0]) == 0 {
+		if parts[0] == "" {
 			return nil, walletOptsHelp, fmt.Errorf("did not understand account specifier %q", path)
 		}
 		wallet, err := e2wallet.OpenWallet(parts[0], e2wallet.WithStore(store))

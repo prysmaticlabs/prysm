@@ -39,8 +39,10 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
-		keymanager: km,
-		wallet:     w,
+		keymanager:            km,
+		wallet:                w,
+		walletDir:             defaultWalletPath,
+		walletInitializedFeed: new(event.Feed),
 	}
 	// First we import accounts into the wallet.
 	encryptor := keystorev4.New()
@@ -82,21 +84,29 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
+		walletDir:             defaultWalletPath,
 	}
+	_, err := s.Signup(ctx, &pb.AuthRequest{
+		Password:  strongPass,
+		WalletDir: defaultWalletPath,
+	})
+	require.NoError(t, err)
 	req := &pb.CreateWalletRequest{
-		WalletPath:        localWalletDir,
-		Keymanager:        pb.KeymanagerKind_DIRECT,
-		WalletPassword:    strongPass,
-		KeystoresPassword: strongPass,
+		WalletPath:     localWalletDir,
+		Keymanager:     pb.KeymanagerKind_DIRECT,
+		WalletPassword: strongPass,
 	}
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
 	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
-	_, err := s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "No keystores included for import", err)
-
-	req.KeystoresImported = []string{"badjson"}
 	_, err = s.CreateWallet(ctx, req)
+	require.NoError(t, err)
+
+	importReq := &pb.ImportKeystoresRequest{
+		KeystoresPassword: strongPass,
+		KeystoresImported: []string{"badjson"},
+	}
+	_, err = s.ImportKeystores(ctx, importReq)
 	require.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
 
 	encryptor := keystorev4.New()
@@ -119,8 +129,8 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		require.NoError(t, err)
 		keystores[i] = string(encodedFile)
 	}
-	req.KeystoresImported = keystores
-	_, err = s.CreateWallet(ctx, req)
+	importReq.KeystoresImported = keystores
+	_, err = s.ImportKeystores(ctx, importReq)
 	require.NoError(t, err)
 }
 
@@ -154,10 +164,6 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
-
-	// Now trying to create a wallet where a previous wallet already exists.  We expect an error.
-	_, err = s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "wallet already exists at this location", err)
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
@@ -174,6 +180,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
+		walletDir:             defaultWalletPath,
 	}
 	// We attempt to create the wallet.
 	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
@@ -210,9 +217,12 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	ss := &Server{}
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
 	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
-		Password: "",
+		CurrentPassword: strongPass,
+		Password:        "",
 	})
 	assert.ErrorContains(t, noWalletMsg, err)
 	// We attempt to create the wallet.
@@ -231,10 +241,12 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	ss.walletInitialized = true
 	ss.keymanager = km
 	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
-		Password: "",
+		CurrentPassword: strongPass,
+		Password:        "",
 	})
-	assert.ErrorContains(t, "cannot be empty", err)
+	assert.ErrorContains(t, "Could not validate wallet password", err)
 	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		CurrentPassword:      strongPass,
 		Password:             "abc",
 		PasswordConfirmation: "def",
 	})
@@ -245,6 +257,7 @@ func TestServer_ChangePassword_DirectKeymanager(t *testing.T) {
 	ss, _ := createDirectWalletWithAccounts(t, 1)
 	newPassword := "NewPassw0rdz%%%%pass"
 	_, err := ss.ChangePassword(context.Background(), &pb.ChangePasswordRequest{
+		CurrentPassword:      ss.wallet.Password(),
 		Password:             newPassword,
 		PasswordConfirmation: newPassword,
 	})
@@ -269,12 +282,15 @@ func TestServer_ChangePassword_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
-	ss := &Server{}
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
 	ss.wallet = w
 	ss.walletInitialized = true
 	ss.keymanager = km
 	newPassword := "NewPassw0rdz%%%%pass"
 	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		CurrentPassword:      strongPass,
 		Password:             newPassword,
 		PasswordConfirmation: newPassword,
 	})
@@ -287,7 +303,9 @@ func TestServer_HasWallet(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	ss := &Server{}
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
 	// First delete the created folder and check the response
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	resp, err := ss.HasWallet(ctx, &ptypes.Empty{})
@@ -383,6 +401,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_ImportKeystores_OK(t *testing.T) {
+	direct.ResetCaches()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
@@ -400,8 +419,9 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
-		keymanager: km,
-		wallet:     w,
+		keymanager:            km,
+		wallet:                w,
+		walletInitializedFeed: new(event.Feed),
 	}
 
 	// Create 3 keystores.

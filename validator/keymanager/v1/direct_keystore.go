@@ -61,7 +61,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 				return nil, keystoreOptsHelp, err
 			}
 			text := string(bytePassword)
-			opts.Passphrase = strings.Replace(text, "\n", "", -1)
+			opts.Passphrase = strings.ReplaceAll(text, "\n", "")
 		}
 
 		if err := v1.VerifyAccountNotExists(opts.Path, opts.Passphrase); err == nil {

@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-var _ = Validator(&FakeValidator{})
+var _ Validator = (*FakeValidator)(nil)
 
 // FakeValidator for mocking.
 type FakeValidator struct {
