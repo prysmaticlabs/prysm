@@ -28,7 +28,7 @@ var (
 
 // Signup to authenticate access to the validator RPC API using bcrypt and
 // a sufficiently strong password check.
-func (s *Server) Signup(_ context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
 	if strings.TrimSpace(req.WalletDir) != "" {
 		walletDir = req.WalletDir
