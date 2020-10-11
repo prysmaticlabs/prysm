@@ -47,7 +47,7 @@ func fillDBTestBlocks(t *testing.T, ctx context.Context, db db.Database) (*ethpb
 		att2.Data.Slot = i
 		att2.Data.CommitteeIndex = i + 1
 		b.Block.Body.Attestations = []*ethpb_alpha.Attestation{att1, att2}
-		root, err := b.HashTreeRoot()
+		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = b
 		blkContainers[i] = &ethpb_alpha.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
