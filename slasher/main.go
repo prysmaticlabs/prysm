@@ -84,7 +84,7 @@ func main() {
 	app.Flags = appFlags
 	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
-		// Load any flags from file, if specified.
+		// Load flags from config file, if specified.
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
 			return err
 		}

@@ -205,7 +205,7 @@ var (
 	}
 )
 
-// LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set
+// LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
 func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 	if cliCtx.IsSet(ConfigFileFlag.Name) {
 		if err := altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name))(cliCtx); err != nil {

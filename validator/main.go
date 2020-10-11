@@ -316,7 +316,7 @@ contract in order to activate the validator client`,
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
-		// Load any flags from file, if specified.
+		// Load flags from config file, if specified.
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
 			return err
 		}
