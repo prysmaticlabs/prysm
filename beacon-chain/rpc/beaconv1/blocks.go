@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -28,7 +30,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
 	if blk == nil {
-		return nil, status.Errorf(codes.Internal, "Could not find requested block")
+		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 
 	blkHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
@@ -67,44 +69,33 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 	if len(req.ParentRoot) == 32 {
 		blks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(req.ParentRoot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
-		}
-		if blks == nil {
-			return nil, nil
+			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 		}
 	} else {
 		blks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(req.Slot).SetEndSlot(req.Slot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", req.Slot, err)
 		}
-		if blks == nil {
-			return nil, nil
-		}
+	}
+	if blks == nil {
+		return nil, status.Error(codes.NotFound, "Could not find requested blocks")
 	}
 
 	blkHdrs := make([]*ethpb.BlockHeaderContainer, len(blks))
 	for i, blk := range blks {
-		blkHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
+		blkHdr, err := v1alpha1BlockToV1BlockHeader(blk)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 		}
-		marshaledBlkHdr, err := blkHdr.Marshal()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block header: %v", err)
-		}
-		v1BlockHdr := &ethpb.SignedBeaconBlockHeader{}
-		if err := proto.Unmarshal(marshaledBlkHdr, v1BlockHdr); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not unmarshal block header: %v", err)
-		}
-		root, err := v1BlockHdr.Header.HashTreeRoot()
+		root, err := blkHdr.Header.HashTreeRoot()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
 		blkHdrs[i] = &ethpb.BlockHeaderContainer{
 			Root: root[:],
 			Header: &ethpb.BeaconBlockHeaderContainer{
-				Message:   v1BlockHdr.Header,
-				Signature: v1BlockHdr.Signature,
+				Message:   blkHdr.Header,
+				Signature: blkHdr.Signature,
 			},
 		}
 	}
@@ -161,7 +152,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
 	if blk == nil {
-		return nil, status.Errorf(codes.Internal, "Could not find requested block")
+		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 
 	v1Block, err := v1alpha1ToV1Block(blk)
@@ -179,54 +170,39 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
 func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockRootResponse, error) {
+	var root []byte
+	var err error
 	switch string(req.BlockId) {
 	case "head":
-		root, err := bs.HeadFetcher.HeadRoot(ctx)
+		root, err = bs.HeadFetcher.HeadRoot(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve head block: %v", err)
 		}
 		if root == nil {
-			return nil, status.Errorf(codes.Internal, "No head root was found")
+			return nil, status.Errorf(codes.NotFound, "No head root was found")
 		}
-		return &ethpb.BlockRootResponse{
-			Data: &ethpb.BlockRootContainer{
-				Root: root,
-			},
-		}, nil
 	case "finalized":
 		finalized := bs.FinalizationFetcher.FinalizedCheckpt()
 		if finalized == nil {
-			return nil, status.Errorf(codes.Internal, "No finalized root was found")
+			return nil, status.Errorf(codes.NotFound, "No finalized root was found")
 		}
-		return &ethpb.BlockRootResponse{
-			Data: &ethpb.BlockRootContainer{
-				Root: finalized.Root,
-			},
-		}, nil
+		root = finalized.Root
 	case "genesis":
 		blk, err := bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
 		if blk == nil {
-			return nil, status.Error(codes.Internal, "Could not find genesis block")
+			return nil, status.Error(codes.NotFound, "Could not find genesis block")
 		}
-		root, err := blk.Block.HashTreeRoot()
+		blkRoot, err := blk.Block.HashTreeRoot()
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not hash genesis block")
 		}
-		return &ethpb.BlockRootResponse{
-			Data: &ethpb.BlockRootContainer{
-				Root: root[:],
-			},
-		}, nil
+		root = blkRoot[:]
 	default:
 		if len(req.BlockId) == 32 {
-			return &ethpb.BlockRootResponse{
-				Data: &ethpb.BlockRootContainer{
-					Root: req.BlockId,
-				},
-			}, nil
+			root = req.BlockId
 		} else {
 			slot := bytesutil.BytesToUint64BigEndian(req.BlockId)
 			roots, err := bs.BeaconDB.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
@@ -236,16 +212,17 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 
 			numRoots := len(roots)
 			if numRoots == 0 {
-				return nil, nil
+				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
 			}
-			root := roots[0]
-			return &ethpb.BlockRootResponse{
-				Data: &ethpb.BlockRootContainer{
-					Root: root[:],
-				},
-			}, nil
+			root = roots[0][:]
 		}
 	}
+
+	return &ethpb.BlockRootResponse{
+		Data: &ethpb.BlockRootContainer{
+			Root: req.BlockId,
+		},
+	}, nil
 }
 
 // ListBlockAttestations retrieves attestation included in requested block.
@@ -255,7 +232,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
 	if blk == nil {
-		return nil, status.Errorf(codes.Internal, "Could not find requested block")
+		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 
 	v1Block, err := v1alpha1ToV1Block(blk)
@@ -276,9 +253,6 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve head block")
 		}
-		if blk == nil {
-			return nil, errors.New("no head block was found")
-		}
 	case "finalized":
 		finalized, err := bs.BeaconDB.FinalizedCheckpoint(ctx)
 		if err != nil {
@@ -289,25 +263,16 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 		if err != nil {
 			return nil, errors.New("could not get finalized block from db")
 		}
-		if blk == nil {
-			return nil, errors.New("could not find finalized block")
-		}
 	case "genesis":
 		blk, err = bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve blocks for genesis slot")
-		}
-		if blk == nil {
-			return nil, errors.Wrap(err, "could not find genesis block")
 		}
 	default:
 		if len(blockId) == 32 {
 			blk, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(blockId))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not retrieve block")
-			}
-			if blk == nil {
-				return nil, nil
 			}
 		} else {
 			slot := bytesutil.FromBytes8(blockId)
@@ -324,6 +289,23 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 		}
 	}
 	return blk, nil
+}
+
+func v1alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get body root of block")
+	}
+	return &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:          block.Block.Slot,
+			ProposerIndex: block.Block.ProposerIndex,
+			ParentRoot:    block.Block.ParentRoot,
+			StateRoot:     block.Block.StateRoot,
+			BodyRoot:      bodyRoot[:],
+		},
+		Signature: block.Signature,
+	}, nil
 }
 
 func v1alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
