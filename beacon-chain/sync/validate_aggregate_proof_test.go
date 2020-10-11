@@ -497,7 +497,7 @@ func TestValidateAggregateAndProofUseCheckptCache_CanValidate(t *testing.T) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
+			Data:  buf.Bytes(),
 			Topic: &topic,
 		},
 	}
@@ -585,7 +585,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
+			Data:  buf.Bytes(),
 			Topic: &topic,
 		},
 	}
@@ -599,7 +599,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, err)
 	msg = &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
+			Data:  buf.Bytes(),
 			Topic: &topic,
 		},
 	}
@@ -690,7 +690,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
+			Data:  buf.Bytes(),
 			Topic: &topic,
 		},
 	}

@@ -152,6 +152,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
+		pubsub.WithSubscriptionFilter(newSubscriptionFilter(ctx, cfg.StateNotifier)),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()

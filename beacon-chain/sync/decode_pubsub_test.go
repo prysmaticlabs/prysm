@@ -43,12 +43,12 @@ func TestService_decodePubsubMessage(t *testing.T) {
 			wantErr: errInvalidTopic,
 		},
 		{
-			name: "topic not mapped to any message type",
-			topic: "/eth2/abcdef/foo",
+			name:    "topic not mapped to any message type",
+			topic:   "/eth2/abcdef/foo",
 			wantErr: p2p.ErrMessageNotMapped,
 		},
 		{
-			name: "valid message -- beacon block",
+			name:  "valid message -- beacon block",
 			topic: p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlock{})],
 			input: &pubsub.Message{
 				Message: &pb.Message{
