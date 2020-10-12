@@ -311,6 +311,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 						}
 
 						wg.Done()
+					case <-ctx.Done():
+						log.Debug("Context closed, exiting goroutine")
+						return unionRespBlocks, nil
 					}
 				}
 			}

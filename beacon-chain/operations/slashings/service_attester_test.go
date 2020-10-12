@@ -15,14 +15,14 @@ import (
 )
 
 func validAttesterSlashingForValIdx(t *testing.T, beaconState *state.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
-	slashings := []*ethpb.AttesterSlashing{}
+	var slashings []*ethpb.AttesterSlashing
 	for _, idx := range valIdx {
 		slashing, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privs[idx], idx)
 		require.NoError(t, err)
 		slashings = append(slashings, slashing)
 	}
-	allSig1 := []bls.Signature{}
-	allSig2 := []bls.Signature{}
+	var allSig1 []bls.Signature
+	var allSig2 []bls.Signature
 	for _, slashing := range slashings {
 		sig1 := slashing.Attestation_1.Signature
 		sig2 := slashing.Attestation_2.Signature

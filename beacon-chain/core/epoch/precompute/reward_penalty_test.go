@@ -122,7 +122,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		base, err := epoch.BaseReward(state, i)
 		assert.NoError(t, err, "Could not get base reward")
 		assert.Equal(t, uint64(0), rewards[i], "Unexpected slashed indices reward balance")
-		assert.Equal(t, uint64(3*base), penalties[i], "Unexpected slashed indices penalty balance")
+		assert.Equal(t, 3*base, penalties[i], "Unexpected slashed indices penalty balance")
 	}
 
 	nonAttestedIndices := []uint64{434, 677, 872, 791}
@@ -254,7 +254,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	}
 }
 
-func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
+func buildState(slot, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
