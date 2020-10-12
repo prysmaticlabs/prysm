@@ -37,7 +37,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-var _ = shared.Service(&Service{})
+var _ shared.Service = (*Service)(nil)
 
 // In the event that we are at our peer limit, we
 // stop looking for new peers and instead poll

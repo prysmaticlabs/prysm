@@ -154,7 +154,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(savedAttestation.Data, domain)
 	require.NoError(t, err)
-	sig := []bls.Signature{}
+	var sig []bls.Signature
 	for _, idx := range savedAttestation.AttestingIndices {
 		validatorSig := keys[idx].Sign(root[:])
 		sig = append(sig, validatorSig)

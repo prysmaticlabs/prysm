@@ -30,7 +30,7 @@ var goodByes = map[uint64]string{
 const flushDelay = 50 * time.Millisecond
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
-func (s *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
@@ -59,10 +59,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id 
 			"peer":  id,
 		}).Debug("Could not send goodbye message to peer")
 	}
-	if err := s.p2p.Disconnect(id); err != nil {
-		return err
-	}
-	return nil
+	return s.p2p.Disconnect(id)
 }
 
 func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {

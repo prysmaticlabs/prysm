@@ -79,6 +79,7 @@ go_test(
         "//validator/accounts/v2/wallet:go_default_library",
         "//validator/client:go_default_library",
         "//validator/db/testing:go_default_library",
+        "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/derived:go_default_library",
         "//validator/keymanager/v2/direct:go_default_library",

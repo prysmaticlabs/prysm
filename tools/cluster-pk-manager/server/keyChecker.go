@@ -10,7 +10,7 @@ type keyChecker struct {
 	db *db
 }
 
-func newkeyChecker(db *db, beaconRPCAddr string) *keyChecker {
+func newkeyChecker(db *db, _ string) *keyChecker {
 	log.Warn("Key checker temporarily disabled during refactor.")
 
 	return &keyChecker{

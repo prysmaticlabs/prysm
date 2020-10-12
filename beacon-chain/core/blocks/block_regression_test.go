@@ -50,7 +50,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err, "Could not get signing root of beacon block header")
-	aggSigs := []bls.Signature{}
+	var aggSigs []bls.Signature
 	for _, index := range setA {
 		sig := privKeys[index].Sign(signingRoot[:])
 		aggSigs = append(aggSigs, sig)

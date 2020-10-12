@@ -67,7 +67,7 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 	return nil
 }
 
-var _ = p2p.Broadcaster(&mockBroadcaster{})
+var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummaryCache) *Service {
 	endpoint := "http://127.0.0.1"

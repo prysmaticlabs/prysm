@@ -86,12 +86,12 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 		return serializedItems, nil
 	}
 	// We flatten the list in order to pack its items into byte chunks correctly.
-	orderedItems := []byte{}
+	var orderedItems []byte
 	for _, item := range serializedItems {
 		orderedItems = append(orderedItems, item...)
 	}
 	numItems := len(orderedItems)
-	chunks := [][]byte{}
+	var chunks [][]byte
 	for i := 0; i < numItems; i += bytesPerChunk {
 		j := i + bytesPerChunk
 		// We create our upper bound index of the chunk, if it is greater than numItems,

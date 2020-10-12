@@ -16,7 +16,7 @@ func (s SecretKey) PublicKey() iface.PublicKey {
 }
 
 // Sign -- stub
-func (s SecretKey) Sign(msg []byte) iface.Signature {
+func (s SecretKey) Sign(_ []byte) iface.Signature {
 	panic(err)
 }
 
@@ -39,7 +39,7 @@ func (p PublicKey) Copy() iface.PublicKey {
 }
 
 // Aggregate -- stub
-func (p PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
+func (p PublicKey) Aggregate(_ iface.PublicKey) iface.PublicKey {
 	panic(err)
 }
 
@@ -47,7 +47,7 @@ func (p PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
 type Signature struct{}
 
 // Verify -- stub
-func (s Signature) Verify(pubKey iface.PublicKey, msg []byte) bool {
+func (s Signature) Verify(_ iface.PublicKey, _ []byte) bool {
 	panic(err)
 }
 
