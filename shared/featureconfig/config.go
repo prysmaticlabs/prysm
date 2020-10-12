@@ -84,7 +84,6 @@ type Flags struct {
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
 	// Cache toggles.
-	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
@@ -181,11 +180,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableDynamicCommitteeSubnets.Name) {
 		log.Warn("Disabled dynamic attestation committee subnets")
 		cfg.DisableDynamicCommitteeSubnets = true
-	}
-	cfg.EnableSSZCache = true
-	if ctx.Bool(disableSSZCache.Name) {
-		log.Warn("Disabled ssz cache")
-		cfg.EnableSSZCache = false
 	}
 	cfg.InitSyncNoVerify = false
 	if ctx.Bool(disableInitSyncVerifyEverythingFlag.Name) {

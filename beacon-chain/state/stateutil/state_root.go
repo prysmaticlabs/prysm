@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,7 +16,6 @@ import (
 
 const cacheSize = 100000
 
-var nocachedHasher *stateRootHasher
 var cachedHasher *stateRootHasher
 
 // There are 21 fields in the beacon state.
@@ -35,7 +33,6 @@ func init() {
 	}
 	// Temporarily disable roots cache until cache issues can be resolved.
 	cachedHasher = &stateRootHasher{rootsCache: rootsCache}
-	nocachedHasher = &stateRootHasher{}
 }
 
 type stateRootHasher struct {
@@ -45,10 +42,7 @@ type stateRootHasher struct {
 // ComputeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
 func ComputeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
-		return cachedHasher.computeFieldRoots(state)
-	}
-	return nocachedHasher.computeFieldRoots(state)
+	return cachedHasher.computeFieldRoots(state)
 }
 
 func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, error) {

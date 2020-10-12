@@ -7,7 +7,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
@@ -21,10 +20,7 @@ var (
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
 // according to the Simple Serialize specification of eth2.
 func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
-		return cachedHasher.arraysRoot(vals, length, fieldName)
-	}
-	return nocachedHasher.arraysRoot(vals, length, fieldName)
+	return cachedHasher.arraysRoot(vals, length, fieldName)
 }
 
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
