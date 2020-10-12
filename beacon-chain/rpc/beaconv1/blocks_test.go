@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/golang/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,7 +13,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -23,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func fillDBTestBlocks(t *testing.T, ctx context.Context, db db.Database) (*ethpb_alpha.SignedBeaconBlock, []*ethpb_alpha.BeaconBlockContainer) {
+func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb_alpha.SignedBeaconBlock, []*ethpb_alpha.BeaconBlockContainer) {
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
 	genBlk := testutil.NewBeaconBlock()
@@ -39,7 +37,7 @@ func fillDBTestBlocks(t *testing.T, ctx context.Context, db db.Database) (*ethpb
 	for i := uint64(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
-		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i) % 8}, 32)
+		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
 		att1 := testutil.NewAttestation()
 		att1.Data.Slot = i
 		att1.Data.CommitteeIndex = i
@@ -54,7 +52,7 @@ func fillDBTestBlocks(t *testing.T, ctx context.Context, db db.Database) (*ethpb
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
-	summary := &ethereum_beacon_p2p_v1.StateSummary{
+	summary := &p2ppb.StateSummary{
 		Root: headRoot[:],
 		Slot: blkContainers[len(blks)-1].Block.Block.Slot,
 	}
@@ -63,138 +61,129 @@ func fillDBTestBlocks(t *testing.T, ctx context.Context, db db.Database) (*ethpb
 	return genBlk, blkContainers
 }
 
-func TestServer_GetBlockHeader_Slot(t *testing.T) {
+func TestServer_GetBlockHeader(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
 		BeaconDB: db,
 	}
-	_, blkContainers := fillDBTestBlocks(t, ctx, db)
+	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 
-	header, err := bs.GetBlockHeader(ctx, &ethpb.BlockRequest{
-		BlockId: bytesutil.ToBytes(30, 8),
-	})
-	require.NoError(t, err)
+	tests := []struct {
+		name    string
+		blockID []byte
+		want    *ethpb_alpha.SignedBeaconBlock
+		wantErr bool
+	}{
+		{
+			name:    "slot",
+			blockID: []byte("30"),
+			want:    blkContainers[30].Block,
+		},
+		{
+			name:    "root",
+			blockID: blkContainers[20].BlockRoot,
+			want:    blkContainers[20].Block,
+		},
+		{
+			name:    "no block",
+			blockID: []byte("105"),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			header, err := bs.GetBlockHeader(ctx, &ethpb.BlockRequest{
+				BlockId: tt.blockID,
+			})
+			if !tt.wantErr {
+				require.NoError(t, err)
+			} else {
+				require.NotEqual(t, err, nil)
+				return
+			}
 
-	blkHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(blkContainers[30].Block)
-	require.NoError(t, err)
-	marshaledBlkHdr, err := blkHdr.Marshal()
-	require.NoError(t, err)
+			blkHdr, err := v1alpha1BlockToV1BlockHeader(tt.want)
+			require.NoError(t, err)
 
-	v1BlockHdr := &ethpb.SignedBeaconBlockHeader{}
-	require.NoError(t, err)
-	require.NoError(t, proto.Unmarshal(marshaledBlkHdr, v1BlockHdr))
-
-	if !reflect.DeepEqual(header.Data.Header.Message, v1BlockHdr.Header) {
-		t.Error("Expected blocks to equal")
+			if !reflect.DeepEqual(header.Data.Header.Message, blkHdr.Header) {
+				t.Error("Expected blocks to equal")
+			}
+		})
 	}
 }
 
-func TestServer_GetBlockHeader_Slot_Empty(t *testing.T) {
+func TestServer_ListBlockHeaders(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
 		BeaconDB: db,
 	}
-	_, _ = fillDBTestBlocks(t, ctx, db)
-
-	// Should throw an error no block is found.
-	_, err := bs.GetBlockHeader(ctx, &ethpb.BlockRequest{
-		BlockId: bytesutil.ToBytes(105, 8),
-	})
-	require.ErrorContains(t, "Could not find", err)
-}
-
-func TestServer_ListBlockHeaders_Slot(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	bs := &Server{
-		BeaconDB: db,
-	}
-	_, blkContainers := fillDBTestBlocks(t, ctx, db)
+	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
-	b2.Block.Body.Graffiti = bytesutil.PadTo([]byte{4}, 32)
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
 	require.NoError(t, db.SaveBlock(ctx, b2))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
-	b3.Block.Body.Graffiti = bytesutil.PadTo([]byte{3}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b3))
-
-	// Should throw an error if more than one blk returned.
-	headers, err := bs.ListBlockHeaders(ctx, &ethpb.BlockHeadersRequest{
-		Slot: 30,
-	})
-	require.NoError(t, err)
-
-	blocks := []*ethpb_alpha.SignedBeaconBlock{blkContainers[30].Block, b2, b3}
-	require.Equal(t, len(blocks), len(headers.Data))
-	for i, blk := range blocks {
-		signedHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
-		require.NoError(t, err)
-		marshaledBlkHdr, err := signedHdr.Marshal()
-		require.NoError(t, err)
-		v1alpa1BlockHdr := &ethpb_alpha.SignedBeaconBlockHeader{}
-		require.NoError(t, err)
-		require.NoError(t, proto.Unmarshal(marshaledBlkHdr, v1alpa1BlockHdr))
-		v1BlockHdr := &ethpb.SignedBeaconBlockHeader{}
-		require.NoError(t, err)
-		require.NoError(t, proto.Unmarshal(marshaledBlkHdr, v1BlockHdr))
-
-		if !reflect.DeepEqual(headers.Data[i].Header.Message, v1BlockHdr.Header) {
-			t.Error("Expected blocks to equal")
-		}
-	}
-}
-
-func TestServer_ListBlockHeaders_ParentRoot(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	bs := &Server{
-		BeaconDB: db,
-	}
-	parentRoot := bytesutil.PadTo([]byte{5, 6}, 32)
-	_, _ = fillDBTestBlocks(t, ctx, db)
-	b2 := testutil.NewBeaconBlock()
-	b2.Block.Slot = 31
-	b2.Block.ParentRoot = parentRoot
-	require.NoError(t, db.SaveBlock(ctx, b2))
-	b3 := testutil.NewBeaconBlock()
-	b3.Block.Slot = 32
-	b3.Block.ParentRoot = parentRoot
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 	require.NoError(t, db.SaveBlock(ctx, b3))
 	b4 := testutil.NewBeaconBlock()
-	b4.Block.Slot = 36
-	b4.Block.ParentRoot = parentRoot
+	b4.Block.Slot = 31
+	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
 	require.NoError(t, db.SaveBlock(ctx, b4))
+	b5 := testutil.NewBeaconBlock()
+	b5.Block.Slot = 28
+	b5.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	require.NoError(t, db.SaveBlock(ctx, b5))
 
-	// Should throw an error if more than one blk returned.
-	headers, err := bs.ListBlockHeaders(ctx, &ethpb.BlockHeadersRequest{
-		ParentRoot: parentRoot,
-	})
-	require.NoError(t, err)
+	tests := []struct {
+		name       string
+		slot       uint64
+		parentRoot []byte
+		want       []*ethpb_alpha.SignedBeaconBlock
+		wantErr    bool
+	}{
+		{
+			name: "slot",
+			slot: 30,
+			want: []*ethpb_alpha.SignedBeaconBlock{
+				blkContainers[30].Block,
+				b2,
+				b3,
+			},
+		},
+		{
+			name:       "parent root",
+			parentRoot: b2.Block.ParentRoot,
+			want: []*ethpb_alpha.SignedBeaconBlock{
+				blkContainers[1].Block,
+				b2,
+				b4,
+				b5,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers, err := bs.ListBlockHeaders(ctx, &ethpb.BlockHeadersRequest{
+				Slot:       tt.slot,
+				ParentRoot: tt.parentRoot,
+			})
+			require.NoError(t, err)
 
-	blocks := []*ethpb_alpha.SignedBeaconBlock{b2, b3, b4}
-	require.Equal(t, len(blocks), len(headers.Data))
-	for i, blk := range blocks {
-		signedHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
-		require.NoError(t, err)
-		marshaledBlkHdr, err := signedHdr.Marshal()
-		require.NoError(t, err)
-		v1alpa1BlockHdr := &ethpb_alpha.SignedBeaconBlockHeader{}
-		require.NoError(t, err)
-		require.NoError(t, proto.Unmarshal(marshaledBlkHdr, v1alpa1BlockHdr))
-		v1BlockHdr := &ethpb.SignedBeaconBlockHeader{}
-		require.NoError(t, err)
-		require.NoError(t, proto.Unmarshal(marshaledBlkHdr, v1BlockHdr))
+			require.Equal(t, len(tt.want), len(headers.Data))
+			for i, blk := range tt.want {
+				signedHdr, err := v1alpha1BlockToV1BlockHeader(blk)
+				require.NoError(t, err)
 
-		if !reflect.DeepEqual(headers.Data[i].Header.Message, v1BlockHdr.Header) {
-			t.Error("Expected blocks to equal")
-		}
+				if !reflect.DeepEqual(headers.Data[i].Header.Message, signedHdr.Header) {
+					t.Error("Expected blocks to equal")
+				}
+			}
+		})
 	}
 }
 
@@ -238,7 +227,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 	assert.NoError(t, err, "Could not propose block correctly")
 }
 
-func TestServer_GetBlock_GenesisRoot(t *testing.T) {
+func TestServer_GetBlock(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -246,130 +235,80 @@ func TestServer_GetBlock_GenesisRoot(t *testing.T) {
 		BeaconDB: db,
 	}
 
-	genBlk, _ := fillDBTestBlocks(t, ctx, db)
-	root, err := genBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	// Should throw an error if more than one blk returned.
-	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
-		BlockId: root[:],
-	})
-	require.NoError(t, err)
-
-	marshaledBlk, err := genBlk.Block.Marshal()
-	require.NoError(t, err)
-	v1Block := &ethpb.BeaconBlock{}
-	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
-
-	if !reflect.DeepEqual(block.Data.Message, v1Block) {
-		t.Error("Expected blocks to equal")
-	}
-}
-
-func TestServer_GetBlock_Genesis(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	bs := &Server{
-		BeaconDB: db,
-	}
-
-	genBlk, _ := fillDBTestBlocks(t, ctx, db)
-
-	// Should throw an error if more than one blk returned.
-	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
-		BlockId: []byte("genesis"),
-	})
-	require.NoError(t, err)
-
-	marshaledBlk, err := genBlk.Block.Marshal()
-	require.NoError(t, err)
-	v1Block := &ethpb.BeaconBlock{}
-	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
-
-	if !reflect.DeepEqual(block.Data.Message, v1Block) {
-		t.Error("Expected blocks to equal")
-	}
-}
-
-func TestServer_GetBlock_Head(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	bs := &Server{
-		BeaconDB: db,
-	}
-
-	_, blkContainers := fillDBTestBlocks(t, ctx, db)
+	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 
 	headBlock := blkContainers[len(blkContainers)-1]
 	bs = &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
 	}
-	// Should throw an error if more than one blk returned.
-	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
-		BlockId: []byte("head"),
-	})
+
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
+	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	marshaledBlk, err := headBlock.Block.Block.Marshal()
-	require.NoError(t, err)
-	v1Block := &ethpb.BeaconBlock{}
-	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
-
-	if !reflect.DeepEqual(block.Data.Message, v1Block) {
-		t.Error("Expected blocks to equal")
+	tests := []struct {
+		name    string
+		blockID []byte
+		want    *ethpb_alpha.SignedBeaconBlock
+		wantErr bool
+	}{
+		{
+			name:    "slot",
+			blockID: []byte("30"),
+			want:    blkContainers[30].Block,
+		},
+		{
+			name:    "head",
+			blockID: []byte("head"),
+			want:    headBlock.Block,
+		},
+		{
+			name:    "genesis",
+			blockID: []byte("genesis"),
+			want:    genBlk,
+		},
+		{
+			name:    "genesis root",
+			blockID: root[:],
+			want:    genBlk,
+		},
+		{
+			name:    "root",
+			blockID: blkContainers[20].BlockRoot,
+			want:    blkContainers[20].Block,
+		},
+		{
+			name:    "slot",
+			blockID: []byte("40"),
+			want:    blkContainers[40].Block,
+		},
+		{
+			name:    "no block",
+			blockID: []byte("105"),
+			wantErr: true,
+		},
 	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
+				BlockId: tt.blockID,
+			})
+			if tt.wantErr {
+				require.NotEqual(t, err, nil)
+				return
+			}
+			require.NoError(t, err)
 
-func TestServer_GetBlock_Root(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
+			marshaledBlk, err := tt.want.Block.Marshal()
+			require.NoError(t, err)
+			v1Block := &ethpb.BeaconBlock{}
+			require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
 
-	bs := &Server{
-		BeaconDB: db,
-	}
-	_, blkContainers := fillDBTestBlocks(t, ctx, db)
-
-	// Should throw an error if more than one blk returned.
-	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
-		BlockId: blkContainers[50].BlockRoot,
-	})
-	require.NoError(t, err)
-
-	marshaledBlk, err := blkContainers[50].Block.Block.Marshal()
-	require.NoError(t, err)
-	v1Block := &ethpb.BeaconBlock{}
-	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
-
-	if !reflect.DeepEqual(block.Data.Message, v1Block) {
-		t.Error("Expected blocks to equal")
-	}
-}
-
-func TestServer_GetBlock_Slot(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	bs := &Server{
-		BeaconDB: db,
-	}
-	_, blkContainers := fillDBTestBlocks(t, ctx, db)
-
-	// Should throw an error if more than one blk returned.
-	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
-		BlockId: bytesutil.ToBytes(40, 8),
-	})
-	require.NoError(t, err)
-
-	marshaledBlk, err := blkContainers[40].Block.Block.Marshal()
-	require.NoError(t, err)
-	v1Block := &ethpb.BeaconBlock{}
-	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
-
-	if !reflect.DeepEqual(block.Data.Message, v1Block) {
-		t.Error("Expected blocks to equal")
+			if !reflect.DeepEqual(block.Data.Message, v1Block) {
+				t.Error("Expected blocks to equal")
+			}
+		})
 	}
 }
 
@@ -380,7 +319,7 @@ func TestServer_GetBlockAttestations_Slot(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 	}
-	_, blkContainers := fillDBTestBlocks(t, ctx, db)
+	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 
 	// Should throw an error if more than one blk returned.
 	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
@@ -388,10 +327,8 @@ func TestServer_GetBlockAttestations_Slot(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	marshaledBlk, err := blkContainers[40].Block.Block.Marshal()
+	v1Block, err := v1alpha1ToV1Block(blkContainers[40].Block)
 	require.NoError(t, err)
-	v1Block := &ethpb.BeaconBlock{}
-	require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
 
 	if !reflect.DeepEqual(block.Data.Message, v1Block) {
 		t.Error("Expected blocks to equal")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 
@@ -220,7 +221,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 
 	return &ethpb.BlockRootResponse{
 		Data: &ethpb.BlockRootContainer{
-			Root: req.BlockId,
+			Root: root,
 		},
 	}, nil
 }
@@ -275,7 +276,11 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 				return nil, errors.Wrap(err, "could not retrieve block")
 			}
 		} else {
-			slot := bytesutil.FromBytes8(blockId)
+			slotInt, err := strconv.Atoi(string(blockId))
+			if err != nil {
+				return nil, errors.Wrap(err, "could not decode block id")
+			}
+			slot := uint64(slotInt)
 			blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
