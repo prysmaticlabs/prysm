@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb_alpha.SignedBeaconBlock, []*ethpb_alpha.BeaconBlockContainer) {

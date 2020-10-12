@@ -6,22 +6,21 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 // GetBlockHeader retrieves block header for given block id.
