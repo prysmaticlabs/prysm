@@ -346,7 +346,7 @@ func (w *Wallet) InitializeKeymanager(
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
-func (w *Wallet) WriteFileAtPath(_ context.Context, filePath string, fileName string, data []byte) error {
+func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) error {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not create path: %s", accountPath)
@@ -363,7 +363,7 @@ func (w *Wallet) WriteFileAtPath(_ context.Context, filePath string, fileName st
 }
 
 // ReadFileAtPath within the wallet directory given the desired path and filename.
-func (w *Wallet) ReadFileAtPath(_ context.Context, filePath string, fileName string) ([]byte, error) {
+func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([]byte, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
@@ -385,7 +385,7 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath string, fileName str
 
 // FileNameAtPath return the full file name for the requested file. It allows for finding the file
 // with a regex pattern.
-func (w *Wallet) FileNameAtPath(_ context.Context, filePath string, fileName string) (string, error) {
+func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (string, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return "", errors.Wrapf(err, "could not create path: %s", accountPath)

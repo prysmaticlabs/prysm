@@ -58,7 +58,7 @@ func (s *MockSpanDetector) DetectSlashingsForAttestation(
 
 // SpanForEpochByValidator returns the specific min-max span for a
 // validator index in a given epoch.
-func (s *MockSpanDetector) SpanForEpochByValidator(_ context.Context, _ uint64, _ uint64) (types.Span, error) {
+func (s *MockSpanDetector) SpanForEpochByValidator(_ context.Context, _, _ uint64) (types.Span, error) {
 	return types.Span{MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{}, HasAttested: false}, nil
 }
 
@@ -68,7 +68,7 @@ func (s *MockSpanDetector) ValidatorSpansByEpoch(_ context.Context, _ uint64) ma
 }
 
 // DeleteValidatorSpansByEpoch mocks the delete spans by epoch function.
-func (s *MockSpanDetector) DeleteValidatorSpansByEpoch(_ context.Context, _ uint64, _ uint64) error {
+func (s *MockSpanDetector) DeleteValidatorSpansByEpoch(_ context.Context, _, _ uint64) error {
 	return nil
 }
 

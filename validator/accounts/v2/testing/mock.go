@@ -56,7 +56,7 @@ func (m *Wallet) SetPassword(newPass string) {
 }
 
 // WriteFileAtPath --
-func (m *Wallet) WriteFileAtPath(_ context.Context, pathName string, fileName string, data []byte) error {
+func (m *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if m.Files[pathName] == nil {
@@ -67,7 +67,7 @@ func (m *Wallet) WriteFileAtPath(_ context.Context, pathName string, fileName st
 }
 
 // ReadFileAtPath --
-func (m *Wallet) ReadFileAtPath(_ context.Context, pathName string, fileName string) ([]byte, error) {
+func (m *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for f, v := range m.Files[pathName] {

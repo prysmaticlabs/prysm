@@ -111,7 +111,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 // NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
-func NewInteropKeymanager(_ context.Context, offset uint64, numValidatorKeys uint64) (*Keymanager, error) {
+func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		accountsChangedFeed: new(event.Feed),
 	}
@@ -429,8 +429,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 
 func (dr *Keymanager) createAccountsKeystore(
 	_ context.Context,
-	privateKeys [][]byte,
-	publicKeys [][]byte,
+	privateKeys, publicKeys [][]byte,
 ) (*v2keymanager.Keystore, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()

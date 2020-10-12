@@ -126,7 +126,7 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
-func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime uint64, nowTime uint64, c *ethpb.Checkpoint) error {
+func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
 	currentSlot := (nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 	var prevEpoch uint64
