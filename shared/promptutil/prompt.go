@@ -18,17 +18,6 @@ import (
 
 var au = aurora.NewAurora(true)
 
-// PasswordConfirm defines an enum type that can determine whether or not
-// a prompt should confirm a password input.
-type PasswordConfirm int
-
-const (
-	// NoConfirmPass enum to indicate to the prompt that confirming the password is not needed.
-	NoConfirmPass PasswordConfirm = iota
-	// ConfirmPass enum to indicate to the prompt to confirm the password entered.
-	ConfirmPass
-)
-
 // PasswordReaderFunc takes in a *file and returns a password using the terminal package
 func passwordReaderFunc(file *os.File) ([]byte, error) {
 	pass, err := terminal.ReadPassword(int(file.Fd()))
@@ -36,7 +25,7 @@ func passwordReaderFunc(file *os.File) ([]byte, error) {
 }
 
 // PasswordReader has passwordReaderFunc as the default but can be changed for testing purposes.
-var PasswordReader func(file *os.File) ([]byte, error) = passwordReaderFunc
+var PasswordReader = passwordReaderFunc
 
 // ValidatePrompt requests the user for text and expects the user to fulfill the provided validation function.
 func ValidatePrompt(r io.Reader, promptText string, validateFunc func(string) error) (string, error) {

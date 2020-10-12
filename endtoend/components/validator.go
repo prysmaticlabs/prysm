@@ -29,7 +29,7 @@ const depositGasLimit = 4000000
 
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.
-func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath string) {
+func StartValidatorClients(t *testing.T, config *types.E2EConfig) {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconNodeNum := e2e.TestParams.BeaconNodeCount

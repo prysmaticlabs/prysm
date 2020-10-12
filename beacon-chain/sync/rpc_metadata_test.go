@@ -47,7 +47,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
+		expectSuccess(t, stream)
 		out := new(pb.MetaData)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.DeepEqual(t, p1.LocalMetadata, out, "Metadata unequal")
