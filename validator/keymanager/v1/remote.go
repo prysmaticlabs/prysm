@@ -160,7 +160,7 @@ func (km *Remote) Sign(_ context.Context, _ [48]byte, _ [32]byte) (bls.Signature
 }
 
 // SignGeneric signs a generic message for the validator to broadcast.
-func (km *Remote) SignGeneric(ctx context.Context, pubKey [48]byte, root [32]byte, domain [32]byte) (bls.Signature, error) {
+func (km *Remote) SignGeneric(ctx context.Context, pubKey [48]byte, root, domain [32]byte) (bls.Signature, error) {
 	accountInfo, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey

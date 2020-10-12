@@ -71,7 +71,7 @@ var ValidatorHasExited = types.Evaluator{
 }
 
 // Not including first epoch because of issues with genesis.
-func isBetweenEpochs(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
+func isBetweenEpochs(fromEpoch, toEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return fromEpoch < currentEpoch && currentEpoch < toEpoch
 	}

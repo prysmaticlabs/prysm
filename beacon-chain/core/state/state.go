@@ -249,7 +249,7 @@ func EmptyGenesisState() (*stateTrie.BeaconState, error) {
 //     return True
 // This method has been modified from the spec to allow whole states not to be saved
 // but instead only cache the relevant information.
-func IsValidGenesisState(chainStartDepositCount uint64, currentTime uint64) bool {
+func IsValidGenesisState(chainStartDepositCount, currentTime uint64) bool {
 	if currentTime < params.BeaconConfig().MinGenesisTime {
 		return false
 	}
