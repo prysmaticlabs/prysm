@@ -192,10 +192,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Initial syncing while verifying only the block proposer signatures.")
 		cfg.InitSyncNoVerify = true
 	}
-	if ctx.Bool(skipBLSVerifyFlag.Name) {
-		log.Warn("UNSAFE: Skipping BLS verification at runtime")
-		cfg.SkipBLSVerify = true
-	}
 	if ctx.Bool(enableBackupWebhookFlag.Name) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
