@@ -118,7 +118,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4242,http://127.0.0.1:4242",
+		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200",
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
@@ -203,7 +203,7 @@ var (
 		Value: false,
 	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
-	NumAccountsFlag = &cli.Int64Flag{
+	NumAccountsFlag = &cli.IntFlag{
 		Name:  "num-accounts",
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,

@@ -206,7 +206,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 }
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
-func (s *Service) hasSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, aggregateBits []byte) bool {
+func (s *Service) hasSeenCommitteeIndicesSlot(slot, committeeID uint64, aggregateBits []byte) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
@@ -216,7 +216,7 @@ func (s *Service) hasSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, a
 }
 
 // Set committee's indices and slot as seen for incoming attestations.
-func (s *Service) setSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, aggregateBits []byte) {
+func (s *Service) setSeenCommitteeIndicesSlot(slot, committeeID uint64, aggregateBits []byte) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)

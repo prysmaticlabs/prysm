@@ -86,7 +86,7 @@ func (ds *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestatio
 // detectDoubleVote cross references the passed in attestation with the bloom filter maintained
 // for every epoch for the validator in order to determine if it is a double vote.
 func (ds *Service) detectDoubleVote(
-	ctx context.Context,
+	_ context.Context,
 	possibleAtts []*ethpb.IndexedAttestation,
 	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
@@ -199,20 +199,17 @@ func resultHash(result *types.DetectionResult) [32]byte {
 	return hashutil.Hash(resultBytes)
 }
 
-func isDoublePropose(
-	incomingBlockHeader *ethpb.SignedBeaconBlockHeader,
-	prevBlockHeader *ethpb.SignedBeaconBlockHeader,
-) bool {
+func isDoublePropose(incomingBlockHeader, prevBlockHeader *ethpb.SignedBeaconBlockHeader) bool {
 	return incomingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex &&
 		!bytes.Equal(incomingBlockHeader.Signature, prevBlockHeader.Signature) &&
 		incomingBlockHeader.Header.Slot == prevBlockHeader.Header.Slot
 }
 
-func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
+func isDoubleVote(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
 	return !attestationutil.AttDataIsEqual(incomingAtt.Data, prevAtt.Data) && incomingAtt.Data.Target.Epoch == prevAtt.Data.Target.Epoch
 }
 
-func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
+func isSurrounding(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
 	return incomingAtt.Data.Source.Epoch < prevAtt.Data.Source.Epoch &&
 		incomingAtt.Data.Target.Epoch > prevAtt.Data.Target.Epoch
 }

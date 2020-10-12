@@ -100,16 +100,23 @@ func TestDirectKeymanager_ImportKeystores(t *testing.T) {
 		accountsStore: &AccountStore{},
 	}
 
-	// Create several keystores and attempt to import them.
+	// Create a duplicate keystore and attempt to import it.
 	numAccounts := 5
-	keystores := make([]*v2keymanager.Keystore, numAccounts)
-	for i := 0; i < numAccounts; i++ {
+	keystores := make([]*v2keymanager.Keystore, numAccounts+1)
+	for i := 1; i < numAccounts+1; i++ {
 		keystores[i] = createRandomKeystore(t, password)
 	}
+	keystores[0] = keystores[1]
 	ctx := context.Background()
-	require.NoError(t, dr.ImportKeystores(
+	require.ErrorContains(t, "duplicated key found:", dr.ImportKeystores(
 		ctx,
 		keystores,
+		password,
+	))
+	// Import them correctly without the duplicate.
+	require.NoError(t, dr.ImportKeystores(
+		ctx,
+		keystores[1:],
 		password,
 	))
 

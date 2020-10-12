@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
@@ -111,11 +110,9 @@ func main() {
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
-		// Load any flags from file, if specified.
-		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
-			if err := altsrc.InitInputSourceWithContext(appFlags, altsrc.NewYamlSourceFromFlagFunc(cmd.ConfigFileFlag.Name))(ctx); err != nil {
-				return err
-			}
+		// Load flags from config file, if specified.
+		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
+			return err
 		}
 
 		format := ctx.String(cmd.LogFormat.Name)

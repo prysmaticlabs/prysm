@@ -36,7 +36,7 @@ import (
 //
 //    slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
-	ctx context.Context,
+	_ context.Context,
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {

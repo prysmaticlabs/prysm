@@ -112,7 +112,7 @@ func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
-	committeeIdxs := []uint64{}
+	var committeeIdxs []uint64
 	for i := uint64(0); i < attestationSubnetCount; i++ {
 		if bitV.BitAt(i) {
 			committeeIdxs = append(committeeIdxs, i)

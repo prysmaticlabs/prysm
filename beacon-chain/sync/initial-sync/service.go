@@ -23,7 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _ = shared.Service(&Service{})
+var _ shared.Service = (*Service)(nil)
 
 // blockchainService defines the interface for interaction with block chain service.
 type blockchainService interface {
@@ -54,13 +54,14 @@ type Service struct {
 	stateNotifier     statefeed.Notifier
 	counter           *ratecounter.RateCounter
 	lastProcessedSlot uint64
+	genesisChan       chan time.Time
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
+	s := &Service{
 		ctx:           ctx,
 		cancel:        cancel,
 		chain:         cfg.Chain,
@@ -68,13 +69,18 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		db:            cfg.DB,
 		stateNotifier: cfg.StateNotifier,
 		counter:       ratecounter.NewRateCounter(counterSeconds * time.Second),
+		genesisChan:   make(chan time.Time),
 	}
+	go s.waitForStateInitialization()
+	return s
 }
 
 // Start the initial sync service.
 func (s *Service) Start() {
-	genesis, err := s.waitForStateInitialization()
-	if err != nil {
+	// Wait for state initialized event.
+	genesis := <-s.genesisChan
+	if genesis.IsZero() {
+		log.Debug("Exiting Initial Sync Service")
 		return
 	}
 	if flags.Get().DisableSync {
@@ -169,15 +175,7 @@ func (s *Service) waitForMinimumPeers() {
 
 // waitForStateInitialization makes sure that beacon node is ready to be accessed: it is either
 // already properly configured or system waits up until state initialized event is triggered.
-func (s *Service) waitForStateInitialization() (time.Time, error) {
-	headState, err := s.chain.HeadState(s.ctx)
-	if err != nil {
-		return time.Time{}, err
-	}
-	if headState != nil {
-		return time.Unix(int64(headState.GenesisTime()), 0), nil
-	}
-
+func (s *Service) waitForStateInitialization() {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -193,14 +191,19 @@ func (s *Service) waitForStateInitialization() (time.Time, error) {
 					continue
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-				return data.StartTime, nil
+				s.genesisChan <- data.StartTime
+				return
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
-			return time.Time{}, errors.New("context closed")
+			// Send a zero time in the event we are exiting.
+			s.genesisChan <- time.Time{}
+			return
 		case err := <-stateSub.Err():
 			log.WithError(err).Error("Subscription to state notifier failed")
-			return time.Time{}, err
+			// Send a zero time in the event we are exiting.
+			s.genesisChan <- time.Time{}
+			return
 		}
 	}
 }

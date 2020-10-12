@@ -34,7 +34,7 @@ type Server struct {
 
 // SetLoggingLevel of a beacon node according to a request type,
 // either INFO, DEBUG, or TRACE.
-func (ds *Server) SetLoggingLevel(ctx context.Context, req *pbrpc.LoggingLevelRequest) (*ptypes.Empty, error) {
+func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequest) (*ptypes.Empty, error) {
 	var verbosity string
 	switch req.Level {
 	case pbrpc.LoggingLevelRequest_INFO:

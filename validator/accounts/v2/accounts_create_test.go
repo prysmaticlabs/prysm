@@ -72,7 +72,7 @@ type passwordReader struct {
 }
 
 // Instead of forwarding the read request to terminal.ReadPassword(), we simply provide a canned response.
-func (p *passwordReader) passwordReaderFunc(file *os.File) ([]byte, error) {
+func (p *passwordReader) passwordReaderFunc(_ *os.File) ([]byte, error) {
 	p.counter--
 	if p.counter <= 0 {
 		log.Fatalln("Too many password attempts using passwordReaderFunc()")

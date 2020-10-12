@@ -146,7 +146,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func metricCheckLessThan(pageContent string, topic string, value int) error {
+func metricCheckLessThan(pageContent, topic string, value int) error {
 	topicValue, err := getValueOfTopic(pageContent, topic)
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func metricCheckLessThan(pageContent string, topic string, value int) error {
 	return nil
 }
 
-func metricCheckComparison(pageContent string, topic1 string, topic2 string, comparison float64) error {
+func metricCheckComparison(pageContent, topic1, topic2 string, comparison float64) error {
 	topic2Value, err := getValueOfTopic(pageContent, topic2)
 	// If we can't find the first topic (error metrics), then assume the test passes.
 	if topic2Value != -1 {
@@ -191,7 +191,7 @@ func metricCheckComparison(pageContent string, topic1 string, topic2 string, com
 	return nil
 }
 
-func getValueOfTopic(pageContent string, topic string) (int, error) {
+func getValueOfTopic(pageContent, topic string) (int, error) {
 	regexExp, err := regexp.Compile(topic + " ")
 	if err != nil {
 		return -1, errors.Wrap(err, "could not create regex expression")

@@ -12,7 +12,7 @@ import (
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
-func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Debug("Failed to close stream")

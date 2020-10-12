@@ -3,13 +3,11 @@ package kv
 import (
 	"context"
 	"encoding/hex"
-	"flag"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/urfave/cli/v2"
 )
 
 type spansTestStruct struct {
@@ -54,9 +52,8 @@ func init() {
 }
 
 func TestValidatorSpans_NilDB(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
@@ -68,9 +65,8 @@ func TestValidatorSpans_NilDB(t *testing.T) {
 }
 
 func TestStore_SaveReadEpochSpans(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range spanNewTests {
@@ -100,9 +96,8 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 }
 
 func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	spansToSave := map[uint64]types.Span{
@@ -129,9 +124,8 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 }
 
 func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	spansToSave := map[uint64]types.Span{

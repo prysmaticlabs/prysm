@@ -120,7 +120,7 @@ func GeneralizedIndexLength(index int) int {
 //    Return the given bit of a generalized index.
 //    """
 //    return (index & (1 << position)) > 0
-func GeneralizedIndexBit(index uint64, pos uint64) bool {
+func GeneralizedIndexBit(index, pos uint64) bool {
 	return (index & (1 << pos)) > 0
 }
 

@@ -71,8 +71,7 @@ func GetSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, second
 func (s *SlotTicker) start(
 	genesisTime time.Time,
 	secondsPerSlot uint64,
-	since func(time.Time) time.Duration,
-	until func(time.Time) time.Duration,
+	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
 
 	d := time.Duration(secondsPerSlot) * time.Second
