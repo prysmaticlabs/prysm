@@ -176,8 +176,8 @@ func BeaconFuzzBlock(b []byte) {
 	pid := peer.ID("fuzz")
 	msg := &pubsub.Message{
 		Message: &pubsub_pb.Message{
-			Data:     buf.Bytes(),
-			TopicIDs: []string{topic},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
