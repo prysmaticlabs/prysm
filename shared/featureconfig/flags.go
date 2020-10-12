@@ -164,6 +164,10 @@ var (
 		Name:  "use-check-point-cache",
 		Usage: "Enables check point info caching",
 	}
+	enablePruningDepositProofs = &cli.BoolFlag{
+		Name:  "enable-pruning-deposit-proofs",
+		Usage: "Enables pruning deposit proofs when they are no longer needed. This significantly reduces deposit size.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -172,6 +176,7 @@ var devModeFlags = []cli.Flag{
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
+	enablePruningDepositProofs,
 }
 
 // Deprecated flags list.
@@ -691,6 +696,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	checkPtInfoCache,
+	enablePruningDepositProofs,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -700,4 +706,5 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
+	"--enable-pruning-deposit-proofs",
 }
