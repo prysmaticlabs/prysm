@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestNewAttestationHistoryArray(t *testing.T) {
@@ -170,6 +171,22 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	historyForPubKeys, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 	require.DeepEqual(t, setAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
+}
+func TestStore_ImportOldAttestationFormatBadSourceFormat(t *testing.T) {
+	ctx := context.Background()
+	pubKeys := [][48]byte{{3}, {4}}
+	db := setupDB(t, pubKeys)
+	err := db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicAttestationsBucket)
+		for _, pubKey := range pubKeys {
+			if err := bucket.Put(pubKey[:], []byte{1}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+	require.ErrorContains(t, "could not retrieve data for public keys", db.ImportOldAttestationFormat(ctx))
 }
 
 func TestStore_ImportOldAttestationFormat(t *testing.T) {
