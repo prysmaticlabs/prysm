@@ -91,7 +91,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
+func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 

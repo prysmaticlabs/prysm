@@ -59,7 +59,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 func (s *Store) insert(ctx context.Context,
 	slot uint64,
 	root, parent, graffiti [32]byte,
-	justifiedEpoch uint64, finalizedEpoch uint64) error {
+	justifiedEpoch, finalizedEpoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
