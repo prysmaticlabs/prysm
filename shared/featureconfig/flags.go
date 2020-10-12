@@ -695,9 +695,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
-	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-eth1-data-majority-vote",
