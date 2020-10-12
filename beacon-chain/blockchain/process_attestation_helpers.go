@@ -162,7 +162,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 }
 
 // verifyLMDFFGConsistent verifies LMD GHOST and FFG votes are consistent with each other.
-func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot []byte, lmdRoot []byte) error {
+func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot, lmdRoot []byte) error {
 	ffgSlot, err := helpers.StartSlot(ffgEpoch)
 	if err != nil {
 		return err

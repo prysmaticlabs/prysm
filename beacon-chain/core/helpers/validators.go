@@ -29,7 +29,7 @@ func IsActiveValidatorUsingTrie(validator *stateTrie.ReadOnlyValidator, epoch ui
 	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
 }
 
-func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch uint64) bool {
+func checkValidatorActiveStatus(activationEpoch, exitEpoch, epoch uint64) bool {
 	return activationEpoch <= epoch && epoch < exitEpoch
 }
 
@@ -42,7 +42,7 @@ func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch 
 //  Check if ``validator`` is slashable.
 //  """
 //  return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
-func IsSlashableValidator(activationEpoch uint64, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func IsSlashableValidator(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
 	return checkValidatorSlashable(activationEpoch, withdrawableEpoch, slashed, epoch)
 }
 
@@ -51,7 +51,7 @@ func IsSlashableValidatorUsingTrie(val *stateTrie.ReadOnlyValidator, epoch uint6
 	return checkValidatorSlashable(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), epoch)
 }
 
-func checkValidatorSlashable(activationEpoch uint64, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func checkValidatorSlashable(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
 	active := activationEpoch <= epoch
 	beforeWithdrawable := epoch < withdrawableEpoch
 	return beforeWithdrawable && active && !slashed
@@ -313,7 +313,7 @@ func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidato
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
-func isEligibileForActivationQueue(activationEligibilityEpoch uint64, effectiveBalance uint64) bool {
+func isEligibileForActivationQueue(activationEligibilityEpoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
@@ -346,7 +346,7 @@ func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *s
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*
-func isEligibleForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
+func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch uint64) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }

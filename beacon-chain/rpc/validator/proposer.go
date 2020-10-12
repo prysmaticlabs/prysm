@@ -305,8 +305,7 @@ func (vs *Server) slotStartTime(slot uint64) uint64 {
 
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	firstValidBlockNumber *big.Int,
-	lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
+	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
 
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
 

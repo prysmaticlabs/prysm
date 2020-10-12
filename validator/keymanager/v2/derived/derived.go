@@ -516,7 +516,7 @@ func initializeWalletSeedFile(password string, skipMnemonicConfirm bool) (*SeedC
 
 // Uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
-func seedFileFromMnemonic(mnemonic string, password string) (*SeedConfig, error) {
+func seedFileFromMnemonic(mnemonic, password string) (*SeedConfig, error) {
 	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
 		return nil, bip39.ErrInvalidMnemonic
 	}

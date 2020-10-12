@@ -182,7 +182,7 @@ func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
 }
 
 // VerifyMerkleBranch verifies a Merkle branch against a root of a trie.
-func VerifyMerkleBranch(root []byte, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
+func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
 	if len(proof) != int(depth)+1 {
 		return false
 	}
