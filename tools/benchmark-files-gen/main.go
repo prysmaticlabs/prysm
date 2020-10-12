@@ -77,10 +77,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes, 0644); err != nil {
-		return err
-	}
-	return nil
+	return ioutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes, 0644)
 }
 
 func generateMarshalledFullStateAndBlock() error {
@@ -112,7 +109,7 @@ func generateMarshalledFullStateAndBlock() error {
 		NumAttestations: benchutil.AttestationsPerEpoch / slotsPerEpoch,
 	}
 
-	atts := []*ethpb.Attestation{}
+	var atts []*ethpb.Attestation
 	for i := slotOffset + 1; i < slotsPerEpoch+slotOffset; i++ {
 		attsForSlot, err := testutil.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
 		if err != nil {
@@ -167,10 +164,8 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes, 0644); err != nil {
-		return err
-	}
-	return nil
+
+	return ioutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes, 0644)
 }
 
 func generate2FullEpochState() error {
@@ -204,10 +199,8 @@ func generate2FullEpochState() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes, 0644); err != nil {
-		return err
-	}
-	return nil
+
+	return ioutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes, 0644)
 }
 
 func genesisBeaconState() (*stateTrie.BeaconState, error) {

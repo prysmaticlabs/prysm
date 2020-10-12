@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -11,13 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/urfave/cli/v2"
 )
 
 func TestNilDBHistoryBlkHdr(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	slot := uint64(1)
@@ -31,9 +27,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 }
 
 func TestSaveHistoryBlkHdr(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -65,9 +59,7 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 }
 
 func TestDeleteHistoryBlkHdr(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -103,9 +95,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 }
 
 func TestHasHistoryBlkHdr(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -140,9 +130,7 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 }
 
 func TestPruneHistoryBlkHdr(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {

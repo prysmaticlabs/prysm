@@ -155,7 +155,7 @@ func (km *Remote) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign without protection is not supported by remote keymanagers.
-func (km *Remote) Sign(ctx context.Context, pubKey [48]byte, root [32]byte) (bls.Signature, error) {
+func (km *Remote) Sign(_ context.Context, _ [48]byte, _ [32]byte) (bls.Signature, error) {
 	return nil, errors.New("remote keymanager does not support unprotected signing")
 }
 
