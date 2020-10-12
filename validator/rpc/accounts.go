@@ -154,7 +154,7 @@ func (s *Server) BackupAccounts(
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derived keymanager: %v", err)
 		}
 	}
-	if keystoresToBackup == nil || len(keystoresToBackup) == 0 {
+	if len(keystoresToBackup) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores to backup")
 	}
 
