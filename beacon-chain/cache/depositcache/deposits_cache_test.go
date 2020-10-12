@@ -609,7 +609,7 @@ func TestPruneProofs_Ok(t *testing.T) {
 		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
 	}
 
-	_ = dc.PruneProofs(context.Background(), 1)
+	require.NoError(t, dc.PruneProofs(context.Background(), 1))
 
 	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[0].Deposit.Proof)
 	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[1].Deposit.Proof)
@@ -652,7 +652,7 @@ func TestPruneProofs_SomeAlreadyPruned(t *testing.T) {
 		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
 	}
 
-	_ = dc.PruneProofs(context.Background(), 2)
+	require.NoError(t, dc.PruneProofs(context.Background(), 2))
 
 	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[2].Deposit.Proof)
 }
@@ -692,7 +692,7 @@ func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
 		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
 	}
 
-	_ = dc.PruneProofs(context.Background(), 99)
+	require.NoError(t, dc.PruneProofs(context.Background(), 99))
 
 	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[0].Deposit.Proof)
 	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[1].Deposit.Proof)
