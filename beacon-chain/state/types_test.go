@@ -34,8 +34,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 
 	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	beaconState, err := stateTrie.InitializeFromProto(genesis)
-	require.NoError(t, err)
+	beaconState := customState.Copy()
 	r2, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, r1, r2, "Mismatched roots")
@@ -47,7 +46,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	r1, err = customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis.Balances = balances
-	beaconState, err = stateTrie.InitializeFromProto(genesis)
+	beaconState = customState.Copy()
 	require.NoError(t, err)
 	r2, err = beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
