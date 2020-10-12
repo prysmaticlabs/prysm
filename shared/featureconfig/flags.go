@@ -720,6 +720,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	checkPtInfoCache,
+	enablePruningDepositProofs,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -731,5 +732,5 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
-	//"--enable-pruning-deposit-proofs",
+	"--enable-pruning-deposit-proofs",
 }
