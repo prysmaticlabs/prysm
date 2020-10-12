@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"reflect"
 	"sort"
 	"testing"
@@ -10,14 +9,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
-	"github.com/urfave/cli/v2"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	ps := &ethpb.ProposerSlashing{
@@ -51,9 +48,8 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 }
 
 func TestStore_SaveProposerSlashing(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -153,9 +149,8 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 }
 
 func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -254,9 +249,8 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 }
 
 func TestStore_SaveProposerSlashings(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	ps := []*ethpb.ProposerSlashing{

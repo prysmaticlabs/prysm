@@ -36,7 +36,7 @@ func (mockListener) Lookup(enode.ID) []*enode.Node {
 	panic("implement me")
 }
 
-func (mockListener) ReadRandomNodes([]*enode.Node) int {
+func (mockListener) ReadRandomNodes(_ []*enode.Node) int {
 	panic("implement me")
 }
 

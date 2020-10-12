@@ -17,12 +17,12 @@ const backupsDirectoryName = "backups"
 
 // Backup the database to the datadir backup directory.
 // Example for backup at slot 345: $DATADIR/backups/prysm_beacondb_at_slot_0000345.backup
-func (kv *Store) Backup(ctx context.Context) error {
+func (s *Store) Backup(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Backup")
 	defer span.End()
 
-	backupsDir := path.Join(kv.databasePath, backupsDirectoryName)
-	head, err := kv.HeadBlock(ctx)
+	backupsDir := path.Join(s.databasePath, backupsDirectoryName)
+	head, err := s.HeadBlock(ctx)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (kv *Store) Backup(ctx context.Context) error {
 		}
 	}()
 
-	return kv.db.View(func(tx *bolt.Tx) error {
+	return s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			logrus.Debugf("Copying bucket %s\n", name)
 			return copyDB.Update(func(tx2 *bolt.Tx) error {
