@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "config.go",
+        "deprecated_flags.go",
         "filter_flags.go",
         "flags.go",
     ],
@@ -23,7 +24,7 @@ go_test(
     size = "small",
     srcs = [
         "config_test.go",
-        "flags_test.go",
+        "deprecated_flags_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
