@@ -302,7 +302,7 @@ func (w *Wallet) InitializeKeymanager(
 			if err != nil {
 				return nil, err
 			}
-			if keys == nil || len(keys) == 0 {
+			if len(keys) == 0 {
 				return nil, errors.New("please recreate your wallet with wallet-v2 create")
 			}
 			if err := w.SaveHashedPassword(ctx); err != nil {
