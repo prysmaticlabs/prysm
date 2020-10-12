@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -27,14 +26,6 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 	dc.InsertPendingDeposit(context.Background(), nil /*deposit*/, 0 /*blockNum*/, 0, [32]byte{})
 
 	assert.Equal(t, 0, len(dc.pendingDeposits))
-}
-
-func makeDepositProof() [][]byte {
-	proof := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
-	for i := range proof {
-		proof[i] = make([]byte, 32)
-	}
-	return proof
 }
 
 func TestRemovePendingDeposit_OK(t *testing.T) {

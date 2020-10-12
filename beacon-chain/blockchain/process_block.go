@@ -125,7 +125,17 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err != nil {
 			return errors.Wrap(err, "could not fetch finalized state")
 		}
-		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount-1))
+		// We update the cache up to the last deposit index in the finalized block's state.
+		// We can be confident that these deposits will be included in some block
+		// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
+		eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+		s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+		if featureconfig.Get().EnablePruningDepositProofs {
+			// Deposit proofs are only used during state transition and can be safely removed to save space.
+			if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+				return errors.Wrap(err, "could not prune deposit proofs")
+			}
+		}
 	}
 
 	defer reportAttestationInclusion(b)
