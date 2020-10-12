@@ -160,10 +160,7 @@ func WritePprofFiles(testDir string, index int) error {
 	}
 	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.BeaconNodeRPCPort+50+index)
 	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
-	if err := writeURLRespAtPath(url, filePath); err != nil {
-		return err
-	}
-	return nil
+	return writeURLRespAtPath(url, filePath)
 }
 
 func writeURLRespAtPath(url string, filePath string) error {

@@ -318,7 +318,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.Unlock()
-	changedVals := []uint64{}
+	var changedVals []uint64
 	for i, val := range v {
 		changed, err := f(i, val)
 		if err != nil {

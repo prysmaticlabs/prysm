@@ -371,14 +371,10 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return err
 	}
-	if err := proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
+	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
 		BlockRoot:       bytesutil.ToBytes32(r),
 		ProposerIndices: proposerIndices,
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 // ClearCache clears the committee cache

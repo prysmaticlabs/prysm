@@ -20,7 +20,7 @@ const ipLimit = 4
 const ipBurst = 8
 
 // InterceptPeerDial tests whether we're permitted to Dial the specified peer.
-func (s *Service) InterceptPeerDial(p peer.ID) (allow bool) {
+func (s *Service) InterceptPeerDial(_ peer.ID) (allow bool) {
 	return true
 }
 
@@ -51,12 +51,12 @@ func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 
 // InterceptSecured tests whether a given connection, now authenticated,
 // is allowed.
-func (s *Service) InterceptSecured(_ network.Direction, _ peer.ID, n network.ConnMultiaddrs) (allow bool) {
+func (s *Service) InterceptSecured(_ network.Direction, _ peer.ID, _ network.ConnMultiaddrs) (allow bool) {
 	return true
 }
 
 // InterceptUpgraded tests whether a fully capable connection is allowed.
-func (s *Service) InterceptUpgraded(n network.Conn) (allow bool, reason control.DisconnectReason) {
+func (s *Service) InterceptUpgraded(_ network.Conn) (allow bool, reason control.DisconnectReason) {
 	return true, 0
 }
 

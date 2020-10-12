@@ -64,7 +64,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		return nil, err
 	}
 	// Process initial deposits.
-	leaves := [][]byte{}
+	var leaves [][]byte
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
 			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)

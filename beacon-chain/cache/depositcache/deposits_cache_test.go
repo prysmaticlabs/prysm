@@ -19,7 +19,7 @@ import (
 
 const nilDepositErr = "Ignoring nil deposit insertion"
 
-var _ = DepositFetcher(&DepositCache{})
+var _ DepositFetcher = (*DepositCache)(nil)
 
 func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()

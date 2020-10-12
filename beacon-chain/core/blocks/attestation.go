@@ -314,7 +314,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return err
 	}
 	indices := indexedAtt.AttestingIndices
-	pubkeys := []bls.PublicKey{}
+	var pubkeys []bls.PublicKey
 	for i := 0; i < len(indices); i++ {
 		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
@@ -365,7 +365,7 @@ func VerifyAttSigUseCheckPt(ctx context.Context, c *pb.CheckPtInfo, att *ethpb.A
 		return err
 	}
 	indices := indexedAtt.AttestingIndices
-	pubkeys := []bls.PublicKey{}
+	var pubkeys []bls.PublicKey
 	for i := 0; i < len(indices); i++ {
 		pubkeyAtIdx := c.PubKeys[indices[i]]
 		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx)

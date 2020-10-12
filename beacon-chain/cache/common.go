@@ -24,6 +24,6 @@ func trim(queue *cache.FIFO, maxSize uint64) {
 }
 
 // popProcessNoopFunc is a no-op function that never returns an error.
-func popProcessNoopFunc(obj interface{}) error {
+func popProcessNoopFunc(_ interface{}) error {
 	return nil
 }

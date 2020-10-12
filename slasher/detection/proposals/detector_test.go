@@ -13,7 +13,7 @@ import (
 	testDetect "github.com/prysmaticlabs/prysm/slasher/detection/testing"
 )
 
-var _ = iface.ProposalsDetector(&ProposeDetector{})
+var _ iface.ProposalsDetector = (*ProposeDetector)(nil)
 
 func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 	type testStruct struct {
