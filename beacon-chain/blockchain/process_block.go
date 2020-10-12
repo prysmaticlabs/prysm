@@ -126,12 +126,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err != nil {
 			return errors.Wrap(err, "could not fetch finalized state")
 		}
-		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount-1))
-		c := s.depositCache.AllDepositContainers(ctx)
-		for _, d := range c {
-			if uint64(d.Index) <= finalizedState.Eth1Data().DepositCount-1 && d.Deposit.Proof != nil {
-				d.Deposit.Proof = nil
-			}
+		eth1Index := int64(finalizedState.Eth1Data().DepositCount - 1)
+		s.depositCache.InsertFinalizedDeposits(ctx, eth1Index)
+		if featureconfig.Get().EnablePruningDepositProofs {
+			// Deposit proofs are only used during state transition and can be safely removed to save space.
+			s.depositCache.PruneProofs(ctx, eth1Index)
 		}
 	}
 
