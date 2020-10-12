@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -37,9 +38,15 @@ func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
 	if parts[2] != sf.currentForkDigest && parts[1] != sf.previousForkDigest {
 		return false
 	}
-	// TODO: Match the last part of the topic.
 
-	return true
+	// Check the incoming topic matches any topic mapping.
+	for gt, _ := range GossipTopicMappings {
+		if _, err := scanfcheck(topic, gt); err != nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (sf *subscriptionFilter) FilterIncomingSubscriptions(id peer.ID, subs []*pubsubpb.RPC_SubOpts) ([]*pubsubpb.RPC_SubOpts, error) {
@@ -75,4 +82,18 @@ func (sf *subscriptionFilter) monitorState() {
 			_ = evt
 		}
 	}
+}
+
+// scanfcheck uses fmt.Sscanf to check that a given string matches expected format. This method
+// returns the number of formatting substitutions matched and error if the string does not match
+// the expected format. Note: this method only accepts integer compatible formatting substitutions
+// such as %d or %x.
+func scanfcheck(input, format string) (int, error) {
+	var t int
+	var cnt = strings.Count(format, "%")
+	var args = []interface{}{}
+	for i := 0; i < cnt; i++ {
+		args = append(args, &t)
+	}
+	return fmt.Sscanf(input, format, args...)
 }
