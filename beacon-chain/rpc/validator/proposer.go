@@ -348,7 +348,7 @@ func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVo
 			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
 		}
 	}
-	if voteCount == nil || len(voteCount) == 0 {
+	if len(voteCount) == 0 {
 		return eth1DataAggregatedVote{}
 	}
 	currentVote := voteCount[0]
