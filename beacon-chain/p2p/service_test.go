@@ -36,7 +36,7 @@ func (mockListener) Lookup(enode.ID) []*enode.Node {
 	panic("implement me")
 }
 
-func (mockListener) ReadRandomNodes([]*enode.Node) int {
+func (mockListener) ReadRandomNodes(_ []*enode.Node) int {
 	panic("implement me")
 }
 
@@ -61,8 +61,8 @@ func (mockListener) RandomNodes() enode.Iterator {
 }
 
 func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
-	ipAddr, pkey := createAddrAndPrivKey(t)
-	ipAddr = net.ParseIP("127.0.0.1")
+	_, pkey := createAddrAndPrivKey(t)
+	ipAddr := net.ParseIP("127.0.0.1")
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
 	require.NoError(t, err, "Failed to p2p listen")
 	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen)}...)

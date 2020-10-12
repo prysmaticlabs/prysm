@@ -126,7 +126,7 @@ func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e 
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
-func (s *Service) verifyAttTargetEpoch(ctx context.Context, genesisTime uint64, nowTime uint64, c *ethpb.Checkpoint) error {
+func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
 	currentSlot := (nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 	var prevEpoch uint64
@@ -162,7 +162,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 }
 
 // verifyLMDFFGConsistent verifies LMD GHOST and FFG votes are consistent with each other.
-func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot []byte, lmdRoot []byte) error {
+func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot, lmdRoot []byte) error {
 	ffgSlot, err := helpers.StartSlot(ffgEpoch)
 	if err != nil {
 		return err

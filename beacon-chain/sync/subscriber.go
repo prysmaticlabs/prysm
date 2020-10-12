@@ -29,7 +29,7 @@ const pubsubMessageTimeout = 30 * time.Second
 type subHandler func(context.Context, proto.Message) error
 
 // noopValidator is a no-op that only decodes the message, but does not check its contents.
-func (s *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Failed to decode message")
@@ -91,6 +91,7 @@ func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle s
 	return s.subscribeWithBase(base, s.addDigestToTopic(topic), validator, handle)
 }
 
+// TODO(7437): Refactor this method to remove unused arg "base".
 func (s *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
 	topic += s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
@@ -166,8 +167,9 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 // Wrap the pubsub validator with a metric monitoring function. This function increments the
 // appropriate counter if the particular message fails to validate.
 func wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
-	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) (res pubsub.ValidationResult) {
 		defer messagehandler.HandlePanic(ctx, msg)
+		res = pubsub.ValidationIgnore // Default: ignore any message that panics.
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()

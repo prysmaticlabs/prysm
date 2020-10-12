@@ -57,12 +57,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create file at %s: %v", os.Args[2], err)
 	}
-	defer func() {
+	cleanup := func() {
 		if err := outFile.Close(); err != nil {
 			panic(err)
 		}
-	}()
+	}
+	defer cleanup()
 	if err := keygen.SaveUnencryptedKeysToFile(outFile, out); err != nil {
+		// log.Fatalf will prevent defer from being called
+		cleanup()
 		log.Fatalf("Failed to save %v", err)
 	}
 	log.Printf("Wrote %s\n", os.Args[2])

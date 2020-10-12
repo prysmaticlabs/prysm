@@ -161,6 +161,10 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
+load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
+
+go_embed_data_dependencies()
+
 load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
 
 gometalinter_dependencies()
@@ -334,6 +338,22 @@ go_binary(
     """,
     strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
+)
+
+http_archive(
+    name = "prysm_web_ui",
+    build_file_content = """
+filegroup(
+    name = "site",
+    srcs = glob(["**/*"]),
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "507d574be56a63d5a30a28b4426b9ece89cf70bbb29739e982e0a8fdf1285e3a",
+    urls = [
+        "https://prysmaticlabs.com/uploads/prysm-web-ui.0.0.1-alpha.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/0.0.1-alpha/prysm-web-ui.tar.gz",
+    ],
 )
 
 load("//:deps.bzl", "prysm_deps")

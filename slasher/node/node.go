@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -64,6 +65,9 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		return nil, err
 	}
 
+	// Warn if user's platform is not supported
+	prereq.WarnIfNotSupported(cliCtx.Context)
+
 	if cliCtx.Bool(flags.EnableHistoricalDetectionFlag.Name) {
 		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.
 		cmdConfig := cmd.Get()
@@ -85,8 +89,11 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		services:              registry,
 		stop:                  make(chan struct{}),
 	}
-	if err := slasher.registerPrometheusService(); err != nil {
-		return nil, err
+
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := slasher.registerPrometheusService(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := slasher.startDB(); err != nil {
@@ -187,6 +194,9 @@ func (s *SlasherNode) startDB() error {
 	}
 	if clearDBConfirmed || forceClearDB {
 		log.Warning("Removing database")
+		if err := d.Close(); err != nil {
+			return errors.Wrap(err, "could not close db prior to clearing")
+		}
 		if err := d.ClearDB(); err != nil {
 			return err
 		}

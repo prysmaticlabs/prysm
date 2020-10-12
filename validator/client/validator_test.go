@@ -28,7 +28,7 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-var _ = Validator(&validator{})
+var _ Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
@@ -680,8 +680,7 @@ func TestSaveProtections_OK(t *testing.T) {
 	history1 := cleanHistories[pubKey1]
 	history1 = markAttestationForTargetEpoch(history1, 0, 1)
 
-	history2 := cleanHistories[pubKey1]
-	history2 = markAttestationForTargetEpoch(history1, 2, 3)
+	history2 := markAttestationForTargetEpoch(history1, 2, 3)
 
 	cleanHistories[pubKey1] = history1
 	cleanHistories[pubKey2] = history2

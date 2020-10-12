@@ -44,6 +44,12 @@ var (
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
+	// EnableRPCFlag enables controlling the validator client via gRPC (without web UI).
+	EnableRPCFlag = &cli.BoolFlag{
+		Name:  "rpc",
+		Usage: "Enables the RPC server for the validator client (without Web UI)",
+		Value: false,
+	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{
 		Name:  "rpc-host",
@@ -112,7 +118,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200",
+		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200",
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
@@ -197,7 +203,7 @@ var (
 		Value: false,
 	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
-	NumAccountsFlag = &cli.Int64Flag{
+	NumAccountsFlag = &cli.IntFlag{
 		Name:  "num-accounts",
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,
@@ -274,58 +280,10 @@ var (
 		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
-	// Eth1KeystoreUTCPathFlag defines the path to an eth1 utc keystore containing eth1 private keys.
-	Eth1KeystoreUTCPathFlag = &cli.StringFlag{
-		Name:  "eth1-keystore-utc-path",
-		Usage: "Path to an eth1 utc keystore containing eth1 private keys",
-		Value: "",
-	}
-	// Eth1KeystorePasswordFileFlag to unlock an eth1 keystores.
-	Eth1KeystorePasswordFileFlag = &cli.StringFlag{
-		Name:  "eth1-keystore-password-file",
-		Value: "",
-		Usage: "Password file for unlock account",
-	}
-	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
-	HTTPWeb3ProviderFlag = &cli.StringFlag{
-		Name:  "http-web3provider",
-		Usage: "An eth1 web3 provider string http endpoint",
-		Value: "https://goerli.prylabs.net",
-	}
-	// Eth1PrivateKeyFileFlag containing a hex string for sending deposit transactions from eth1.
-	Eth1PrivateKeyFileFlag = &cli.StringFlag{
-		Name:  "eth1-private-key-file",
-		Usage: "File containing a private key for sending deposit transactions from eth1",
-		Value: "",
-	}
-	// DepositDelaySecondsFlag to delay sending deposit transactions by a fixed interval.
-	DepositDelaySecondsFlag = &cli.Int64Flag{
-		Name:  "deposit-delay-seconds",
-		Usage: "The time delay between sending the deposits to the contract (in seconds)",
-		Value: 5,
-	}
-	// DepositContractAddressFlag for the validator deposit contract on eth1.
-	DepositContractAddressFlag = &cli.StringFlag{
-		Name:  "deposit-contract",
-		Usage: "Address of the deposit contract",
-		Value: "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", // Medalla deposit contract address.
-	}
-	// DepositPublicKeysFlag for validating public keys a user wishes to deposit for.
-	DepositPublicKeysFlag = &cli.StringFlag{
-		Name:  "deposit-public-keys",
-		Usage: "Comma-separated list of validating public key hex strings to specify which validator accounts to deposit",
-		Value: "",
-	}
 	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.
 	SkipDepositConfirmationFlag = &cli.BoolFlag{
 		Name:  "skip-deposit-confirmation",
 		Usage: "Skips the y/n confirmation prompt for sending a deposit to the deposit contract",
-		Value: false,
-	}
-	// DepositAllAccountsFlag is an easy way for a user to send deposit transactions for all accounts in their wallet.
-	DepositAllAccountsFlag = &cli.BoolFlag{
-		Name:  "deposit-all-accounts",
-		Usage: "Sends a 32 ETH deposit for each of a user's validator accounts in their wallet",
 		Value: false,
 	}
 	// EnableWebFlag enables controlling the validator client via the Prysm web ui. This is a work in progress.
@@ -333,6 +291,18 @@ var (
 		Name:  "web",
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
+	}
+	// WebHostFlag specifies the host name to bind the Prysm web UI server.
+	WebHostFlag = &cli.StringFlag{
+		Name:  "web-host",
+		Usage: "The host address which to serve the Prysm web UI",
+		Value: "127.0.0.1",
+	}
+	// WebPortFlag specifies the port number to bind the Prysm web UI server.
+	WebPortFlag = &cli.Uint64Flag{
+		Name:  "web-port",
+		Usage: "The host port which to serve the Prysm web UI",
+		Value: 4242,
 	}
 )
 

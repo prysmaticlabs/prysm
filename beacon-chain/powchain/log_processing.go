@@ -254,6 +254,9 @@ func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 func (s *Service) processPastLogs(ctx context.Context) error {
 	currentBlockNum := s.latestEth1Data.LastRequestedBlock
 	deploymentBlock := int64(params.BeaconNetworkConfig().ContractDeploymentBlock)
+	// Start from the deployment block if our last requested block
+	// is behind it. This is as the deposit logs can only start from the
+	// block of the deployment of the deposit contract.
 	if uint64(deploymentBlock) > currentBlockNum {
 		currentBlockNum = uint64(deploymentBlock)
 	}
@@ -290,6 +293,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		start := currentBlockNum
 		end := currentBlockNum + eth1HeaderReqLimit
+		// Appropriately bound the request, as we do not
+		// want request blocks beyond the current follow distance.
 		if end > latestFollowHeight {
 			end = latestFollowHeight
 		}
@@ -302,7 +307,10 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
 		// only change the end block if the remaining logs are below the required log limit.
-		if remainingLogs < depositlogRequestLimit && end >= latestFollowHeight {
+		// reset our query and end block in this case.
+		withinLimit := remainingLogs < depositlogRequestLimit
+		aboveFollowHeight := end >= latestFollowHeight
+		if withinLimit && aboveFollowHeight {
 			query.ToBlock = big.NewInt(int64(latestFollowHeight))
 			end = latestFollowHeight
 		}
@@ -310,6 +318,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		// Only request headers before chainstart to correctly determine
+		// genesis.
 		if !s.chainStartData.Chainstarted {
 			if err := requestHeaders(start, end); err != nil {
 				return err
@@ -403,7 +413,7 @@ func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, want
 	return nil
 }
 
-func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBlk uint64) error {
+func (s *Service) processBlksInRange(ctx context.Context, startBlk, endBlk uint64) error {
 	for i := startBlk; i <= endBlk; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
@@ -442,8 +452,7 @@ func (s *Service) checkHeaderForChainstart(header *gethTypes.Header) {
 	s.checkForChainstart(header.Hash(), header.Number, header.Time)
 }
 
-func (s *Service) checkHeaderRange(start uint64, end uint64,
-	headersMap map[uint64]*gethTypes.Header,
+func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*gethTypes.Header,
 	requestHeaders func(uint64, uint64) error) error {
 	for i := start; i <= end; i++ {
 		if !s.chainStartData.Chainstarted {

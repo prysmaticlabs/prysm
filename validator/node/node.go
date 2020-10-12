@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -34,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -70,6 +72,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		return nil, err
 	}
 	logrus.SetLevel(level)
+
+	// Warn if user's platform is not supported
+	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
@@ -221,8 +226,10 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {
@@ -232,11 +239,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if err := s.registerClientService(keyManagerV1, keyManagerV2); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx); err != nil {
-		return err
-	}
-	if err := s.registerRPCGatewayService(cliCtx); err != nil {
-		return err
+	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
+		if err := s.registerRPCService(cliCtx); err != nil {
+			return err
+		}
+		if err := s.registerRPCGatewayService(cliCtx); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -286,8 +295,10 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := s.registerPrometheusService(); err != nil {
-		return err
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		if err := s.registerPrometheusService(); err != nil {
+			return err
+		}
 	}
 	if featureconfig.Get().SlasherProtection {
 		if err := s.registerSlasherClientService(); err != nil {
@@ -303,7 +314,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
-	return nil
+	return s.registerWebService(cliCtx)
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
@@ -389,6 +400,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
 		ValDB:                 s.db,
 		Host:                  rpcHost,
@@ -398,6 +410,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		SyncChecker:           vs,
 		GenesisFetcher:        vs,
 		NodeGatewayEndpoint:   nodeGatewayEndpoint,
+		WalletDir:             walletDir,
 	})
 	return s.services.RegisterService(server)
 }
@@ -417,6 +430,14 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		allowedOrigins,
 	)
 	return s.services.RegisterService(gatewaySrv)
+}
+
+func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
+	host := cliCtx.String(flags.WebHostFlag.Name)
+	port := cliCtx.Uint64(flags.WebPortFlag.Name)
+	webAddress := fmt.Sprintf("%s:%d", host, port)
+	srv := web.NewServer(webAddress)
+	return s.services.RegisterService(srv)
 }
 
 // Selects the key manager depending on the options provided by the user.
@@ -505,6 +526,9 @@ func clearDB(dataDir string, force bool) error {
 		valDB, err := kv.NewKVStore(dataDir, nil)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		}
+		if err := valDB.Close(); err != nil {
+			return errors.Wrapf(err, "could not close DB in dir %s", dataDir)
 		}
 
 		log.Warning("Removing database")

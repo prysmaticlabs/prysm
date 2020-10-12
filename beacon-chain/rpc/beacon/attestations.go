@@ -114,7 +114,7 @@ func (bs *Server) ListAttestations(
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
-	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+	var blocks []*ethpb.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
@@ -378,7 +378,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *Server) AttestationPool(
-	ctx context.Context, req *ethpb.AttestationPoolRequest,
+	_ context.Context, req *ethpb.AttestationPoolRequest,
 ) (*ethpb.AttestationPoolResponse, error) {
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(

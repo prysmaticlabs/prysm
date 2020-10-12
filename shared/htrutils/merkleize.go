@@ -68,7 +68,7 @@ func GetDepth(v uint64) (out uint8) {
 }
 
 // Merkleize with log(N) space allocation
-func Merkleize(hasher Hasher, count uint64, limit uint64, leaf func(i uint64) []byte) (out [32]byte) {
+func Merkleize(hasher Hasher, count, limit uint64, leaf func(i uint64) []byte) (out [32]byte) {
 	if count > limit {
 		panic("merkleizing list that is too large, over limit")
 	}
@@ -134,7 +134,7 @@ func Merkleize(hasher Hasher, count uint64, limit uint64, leaf func(i uint64) []
 
 // ConstructProof builds a merkle-branch of the given depth, at the given index (at that depth),
 // for a list of leafs of a balanced binary tree.
-func ConstructProof(hasher Hasher, count uint64, limit uint64, leaf func(i uint64) []byte, index uint64) (branch [][32]byte) {
+func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []byte, index uint64) (branch [][32]byte) {
 	if count > limit {
 		panic("merkleizing list that is too large, over limit")
 	}

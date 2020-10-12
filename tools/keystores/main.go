@@ -102,6 +102,9 @@ func decrypt(cliCtx *cli.Context) error {
 			// Any password is valid.
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 	isDir, err := fileutil.HasDir(fullPath)
 	if err != nil {
@@ -139,6 +142,9 @@ func encrypt(cliCtx *cli.Context) error {
 			// Any password is valid.
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 	privateKeyString := cliCtx.String(privateKeyFlag.Name)
 	if privateKeyString == "" {
@@ -218,7 +224,7 @@ func encrypt(cliCtx *cli.Context) error {
 
 // Reads the keystore file at the provided path and attempts
 // to decrypt it with the specified passwords.
-func readAndDecryptKeystore(fullPath string, password string) error {
+func readAndDecryptKeystore(fullPath, password string) error {
 	file, err := ioutil.ReadFile(fullPath)
 	if err != nil {
 		return errors.Wrapf(err, "could not read file at path: %s", fullPath)

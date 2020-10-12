@@ -295,11 +295,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				if err := mc.ReceiveBlock(ctx, block, root); err != nil {
-					return err
-				}
-
-				return nil
+				return mc.ReceiveBlock(ctx, block, root)
 			}
 
 			var blocks []*eth.SignedBeaconBlock

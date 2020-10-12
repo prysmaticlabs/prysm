@@ -15,10 +15,20 @@ var (
 		Name:  "onyx",
 		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
 	}
-	// SpadinaTestnet flag for the multiclient eth2 devnet.
+	// MedallaTestnet flag for the multiclient eth2 testnet.
+	MedallaTestnet = &cli.BoolFlag{
+		Name:  "medalla",
+		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
+	}
+	// SpadinaTestnet flag for the multiclient eth2 testnet.
 	SpadinaTestnet = &cli.BoolFlag{
 		Name:  "spadina",
 		Usage: "This defines the flag through which we can run on the Spadina Multiclient Testnet",
+	}
+	// ZinkenTestnet flag for the multiclient eth2 testnet.
+	ZinkenTestnet = &cli.BoolFlag{
+		Name:  "zinken",
+		Usage: "This defines the flag through which we can run on the Zinken Multiclient Testnet",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
@@ -509,11 +519,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedMedallaTestnet = &cli.BoolFlag{
-		Name:   "medalla",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableAccountsV2 = &cli.BoolFlag{
 		Name:   "enable-accounts-v2",
 		Usage:  deprecatedUsage,
@@ -631,7 +636,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
-	deprecatedMedallaTestnet,
 	deprecatedEnableAccountsV2,
 	deprecatedCustomGenesisDelay,
 	deprecatedNewBeaconStateLocks,
@@ -652,7 +656,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
+	MedallaTestnet,
 	SpadinaTestnet,
+	ZinkenTestnet,
 	disableAccountsV2,
 	enableBlst,
 }...)
@@ -660,6 +666,11 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
+	AltonaTestnet,
+	OnyxTestnet,
+	MedallaTestnet,
+	SpadinaTestnet,
+	ZinkenTestnet,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
@@ -693,7 +704,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
+	MedallaTestnet,
 	SpadinaTestnet,
+	ZinkenTestnet,
 	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,

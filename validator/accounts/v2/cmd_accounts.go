@@ -21,7 +21,7 @@ var AccountCommands = &cli.Command{
 			Description: `creates a new validator account for eth2. If no wallet exists at the given wallet path, creates a new wallet for a user based on
 specified input, capable of creating a direct, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
@@ -29,7 +29,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.DeprecatedPasswordsDirFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -42,14 +47,19 @@ this command outputs a deposit data string which is required to become a validat
 		{
 			Name:        "delete",
 			Description: `deletes the selected accounts from a users wallet.`,
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
 				flags.DeletePublicKeysFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -62,14 +72,19 @@ this command outputs a deposit data string which is required to become a validat
 		{
 			Name:        "list",
 			Description: "Lists all validator accounts in a user's wallet directory",
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.ShowDepositDataFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -85,7 +100,7 @@ this command outputs a deposit data string which is required to become a validat
 				"at a desired output directory. Accounts to backup can also " +
 				"be specified programmatically via a --backup-for-public-keys flag which specifies a comma-separated " +
 				"list of hex string public keys",
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.BackupDirFlag,
@@ -93,7 +108,12 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupPasswordFile,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -106,7 +126,7 @@ this command outputs a deposit data string which is required to become a validat
 		{
 			Name:        "import",
 			Description: `imports eth2 validator accounts stored in EIP-2335 keystore.json files from an external directory`,
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.KeysDirFlag,
 				flags.WalletPasswordFileFlag,
@@ -114,8 +134,13 @@ this command outputs a deposit data string which is required to become a validat
 				flags.ImportPrivateKeyFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -128,7 +153,7 @@ this command outputs a deposit data string which is required to become a validat
 		{
 			Name:        "voluntary-exit",
 			Description: "Performs a voluntary exit on selected accounts",
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
@@ -141,40 +166,17 @@ this command outputs a deposit data string which is required to become a validat
 				flags.GrpcRetryDelayFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
 				if err := ExitAccountsCli(cliCtx, os.Stdin); err != nil {
 					log.Fatalf("Could not perform voluntary exit: %v", err)
-				}
-				return nil
-			},
-		},
-		{
-			Name: "deposit",
-			Description: "Submits a deposit to the eth2 deposit contract for a validator key by connecting " +
-				"to an eth1 endpoint to submit a transaction. Requires signing the transaction with an eth1 private key",
-			Flags: []cli.Flag{
-				flags.WalletDirFlag,
-				flags.WalletPasswordFileFlag,
-				flags.HTTPWeb3ProviderFlag,
-				flags.Eth1KeystoreUTCPathFlag,
-				flags.Eth1KeystorePasswordFileFlag,
-				flags.Eth1PrivateKeyFileFlag,
-				flags.DepositDelaySecondsFlag,
-				flags.DepositContractAddressFlag,
-				flags.DepositPublicKeysFlag,
-				flags.SkipDepositConfirmationFlag,
-				flags.DepositAllAccountsFlag,
-				featureconfig.AltonaTestnet,
-				featureconfig.OnyxTestnet,
-				featureconfig.SpadinaTestnet,
-			},
-			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
-				if err := SendDepositCli(cliCtx); err != nil {
-					log.Fatalf("Could not send validator deposit(s): %v", err)
 				}
 				return nil
 			},

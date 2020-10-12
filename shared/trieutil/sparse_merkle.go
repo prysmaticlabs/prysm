@@ -102,7 +102,7 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 	for i := 0; i < int(m.depth); i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
-		neighbor := make([]byte, 32)
+		var neighbor []byte
 		if neighborIdx >= len(m.branches[i]) {
 			neighbor = ZeroHashes[i][:]
 		} else {
@@ -182,7 +182,7 @@ func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
 }
 
 // VerifyMerkleBranch verifies a Merkle branch against a root of a trie.
-func VerifyMerkleBranch(root []byte, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
+func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
 	if len(proof) != int(depth)+1 {
 		return false
 	}

@@ -99,7 +99,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 			return nil, err
 		}
 		indices := indexedAtt.AttestingIndices
-		pubkeys := []bls.PublicKey{}
+		var pubkeys []bls.PublicKey
 		for i := 0; i < len(indices); i++ {
 			pubkeyAtIdx := c.PubKeys[indices[i]]
 			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx)

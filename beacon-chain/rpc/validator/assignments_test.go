@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"testing"
 	"time"
 
@@ -11,12 +10,10 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -31,46 +28,6 @@ func pubKey(i uint64) []byte {
 	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.LittleEndian.PutUint64(pubKey, i)
 	return pubKey
-}
-func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
-
-	genesis := testutil.NewBeaconBlock()
-	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-
-	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
-		TimesByHeight: map[int]uint64{
-			0: uint64(height),
-		},
-	}
-
-	chain := &mockChain.ChainService{
-		State: beaconState, Root: genesisRoot[:], Genesis: time.Now(),
-	}
-	depositCache, err := depositcache.New()
-	require.NoError(t, err)
-
-	vs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		Eth1InfoFetcher:    p,
-		DepositFetcher:     depositCache,
-		GenesisTimeFetcher: chain,
-	}
-
-	pubKey := pubKey(99999)
-	req := &ethpb.DutiesRequest{
-		PublicKeys: [][]byte{pubKey},
-	}
-	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.GetDuties(ctx, req); err != nil {
-		assert.ErrorContains(t, want, err)
-	}
 }
 
 func TestGetDuties_OK(t *testing.T) {

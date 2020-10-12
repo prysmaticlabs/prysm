@@ -53,7 +53,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
+		expectSuccess(t, stream)
 		out := new(uint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), *out)
@@ -187,5 +187,6 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	}
 
 	res, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.BHost.ID())
-	assert.Equal(t, int(1), res, "Peer wasn't penalised for providing a bad sequence number")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, res, "Peer wasn't penalised for providing a bad sequence number")
 }

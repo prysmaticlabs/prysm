@@ -146,7 +146,23 @@ func (s *Service) Start() {
 	}
 
 	if beaconState == nil {
-		beaconState, err = s.stateGen.StateByRoot(s.ctx, bytesutil.ToBytes32(cp.Root))
+		r := bytesutil.ToBytes32(cp.Root)
+		// Before the first finalized epoch, in the current epoch,
+		// the finalized root is defined as zero hashes instead of genesis root hash.
+		// We want to use genesis root to retrieve for state.
+		if r == params.BeaconConfig().ZeroHash {
+			genesisBlock, err := s.beaconDB.GenesisBlock(s.ctx)
+			if err != nil {
+				log.Fatalf("Could not fetch finalized cp: %v", err)
+			}
+			if genesisBlock != nil {
+				r, err = genesisBlock.Block.HashTreeRoot()
+				if err != nil {
+					log.Fatalf("Could not tree hash genesis block: %v", err)
+				}
+			}
+		}
+		beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
 		if err != nil {
 			log.Fatalf("Could not fetch beacon state by root: %v", err)
 		}
@@ -314,11 +330,7 @@ func (s *Service) Stop() error {
 	}
 
 	// Save initial sync cached blocks to the DB before stop.
-	if err := s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks()); err != nil {
-		return err
-	}
-
-	return nil
+	return s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
 
 // Status always returns nil unless there is an error condition that causes
@@ -439,7 +451,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
+	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	var finalizedState *stateTrie.BeaconState
 
 	finalizedState, err = s.stateGen.Resume(ctx)
@@ -462,7 +474,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 
 // This is called when a client starts from non-genesis slot. This passes last justified and finalized
 // information to fork choice service to initializes fork choice store.
-func (s *Service) resumeForkChoice(justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) {
+func (s *Service) resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint *ethpb.Checkpoint) {
 	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	s.forkChoiceStore = store
 }

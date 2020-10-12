@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -182,6 +183,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			attsl, err := db.AttesterSlashings(ctx, status.Active)
+			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(attsl), "Didnt save slashing to db")
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
@@ -332,6 +334,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			savedSlashings, err := db.AttesterSlashings(ctx, status.Active)
+			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(savedSlashings), "Did not save slashing to db")
 
 			for _, ss := range slashings {
@@ -356,11 +359,15 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 		incomingBlk *ethpb.SignedBeaconBlockHeader
 		slashing    *ethpb.ProposerSlashing
 	}
-	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	s0, err := helpers.StartSlot(0)
 	require.NoError(t, err)
-	sigBlk2slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	sigBlk1slot0, err := testDetect.SignedBlockHeader(s0, 0)
 	require.NoError(t, err)
-	sigBlk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
+	sigBlk2slot0, err := testDetect.SignedBlockHeader(s0, 0)
+	require.NoError(t, err)
+	s1, err := helpers.StartSlot(1)
+	require.NoError(t, err)
+	sigBlk1epoch1, err := testDetect.SignedBlockHeader(s1, 0)
 	require.NoError(t, err)
 	tests := []testStruct{
 		{
@@ -397,6 +404,7 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			require.NoError(t, err)
 			assert.DeepEqual(t, tt.slashing, slashing)
 			savedSlashings, err := db.ProposalSlashingsByStatus(ctx, status.Active)
+			require.NoError(t, err)
 			if tt.slashing != nil {
 				require.Equal(t, 1, len(savedSlashings), "Did not save slashing to db")
 			}
@@ -418,18 +426,20 @@ func TestDetect_detectProposerSlashingNoUpdate(t *testing.T) {
 		noUpdtaeBlk *ethpb.BeaconBlockHeader
 		slashable   bool
 	}
-	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	s0, err := helpers.StartSlot(0)
 	require.NoError(t, err)
-	blk1slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	sigBlk1slot0, err := testDetect.SignedBlockHeader(s0, 0)
 	require.NoError(t, err)
-	blk2slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	blk1slot0, err := testDetect.BlockHeader(s0, 0)
+	require.NoError(t, err)
+	blk2slot0, err := testDetect.BlockHeader(s0, 0)
 	require.NoError(t, err)
 	diffRoot := [32]byte{1, 1, 1}
 	blk2slot0.ParentRoot = diffRoot[:]
-	blk3slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	blk3slot0, err := testDetect.BlockHeader(s0, 0)
 	require.NoError(t, err)
 	blk3slot0.StateRoot = diffRoot[:]
-	blk4slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	blk4slot0, err := testDetect.BlockHeader(s0, 0)
 	require.NoError(t, err)
 	blk4slot0.BodyRoot = diffRoot[:]
 	tests := []testStruct{

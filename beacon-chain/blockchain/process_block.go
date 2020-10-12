@@ -121,7 +121,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		}
 
 		// Update deposit cache.
-		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
+		finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch finalized state")
+		}
+		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount-1))
 	}
 
 	defer reportAttestationInclusion(b)
@@ -235,7 +239,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		PublicKeys: []bls.PublicKey{},
 		Messages:   [][32]byte{},
 	}
-	set := new(bls.SignatureSet)
+	var set *bls.SignatureSet
 	boundaries := make(map[[32]byte]*stateTrie.BeaconState)
 	for i, b := range blks {
 		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
@@ -246,7 +250,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		if helpers.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(preState); err != nil {
-				return nil, nil, fmt.Errorf("could not handle epoch boundary state")
+				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
 			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
@@ -280,7 +284,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 // handles a block after the block's batch has been verified, where we can save blocks
 // their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb.SignedBeaconBlock,
-	blockRoot [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	b := signed.Block
 
 	s.saveInitSyncBlock(blockRoot, signed)
@@ -354,7 +358,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 }
 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock,
-	root [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}

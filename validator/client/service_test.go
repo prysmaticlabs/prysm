@@ -17,7 +17,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = shared.Service(&ValidatorService{})
+var _ shared.Service = (*ValidatorService)(nil)
 var validatorKey *keystore.Key
 var validatorPubKey [48]byte
 var keyMap map[[48]byte]*keystore.Key
@@ -57,16 +57,20 @@ func keySetup() {
 
 func TestMain(m *testing.M) {
 	dir := testutil.TempDir() + "/keystore1"
-	defer func() {
+	cleanup := func() {
 		if err := os.RemoveAll(dir); err != nil {
 			log.WithError(err).Debug("Cannot remove keystore folder")
 		}
-	}()
+	}
+	defer cleanup()
 	if err := v1.NewValidatorAccount(dir, "1234"); err != nil {
 		log.WithError(err).Debug("Cannot create validator account")
 	}
 	keySetup()
-	os.Exit(m.Run())
+	code := m.Run()
+	// os.Exit will prevent defer from being called
+	cleanup()
+	os.Exit(code)
 }
 
 func TestStop_CancelsContext(t *testing.T) {

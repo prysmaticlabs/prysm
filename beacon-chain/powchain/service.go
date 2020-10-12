@@ -539,16 +539,11 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 		"blockNumber": s.latestEth1Data.BlockHeight,
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
 	}).Debug("Latest eth1 chain event")
-
-	if err := s.headerCache.AddHeader(header); err != nil {
-		s.runError = err
-		log.Errorf("Unable to add block data to cache %v", err)
-	}
 }
 
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
-func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
+func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
@@ -619,8 +614,11 @@ func (s *Service) handleETH1FollowDistance() {
 	}
 	// If the last requested block has not changed,
 	// we do not request batched logs as this means there are no new
-	// logs for the powchain service to process.
+	// logs for the powchain service to process. Also is a potential
+	// failure condition as would mean we have not respected the protocol
+	// threshold.
 	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
+		log.Error("Beacon node is not respecting the follow distance")
 		return
 	}
 	if err := s.requestBatchedLogs(ctx); err != nil {

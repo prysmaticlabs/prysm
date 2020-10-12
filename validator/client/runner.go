@@ -50,8 +50,11 @@ type Validator interface {
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
-	defer v.Done()
+	cleanup := v.Done
+	defer cleanup()
 	if err := v.WaitForWalletInitialization(ctx); err != nil {
+		// log.Fatalf will prevent defer from being called
+		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
 	}
 	if featureconfig.Get().SlasherProtection {
@@ -87,6 +90,7 @@ func run(ctx context.Context, v Validator) {
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
+			span.End()
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
@@ -111,6 +115,7 @@ func run(ctx context.Context, v Validator) {
 			if featureconfig.Get().LocalProtection {
 				if err := v.UpdateProtections(ctx, slot); err != nil {
 					log.WithError(err).Error("Could not update validator protection")
+					span.End()
 					continue
 				}
 			}
@@ -125,6 +130,7 @@ func run(ctx context.Context, v Validator) {
 			allRoles, err := v.RolesAt(ctx, slot)
 			if err != nil {
 				log.WithError(err).Error("Could not get validator roles")
+				span.End()
 				continue
 			}
 			for pubKey, roles := range allRoles {

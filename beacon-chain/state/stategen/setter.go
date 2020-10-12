@@ -37,16 +37,13 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	if err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveState(ctx, fs, root32); err != nil {
-		return err
-	}
 
-	return nil
+	return s.beaconDB.SaveState(ctx, fs, root32)
 }
 
 // SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
 // state summary cache.
-func (s *State) SaveStateSummary(ctx context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
+func (s *State) SaveStateSummary(_ context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
 	// Save State summary
 	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
 		Slot: blk.Block.Slot,

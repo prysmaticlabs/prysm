@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -28,7 +29,12 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-var log = logrus.WithField("prefix", "derived-keymanager-v2")
+var (
+	log               = logrus.WithField("prefix", "derived-keymanager-v2")
+	lock              sync.RWMutex
+	orderedPublicKeys = make([][48]byte, 0)
+	secretKeysCache   = make(map[[48]byte]bls.SecretKey)
+)
 
 const (
 	// EIPVersion used by this derived keymanager implementation.
@@ -75,11 +81,16 @@ type Keymanager struct {
 	wallet            iface.Wallet
 	opts              *KeymanagerOpts
 	mnemonicGenerator SeedPhraseFactory
-	publicKeysCache   [][48]byte
-	secretKeysCache   map[[48]byte]bls.SecretKey
-	lock              sync.RWMutex
 	seedCfg           *SeedConfig
 	seed              []byte
+}
+
+// ResetCaches for the keymanager.
+func ResetCaches() {
+	lock.Lock()
+	orderedPublicKeys = make([][48]byte, 0)
+	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	lock.Unlock()
 }
 
 // DefaultKeymanagerOpts for a derived keymanager implementation.
@@ -214,7 +225,7 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 }
 
 // MarshalOptionsFile returns a marshaled options file for a keymanager.
-func MarshalOptionsFile(ctx context.Context, opts *KeymanagerOpts) ([]byte, error) {
+func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(opts, "", "\t")
 }
 
@@ -224,7 +235,7 @@ func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 }
 
 // NextAccountNumber managed by the derived keymanager.
-func (dr *Keymanager) NextAccountNumber(ctx context.Context) uint64 {
+func (dr *Keymanager) NextAccountNumber() uint64 {
 	return dr.seedCfg.NextAccount
 }
 
@@ -246,13 +257,13 @@ func (dr *Keymanager) WriteEncryptedSeedToWallet(ctx context.Context, mnemonic s
 }
 
 // ValidatingAccountNames for the derived keymanager.
-func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, error) {
-	dr.lock.RLock()
-	names := make([]string, len(dr.publicKeysCache))
-	for i, pubKey := range dr.publicKeysCache {
+func (dr *Keymanager) ValidatingAccountNames(_ context.Context) ([]string, error) {
+	lock.RLock()
+	names := make([]string, len(orderedPublicKeys))
+	for i, pubKey := range orderedPublicKeys {
 		names[i] = petnames.DeterministicName(bytesutil.FromBytes48(pubKey), "-")
 	}
-	dr.lock.RUnlock()
+	lock.RUnlock()
 	return names, nil
 }
 
@@ -261,41 +272,44 @@ func (dr *Keymanager) ValidatingAccountNames(ctx context.Context) ([]string, err
 // for hierarchical derivation of BLS secret keys and a common derivation path structure for
 // persisting accounts to disk. Each account stores the generated keystore.json file.
 // The entire derived wallet seed phrase can be recovered from a BIP-39 english mnemonic.
-func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) ([]byte, error) {
+func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, *pb.Deposit_Data, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
+		return nil, nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
 	}
 	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
+		return nil, nil, errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
 	}
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
 	blsValidatingKey, err := bls.SecretKeyFromBytes(validatingKey.Marshal())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	blsWithdrawalKey, err := bls.SecretKeyFromBytes(withdrawalKey.Marshal())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
 	tx, data, err := depositutil.GenerateDepositTransaction(blsValidatingKey, blsWithdrawalKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate deposit transaction data")
+		return nil, nil, errors.Wrap(err, "could not generate deposit transaction data")
 	}
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
 		nil, /*forkVersion*/
 		nil, /*genesisValidatorsRoot*/
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
+		return nil, nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
 	}
 	// Log the deposit transaction data to the user.
 	fmt.Printf(`
@@ -305,42 +319,40 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, logAccountInfo bool) ([
 	fmt.Println("")
 	// Finally, write the account creation timestamps as a files.
 	newAccountNumber := dr.seedCfg.NextAccount
-	if logAccountInfo {
-		log.WithFields(logrus.Fields{
-			"accountNumber":       newAccountNumber,
-			"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
-			"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
-			"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
-			"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
-		}).Info("Successfully created new validator account")
-	}
+	log.WithFields(logrus.Fields{
+		"accountNumber":       newAccountNumber,
+		"withdrawalPublicKey": fmt.Sprintf("%#x", withdrawalKey.PublicKey().Marshal()),
+		"validatingPublicKey": fmt.Sprintf("%#x", validatingKey.PublicKey().Marshal()),
+		"withdrawalKeyPath":   path.Join(dr.wallet.AccountsDir(), withdrawalKeyPath),
+		"validatingKeyPath":   path.Join(dr.wallet.AccountsDir(), validatingKeyPath),
+	}).Info("Successfully created new validator account")
 
-	dr.lock.Lock()
+	lock.Lock()
 	dr.seedCfg.NextAccount++
 	// Append the new account keys to the account keys caches
 	publicKey := bytesutil.ToBytes48(blsValidatingKey.PublicKey().Marshal())
-	dr.publicKeysCache = append(dr.publicKeysCache, publicKey)
-	dr.secretKeysCache[publicKey] = blsValidatingKey
-	dr.lock.Unlock()
+	orderedPublicKeys = append(orderedPublicKeys, publicKey)
+	secretKeysCache[publicKey] = blsValidatingKey
+	lock.Unlock()
 	encodedCfg, err := marshalEncryptedSeedFile(dr.seedCfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal encrypted seed file")
+		return nil, nil, errors.Wrap(err, "could not marshal encrypted seed file")
 	}
 	if err := dr.wallet.WriteEncryptedSeedToDisk(ctx, encodedCfg); err != nil {
-		return nil, errors.Wrap(err, "could not write encrypted seed file to disk")
+		return nil, nil, errors.Wrap(err, "could not write encrypted seed file to disk")
 	}
-	return publicKey[:], nil
+	return publicKey[:], data, nil
 }
 
 // Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+func (dr *Keymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	rawPubKey := req.PublicKey
 	if rawPubKey == nil {
 		return nil, errors.New("nil public key in request")
 	}
-	dr.lock.RLock()
-	secretKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(rawPubKey)]
-	dr.lock.RUnlock()
+	lock.RLock()
+	secretKey, ok := secretKeysCache[bytesutil.ToBytes48(rawPubKey)]
+	lock.RUnlock()
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
@@ -348,17 +360,17 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 }
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
-func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	dr.lock.RLock()
-	keys := dr.publicKeysCache
+func (dr *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+	lock.RLock()
+	keys := orderedPublicKeys
 	result := make([][48]byte, len(keys))
 	copy(result, keys)
-	dr.lock.RUnlock()
+	lock.RUnlock()
 	return result, nil
 }
 
 // FetchWithdrawalPublicKeys fetches the list of withdrawal public keys from keymanager
-func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (dr *Keymanager) FetchWithdrawalPublicKeys(_ context.Context) ([][48]byte, error) {
 	publicKeys := make([][48]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
@@ -430,21 +442,21 @@ func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
 // Append the public and the secret key for the provided secret key to their respective caches
 func (dr *Keymanager) appendKeysToCaches(secretKey bls.SecretKey) error {
 	publicKey := bytesutil.ToBytes48(secretKey.PublicKey().Marshal())
-	dr.lock.Lock()
-	dr.publicKeysCache = append(dr.publicKeysCache, publicKey)
-	dr.secretKeysCache[publicKey] = secretKey
-	dr.lock.Unlock()
+	lock.Lock()
+	orderedPublicKeys = append(orderedPublicKeys, publicKey)
+	secretKeysCache[publicKey] = secretKey
+	lock.Unlock()
 	return nil
 }
 
 // Initialize public and secret key caches used to speed up the functions
 // FetchValidatingPublicKeys and Sign as part of the Keymanager instance initialization
 func (dr *Keymanager) initializeKeysCachesFromSeed() error {
-	dr.lock.Lock()
-	defer dr.lock.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
 	count := dr.seedCfg.NextAccount
-	dr.publicKeysCache = make([][48]byte, count)
-	dr.secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
+	orderedPublicKeys = make([][48]byte, count)
+	secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
 	for i := uint64(0); i < count; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
 		derivedKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
@@ -460,8 +472,8 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 			)
 		}
 		publicKey := bytesutil.ToBytes48(secretKey.PublicKey().Marshal())
-		dr.publicKeysCache[i] = publicKey
-		dr.secretKeysCache[publicKey] = secretKey
+		orderedPublicKeys[i] = publicKey
+		secretKeysCache[publicKey] = secretKey
 	}
 	return nil
 }
@@ -504,7 +516,7 @@ func initializeWalletSeedFile(password string, skipMnemonicConfirm bool) (*SeedC
 
 // Uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
-func seedFileFromMnemonic(mnemonic string, password string) (*SeedConfig, error) {
+func seedFileFromMnemonic(mnemonic, password string) (*SeedConfig, error) {
 	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
 		return nil, bip39.ErrInvalidMnemonic
 	}

@@ -27,7 +27,7 @@ type mockRemoteKeymanager struct {
 	opts       *remote.KeymanagerOpts
 }
 
-func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	return m.publicKeys, nil
 }
 
@@ -62,7 +62,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 
 	numAccounts := 5
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(cliCtx.Context)
+		_, _, err := keymanager.CreateAccount(cliCtx.Context)
 		require.NoError(t, err)
 	}
 	rescueStdout := os.Stdout
@@ -189,7 +189,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	numAccounts := 5
 	depositDataForAccounts := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, err := keymanager.CreateAccount(cliCtx.Context, false /*logAccountInfo*/)
+		_, _, err := keymanager.CreateAccount(cliCtx.Context)
 		require.NoError(t, err)
 		enc, err := keymanager.DepositDataForAccount(uint64(i))
 		require.NoError(t, err)

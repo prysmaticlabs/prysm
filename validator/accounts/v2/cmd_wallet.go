@@ -26,7 +26,9 @@ var WalletCommands = &cli.Command{
 				flags.WalletPasswordFileFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -48,7 +50,9 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCACertPathFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -69,7 +73,9 @@ var WalletCommands = &cli.Command{
 				flags.NumAccountsFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
 				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
