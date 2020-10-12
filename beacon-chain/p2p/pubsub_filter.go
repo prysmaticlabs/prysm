@@ -85,12 +85,13 @@ func newSubscriptionFilter(ctx context.Context, notifier statefeed.Notifier) pub
 		panic("notifier must not be nil")
 	}
 
-	go sf.monitorState()
+	go sf.monitorStateInitialized()
 
 	return sf
 }
 
-func (sf *subscriptionFilter) monitorState() {
+// Monitor the state feed notifier for the state initialization event.
+func (sf *subscriptionFilter) monitorStateInitialized() {
 	ch := make(chan *feed.Event, 1)
 	sub := sf.notifier.StateFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
