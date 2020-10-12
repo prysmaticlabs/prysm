@@ -10,6 +10,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var _ pubsub.SubscriptionFilter = (*subscriptionFilter)(nil)
@@ -23,6 +24,7 @@ type subscriptionFilter struct {
 	previousForkDigest string
 }
 
+// CanSubscribe returns true if the topic is of interest and we could subscribe to it.
 func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
 	parts := strings.Split(topic, "/")
 	if len(parts) != 4 {
@@ -49,7 +51,10 @@ func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
 	return false
 }
 
-func (sf *subscriptionFilter) FilterIncomingSubscriptions(id peer.ID, subs []*pubsubpb.RPC_SubOpts) ([]*pubsubpb.RPC_SubOpts, error) {
+// FilterIncomingSubscriptions is invoked for all RPCs containing subscription notifications.
+// This method returns only the topics of interest and may return an error if the subscription
+// request contains too many topics.
+func (sf *subscriptionFilter) FilterIncomingSubscriptions(_ peer.ID, subs []*pubsubpb.RPC_SubOpts) ([]*pubsubpb.RPC_SubOpts, error) {
 	if len(subs) > pubsubSubscriptionRequestLimit {
 		return nil, pubsub.ErrTooManySubscriptions
 	}
@@ -59,8 +64,10 @@ func (sf *subscriptionFilter) FilterIncomingSubscriptions(id peer.ID, subs []*pu
 
 func newSubscriptionFilter(ctx context.Context, notifier statefeed.Notifier) pubsub.SubscriptionFilter {
 	sf := &subscriptionFilter{
-		ctx:      ctx,
-		notifier: notifier,
+		ctx:                ctx,
+		notifier:           notifier,
+		currentForkDigest:  fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion),
+		previousForkDigest: fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion),
 	}
 
 	go sf.monitorState()

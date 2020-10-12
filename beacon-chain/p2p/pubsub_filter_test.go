@@ -1,8 +1,16 @@
 package p2p
 
 import (
+	"context"
 	"fmt"
+	"reflect"
 	"testing"
+	"time"
+
+	"github.com/libp2p/go-libp2p-core/peer"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
@@ -13,7 +21,6 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 		topic string
 		want  bool
 	}
-
 	tests := []test{
 		{
 			name:  "block topic on current fork",
@@ -162,4 +169,150 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 			}
 		})
 	}
+}
+
+func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
+	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
+	previousFork := [4]byte{0x11, 0x12, 0x13, 0x14}
+	type args struct {
+		id   peer.ID
+		subs []*pubsubpb.RPC_SubOpts
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []*pubsubpb.RPC_SubOpts
+		wantErr bool
+	}{
+		{
+			name: "too many topics",
+			args: args{
+				subs: make([]*pubsubpb.RPC_SubOpts, pubsubSubscriptionRequestLimit+1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "exactly topic limit",
+			args: args{
+				subs: make([]*pubsubpb.RPC_SubOpts, pubsubSubscriptionRequestLimit),
+			},
+			wantErr: false,
+			want:    nil, // No topics matched filters.
+		},
+		{
+			name: "blocks topic",
+			args: args{
+				subs: []*pubsubpb.RPC_SubOpts{
+					{
+						Subscribe: func() *bool {
+							b := true
+							return &b
+						}(),
+						Topicid: func() *string {
+							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+							return &s
+						}(),
+					},
+				},
+			},
+			wantErr: false,
+			want: []*pubsubpb.RPC_SubOpts{
+				{
+					Subscribe: func() *bool {
+						b := true
+						return &b
+					}(),
+					Topicid: func() *string {
+						s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+						return &s
+					}(),
+				},
+			},
+		},
+		{
+			name: "blocks topic, duplicated",
+			args: args{
+				subs: []*pubsubpb.RPC_SubOpts{
+					{
+						Subscribe: func() *bool {
+							b := true
+							return &b
+						}(),
+						Topicid: func() *string {
+							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+							return &s
+						}(),
+					},
+					{
+						Subscribe: func() *bool {
+							b := true
+							return &b
+						}(),
+						Topicid: func() *string {
+							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+							return &s
+						}(),
+					},
+				},
+			},
+			wantErr: false,
+			want: []*pubsubpb.RPC_SubOpts{ // Duplicated topics are only present once after filtering.
+				{
+					Subscribe: func() *bool {
+						b := true
+						return &b
+					}(),
+					Topicid: func() *string {
+						s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+						return &s
+					}(),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sf := &subscriptionFilter{
+				currentForkDigest:  fmt.Sprintf("%x", currentFork),
+				previousForkDigest: fmt.Sprintf("%x", previousFork),
+			}
+			got, err := sf.FilterIncomingSubscriptions(tt.args.id, tt.args.subs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FilterIncomingSubscriptions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FilterIncomingSubscriptions() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_newSubscriptionFilter_UsesGenesisForkVersion(t *testing.T) {
+	sf, ok := newSubscriptionFilter(context.Background(), &mock.MockStateNotifier{}).(*subscriptionFilter)
+	if !ok {
+		t.Fatal("newSubscriptionFilter does not return a subscriptionFilter")
+	}
+	if sf.currentForkDigest != fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion) {
+		t.Errorf("%s does not match %x", sf.currentForkDigest, params.BeaconConfig().GenesisForkVersion)
+	}
+	if sf.previousForkDigest != fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion) {
+		t.Errorf("%s does not match %x", sf.previousForkDigest, params.BeaconConfig().GenesisForkVersion)
+	}
+}
+
+func Test_subscriptionFilter_MonitorsStateForkUpdates(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	notifier := &mock.MockStateNotifier{}
+	sf := newSubscriptionFilter(ctx, notifier)
+
+	for n := 0; n == 0; {
+		if ctx.Err() != nil {
+			t.Fatal(ctx.Err())
+		}
+		n = notifier.StateFeed().Send(nil)
+	}
+
+	_ = sf
 }
