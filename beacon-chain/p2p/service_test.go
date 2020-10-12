@@ -71,7 +71,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{})
+	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	s.started = true
 	s.dv5Listener = &mockListener{}
@@ -80,7 +80,7 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{})
+	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	assert.NoError(t, s.Stop())
 }
@@ -89,8 +89,9 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
-		TCPPort: 2000,
-		UDPPort: 2000,
+		TCPPort:       2000,
+		UDPPort:       2000,
+		StateNotifier: &mock.MockStateNotifier{},
 	}
 	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
@@ -127,7 +128,7 @@ func TestService_Status_NotRunning(t *testing.T) {
 
 func TestListenForNewNodes(t *testing.T) {
 	// Setup bootnode.
-	cfg := &Config{}
+	cfg := &Config{StateNotifier: &mock.MockStateNotifier{}}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
@@ -192,10 +193,10 @@ func TestListenForNewNodes(t *testing.T) {
 
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
+	cfg.StateNotifier = &mock.MockStateNotifier{}
 
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
-	s.stateNotifier = &mock.MockStateNotifier{}
 	exitRoutine := make(chan bool)
 	go func() {
 		s.Start()
@@ -249,7 +250,7 @@ func TestPeer_Disconnect(t *testing.T) {
 }
 
 func TestService_JoinLeaveTopic(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{})
+	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(s.joinedTopics))
 

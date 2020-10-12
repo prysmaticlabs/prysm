@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{})
+	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

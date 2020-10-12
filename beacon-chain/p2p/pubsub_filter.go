@@ -10,6 +10,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -17,15 +18,24 @@ var _ pubsub.SubscriptionFilter = (*subscriptionFilter)(nil)
 
 const pubsubSubscriptionRequestLimit = 100
 
+// subscriptionFilter handles filtering pubsub topic subscription metadata from peers.
+// Notice: This filter does not support phase 1 fork schedule yet.
 type subscriptionFilter struct {
-	ctx                context.Context
-	notifier           statefeed.Notifier
+	ctx      context.Context
+	notifier statefeed.Notifier
+
+	// Once the genesis state is initialized, this filter is now aware of the genesis fork digest.
+	// This filter does not check the fork schedule for planned forks and their respective digests.
+	initialized        bool
 	currentForkDigest  string
 	previousForkDigest string
 }
 
 // CanSubscribe returns true if the topic is of interest and we could subscribe to it.
 func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
+	if !sf.initialized {
+		return false
+	}
 	parts := strings.Split(topic, "/")
 	if len(parts) != 4 {
 		return false
@@ -70,6 +80,11 @@ func newSubscriptionFilter(ctx context.Context, notifier statefeed.Notifier) pub
 		previousForkDigest: fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion),
 	}
 
+	if notifier == nil {
+		// This should never happen, except maybe in a poorly set up test.
+		panic("notifier must not be nil")
+	}
+
 	go sf.monitorState()
 
 	return sf
@@ -81,12 +96,27 @@ func (sf *subscriptionFilter) monitorState() {
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-sub.Err():
+		case err := <-sub.Err():
+			log.WithError(err).Error("Failed to initialize subscription filter data")
 			return
 		case <-sf.ctx.Done():
 			return
 		case evt := <-ch:
-			_ = evt
+			if evt.Type != statefeed.Initialized {
+				continue
+			}
+			if d, ok := evt.Data.(*statefeed.InitializedData); ok {
+				fd, err := p2putils.CreateForkDigest(d.StartTime, d.GenesisValidatorsRoot)
+				if err != nil {
+					log.WithError(err).Error("Failed to create fork digest")
+					continue
+				}
+				sf.initialized = true
+				sfd := fmt.Sprintf("%x", fd)
+				sf.currentForkDigest = sfd
+				sf.previousForkDigest = sfd
+				return
+			}
 		}
 	}
 }

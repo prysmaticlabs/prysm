@@ -362,7 +362,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{})
+	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	r := [32]byte{'a'}
 	if s.HasInitSyncBlock(r) {

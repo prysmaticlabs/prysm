@@ -10,7 +10,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
@@ -75,6 +80,7 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 			sf := &subscriptionFilter{
 				currentForkDigest:  fmt.Sprintf("%x", currentFork),
 				previousForkDigest: fmt.Sprintf("%x", previousFork),
+				initialized:        true,
 			}
 			if got := sf.CanSubscribe(tt.topic); got != tt.want {
 				t.Errorf("CanSubscribe(%s) = %v, want %v", tt.topic, got, tt.want)
@@ -275,6 +281,7 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 			sf := &subscriptionFilter{
 				currentForkDigest:  fmt.Sprintf("%x", currentFork),
 				previousForkDigest: fmt.Sprintf("%x", previousFork),
+				initialized:        true,
 			}
 			got, err := sf.FilterIncomingSubscriptions(tt.args.id, tt.args.subs)
 			if (err != nil) != tt.wantErr {
@@ -305,14 +312,38 @@ func Test_subscriptionFilter_MonitorsStateForkUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	notifier := &mock.MockStateNotifier{}
-	sf := newSubscriptionFilter(ctx, notifier)
+	sf, ok := newSubscriptionFilter(ctx, notifier).(*subscriptionFilter)
+	if !ok {
+		t.Fatal("newSubscriptionFilter did not return *subscriptionFilter")
+	}
+
+	require.False(t, sf.initialized)
 
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
 			t.Fatal(ctx.Err())
 		}
-		n = notifier.StateFeed().Send(nil)
+		n = notifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             timeutils.Now(),
+				GenesisValidatorsRoot: bytesutil.PadTo([]byte("genesis"), 32),
+			},
+		})
 	}
 
-	_ = sf
+	time.Sleep(50 * time.Millisecond)
+
+	require.True(t, sf.initialized)
+	require.NotEmpty(t, sf.previousForkDigest)
+	require.NotEmpty(t, sf.currentForkDigest)
+}
+
+func Test_subscriptionFilter_doesntSupportForksYet(t *testing.T) {
+	// Part of phase 1 will include a state transition which updates the state's fork. In phase 0,
+	// there are no forks or fork schedule planned. As such, we'll work on supporting fork upgrades
+	// in phase 1 changes.
+	if len(params.BeaconConfig().ForkVersionSchedule) > 0 {
+		t.Fatal("pubsub subscription filters do not support fork schedule (yet)")
+	}
 }
