@@ -115,7 +115,7 @@ func ValidatePasswordInput(input string) error {
 }
 
 // ValidatePhrase checks whether the user input is equal to the wanted phrase. The verification is case sensitive.
-func ValidatePhrase(input string, wantedPhrase string) error {
+func ValidatePhrase(input, wantedPhrase string) error {
 	if strings.TrimSpace(input) != wantedPhrase {
 		return errIncorrectPhrase
 	}

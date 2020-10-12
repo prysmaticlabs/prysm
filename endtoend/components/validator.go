@@ -29,7 +29,7 @@ const depositGasLimit = 4000000
 
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.
-func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath string) {
+func StartValidatorClients(t *testing.T, config *types.E2EConfig) {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconNodeNum := e2e.TestParams.BeaconNodeCount
@@ -43,7 +43,7 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 }
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
-func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum int, index int, offset int) {
+func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum, index, offset int) {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
@@ -82,7 +82,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 }
 
 // SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
-func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum int, offset int) {
+func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset int) {
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
 	if err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum int, of
 }
 
 // SendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
-func SendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num int, offset int) error {
+func SendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int) error {
 	txOps, err := bind.NewTransactor(bytes.NewReader(keystoreBytes), "" /*password*/)
 	if err != nil {
 		return err

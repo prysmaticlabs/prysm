@@ -85,7 +85,7 @@ func RandKey() iface.SecretKey {
 }
 
 // VerifyCompressed signature.
-func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
+func VerifyCompressed(signature, pub, msg []byte) bool {
 	if featureconfig.Get().EnableBlst {
 		return blst.VerifyCompressed(signature, pub, msg)
 	}

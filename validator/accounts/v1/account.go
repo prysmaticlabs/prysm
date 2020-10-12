@@ -32,7 +32,7 @@ var errFailedToCloseManyDb = errors.New("failed to close one or more databases")
 
 // DecryptKeysFromKeystore extracts a set of validator private keys from
 // an encrypted keystore directory and a password string.
-func DecryptKeysFromKeystore(directory string, filePrefix string, password string) (map[string]*keystore.Key, error) {
+func DecryptKeysFromKeystore(directory, filePrefix, password string) (map[string]*keystore.Key, error) {
 	ks := keystore.New(directory)
 	validatorKeys, err := ks.GetKeys(directory, filePrefix, password, true)
 	if err != nil {
@@ -43,7 +43,7 @@ func DecryptKeysFromKeystore(directory string, filePrefix string, password strin
 
 // VerifyAccountNotExists checks if a validator has not yet created an account
 // and keystore in the provided directory string.
-func VerifyAccountNotExists(directory string, password string) error {
+func VerifyAccountNotExists(directory, password string) error {
 	if directory == "" || password == "" {
 		return errors.New("expected a path to the validator keystore and password to be provided, received nil")
 	}
@@ -65,7 +65,7 @@ func VerifyAccountNotExists(directory string, password string) error {
 // parameters needed to deposit into the deposit contract on the ETH1.0 chain. Specifically, this
 // generates a BLS private and public key, and then logs the serialized deposit input hex string
 // to be used in an ETH1.0 transaction by the validator.
-func NewValidatorAccount(directory string, password string) error {
+func NewValidatorAccount(directory, password string) error {
 	if password == "" {
 		return errors.New("empty passphrase is not allowed")
 	}
@@ -158,7 +158,7 @@ func Exists(keystorePath string, assertNonEmpty bool) (bool, error) {
 }
 
 // CreateValidatorAccount creates a validator account from the given cli context.
-func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
+func CreateValidatorAccount(path, passphrase string) (string, string, error) {
 	// Forces user to create directory if using non-default path.
 	if path != DefaultValidatorDir() {
 		exists, err := Exists(path, false /* assertNonEmpty */)
@@ -176,7 +176,7 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 }
 
 // PrintPublicAndPrivateKeys uses the passed in path and prints out the public and private keys in that directory.
-func PrintPublicAndPrivateKeys(path string, passphrase string) error {
+func PrintPublicAndPrivateKeys(path, passphrase string) error {
 	keystores, err := DecryptKeysFromKeystore(path, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
 	if err != nil {
 		return errors.Wrapf(err, "failed to decrypt keystore keys at path %s", path)
@@ -276,7 +276,7 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 
 // Split splits data from one validator database in sourceDirectory into several validator databases.
 // Each validator database is created in its own subdirectory inside targetDirectory.
-func Split(ctx context.Context, sourceDirectory string, targetDirectory string) (err error) {
+func Split(ctx context.Context, sourceDirectory, targetDirectory string) (err error) {
 	var sourceStore *kv.Store
 	sourceStore, err = kv.GetKVStore(sourceDirectory)
 	if err != nil {
@@ -302,7 +302,7 @@ func Split(ctx context.Context, sourceDirectory string, targetDirectory string) 
 
 // ChangePassword changes the password for all keys located in a keystore.
 // Password is changed only for keys that can be decrypted using the old password.
-func ChangePassword(keystorePath string, oldPassword string, newPassword string) error {
+func ChangePassword(keystorePath, oldPassword, newPassword string) error {
 	err := changePasswordForKeyType(
 		keystorePath,
 		params.BeaconConfig().ValidatorPrivkeyFileName,
@@ -319,7 +319,7 @@ func ChangePassword(keystorePath string, oldPassword string, newPassword string)
 		newPassword)
 }
 
-func changePasswordForKeyType(keystorePath string, filePrefix string, oldPassword string, newPassword string) error {
+func changePasswordForKeyType(keystorePath, filePrefix, oldPassword, newPassword string) error {
 	keys, err := DecryptKeysFromKeystore(keystorePath, filePrefix, oldPassword)
 	if err != nil {
 		return errors.Wrap(err, "failed to decrypt keys")
@@ -337,7 +337,7 @@ func changePasswordForKeyType(keystorePath string, filePrefix string, oldPasswor
 }
 
 // ExtractPublicKeysFromKeyStore extracts only the public keys from the decrypted keys from the keystore.
-func ExtractPublicKeysFromKeyStore(keystorePath string, passphrase string) ([][]byte, error) {
+func ExtractPublicKeysFromKeyStore(keystorePath, passphrase string) ([][]byte, error) {
 	decryptedKeys, err := DecryptKeysFromKeystore(keystorePath, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not decrypt keys from keystore in path %s", keystorePath)

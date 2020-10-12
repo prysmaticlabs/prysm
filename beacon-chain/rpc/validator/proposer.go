@@ -305,8 +305,7 @@ func (vs *Server) slotStartTime(slot uint64) uint64 {
 
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	firstValidBlockNumber *big.Int,
-	lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
+	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
 
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
 
@@ -348,7 +347,9 @@ func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVo
 			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
 		}
 	}
-
+	if len(voteCount) == 0 {
+		return eth1DataAggregatedVote{}
+	}
 	currentVote := voteCount[0]
 	for _, aggregatedVote := range voteCount[1:] {
 		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
@@ -557,7 +558,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 	}
 
 	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
-	depositData := [][]byte{}
+	var depositData [][]byte
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := dep.Data.HashTreeRoot()
 		if err != nil {

@@ -68,7 +68,7 @@ func AttestationsDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Valida
 	return rewards, penalties, nil
 }
 
-func attestationDelta(pBal *Balance, v *Validator, prevEpoch uint64, finalizedEpoch uint64) (uint64, uint64) {
+func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uint64) (uint64, uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	if !eligible || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
@@ -182,7 +182,7 @@ func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator
 // Spec code:
 // def is_in_inactivity_leak(state: BeaconState) -> bool:
 //    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
-func isInInactivityLeak(prevEpoch uint64, finalizedEpoch uint64) bool {
+func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
 	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
 }
 
@@ -191,6 +191,6 @@ func isInInactivityLeak(prevEpoch uint64, finalizedEpoch uint64) bool {
 // Spec code:
 // def get_finality_delay(state: BeaconState) -> uint64:
 //    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
-func finalityDelay(prevEpoch uint64, finalizedEpoch uint64) uint64 {
+func finalityDelay(prevEpoch, finalizedEpoch uint64) uint64 {
 	return prevEpoch - finalizedEpoch
 }

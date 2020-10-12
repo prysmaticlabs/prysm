@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-var _ = Validator(&FakeValidator{})
+var _ Validator = (*FakeValidator)(nil)
 
 // FakeValidator for mocking.
 type FakeValidator struct {
@@ -110,13 +110,13 @@ func (fv *FakeValidator) UpdateDuties(_ context.Context, slot uint64) error {
 }
 
 // UpdateProtections for mocking.
-func (fv *FakeValidator) UpdateProtections(_ context.Context, slot uint64) error {
+func (fv *FakeValidator) UpdateProtections(_ context.Context, _ uint64) error {
 	fv.UpdateProtectionsCalled = true
 	return nil
 }
 
 // LogValidatorGainsAndLosses for mocking.
-func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint64) error {
+func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ uint64) error {
 	fv.LogValidatorGainsAndLossesCalled = true
 	return nil
 }
@@ -137,19 +137,19 @@ func (fv *FakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][
 }
 
 // SubmitAttestation for mocking.
-func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot uint64, _ [48]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
 // ProposeBlock for mocking.
-func (fv *FakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *FakeValidator) ProposeBlock(_ context.Context, slot uint64, _ [48]byte) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
 
 // SubmitAggregateAndProof for mocking.
-func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [48]byte) {}
+func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ uint64, _ [48]byte) {}
 
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
@@ -158,21 +158,21 @@ func (fv *FakeValidator) LogAttestationsSubmitted() {}
 func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}
 
 // BalancesByPubkeys for mocking.
-func (fv *FakeValidator) BalancesByPubkeys(ctx context.Context) map[[48]byte]uint64 {
+func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[48]byte]uint64 {
 	return fv.Balances
 }
 
 // IndicesToPubkeys for mocking.
-func (fv *FakeValidator) IndicesToPubkeys(ctx context.Context) map[uint64][48]byte {
+func (fv *FakeValidator) IndicesToPubkeys(_ context.Context) map[uint64][48]byte {
 	return fv.IndexToPubkeyMap
 }
 
 // PubkeysToIndices for mocking.
-func (fv *FakeValidator) PubkeysToIndices(ctx context.Context) map[[48]byte]uint64 {
+func (fv *FakeValidator) PubkeysToIndices(_ context.Context) map[[48]byte]uint64 {
 	return fv.PubkeyToIndexMap
 }
 
 // PubkeysToStatuses for mocking.
-func (fv *FakeValidator) PubkeysToStatuses(ctx context.Context) map[[48]byte]ethpb.ValidatorStatus {
+func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[48]byte]ethpb.ValidatorStatus {
 	return fv.PubkeysToStatusesMap
 }
