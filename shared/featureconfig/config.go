@@ -67,11 +67,6 @@ type Flags struct {
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
 
-	// DisableForkChoice disables using LMD-GHOST fork choice to update
-	// the head of the chain based on attestations and instead accepts any valid received block
-	// as the chain head. UNSAFE, use with caution.
-	DisableForkChoice bool
-
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
