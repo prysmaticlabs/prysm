@@ -216,7 +216,7 @@ func DecryptKey(keyJSON []byte, password string) (*Key, error) {
 	}, nil
 }
 
-func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyID []byte, err error) {
+func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes, keyID []byte, err error) {
 	keyID = uuid.Parse(keyProtected.ID)
 	if keyProtected.Crypto.Cipher != "aes-128-ctr" {
 		return nil, nil, fmt.Errorf("cipher not supported: %v", keyProtected.Crypto.Cipher)
