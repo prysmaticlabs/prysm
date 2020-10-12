@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 var (
@@ -167,7 +168,7 @@ var (
 	// LogFormat specifies the log output format.
 	LogFormat = &cli.StringFlag{
 		Name:  "log-format",
-		Usage: "Specify log formatting. Supports: text, json, fluentd, journald.",
+		Usage: "Specify log formatting. Supports: text, json, fluentd.",
 		Value: "text",
 	}
 	// MaxGoroutines specifies the maximum amount of goroutines tolerated, before a status check fails.
@@ -203,3 +204,13 @@ var (
 		Value: 1 << 22,
 	}
 )
+
+// LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
+func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
+	if cliCtx.IsSet(ConfigFileFlag.Name) {
+		if err := altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name))(cliCtx); err != nil {
+			return err
+		}
+	}
+	return nil
+}

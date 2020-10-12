@@ -155,7 +155,7 @@ func (km *Remote) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign without protection is not supported by remote keymanagers.
-func (km *Remote) Sign(ctx context.Context, pubKey [48]byte, root [32]byte) (bls.Signature, error) {
+func (km *Remote) Sign(_ context.Context, _ [48]byte, _ [32]byte) (bls.Signature, error) {
 	return nil, errors.New("remote keymanager does not support unprotected signing")
 }
 
@@ -302,7 +302,7 @@ func pathsToVerificationRegexes(paths []string) []*regexp.Regexp {
 	for _, path := range paths {
 		log := log.WithField("path", path)
 		parts := strings.Split(path, "/")
-		if len(parts) == 0 || len(parts[0]) == 0 {
+		if len(parts) == 0 || parts[0] == "" {
 			log.Debug("Invalid path")
 			continue
 		}

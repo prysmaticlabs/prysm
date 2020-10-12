@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 func TestExitAccountsCli_Ok(t *testing.T) {
@@ -71,14 +72,15 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		// Flag required for ExitAccounts to work.
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
-	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: v2keymanager.Direct,
-			WalletPassword: "Passwordz0320$",
+			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(cliCtx.Context))
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
 	validatingPublicKeys, keymanager, err := prepareWallet(cliCtx)
@@ -109,6 +111,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
+	direct.ResetCaches()
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,

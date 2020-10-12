@@ -25,8 +25,6 @@ const (
 	SelectAccountsDeletePromptText = "Select the account(s) you would like to delete"
 	// SelectAccountsBackupPromptText --
 	SelectAccountsBackupPromptText = "Select the account(s) you wish to backup"
-	// SelectAccountsDepositPromptText --
-	SelectAccountsDepositPromptText = "Select the validating public keys you wish to submit deposits for"
 	// SelectAccountsVoluntaryExitPromptText --
 	SelectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
 )
@@ -62,23 +60,6 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 		return directory, nil
 	}
 	return fileutil.ExpandPath(inputtedDir)
-}
-
-// InputWeakPassword from the cli.
-func InputWeakPassword(cliCtx *cli.Context, passwordFileFlag *cli.StringFlag, promptText string) (string, error) {
-	if cliCtx.IsSet(passwordFileFlag.Name) {
-		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
-		if err != nil {
-			return "", errors.Wrap(err, "could not determine absolute path of password file")
-		}
-		return passwordFilePath, nil
-	}
-	walletPasswordFilePath, err := promptutil.PasswordPrompt(promptText, promptutil.NotEmpty)
-	if err != nil {
-		return "", fmt.Errorf("could not read account password: %v", err)
-	}
-	return walletPasswordFilePath, nil
 }
 
 // InputRemoteKeymanagerConfig via the cli.

@@ -21,7 +21,7 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) err
 		totalSlashing += slashing
 	}
 
-	minSlashing := mathutil.Min(totalSlashing*3, pBal.ActiveCurrentEpoch)
+	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, pBal.ActiveCurrentEpoch)
 	epochToWithdraw := currentEpoch + exitLength/2
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {

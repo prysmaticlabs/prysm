@@ -57,7 +57,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			},
 		},
 	}
-	registry := []*ethpb.Validator{}
+	var registry []*ethpb.Validator
 	currentSlot := uint64(0)
 
 	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
@@ -77,7 +77,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 }
 
 func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T) {
-	registry := []*ethpb.Validator{}
+	var registry []*ethpb.Validator
 	currentSlot := uint64(0)
 
 	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
