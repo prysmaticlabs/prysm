@@ -345,7 +345,7 @@ func TestServer_GetBlock(t *testing.T) {
 	}
 }
 
-func TestServer_GetBlockAttestations_Slot(t *testing.T) {
+func TestServer_ListBlockAttestations_Slot(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -355,15 +355,15 @@ func TestServer_GetBlockAttestations_Slot(t *testing.T) {
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 
 	// Should throw an error if more than one blk returned.
-	block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
-		BlockId: bytesutil.ToBytes(40, 8),
+	resp, err := bs.ListBlockAttestations(ctx, &ethpb.BlockRequest{
+		BlockId: []byte("40"),
 	})
 	require.NoError(t, err)
 
 	v1Block, err := v1alpha1ToV1Block(blkContainers[40].Block)
 	require.NoError(t, err)
 
-	if !reflect.DeepEqual(block.Data.Message, v1Block) {
+	if !reflect.DeepEqual(resp.Data, v1Block.Block.Body.Attestations) {
 		t.Error("Expected blocks to equal")
 	}
 }
