@@ -35,13 +35,13 @@ func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
 	if parts[1] != "eth2" {
 		return false
 	}
-	if parts[2] != sf.currentForkDigest && parts[1] != sf.previousForkDigest {
+	if parts[2] != sf.currentForkDigest && parts[2] != sf.previousForkDigest {
 		return false
 	}
 
 	// Check the incoming topic matches any topic mapping.
 	for gt, _ := range GossipTopicMappings {
-		if _, err := scanfcheck(topic, gt); err != nil {
+		if _, err := scanfcheck(topic, gt); err == nil {
 			return true
 		}
 	}

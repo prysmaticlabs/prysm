@@ -15,7 +15,36 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 	}
 
 	tests := []test{
-		// TODO: Add test cases.
+		{
+			name:  "block topic on current fork",
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork),
+			want:  true,
+		},
+		{
+			name:  "block topic on previous fork",
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, previousFork),
+			want:  true,
+		},
+		{
+			name:  "block topic on unknown fork",
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, [4]byte{0xFF, 0xEE, 0x56, 0x21}),
+			want:  false,
+		},
+		{
+			name:  "erroneous topic",
+			topic: "hey, want to foobar?",
+			want:  false,
+		},
+		{
+			name:  "bad prefix",
+			topic: fmt.Sprintf("/eth3/%x/foobar", currentFork),
+			want:  false,
+		},
+		{
+			name:  "topic not in gossip mapping",
+			topic: fmt.Sprintf("/eth2/%x/foobar", currentFork),
+			want:  false,
+		},
 	}
 
 	// Ensure all gossip topic mappings pass validation.
