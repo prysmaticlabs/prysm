@@ -182,8 +182,7 @@ func (s *Service) createListener(
 func (s *Service) createLocalNode(
 	privKey *ecdsa.PrivateKey,
 	ipAddr net.IP,
-	udpPort int,
-	tcpPort int,
+	udpPort, tcpPort int,
 ) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
@@ -289,7 +288,7 @@ func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
 	return discv5Nodes
 }
 
-func parseGenericAddrs(addrs []string) (enodeString []string, multiAddrString []string) {
+func parseGenericAddrs(addrs []string) (enodeString, multiAddrString []string) {
 	for _, addr := range addrs {
 		if addr == "" {
 			// Ignore empty entries

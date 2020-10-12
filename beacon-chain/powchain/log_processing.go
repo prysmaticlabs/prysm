@@ -413,7 +413,7 @@ func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, want
 	return nil
 }
 
-func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBlk uint64) error {
+func (s *Service) processBlksInRange(ctx context.Context, startBlk, endBlk uint64) error {
 	for i := startBlk; i <= endBlk; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
@@ -452,8 +452,7 @@ func (s *Service) checkHeaderForChainstart(header *gethTypes.Header) {
 	s.checkForChainstart(header.Hash(), header.Number, header.Time)
 }
 
-func (s *Service) checkHeaderRange(start uint64, end uint64,
-	headersMap map[uint64]*gethTypes.Header,
+func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*gethTypes.Header,
 	requestHeaders func(uint64, uint64) error) error {
 	for i := start; i <= end; i++ {
 		if !s.chainStartData.Chainstarted {

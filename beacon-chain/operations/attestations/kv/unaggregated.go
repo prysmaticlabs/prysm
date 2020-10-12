@@ -66,7 +66,7 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 
 // UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
-func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
 	p.unAggregateAttLock.RLock()

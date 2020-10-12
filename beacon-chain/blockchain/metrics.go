@@ -115,7 +115,7 @@ var (
 )
 
 // reportSlotMetrics reports slot related metrics.
-func reportSlotMetrics(stateSlot uint64, headSlot uint64, clockSlot uint64, finalizedCheckpoint *ethpb.Checkpoint) {
+func reportSlotMetrics(stateSlot, headSlot, clockSlot uint64, finalizedCheckpoint *ethpb.Checkpoint) {
 	clockTimeSlot.Set(float64(clockSlot))
 	beaconSlot.Set(float64(stateSlot))
 	beaconHeadSlot.Set(float64(headSlot))
