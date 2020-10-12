@@ -65,10 +65,17 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
+	root, err := genBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	headBlock := blkContainers[len(blkContainers)-1]
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+		},
 	}
-	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 
 	tests := []struct {
 		name    string
@@ -85,6 +92,26 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			name:    "root",
 			blockID: blkContainers[20].BlockRoot,
 			want:    blkContainers[20].Block,
+		},
+		{
+			name:    "genesis",
+			blockID: []byte("genesis"),
+			want:    genBlk,
+		},
+		{
+			name:    "genesis root",
+			blockID: root[:],
+			want:    genBlk,
+		},
+		{
+			name:    "head",
+			blockID: []byte("head"),
+			want:    headBlock.Block,
+		},
+		{
+			name:    "finalized",
+			blockID: []byte("finalized"),
+			want:    blkContainers[64].Block,
 		},
 		{
 			name:    "no block",
@@ -118,10 +145,13 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	bs := &Server{
-		BeaconDB: db,
-	}
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
+	headBlock := blkContainers[len(blkContainers)-1]
+	bs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
+	}
+
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
@@ -231,16 +261,14 @@ func TestServer_GetBlock(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	bs := &Server{
-		BeaconDB: db,
-	}
-
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
-
 	headBlock := blkContainers[len(blkContainers)-1]
-	bs = &Server{
+	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+		},
 	}
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -262,6 +290,11 @@ func TestServer_GetBlock(t *testing.T) {
 			name:    "head",
 			blockID: []byte("head"),
 			want:    headBlock.Block,
+		},
+		{
+			name:    "finalized",
+			blockID: []byte("finalized"),
+			want:    blkContainers[64].Block,
 		},
 		{
 			name:    "genesis",

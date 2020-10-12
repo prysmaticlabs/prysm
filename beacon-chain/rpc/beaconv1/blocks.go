@@ -255,10 +255,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 			return nil, errors.Wrap(err, "could not retrieve head block")
 		}
 	case "finalized":
-		finalized, err := bs.BeaconDB.FinalizedCheckpoint(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve finalized checkpoint")
-		}
+		finalized := bs.FinalizationFetcher.FinalizedCheckpt()
 		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {
