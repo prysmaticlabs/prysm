@@ -34,13 +34,13 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 // We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
+func ShuffledIndex(index, indexCount uint64, seed [32]byte) (uint64, error) {
 	return ComputeShuffledIndex(index, indexCount, seed, true /* shuffle */)
 }
 
 // UnShuffledIndex returns the inverse of ShuffledIndex. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-func UnShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, error) {
+func UnShuffledIndex(index, indexCount uint64, seed [32]byte) (uint64, error) {
 	return ComputeShuffledIndex(index, indexCount, seed, false /* un-shuffle */)
 }
 
@@ -64,7 +64,7 @@ func UnShuffledIndex(index uint64, indexCount uint64, seed [32]byte) (uint64, er
 //        index = flip if bit else index
 //
 //    return ValidatorIndex(index)
-func ComputeShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffle bool) (uint64, error) {
+func ComputeShuffledIndex(index, indexCount uint64, seed [32]byte, shuffle bool) (uint64, error) {
 	if params.BeaconConfig().ShuffleRoundCount == 0 {
 		return index, nil
 	}
