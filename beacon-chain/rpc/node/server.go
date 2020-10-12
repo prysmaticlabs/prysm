@@ -37,7 +37,7 @@ type Server struct {
 }
 
 // GetSyncStatus checks the current network sync status of the node.
-func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncStatus, error) {
+func (ns *Server) GetSyncStatus(_ context.Context, _ *ptypes.Empty) (*ethpb.SyncStatus, error) {
 	return &ethpb.SyncStatus{
 		Syncing: ns.SyncChecker.Syncing(),
 	}, nil
@@ -71,7 +71,7 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 }
 
 // GetVersion checks the version information of the beacon node.
-func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Version, error) {
+func (ns *Server) GetVersion(_ context.Context, _ *ptypes.Empty) (*ethpb.Version, error) {
 	return &ethpb.Version{
 		Version: version.GetVersion(),
 	}, nil
@@ -82,7 +82,7 @@ func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Versi
 // Any service not present in this list may return UNIMPLEMENTED or
 // PERMISSION_DENIED. The server may also support fetching services by grpc
 // reflection.
-func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) (*ethpb.ImplementedServices, error) {
+func (ns *Server) ListImplementedServices(_ context.Context, _ *ptypes.Empty) (*ethpb.ImplementedServices, error) {
 	serviceInfo := ns.Server.GetServiceInfo()
 	serviceNames := make([]string, 0, len(serviceInfo))
 	for svc := range serviceInfo {
@@ -95,8 +95,8 @@ func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) 
 }
 
 // GetHost returns the p2p data on the current local and host peer.
-func (ns *Server) GetHost(ctx context.Context, _ *ptypes.Empty) (*ethpb.HostData, error) {
-	stringAddr := []string{}
+func (ns *Server) GetHost(_ context.Context, _ *ptypes.Empty) (*ethpb.HostData, error) {
+	var stringAddr []string
 	for _, addr := range ns.PeerManager.Host().Addrs() {
 		stringAddr = append(stringAddr, addr.String())
 	}
@@ -118,7 +118,7 @@ func (ns *Server) GetHost(ctx context.Context, _ *ptypes.Empty) (*ethpb.HostData
 }
 
 // GetPeer returns the data known about the peer defined by the provided peer id.
-func (ns *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*ethpb.Peer, error) {
+func (ns *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*ethpb.Peer, error) {
 	pid, err := peer.Decode(peerReq.PeerId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Unable to parse provided peer id: %v", err)

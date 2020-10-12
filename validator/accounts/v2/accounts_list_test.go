@@ -27,7 +27,7 @@ type mockRemoteKeymanager struct {
 	opts       *remote.KeymanagerOpts
 }
 
-func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	return m.publicKeys, nil
 }
 

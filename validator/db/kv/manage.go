@@ -200,11 +200,7 @@ func createSplitTargetStores(
 
 			if err := newStore.update(func(tx *bolt.Tx) error {
 				attestationsBucket := tx.Bucket(historicAttestationsBucket)
-				if err := addAttestations(attestationsBucket, pubKeyAttestations); err != nil {
-					return err
-				}
-
-				return nil
+				return addAttestations(attestationsBucket, pubKeyAttestations)
 			}); err != nil {
 				return err
 			}

@@ -51,10 +51,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot), signingRoot); err != nil {
 			return err
 		}
-		if err := pruneProposalHistoryBySlot(valBucket, slot); err != nil {
-			return err
-		}
-		return nil
+		return pruneProposalHistoryBySlot(valBucket, slot)
 	})
 	return err
 }
