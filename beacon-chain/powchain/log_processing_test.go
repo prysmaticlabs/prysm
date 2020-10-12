@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"testing"
 	"time"
@@ -26,15 +25,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
-}
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()

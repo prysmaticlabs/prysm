@@ -57,6 +57,7 @@ go_test(
         "block_reader_test.go",
         "deposit_test.go",
         "log_processing_test.go",
+        "powchain_test.go",
         "service_test.go",
     ],
     embed = [":go_default_library"],
