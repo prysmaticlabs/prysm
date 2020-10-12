@@ -113,7 +113,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block.Slot,
 					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block.ParentRoot)),
-				}).Info("Requesting parent block")
+				}).Debug("Requesting parent block")
 				parentRoots = append(parentRoots, bytesutil.ToBytes32(b.Block.ParentRoot))
 
 				span.End()
