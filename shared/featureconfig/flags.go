@@ -46,13 +46,6 @@ var (
 		Name:  "disable-dynamic-committee-subnets",
 		Usage: "Disable dynamic committee attestation subnets.",
 	}
-	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
-	// the head of the chain based on attestations and instead accepts any valid received block
-	// as the chain head. UNSAFE, use with caution.
-	disableForkChoiceUnsafeFlag = &cli.BoolFlag{
-		Name:  "disable-fork-choice-unsafe",
-		Usage: "UNSAFE: disable fork choice for determining head of the beacon chain.",
-	}
 	// disableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	disableSSZCache = &cli.BoolFlag{
 		Name:  "disable-ssz-cache",
@@ -75,11 +68,6 @@ var (
 		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
 			"and attestation's aggregated signatures. With this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
-	}
-	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
-		Name: "cache-filtered-block-tree",
-		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
-			"this is used for fork choice.",
 	}
 	enableLocalProtectionFlag = &cli.BoolFlag{
 		Name: "enable-local-protection",
@@ -110,18 +98,10 @@ var (
 		Usage: "Enable signature verification for state gen. This feature increases the cost to generate a historical state," +
 			"the resulting state is signature verified.",
 	}
-	checkHeadState = &cli.BoolFlag{
-		Name:  "check-head-state",
-		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
-	}
 	disableNoiseHandshake = &cli.BoolFlag{
 		Name: "disable-noise",
 		Usage: "This disables the beacon node from using NOISE and instead uses SECIO instead for performing handshakes between peers and " +
 			"securing transports between peers",
-	}
-	dontPruneStateStartUp = &cli.BoolFlag{
-		Name:  "dont-prune-state-start-up",
-		Usage: "Don't prune historical states upon start up",
 	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
@@ -682,20 +662,16 @@ var E2EValidatorFlags = []string{
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
-	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,
 	disableSSZCache,
 	disableInitSyncVerifyEverythingFlag,
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
 	enableStateGenSigVerify,
-	checkHeadState,
 	disableNoiseHandshake,
-	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
 	disableReduceAttesterStateCopy,

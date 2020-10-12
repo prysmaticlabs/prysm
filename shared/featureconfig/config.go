@@ -56,9 +56,7 @@ type Flags struct {
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
-	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
@@ -86,7 +84,6 @@ type Flags struct {
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
-	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 	UseCheckPointInfoCache  bool // UseCheckPointInfoCache uses check point info cache to efficiently verify attestation signatures.
 
 	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
@@ -173,10 +170,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.Bool(disableForkChoiceUnsafeFlag.Name) {
-		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
-		cfg.DisableForkChoice = true
-	}
 	if ctx.Bool(disableDynamicCommitteeSubnets.Name) {
 		log.Warn("Disabled dynamic attestation committee subnets")
 		cfg.DisableDynamicCommitteeSubnets = true
@@ -203,10 +196,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.Bool(cacheFilteredBlockTreeFlag.Name) {
-		log.Warn("Enabled filtered block tree cache for fork choice.")
-		cfg.EnableBlockTreeCache = true
-	}
 	if ctx.Bool(disableStrictAttestationPubsubVerificationFlag.Name) {
 		log.Warn("Disabled strict attestation signature verification in pubsub")
 		cfg.DisableStrictAttestationPubsubVerification = true
@@ -219,18 +208,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling sig verify for state gen")
 		cfg.EnableStateGenSigVerify = true
 	}
-	if ctx.Bool(checkHeadState.Name) {
-		log.Warn("Enabling check head state for chainservice")
-		cfg.CheckHeadState = true
-	}
 	cfg.EnableNoise = true
 	if ctx.Bool(disableNoiseHandshake.Name) {
 		log.Warn("Disabling noise handshake for peer")
 		cfg.EnableNoise = false
-	}
-	if ctx.Bool(dontPruneStateStartUp.Name) {
-		log.Warn("Not enabling state pruning upon start up")
-		cfg.DontPruneStateStartUp = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
