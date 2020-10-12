@@ -260,21 +260,26 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.
 }
 
 // PruneProofs removes proofs from all deposits whose index is equal or less than untilDepositIndex.
-func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64) {
+func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PruneProofs")
 	defer span.End()
-	dc.depositsLock.RLock()
-	defer dc.depositsLock.RUnlock()
+	dc.depositsLock.Lock()
+	defer dc.depositsLock.Unlock()
 
 	if untilDepositIndex > int64(len(dc.deposits)) {
 		untilDepositIndex = int64(len(dc.deposits) - 1)
 	}
 
 	for i := untilDepositIndex; i >= 0; i-- {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		// Finding a nil proof means that all proofs up to this deposit have been already pruned.
 		if dc.deposits[i].Deposit.Proof == nil {
 			break
 		}
 		dc.deposits[i].Deposit.Proof = nil
 	}
+
+	return nil
 }
