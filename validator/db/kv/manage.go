@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"path/filepath"
@@ -315,7 +314,7 @@ func removeDuplicateKeys(keys [][48]byte) [][48]byte {
 next:
 	for _, k1 := range keys {
 		for _, k2 := range keys[:last] {
-			if bytes.Equal(k1[:], k2[:]) {
+			if k1 == k2 {
 				continue next
 			}
 		}
