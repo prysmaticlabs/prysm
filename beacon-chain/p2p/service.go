@@ -387,6 +387,9 @@ func (s *Service) awaitStateInitialized() {
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
 				return
 			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
 		}
 	}
 }

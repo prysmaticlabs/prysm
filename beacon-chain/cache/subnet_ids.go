@@ -41,7 +41,7 @@ func newSubnetIDs() *subnetIDs {
 }
 
 // AddAttesterSubnetID adds the subnet index for subscribing subnet for the attester of a given slot.
-func (c *subnetIDs) AddAttesterSubnetID(slot uint64, subnetID uint64) {
+func (c *subnetIDs) AddAttesterSubnetID(slot, subnetID uint64) {
 	c.attesterLock.Lock()
 	defer c.attesterLock.Unlock()
 
@@ -69,7 +69,7 @@ func (c *subnetIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
 }
 
 // AddAggregatorSubnetID adds the subnet ID for subscribing subnet for the aggregator of a given slot.
-func (c *subnetIDs) AddAggregatorSubnetID(slot uint64, subnetID uint64) {
+func (c *subnetIDs) AddAggregatorSubnetID(slot, subnetID uint64) {
 	c.aggregatorLock.Lock()
 	defer c.aggregatorLock.Unlock()
 
@@ -113,7 +113,7 @@ func (c *subnetIDs) GetAllSubnets() []uint64 {
 	defer c.subnetsLock.RUnlock()
 
 	itemsMap := c.persistentSubnets.Items()
-	committees := []uint64{}
+	var committees []uint64
 
 	for _, v := range itemsMap {
 		if v.Expired() {

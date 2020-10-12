@@ -9,7 +9,7 @@ import (
 
 // SignedBlockHeader given slot, proposer index this function generates signed block header.
 // with random bytes as its signature.
-func SignedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
+func SignedBlockHeader(slot, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
 	sig, err := genRandomByteArray(96)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func SignedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBloc
 }
 
 // BlockHeader given slot, proposer index this function generates block header.
-func BlockHeader(slot uint64, proposerIdx uint64) (*ethpb.BeaconBlockHeader, error) {
+func BlockHeader(slot, proposerIdx uint64) (*ethpb.BeaconBlockHeader, error) {
 	root := [32]byte{1, 2, 3}
 	return &ethpb.BeaconBlockHeader{
 		ProposerIndex: proposerIdx,

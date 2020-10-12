@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 var (
@@ -203,3 +204,13 @@ var (
 		Value: 1 << 22,
 	}
 )
+
+// LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
+func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
+	if cliCtx.IsSet(ConfigFileFlag.Name) {
+		if err := altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name))(cliCtx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
