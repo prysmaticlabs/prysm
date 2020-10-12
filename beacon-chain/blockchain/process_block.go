@@ -102,7 +102,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	// Update finalized check point.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		log.Error("Update finalized epoch")
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
@@ -284,7 +283,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
 		return nil, nil, err
 	}
-
 	return fCheckpoints, jCheckpoints, nil
 }
 

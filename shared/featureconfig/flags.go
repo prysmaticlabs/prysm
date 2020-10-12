@@ -731,5 +731,5 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
-	"--enable-pruning-deposit-proofs",
+	//"--enable-pruning-deposit-proofs",
 }
