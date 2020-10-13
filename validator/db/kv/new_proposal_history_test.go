@@ -195,7 +195,7 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 
 func TestShouldImportProposals(t *testing.T) {
 	pubkey := [48]byte{3}
-	db := setupDB(t, [][48]byte{pubkey})
+	db := setupDB(t, nil)
 	//ctx := context.Background()
 
 	shouldImport, err := db.shouldImportProposals()
