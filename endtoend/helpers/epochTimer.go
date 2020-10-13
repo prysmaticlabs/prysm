@@ -6,33 +6,33 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-// EpochTicker is a special ticker for timing epoch changes.
+// epochTicker is a special ticker for timing epoch changes.
 // The channel emits over the epoch interval, and ensures that
 // the ticks are in line with the genesis time. This means that
 // the duration between the ticks and the genesis time are always a
 // multiple of the epoch duration.
 // In addition, the channel returns the new epoch number.
-type EpochTicker struct {
+type epochTicker struct {
 	c    chan uint64
 	done chan struct{}
 }
 
 // C returns the ticker channel. Call Cancel afterwards to ensure
 // that the goroutine exits cleanly.
-func (s *EpochTicker) C() <-chan uint64 {
+func (s *epochTicker) C() <-chan uint64 {
 	return s.c
 }
 
 // Done should be called to clean up the ticker.
-func (s *EpochTicker) Done() {
+func (s *epochTicker) Done() {
 	go func() {
 		s.done <- struct{}{}
 	}()
 }
 
 // GetEpochTicker is the constructor for EpochTicker.
-func GetEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *EpochTicker {
-	ticker := &EpochTicker{
+func GetEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *epochTicker {
+	ticker := &epochTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
@@ -40,7 +40,7 @@ func GetEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *EpochTicker 
 	return ticker
 }
 
-func (s *EpochTicker) start(
+func (s *epochTicker) start(
 	genesisTime time.Time,
 	secondsPerEpoch uint64,
 	since, until func(time.Time) time.Duration,
