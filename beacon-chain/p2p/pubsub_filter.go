@@ -90,7 +90,8 @@ func newSubscriptionFilter(ctx context.Context, notifier statefeed.Notifier) pub
 	return sf
 }
 
-// Monitor the state feed notifier for the state initialization event.
+// Monitor the state feed notifier for the state initialization event. The genesis time and genesis
+// validator root are required to determine the pubsub fork digest.
 func (sf *subscriptionFilter) monitorStateInitialized() {
 	ch := make(chan *feed.Event, 1)
 	sub := sf.notifier.StateFeed().Subscribe(ch)
@@ -128,6 +129,9 @@ func (sf *subscriptionFilter) monitorStateInitialized() {
 // such as %d or %x.
 func scanfcheck(input, format string) (int, error) {
 	var t int
+	// Sscanf requires argument pointers with the appropriate type to load the value from the input.
+	// This method only checks that the input conforms to the format, the arguments are not used and
+	// therefore we can reuse the same integer pointer.
 	var cnt = strings.Count(format, "%")
 	var args = []interface{}{}
 	for i := 0; i < cnt; i++ {

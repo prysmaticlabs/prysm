@@ -57,6 +57,16 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 			topic: fmt.Sprintf("/eth2/%x/foobar", currentFork),
 			want:  false,
 		},
+		{
+			name:  "att subnet topic on current fork",
+			topic: fmt.Sprintf(AttestationSubnetTopicFormat, currentFork, 55 /*subnet*/),
+			want:  true,
+		},
+		{
+			name:  "att subnet topic on unknown fork",
+			topic: fmt.Sprintf(AttestationSubnetTopicFormat, [4]byte{0xCC, 0xBB, 0xAA, 0xA1} /*fork digest*/, 54 /*subnet*/),
+			want:  false,
+		},
 	}
 
 	// Ensure all gossip topic mappings pass validation.
