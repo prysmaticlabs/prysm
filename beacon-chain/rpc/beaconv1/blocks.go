@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/proto/migration"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -82,7 +84,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 
 	blkHdrs := make([]*ethpb.BlockHeaderContainer, len(blks))
 	for i, blk := range blks {
-		blkHdr, err := v1alpha1BlockToV1BlockHeader(blk)
+		blkHdr, err := migration.V1Alpha1BlockToV1BlockHeader(blk)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 		}
@@ -114,7 +116,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
 	}
 
-	v1alpha1Block, err := v1ToV1alpha1Block(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
+	v1alpha1Block, err := migration.V1ToV1Alpha1Block(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
 	}
@@ -154,7 +156,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 
-	v1Block, err := v1alpha1ToV1Block(blk)
+	v1Block, err := migration.V1Alpha1ToV1Block(blk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
 	}
@@ -246,7 +248,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 
-	v1Block, err := v1alpha1ToV1Block(blk)
+	v1Block, err := migration.V1Alpha1ToV1Block(blk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
 	}
