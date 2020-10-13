@@ -12,6 +12,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -21,6 +22,7 @@ import (
 func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	previousFork := [4]byte{0x11, 0x12, 0x13, 0x14}
+	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	type test struct {
 		name  string
 		topic string
@@ -29,17 +31,27 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 	tests := []test{
 		{
 			name:  "block topic on current fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork),
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + validProtocolSuffix,
 			want:  true,
 		},
 		{
 			name:  "block topic on previous fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, previousFork),
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, previousFork) + validProtocolSuffix,
 			want:  true,
 		},
 		{
 			name:  "block topic on unknown fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, [4]byte{0xFF, 0xEE, 0x56, 0x21}),
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, [4]byte{0xFF, 0xEE, 0x56, 0x21}) + validProtocolSuffix,
+			want:  false,
+		},
+		{
+			name:  "block topic missing protocol suffix",
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork),
+			want:  false,
+		},
+		{
+			name:  "block topic wrong protocol suffix",
+			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + "/foobar",
 			want:  false,
 		},
 		{
@@ -49,22 +61,22 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 		},
 		{
 			name:  "bad prefix",
-			topic: fmt.Sprintf("/eth3/%x/foobar", currentFork),
+			topic: fmt.Sprintf("/eth3/%x/foobar", currentFork) + validProtocolSuffix,
 			want:  false,
 		},
 		{
 			name:  "topic not in gossip mapping",
-			topic: fmt.Sprintf("/eth2/%x/foobar", currentFork),
+			topic: fmt.Sprintf("/eth2/%x/foobar", currentFork) + validProtocolSuffix,
 			want:  false,
 		},
 		{
 			name:  "att subnet topic on current fork",
-			topic: fmt.Sprintf(AttestationSubnetTopicFormat, currentFork, 55 /*subnet*/),
+			topic: fmt.Sprintf(AttestationSubnetTopicFormat, currentFork, 55 /*subnet*/) + validProtocolSuffix,
 			want:  true,
 		},
 		{
 			name:  "att subnet topic on unknown fork",
-			topic: fmt.Sprintf(AttestationSubnetTopicFormat, [4]byte{0xCC, 0xBB, 0xAA, 0xA1} /*fork digest*/, 54 /*subnet*/),
+			topic: fmt.Sprintf(AttestationSubnetTopicFormat, [4]byte{0xCC, 0xBB, 0xAA, 0xA1} /*fork digest*/, 54 /*subnet*/) + validProtocolSuffix,
 			want:  false,
 		},
 	}
@@ -80,7 +92,7 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 
 		tt := test{
 			name:  topic,
-			topic: fmt.Sprintf(topic, formatting...),
+			topic: fmt.Sprintf(topic, formatting...) + validProtocolSuffix,
 			want:  true,
 		}
 		tests = append(tests, tt)

@@ -10,6 +10,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -37,7 +38,7 @@ func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
 		return false
 	}
 	parts := strings.Split(topic, "/")
-	if len(parts) != 4 {
+	if len(parts) != 5 {
 		return false
 	}
 	// The topic must start with a slash, which means the first part will be empty.
@@ -48,6 +49,9 @@ func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
 		return false
 	}
 	if parts[2] != sf.currentForkDigest && parts[2] != sf.previousForkDigest {
+		return false
+	}
+	if parts[4] != encoder.ProtocolSuffixSSZSnappy {
 		return false
 	}
 
