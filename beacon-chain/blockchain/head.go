@@ -51,6 +51,22 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	if headStartRoot == params.BeaconConfig().ZeroHash {
 		headStartRoot = s.genesisRoot
 	}
+
+	// In order to process head, fork choice store requires justified info.
+	// If the fork choice store is missing justified block info, a node should
+	// re-initiate fork choice store using the latest justified info.
+	// This recovers a fatal condition and should not happen in run time.
+	if !s.forkChoiceStore.HasNode(headStartRoot) {
+		jb, err := s.beaconDB.Block(ctx, headStartRoot)
+		if err != nil {
+			return err
+		}
+		s.forkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block, headStartRoot, f, j); err != nil {
+			return err
+		}
+	}
+
 	headRoot, err := s.forkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
 	if err != nil {
 		return err
