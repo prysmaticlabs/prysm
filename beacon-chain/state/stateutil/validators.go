@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,7 +17,10 @@ import (
 // a list of validator structs according to the eth2
 // Simple Serialize specification.
 func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
-	return cachedHasher.validatorRegistryRoot(vals)
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.validatorRegistryRoot(vals)
+	}
+	return nocachedHasher.validatorRegistryRoot(vals)
 }
 
 // ValidatorBalancesRoot computes the HashTreeRoot Merkleization of

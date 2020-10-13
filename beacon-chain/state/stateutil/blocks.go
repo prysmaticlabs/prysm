@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -161,16 +162,19 @@ func Eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error
 			fieldRoots[2] = blockHash[:]
 			enc = append(enc, blockHash[:]...)
 		}
-		if found, ok := cachedHasher.rootsCache.Get(string(enc)); ok && found != nil {
-			return found.([32]byte), nil
+		if featureconfig.Get().EnableSSZCache {
+			if found, ok := cachedHasher.rootsCache.Get(string(enc)); ok && found != nil {
+				return found.([32]byte), nil
+			}
 		}
 	}
 	root, err := htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
-	cachedHasher.rootsCache.Set(string(enc), root, 32)
-
+	if featureconfig.Get().EnableSSZCache {
+		cachedHasher.rootsCache.Set(string(enc), root, 32)
+	}
 	return root, nil
 }
 
@@ -190,10 +194,11 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
 	}
 	hashKey := hashutil.FastSum256(enc)
-	if found, ok := cachedHasher.rootsCache.Get(string(hashKey[:])); ok && found != nil {
-		return found.([32]byte), nil
+	if featureconfig.Get().EnableSSZCache {
+		if found, ok := cachedHasher.rootsCache.Get(string(hashKey[:])); ok && found != nil {
+			return found.([32]byte), nil
+		}
 	}
-
 	eth1Chunks, err := htrutils.Pack(eth1VotesRoots)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
@@ -215,8 +220,9 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	eth1VotesRootBufRoot := make([]byte, 32)
 	copy(eth1VotesRootBufRoot, eth1VotesRootBuf.Bytes())
 	root := htrutils.MixInLength(eth1VotesRootsRoot, eth1VotesRootBufRoot)
-	cachedHasher.rootsCache.Set(string(hashKey[:]), root, 32)
-
+	if featureconfig.Get().EnableSSZCache {
+		cachedHasher.rootsCache.Set(string(hashKey[:]), root, 32)
+	}
 	return root, nil
 }
 
