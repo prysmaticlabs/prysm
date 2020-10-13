@@ -39,10 +39,19 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 	}
 
+	blkRoot, err := blk.Block.HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
+	}
+	canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, blkRoot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
+	}
+
 	return &ethpb.BlockHeaderResponse{
 		Data: &ethpb.BlockHeaderContainer{
 			Root:      root[:],
-			Canonical: true,
+			Canonical: canonical,
 			Header: &ethpb.BeaconBlockHeaderContainer{
 				Message:   v1BlockHdr.Header,
 				Signature: v1BlockHdr.Signature,
@@ -80,8 +89,17 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
+		blkRoot, err := blk.Block.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
+		}
+		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, blkRoot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
+		}
 		blkHdrs[i] = &ethpb.BlockHeaderContainer{
-			Root: root[:],
+			Root:      root[:],
+			Canonical: canonical,
 			Header: &ethpb.BeaconBlockHeaderContainer{
 				Message:   blkHdr.Header,
 				Signature: blkHdr.Signature,
