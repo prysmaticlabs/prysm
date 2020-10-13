@@ -38,7 +38,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 
 	// Populate trie cache, if not initialized yet.
 	if trie == nil {
-		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+		trie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to create new trie")
 		}
@@ -123,7 +123,7 @@ func DeterministicDepositTrie(size int) (*trieutil.SparseMerkleTrie, [][32]byte,
 	}
 
 	items = items[:size]
-	depositTrie, err := trieutil.GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems(items, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, [][32]byte{}, errors.Wrapf(err, "could not generate trie of %d length", size)
 	}
@@ -180,7 +180,7 @@ func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.SparseMerkleT
 		encodedDeposits[i] = hashedDeposit[:]
 	}
 
-	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, [][32]byte{}, errors.Wrap(err, "Could not generate deposit trie")
 	}
@@ -210,7 +210,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 
 	// Populate trie cache, if not initialized yet.
 	if trie == nil {
-		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+		trie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to create new trie")
 		}
