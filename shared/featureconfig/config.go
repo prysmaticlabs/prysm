@@ -68,6 +68,7 @@ type Flags struct {
 	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnablePruningDepositProofs                 bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -296,6 +297,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableBlst.Name) {
 		log.Warn("Enabling new BLS library blst")
 		cfg.EnableBlst = true
+	}
+	if ctx.Bool(enablePruningDepositProofs.Name) {
+		log.Warn("Enabling pruning deposit proofs")
+		cfg.EnablePruningDepositProofs = true
 	}
 	Init(cfg)
 }

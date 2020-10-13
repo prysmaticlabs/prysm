@@ -15,7 +15,7 @@ var log = logrus.WithField("prefix", "node")
 // ConfirmAction uses the passed in actionText as the confirmation text displayed in the terminal.
 // The user must enter Y or N to indicate whether they confirm the action detailed in the warning text.
 // Returns a boolean representing the user's answer.
-func ConfirmAction(actionText string, deniedText string) (bool, error) {
+func ConfirmAction(actionText, deniedText string) (bool, error) {
 	var confirmed bool
 	reader := bufio.NewReader(os.Stdin)
 	log.Warn(actionText)

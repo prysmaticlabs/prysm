@@ -51,7 +51,7 @@ func init() {
 
 func newFaucetServer(
 	r recaptcha.Recaptcha,
-	rpcPath string,
+	rpcPath,
 	funderPrivateKey string,
 	minScore float64,
 ) *faucetServer {

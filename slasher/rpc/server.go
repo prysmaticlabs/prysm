@@ -79,7 +79,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	if err != nil {
 		return nil, err
 	}
-	pubkeys := []bls.PublicKey{}
+	var pubkeys []bls.PublicKey
 	for _, pkBytes := range pkMap {
 		pk, err := bls.PublicKeyFromBytes(pkBytes)
 		if err != nil {

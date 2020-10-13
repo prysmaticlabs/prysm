@@ -162,7 +162,7 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 }
 
 // AttDataIsEqual this function performs an equality check between 2 attestation data, if they're unequal, it will return false.
-func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.AttestationData) bool {
+func AttDataIsEqual(attData1, attData2 *ethpb.AttestationData) bool {
 	if attData1.Slot != attData2.Slot {
 		return false
 	}
@@ -188,7 +188,7 @@ func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.Attestation
 }
 
 // CheckPointIsEqual performs an equality check between 2 check points, returns false if unequal.
-func CheckPointIsEqual(checkPt1 *ethpb.Checkpoint, checkPt2 *ethpb.Checkpoint) bool {
+func CheckPointIsEqual(checkPt1, checkPt2 *ethpb.Checkpoint) bool {
 	if checkPt1.Epoch != checkPt2.Epoch {
 		return false
 	}
