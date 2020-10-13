@@ -76,8 +76,6 @@ func newSubscriptionFilter(ctx context.Context, notifier statefeed.Notifier) pub
 	sf := &subscriptionFilter{
 		ctx:                ctx,
 		notifier:           notifier,
-		currentForkDigest:  fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion),
-		previousForkDigest: fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion),
 	}
 
 	if notifier == nil {
