@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -268,6 +269,14 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					panic("oh no!")
 				},
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: func() *string {
+							s := "foo"
+							return &s
+						}(),
+					},
+				},
 			},
 			want: pubsub.ValidationIgnore,
 		},
@@ -278,8 +287,31 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					return pubsub.ValidationAccept
 				},
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: func() *string {
+							s := "foo"
+							return &s
+						}(),
+					},
+				},
 			},
 			want: pubsub.ValidationAccept,
+		},
+		{
+			name: "nil topic",
+			args: args{
+				topic: "foo",
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+					return pubsub.ValidationAccept
+				},
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: nil,
+					},
+				},
+			},
+			want: pubsub.ValidationReject,
 		},
 	}
 	for _, tt := range tests {

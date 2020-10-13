@@ -173,6 +173,10 @@ func wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
+		if msg.Topic == nil {
+			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+			return pubsub.ValidationReject
+		}
 		b := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
