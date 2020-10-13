@@ -39,6 +39,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/slashing:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/params:go_default_library",

@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -24,9 +25,9 @@ import (
 )
 
 type sourceStoresHistory struct {
-	ProposalEpoch                 uint64
-	FirstStorePubKeyProposals     bitfield.Bitlist
-	SecondStorePubKeyProposals    bitfield.Bitlist
+	ProposalSlot                  uint64
+	FirstStorePubKeyProposals     []byte
+	SecondStorePubKeyProposals    []byte
 	FirstStorePubKeyAttestations  map[uint64]uint64
 	SecondStorePubKeyAttestations map[uint64]uint64
 }
@@ -233,13 +234,13 @@ func TestSplit(t *testing.T) {
 }
 
 func prepareSourcesForMerging(firstStorePubKey [48]byte, firstStore *kv.Store, secondStorePubKey [48]byte, secondStore *kv.Store) (*sourceStoresHistory, error) {
-	proposalEpoch := uint64(0)
-	proposalHistory1 := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x01}
-	if err := firstStore.SaveProposalHistoryForEpoch(context.Background(), firstStorePubKey[:], proposalEpoch, proposalHistory1); err != nil {
+	proposalSlot := uint64(0)
+	proposalHistory1 := bytesutil.PadTo([]byte{1}, 32)
+	if err := firstStore.SaveProposalHistoryForSlot(context.Background(), firstStorePubKey[:], proposalSlot, proposalHistory1); err != nil {
 		return nil, errors.Wrapf(err, "Saving proposal history failed")
 	}
-	proposalHistory2 := bitfield.Bitlist{0x02, 0x00, 0x00, 0x00, 0x01}
-	if err := secondStore.SaveProposalHistoryForEpoch(context.Background(), secondStorePubKey[:], proposalEpoch, proposalHistory2); err != nil {
+	proposalHistory2 := bytesutil.PadTo([]byte{2}, 32)
+	if err := secondStore.SaveProposalHistoryForSlot(context.Background(), secondStorePubKey[:], proposalSlot, proposalHistory2); err != nil {
 		return nil, errors.Wrapf(err, "Saving proposal history failed")
 	}
 
@@ -267,7 +268,7 @@ func prepareSourcesForMerging(firstStorePubKey [48]byte, firstStore *kv.Store, s
 	}
 
 	mergeHistory := &sourceStoresHistory{
-		ProposalEpoch:                 proposalEpoch,
+		ProposalSlot:                  proposalSlot,
 		FirstStorePubKeyProposals:     proposalHistory1,
 		SecondStorePubKeyProposals:    proposalHistory2,
 		FirstStorePubKeyAttestations:  attestationHistoryMap1,
@@ -283,12 +284,12 @@ func assertMergedStore(
 	firstStorePubKey, secondStorePubKey [48]byte,
 	history *sourceStoresHistory) {
 
-	mergedProposalHistory1, err := mergedStore.ProposalHistoryForEpoch(
-		context.Background(), firstStorePubKey[:], history.ProposalEpoch)
+	mergedProposalHistory1, err := mergedStore.ProposalHistoryForSlot(
+		context.Background(), firstStorePubKey[:], history.ProposalSlot)
 	require.NoError(t, err, "Retrieving merged proposal history failed for public key %v", firstStorePubKey)
 	require.DeepEqual(t, history.FirstStorePubKeyProposals, mergedProposalHistory1, "Proposals not merged correctly")
-	mergedProposalHistory2, err := mergedStore.ProposalHistoryForEpoch(
-		context.Background(), secondStorePubKey[:], history.ProposalEpoch)
+	mergedProposalHistory2, err := mergedStore.ProposalHistoryForSlot(
+		context.Background(), secondStorePubKey[:], history.ProposalSlot)
 	require.NoError(t, err, "Retrieving merged proposal history failed for public key %v", secondStorePubKey)
 	require.DeepEqual(t, history.SecondStorePubKeyProposals, mergedProposalHistory2, "Proposals not merged correctly")
 
