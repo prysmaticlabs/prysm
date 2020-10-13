@@ -75,9 +75,9 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
-	err := validator.postBlockSignUpdate(context.Background(), validatorPubKey, block)
+	err := validator.postBlockSignUpdate(context.Background(), validatorPubKey, block, nil)
 	require.ErrorContains(t, failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
 	mockProtector.AllowBlock = true
-	err = validator.postBlockSignUpdate(context.Background(), validatorPubKey, block)
+	err = validator.postBlockSignUpdate(context.Background(), validatorPubKey, block, nil)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }

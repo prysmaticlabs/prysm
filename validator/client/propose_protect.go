@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var failedPreBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
@@ -54,7 +53,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 	return nil
 }
 
-func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, block *ethpb.SignedBeaconBlock) error {
+func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, block *ethpb.SignedBeaconBlock, domain *ethpb.DomainResponse) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
@@ -74,14 +73,6 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 	}
 
 	if featureconfig.Get().LocalProtection {
-		epoch := helpers.SlotToEpoch(block.Block.Slot)
-		domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
-		if err != nil {
-			return errors.Wrap(err, domainDataErr)
-		}
-		if domain == nil {
-			return errors.New(domainDataErr)
-		}
 		signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)
 		if err != nil {
 			return errors.Wrap(err, "failed to compute signing root for block")

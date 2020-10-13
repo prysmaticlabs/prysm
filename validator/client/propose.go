@@ -74,7 +74,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	// Sign returned block from beacon node
-	sig, err := v.signBlock(ctx, pubKey, epoch, b)
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -87,7 +87,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk); err != nil {
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
 		log.WithField("slot", blk.Block.Slot).WithError(err).Error("Failed post block signing validations")
 		return
 	}
@@ -200,20 +200,20 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
-		return nil, errors.Wrap(err, domainDataErr)
+		return nil, nil, errors.Wrap(err, domainDataErr)
 	}
 	if domain == nil {
-		return nil, errors.New(domainDataErr)
+		return nil, nil, errors.New(domainDataErr)
 	}
 
 	var sig bls.Signature
 	if featureconfig.Get().EnableAccountsV2 {
 		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
-			return nil, errors.Wrap(err, signingRootErr)
+			return nil, nil, errors.Wrap(err, signingRootErr)
 		}
 		sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
 			PublicKey:       pubKey[:],
@@ -222,14 +222,14 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 			Object:          &validatorpb.SignRequest_Block{Block: b},
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, "could not sign block proposal")
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
 		}
-		return sig.Marshal(), nil
+		return sig.Marshal(), domain, nil
 	}
 	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
 		bodyRoot, err := b.Body.HashTreeRoot()
 		if err != nil {
-			return nil, errors.Wrap(err, signingRootErr)
+			return nil, nil, errors.Wrap(err, signingRootErr)
 		}
 		blockHeader := &ethpb.BeaconBlockHeader{
 			Slot:          b.Slot,
@@ -240,19 +240,19 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		}
 		sig, err = protectingKeymanager.SignProposal(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), blockHeader)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not sign block proposal")
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
 		}
 	} else {
 		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
-			return nil, errors.Wrap(err, signingRootErr)
+			return nil, nil, errors.Wrap(err, signingRootErr)
 		}
 		sig, err = v.keyManager.Sign(ctx, pubKey, blockRoot)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not sign block proposal")
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
 		}
 	}
-	return sig.Marshal(), nil
+	return sig.Marshal(), domain, nil
 }
 
 // Sign voluntary exit with proposer domain and private key.
