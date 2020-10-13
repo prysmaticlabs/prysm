@@ -5,6 +5,7 @@ import (
 	"context"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -136,4 +137,20 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(context.Background(), state, r))
 	require.NoError(t, service.cacheJustifiedStateBalances(context.Background(), r))
 	require.DeepEqual(t, service.getJustifiedBalances(), state.Balances(), "Incorrect justified balances")
+}
+
+func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
+
+	b := testutil.NewBeaconBlock()
+	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), b))
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.finalizedCheckpt = &ethpb.Checkpoint{}
+	service.bestJustifiedCheckpt = &ethpb.Checkpoint{}
+
+	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
 }
