@@ -78,6 +78,7 @@ type Service struct {
 	joinedTopicsLock      sync.Mutex
 	subnetsLock           map[uint64]*sync.RWMutex
 	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
+	initializationLock    sync.Mutex
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -369,6 +370,13 @@ func (s *Service) pingPeers() {
 // for initializing the p2p service as p2p needs to be aware
 // of genesis information for peering.
 func (s *Service) awaitStateInitialized() {
+	s.initializationLock.Lock()
+	defer s.initializationLock.Unlock()
+
+	if s.isInitialized() {
+		return
+	}
+
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 	cleanup := stateSub.Unsubscribe
@@ -448,4 +456,10 @@ func (s *Service) connectToBootnodes() error {
 	multiAddresses := convertToMultiAddr(nodes)
 	s.connectWithAllPeers(multiAddresses)
 	return nil
+}
+
+// Returns true if the service is aware of the genesis time and genesis validator root. This is
+// required for discovery and pubsub validation.
+func (s *Service) isInitialized() bool {
+	return !s.genesisTime.IsZero() && len(s.genesisValidatorsRoot) == 32
 }
