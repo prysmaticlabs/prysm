@@ -11,6 +11,7 @@ require (
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
+	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/d4l3k/messagediff v1.2.1
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
