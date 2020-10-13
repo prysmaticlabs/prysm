@@ -28,17 +28,12 @@ def _impl(ctx):
     target_libc = "macosx"
     target_cpu = "x86_64"
     osxcross = install + "osxcross/"
-    osxcross_binprefix = osxcross + "bin/x86_64-apple-darwin14-"
-    sdkroot = osxcross + "SDK/MacOSX10.10.sdk/"
+    osxcross_binprefix = osxcross + "bin/x86_64-apple-darwin19-"
+    sdkroot = osxcross + "SDK/MacOSX10.15.sdk/"
     cross_system_include_dirs = [
         "/usr/lib/clang/10.0.0/include",
         osxcross + "include",
         sdkroot + "usr/include",
-    ]
-    cross_system_lib_dirs = [
-        "/usr/x86_64-apple-darwin/lib",
-        sdkroot + "usr/lib",
-        osxcross + "/lib",
     ]
 
     opt_feature = feature(name = "opt")
