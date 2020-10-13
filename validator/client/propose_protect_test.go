@@ -10,6 +10,30 @@ import (
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
+func TestPreBlockSignLocalValidation(t *testing.T) {
+	ctx := context.Background()
+	config := &featureconfig.Flags{
+		LocalProtection:   true,
+		SlasherProtection: false,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
+	validator, _, finish := setup(t)
+	defer finish()
+
+	block := &ethpb.BeaconBlock{
+		Slot:          10,
+		ProposerIndex: 0,
+	}
+	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorPubKey[:], 10, []byte{1})
+	require.NoError(t, err)
+	err = validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
+	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
+	block.Slot = 9
+	err = validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
+}
+
 func TestPreBlockSignValidation(t *testing.T) {
 	config := &featureconfig.Flags{
 		LocalProtection:   false,

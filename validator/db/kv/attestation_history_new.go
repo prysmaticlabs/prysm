@@ -198,3 +198,51 @@ func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 	err = store.SaveAttestationHistoryNewForPubKeys(ctx, dataMap)
 	return err
 }
+
+// UpdateProtectionDb exports old protection data format to the new format and save
+// the exported flag to database.
+func (store *Store) UpdateAttestationProtectionDb(ctx context.Context) error {
+	importAttestations, err := store.shouldImportAttestations()
+	if err != nil {
+		return err
+	}
+	if !importAttestations {
+		return nil
+	}
+	err = store.ImportOldAttestationFormat(ctx)
+	if err != nil {
+		return err
+	}
+	err = store.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicAttestationsBucket)
+		if bucket != nil {
+			if err := bucket.Put([]byte(attestationExported), []byte{1}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (store *Store) shouldImportAttestations() (bool, error) {
+	var importAttestations bool
+	err := store.db.View(func(tx *bolt.Tx) error {
+
+		attestationBucket := tx.Bucket(historicAttestationsBucket)
+		if attestationBucket != nil && attestationBucket.Stats().KeyN != 0 {
+			if exported := attestationBucket.Get([]byte(attestationExported)); exported == nil {
+				importAttestations = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return importAttestations, err
+}

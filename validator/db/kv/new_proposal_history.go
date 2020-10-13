@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/common/log"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -56,10 +57,10 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 	return err
 }
 
-// ImportProposalHistory accepts a validator public key and returns the corresponding signing root.
+// ImportOldProposalFormat accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ImportProposalHistory(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.ImportProposalHistory")
+func (store *Store) ImportOldProposalFormat(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.ImportOldProposalFormat")
 	defer span.End()
 
 	var allKeys [][48]byte
@@ -158,4 +159,57 @@ func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot uint64) error
 		}
 	}
 	return nil
+}
+
+// UpdateProtectionDb exports old protection data format to the new format and save
+// the exported flag to database.
+func (store *Store) UpdateProposalsProtectionDb(ctx context.Context) error {
+	importProposals, err := store.shouldImportProposals()
+	if err != nil {
+		return err
+	}
+
+	if !importProposals {
+		return nil
+	}
+	if err := store.ImportOldProposalFormat(ctx); err != nil {
+		return err
+	}
+	err = store.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicProposalsBucket)
+		if bucket != nil {
+			if err := bucket.Put([]byte(proposalExported), []byte{1}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (store *Store) shouldImportProposals() (bool, error) {
+	var importProposals bool
+	err := store.db.View(func(tx *bolt.Tx) error {
+		proposalBucket := tx.Bucket(historicProposalsBucket)
+		if proposalBucket != nil && proposalBucket.Stats().KeyN != 0 {
+			if exported := proposalBucket.Get([]byte(proposalExported)); exported == nil {
+				if err := proposalBucket.ForEach(func(k, v []byte) error {
+					log.Infof("k: %v , v: %v", k, v)
+					return nil
+				}); err != nil {
+					return err
+				}
+				importProposals = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return importProposals, err
 }
