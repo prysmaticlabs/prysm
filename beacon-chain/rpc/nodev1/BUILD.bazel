@@ -1,0 +1,22 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["server.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/db:go_default_library",
+        "//beacon-chain/p2p:go_default_library",
+        "//beacon-chain/sync:go_default_library",
+        "//shared/version:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+    ],
+)
