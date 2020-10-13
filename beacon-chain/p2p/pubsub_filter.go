@@ -77,8 +77,8 @@ func (sf *subscriptionFilter) FilterIncomingSubscriptions(_ peer.ID, subs []*pub
 
 func newSubscriptionFilter(ctx context.Context, notifier statefeed.Notifier) pubsub.SubscriptionFilter {
 	sf := &subscriptionFilter{
-		ctx:                ctx,
-		notifier:           notifier,
+		ctx:      ctx,
+		notifier: notifier,
 	}
 
 	if notifier == nil {
