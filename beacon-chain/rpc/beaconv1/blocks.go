@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
@@ -302,45 +301,4 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 		}
 	}
 	return blk, nil
-}
-
-func v1alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get body root of block")
-	}
-	return &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			Slot:          block.Block.Slot,
-			ProposerIndex: block.Block.ProposerIndex,
-			ParentRoot:    block.Block.ParentRoot,
-			StateRoot:     block.Block.StateRoot,
-			BodyRoot:      bodyRoot[:],
-		},
-		Signature: block.Signature,
-	}, nil
-}
-
-func v1alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal block")
-	}
-	v1Block := &ethpb.SignedBeaconBlock{}
-	if err := proto.Unmarshal(marshaledBlk, v1Block); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
-	}
-	return v1Block, nil
-}
-
-func v1ToV1alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal block")
-	}
-	v1alpha1Block := &ethpb_alpha.SignedBeaconBlock{}
-	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
-	}
-	return v1alpha1Block, nil
 }
