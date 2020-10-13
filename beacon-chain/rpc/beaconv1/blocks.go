@@ -2,23 +2,19 @@ package beaconv1
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/proto/migration"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,20 +27,12 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
 	if blk == nil {
-		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
+		return nil, status.Errorf(codes.NotFound, "Could not find requested block header")
 	}
 
-	blkHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
+	v1BlockHdr, err := migration.V1Alpha1BlockToV1BlockHeader(blk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
-	}
-	marshaledBlkHdr, err := blkHdr.Marshal()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not marshal block header: %v", err)
-	}
-	v1BlockHdr := &ethpb.SignedBeaconBlockHeader{}
-	if err := proto.Unmarshal(marshaledBlkHdr, v1BlockHdr); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not unmarshal block header: %v", err)
 	}
 	root, err := v1BlockHdr.HashTreeRoot()
 	if err != nil {
@@ -135,9 +123,6 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 	if err := bs.Broadcaster.Broadcast(ctx, v1alpha1Block); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
 	}
-	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(root[:]),
-	}).Debug("Broadcasting block")
 
 	if err := bs.BlockReceiver.ReceiveBlock(ctx, v1alpha1Block, root); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
