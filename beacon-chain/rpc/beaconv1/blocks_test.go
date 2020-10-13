@@ -364,7 +364,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	headBlock := blkContainers[len(blkContainers)-1]
 	bs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
+		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block, Root: headBlock.BlockRoot},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
@@ -443,7 +443,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			require.NoError(t, err)
 
 			if !bytes.Equal(blockRootResp.Data.Root, tt.want) {
-				t.Error("Expected blocks to equal")
+				t.Error("Expected hashes to equal")
 			}
 		})
 	}

@@ -202,9 +202,21 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 		root = blkRoot[:]
 	default:
 		if len(req.BlockId) == 32 {
+			block, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
+			}
+			if block == nil {
+				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
+			}
+
 			root = req.BlockId
 		} else {
-			slot := bytesutil.BytesToUint64BigEndian(req.BlockId)
+			slotInt, err := strconv.Atoi(string(req.BlockId))
+			if err != nil {
+				return nil, errors.Wrap(err, "could not decode block id")
+			}
+			slot := uint64(slotInt)
 			roots, err := bs.BeaconDB.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", slot, err)
