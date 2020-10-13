@@ -387,7 +387,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
-	trie, err := trieutil.GenerateTrieFromItems(deps, int(params.BeaconConfig().DepositContractTreeDepth))
+	trie, err := trieutil.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
 	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
 }
@@ -445,7 +445,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
-	trie, err := trieutil.GenerateTrieFromItems(deps, int(params.BeaconConfig().DepositContractTreeDepth))
+	trie, err := trieutil.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
 	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
 }

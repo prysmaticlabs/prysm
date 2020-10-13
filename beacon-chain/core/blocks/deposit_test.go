@@ -67,7 +67,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	require.NoError(t, err)
 
 	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate trie")
 	proof, err := depositTrie.MerkleProof(0)
 	require.NoError(t, err, "Could not generate proof")
@@ -149,7 +149,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	require.NoError(t, err)
 
 	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate trie")
 	proof, err := depositTrie.MerkleProof(0)
 	require.NoError(t, err, "Could not generate proof")
