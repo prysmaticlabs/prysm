@@ -202,6 +202,7 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	previousFork := [4]byte{0x11, 0x12, 0x13, 0x14}
+	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	type args struct {
 		id   peer.ID
 		subs []*pubsubpb.RPC_SubOpts
@@ -237,7 +238,7 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + validProtocolSuffix
 							return &s
 						}(),
 					},
@@ -251,14 +252,14 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 						return &b
 					}(),
 					Topicid: func() *string {
-						s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+						s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + validProtocolSuffix
 						return &s
 					}(),
 				},
 			},
 		},
 		{
-			name: "blocks topic, duplicated",
+			name: "blocks topic duplicated",
 			args: args{
 				subs: []*pubsubpb.RPC_SubOpts{
 					{
@@ -267,7 +268,7 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + validProtocolSuffix
 							return &s
 						}(),
 					},
@@ -277,7 +278,7 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+							s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + validProtocolSuffix
 							return &s
 						}(),
 					},
@@ -291,7 +292,7 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 						return &b
 					}(),
 					Topicid: func() *string {
-						s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork)
+						s := fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + validProtocolSuffix
 						return &s
 					}(),
 				},

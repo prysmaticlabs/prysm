@@ -17,8 +17,13 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -128,12 +133,13 @@ func TestService_Status_NotRunning(t *testing.T) {
 
 func TestListenForNewNodes(t *testing.T) {
 	// Setup bootnode.
-	cfg := &Config{StateNotifier: &mock.MockStateNotifier{}}
+	notifier := &mock.MockStateNotifier{}
+	cfg := &Config{StateNotifier: notifier}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
-	genesisTime := time.Now()
+	genesisTime := timeutils.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
 		cfg:                   cfg,
@@ -160,6 +166,7 @@ func TestListenForNewNodes(t *testing.T) {
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
+		StateNotifier:       notifier,
 	}
 	for i := 1; i <= 5; i++ {
 		h, pkey, ipAddr := createHost(t, port+i)
@@ -193,7 +200,6 @@ func TestListenForNewNodes(t *testing.T) {
 
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	cfg.StateNotifier = &mock.MockStateNotifier{}
 
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
@@ -202,6 +208,7 @@ func TestListenForNewNodes(t *testing.T) {
 		s.Start()
 		<-exitRoutine
 	}()
+	time.Sleep(1 * time.Second)
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
 		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
@@ -250,14 +257,23 @@ func TestPeer_Disconnect(t *testing.T) {
 }
 
 func TestService_JoinLeaveTopic(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
+
+	fd := initializeStateWithForkDigest(ctx, t, s.stateNotifier.StateFeed())
+
 	assert.Equal(t, 0, len(s.joinedTopics))
 
-	topic := fmt.Sprintf(AttestationSubnetTopicFormat, 42, 42)
+	topic := fmt.Sprintf(AttestationSubnetTopicFormat, fd, 42) + "/" + encoder.ProtocolSuffixSSZSnappy
 	topicHandle, err := s.JoinTopic(topic)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(s.joinedTopics))
+
+	if topicHandle == nil {
+		t.Fatal("topic is nil")
+	}
 
 	sub, err := topicHandle.Subscribe()
 	assert.NoError(t, err)
@@ -269,4 +285,30 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 	// After subscription is cancelled, leaving topic should not result in error.
 	sub.Cancel()
 	assert.NoError(t, s.LeaveTopic(topic))
+}
+
+// initializeStateWithForkDigest sets up the state feed initialized event and returns the fork
+// digest associated with that genesis event.
+func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
+	gt := timeutils.Now()
+	gvr := bytesutil.PadTo([]byte("genesis validator root"), 32)
+	for n := 0; n == 0; {
+		if ctx.Err() != nil {
+			t.Fatal(ctx.Err())
+		}
+		n = ef.Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             gt,
+				GenesisValidatorsRoot: gvr,
+			},
+		})
+	}
+
+	fd, err := p2putils.CreateForkDigest(gt, gvr)
+	require.NoError(t, err)
+
+	time.Sleep(50 * time.Millisecond) // wait for pubsub filter to initialize.
+
+	return fd
 }
