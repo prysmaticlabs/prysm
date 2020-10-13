@@ -199,8 +199,8 @@ func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 	return err
 }
 
-// UpdateProtectionDb exports old protection data format to the new format and save
-// the exported flag to database.
+// UpdateAttestationProtectionDb exports old attestation protection data
+// format to the new format and save the exported flag to database.
 func (store *Store) UpdateAttestationProtectionDb(ctx context.Context) error {
 	importAttestations, err := store.shouldImportAttestations()
 	if err != nil {

@@ -161,8 +161,8 @@ func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot uint64) error
 	return nil
 }
 
-// UpdateProtectionDb exports old protection data format to the new format and save
-// the exported flag to database.
+// UpdateProposalsProtectionDb exports old proposal protection data format to the
+// new format and save the exported flag to database.
 func (store *Store) UpdateProposalsProtectionDb(ctx context.Context) error {
 	importProposals, err := store.shouldImportProposals()
 	if err != nil {
