@@ -22,7 +22,6 @@ package featureconfig
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -230,18 +229,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
-	}
-	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
-		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
-		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
-			log.WithError(err).Error("Failed to update P2PAllowList flag")
-		}
-	}
-	if ctx.IsSet(deprecatedP2PBlacklist.Name) {
-		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PBlacklist.Name, cmd.P2PDenyList.Name)
-		if err := ctx.Set(cmd.P2PDenyList.Name, ctx.String(deprecatedP2PBlacklist.Name)); err != nil {
-			log.WithError(err).Error("Failed to update P2PDenyList flag")
-		}
 	}
 	cfg.ReduceAttesterStateCopy = true
 	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
