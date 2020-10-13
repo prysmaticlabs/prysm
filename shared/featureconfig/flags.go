@@ -86,18 +86,9 @@ var (
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
 			"transmitting a slashable offence over the network.",
 	}
-	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
-		Name:  "disable-strict-attestation-pubsub-verification",
-		Usage: "Disable strict signature verification of attestations in pubsub. See PR 4782 for details.",
-	}
 	disableUpdateHeadPerAttestation = &cli.BoolFlag{
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
-	}
-	disableDomainDataCacheFlag = &cli.BoolFlag{
-		Name: "disable-domain-data-cache",
-		Usage: "Disable caching of domain data requests per epoch. This feature reduces the total " +
-			"calls to the beacon node for each assignment.",
 	}
 	enableStateGenSigVerify = &cli.BoolFlag{
 		Name: "enable-state-gen-sig-verify",
@@ -197,7 +188,6 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
-	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
@@ -234,7 +224,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	cacheFilteredBlockTreeFlag,
-	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
 	enableStateGenSigVerify,
 	checkHeadState,
