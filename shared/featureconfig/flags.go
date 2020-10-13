@@ -90,11 +90,6 @@ var (
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
-	enableStateGenSigVerify = &cli.BoolFlag{
-		Name: "enable-state-gen-sig-verify",
-		Usage: "Enable signature verification for state gen. This feature increases the cost to generate a historical state," +
-			"the resulting state is signature verified.",
-	}
 	checkHeadState = &cli.BoolFlag{
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
@@ -116,10 +111,6 @@ var (
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
 	}
-	disableReduceAttesterStateCopy = &cli.BoolFlag{
-		Name:  "disable-reduce-attester-state-copy",
-		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -132,10 +123,6 @@ var (
 	disableNewBeaconStateLocks = &cli.BoolFlag{
 		Name:  "disable-new-beacon-state-locks",
 		Usage: "Disable new beacon state locking",
-	}
-	disableBatchBlockVerify = &cli.BoolFlag{
-		Name:  "disable-batch-block-verify",
-		Usage: "Disable full signature verification of blocks in batches instead of singularly.",
 	}
 	initSyncVerbose = &cli.BoolFlag{
 		Name:  "init-sync-verbose",
@@ -225,13 +212,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableBackupWebhookFlag,
 	cacheFilteredBlockTreeFlag,
 	disableUpdateHeadPerAttestation,
-	enableStateGenSigVerify,
 	checkHeadState,
 	disableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	disableNewBeaconStateLocks,
@@ -240,7 +225,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
-	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
 	enableBlst,
