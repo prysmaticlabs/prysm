@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -9,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -29,7 +27,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 		}
 
 		// If the bit for the current slot is marked, do not propose.
-		if !bytes.Equal(signingRoot, bytesutil.PadTo([]byte{}, 32)) {
+		if signingRoot != nil {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
