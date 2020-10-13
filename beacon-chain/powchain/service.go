@@ -543,7 +543,7 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
-func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
+func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
@@ -722,6 +722,6 @@ func (s *Service) logTillChainStart() {
 
 	log.WithFields(logrus.Fields{
 		"Extra validators needed":   valNeeded,
-		"Time till minimum genesis": fmt.Sprintf("%s", time.Duration(secondsLeft)*time.Second),
+		"Time till minimum genesis": time.Duration(secondsLeft) * time.Second,
 	}).Infof("Currently waiting for chainstart")
 }

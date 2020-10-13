@@ -376,11 +376,7 @@ func getBlockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFil
 func fetchBlockRootsBySlotRange(
 	ctx context.Context,
 	bkt *bolt.Bucket,
-	startSlotEncoded interface{},
-	endSlotEncoded interface{},
-	startEpochEncoded interface{},
-	endEpochEncoded interface{},
-	slotStepEncoded interface{},
+	startSlotEncoded, endSlotEncoded, startEpochEncoded, endEpochEncoded, slotStepEncoded interface{},
 ) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.fetchBlockRootsBySlotRange")
 	defer span.End()

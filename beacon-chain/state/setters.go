@@ -401,7 +401,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
-func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
+func (b *BeaconState) UpdateBalancesAtIndex(idx, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -490,7 +490,7 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 
 // UpdateSlashingsAtIndex for the beacon state. Updates the slashings
 // at a specific index to a new value.
-func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
+func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}

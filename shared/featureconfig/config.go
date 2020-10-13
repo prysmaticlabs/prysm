@@ -22,7 +22,6 @@ package featureconfig
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -43,7 +42,6 @@ type Flags struct {
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
 	EnableBlst                                 bool // Enables new BLS library from supranational.
@@ -68,6 +66,7 @@ type Flags struct {
 	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnablePruningDepositProofs                 bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -186,11 +185,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
 	}
-	cfg.InitSyncNoVerify = false
-	if ctx.Bool(disableInitSyncVerifyEverythingFlag.Name) {
-		log.Warn("Initial syncing while verifying only the block proposer signatures.")
-		cfg.InitSyncNoVerify = true
-	}
 	if ctx.Bool(skipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
 		cfg.SkipBLSVerify = true
@@ -235,18 +229,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
-	}
-	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
-		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
-		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
-			log.WithError(err).Error("Failed to update P2PAllowList flag")
-		}
-	}
-	if ctx.IsSet(deprecatedP2PBlacklist.Name) {
-		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PBlacklist.Name, cmd.P2PDenyList.Name)
-		if err := ctx.Set(cmd.P2PDenyList.Name, ctx.String(deprecatedP2PBlacklist.Name)); err != nil {
-			log.WithError(err).Error("Failed to update P2PDenyList flag")
-		}
 	}
 	cfg.ReduceAttesterStateCopy = true
 	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
@@ -296,6 +278,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableBlst.Name) {
 		log.Warn("Enabling new BLS library blst")
 		cfg.EnableBlst = true
+	}
+	if ctx.Bool(enablePruningDepositProofs.Name) {
+		log.Warn("Enabling pruning deposit proofs")
+		cfg.EnablePruningDepositProofs = true
 	}
 	Init(cfg)
 }
