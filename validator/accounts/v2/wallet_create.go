@@ -192,8 +192,8 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			wallet.KeymanagerKindSelections[v2keymanager.Derived],
 			wallet.KeymanagerKindSelections[v2keymanager.Direct],
+			wallet.KeymanagerKindSelections[v2keymanager.Derived],
 			wallet.KeymanagerKindSelections[v2keymanager.Remote],
 		},
 	}
@@ -201,5 +201,8 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	if err != nil {
 		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
 	}
-	return v2keymanager.Kind(selection), nil
+	if selection == 2 {
+		return v2keymanager.Remote, nil
+	}
+	return v2keymanager.Kind(selection^1), nil
 }
