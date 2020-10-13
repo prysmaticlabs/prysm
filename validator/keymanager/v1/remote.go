@@ -309,9 +309,7 @@ func pathsToVerificationRegexes(paths []string) []*regexp.Regexp {
 		if len(parts) == 1 {
 			parts = append(parts, ".*")
 		}
-		if strings.HasPrefix(parts[1], "^") {
-			parts[1] = parts[1][1:]
-		}
+		parts[1] = strings.TrimPrefix(parts[1], "^")
 		var specifier string
 		if strings.HasSuffix(parts[1], "$") {
 			specifier = fmt.Sprintf("^%s/%s", parts[0], parts[1])

@@ -59,9 +59,7 @@ func NewUnencrypted(input string) (*Unencrypted, string, error) {
 		return nil, unencryptedOptsHelp, err
 	}
 	sks := make([]bls.SecretKey, 0, len(keyMap))
-	for _, key := range keyMap {
-		sks = append(sks, key)
-	}
+	sks = append(sks, keyMap...)
 
 	km := &Unencrypted{
 		Direct: &Direct{

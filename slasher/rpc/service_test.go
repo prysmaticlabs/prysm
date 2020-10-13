@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -40,6 +39,6 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 
 	rpcService.Start()
 
-	require.LogsContain(t, hook, fmt.Sprint("listening on port"))
+	require.LogsContain(t, hook, "listening on port")
 	require.NoError(t, rpcService.Stop())
 }
