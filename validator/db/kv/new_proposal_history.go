@@ -26,7 +26,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		valBucket := bucket.Bucket(publicKey)
 		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key %#x", publicKey)
+			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
 		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if len(sr) == 0 {
