@@ -400,6 +400,8 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 	require.NoError(t, db.SaveBlock(ctx, b3))
+	b3Root, err := b3.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	bs := &Server{
 		BeaconDB:    db,
@@ -421,19 +423,14 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "slot",
-			blockID: []byte("30"),
-			want:    blkContainers[30].BlockRoot,
-		},
-		{
 			name:    "bad formatting",
 			blockID: []byte("3bad0"),
 			wantErr: true,
 		},
 		{
-			name:    "canonical",
+			name:    "canonical slot",
 			blockID: []byte("30"),
-			want:    blkContainers[30].BlockRoot,
+			want:    b3Root[:],
 		},
 		{
 			name:    "head",
@@ -488,7 +485,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			require.NoError(t, err)
 
 			if !bytes.Equal(blockRootResp.Data.Root, tt.want) {
-				t.Error("Expected hashes to equal")
+				t.Errorf("Expected hashes to equal, expected: %#x, received: %#x", tt.want, blockRootResp.Data.Root)
 			}
 		})
 	}
@@ -506,6 +503,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
+		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
