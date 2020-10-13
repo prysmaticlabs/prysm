@@ -228,6 +228,15 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
 			}
 			root = roots[0][:]
+			for _, blockRoot := range roots {
+				canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, blockRoot)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
+				}
+				if canonical {
+					root = blockRoot[:]
+				}
+			}
 		}
 	}
 
@@ -300,6 +309,20 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 				return nil, nil
 			}
 			blk = blks[0]
+			for _, block := range blks {
+				blkRoot, err := block.Block.HashTreeRoot()
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
+				}
+				canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, blkRoot)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
+				}
+				if canonical {
+					blk = block
+					break
+				}
+			}
 		}
 	}
 	return blk, nil

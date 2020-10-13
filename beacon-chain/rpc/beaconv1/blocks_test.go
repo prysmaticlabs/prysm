@@ -70,12 +70,23 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	headBlock := blkContainers[len(blkContainers)-1]
+
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 30
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	require.NoError(t, db.SaveBlock(ctx, b2))
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 30
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	require.NoError(t, db.SaveBlock(ctx, b3))
+
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
+		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	tests := []struct {
@@ -93,6 +104,11 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			name:    "root",
 			blockID: blkContainers[20].BlockRoot,
 			want:    blkContainers[20].Block,
+		},
+		{
+			name:    "canonical",
+			blockID: []byte("30"),
+			want:    blkContainers[30].Block,
 		},
 		{
 			name:    "genesis",
@@ -264,12 +280,23 @@ func TestServer_GetBlock(t *testing.T) {
 
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 	headBlock := blkContainers[len(blkContainers)-1]
+
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 30
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	require.NoError(t, db.SaveBlock(ctx, b2))
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 30
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	require.NoError(t, db.SaveBlock(ctx, b3))
+
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
+		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -291,6 +318,11 @@ func TestServer_GetBlock(t *testing.T) {
 			name:    "bad formatting",
 			blockID: []byte("3bad0"),
 			wantErr: true,
+		},
+		{
+			name:    "canonical",
+			blockID: []byte("30"),
+			want:    blkContainers[30].Block,
 		},
 		{
 			name:    "head",
@@ -347,7 +379,7 @@ func TestServer_GetBlock(t *testing.T) {
 			v1Block, err := migration.V1Alpha1ToV1Block(tt.want)
 			require.NoError(t, err)
 
-			if !reflect.DeepEqual(block.Data.Message, v1Block) {
+			if !reflect.DeepEqual(block.Data.Message, v1Block.Block) {
 				t.Error("Expected blocks to equal")
 			}
 		})
