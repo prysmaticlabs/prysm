@@ -56,7 +56,7 @@ func (sf *subscriptionFilter) CanSubscribe(topic string) bool {
 
 	// Check the incoming topic matches any topic mapping.
 	for gt := range GossipTopicMappings {
-		if _, err := scanfcheck(topic, gt); err == nil {
+		if _, err := scanfcheck(strings.Join(parts[0:4], "/"), gt); err == nil {
 			return true
 		}
 	}

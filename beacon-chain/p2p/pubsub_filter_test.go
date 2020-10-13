@@ -317,19 +317,6 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 	}
 }
 
-func Test_newSubscriptionFilter_UsesGenesisForkVersion(t *testing.T) {
-	sf, ok := newSubscriptionFilter(context.Background(), &mock.MockStateNotifier{}).(*subscriptionFilter)
-	if !ok {
-		t.Fatal("newSubscriptionFilter does not return a subscriptionFilter")
-	}
-	if sf.currentForkDigest != fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion) {
-		t.Errorf("%s does not match %x", sf.currentForkDigest, params.BeaconConfig().GenesisForkVersion)
-	}
-	if sf.previousForkDigest != fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion) {
-		t.Errorf("%s does not match %x", sf.previousForkDigest, params.BeaconConfig().GenesisForkVersion)
-	}
-}
-
 func Test_subscriptionFilter_MonitorsStateForkUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
