@@ -57,8 +57,8 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[v2keymanager.Kind]string{
-		v2keymanager.Derived: "HD Wallet (Recommended)",
-		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
+		v2keymanager.Derived: "HD Wallet (Least secure)",
+		v2keymanager.Direct:  "Non-HD Wallet (Recommended)",
 		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
