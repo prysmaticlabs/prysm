@@ -392,12 +392,22 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 	headBlock := blkContainers[len(blkContainers)-1]
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 30
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	require.NoError(t, db.SaveBlock(ctx, b2))
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 30
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	require.NoError(t, db.SaveBlock(ctx, b3))
+
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block, Root: headBlock.BlockRoot},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
+		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -419,6 +429,11 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			name:    "bad formatting",
 			blockID: []byte("3bad0"),
 			wantErr: true,
+		},
+		{
+			name:    "canonical",
+			blockID: []byte("30"),
+			want:    blkContainers[30].BlockRoot,
 		},
 		{
 			name:    "head",
