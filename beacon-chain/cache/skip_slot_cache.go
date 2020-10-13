@@ -136,7 +136,7 @@ func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.BeaconState) error {
+func (c *SkipSlotCache) Put(_ context.Context, slot uint64, state *stateTrie.BeaconState) error {
 	if c.disabled {
 		return nil
 	}

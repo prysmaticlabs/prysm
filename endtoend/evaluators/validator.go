@@ -35,7 +35,7 @@ func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 }
 
 // All epochs.
-func allEpochs(currentEpoch uint64) bool {
+func allEpochs(_ uint64) bool {
 	return true
 }
 

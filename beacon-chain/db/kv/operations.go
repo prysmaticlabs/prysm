@@ -9,10 +9,10 @@ import (
 )
 
 // VoluntaryExit retrieval by signing root.
-func (kv *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.VoluntaryExit, error) {
+func (s *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.VoluntaryExit, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.VoluntaryExit")
 	defer span.End()
-	enc, err := kv.voluntaryExitBytes(ctx, exitRoot)
+	enc, err := s.voluntaryExitBytes(ctx, exitRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -27,10 +27,10 @@ func (kv *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.V
 }
 
 // HasVoluntaryExit verifies if a voluntary exit is stored in the db by its signing root.
-func (kv *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
+func (s *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasVoluntaryExit")
 	defer span.End()
-	enc, err := kv.voluntaryExitBytes(ctx, exitRoot)
+	enc, err := s.voluntaryExitBytes(ctx, exitRoot)
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +38,7 @@ func (kv *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 }
 
 // SaveVoluntaryExit to the db by its signing root.
-func (kv *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
+func (s *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveVoluntaryExit")
 	defer span.End()
 	exitRoot, err := exit.HashTreeRoot()
@@ -49,17 +49,17 @@ func (kv *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExi
 	if err != nil {
 		return err
 	}
-	return kv.db.Update(func(tx *bolt.Tx) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(voluntaryExitsBucket)
 		return bucket.Put(exitRoot[:], enc)
 	})
 }
 
-func (kv *Store) voluntaryExitBytes(ctx context.Context, exitRoot [32]byte) ([]byte, error) {
+func (s *Store) voluntaryExitBytes(ctx context.Context, exitRoot [32]byte) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.voluntaryExitBytes")
 	defer span.End()
 	var dst []byte
-	err := kv.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(voluntaryExitsBucket)
 		dst = bkt.Get(exitRoot[:])
 		return nil
@@ -68,10 +68,10 @@ func (kv *Store) voluntaryExitBytes(ctx context.Context, exitRoot [32]byte) ([]b
 }
 
 // deleteVoluntaryExit clears a voluntary exit from the db by its signing root.
-func (kv *Store) deleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error {
+func (s *Store) deleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteVoluntaryExit")
 	defer span.End()
-	return kv.db.Update(func(tx *bolt.Tx) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(voluntaryExitsBucket)
 		return bucket.Delete(exitRoot[:])
 	})

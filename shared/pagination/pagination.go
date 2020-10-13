@@ -11,7 +11,7 @@ import (
 
 // StartAndEndPage takes in the requested page token, wanted page size, total page size.
 // It returns start, end page and the next page token.
-func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, string, error) {
+func StartAndEndPage(pageToken string, pageSize, totalSize int) (int, int, string, error) {
 	if pageToken == "" {
 		pageToken = "0"
 	}
