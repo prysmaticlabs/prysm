@@ -1,6 +1,7 @@
 package beaconv1
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"testing"
@@ -287,6 +288,11 @@ func TestServer_GetBlock(t *testing.T) {
 			want:    blkContainers[30].Block,
 		},
 		{
+			name:    "bad formatting",
+			blockID: []byte("3bad0"),
+			wantErr: true,
+		},
+		{
 			name:    "head",
 			blockID: []byte("head"),
 			want:    headBlock.Block,
@@ -310,6 +316,11 @@ func TestServer_GetBlock(t *testing.T) {
 			name:    "root",
 			blockID: blkContainers[20].BlockRoot,
 			want:    blkContainers[20].Block,
+		},
+		{
+			name:    "non-existent root",
+			blockID: bytesutil.PadTo([]byte("hi there"), 32),
+			wantErr: true,
 		},
 		{
 			name:    "slot",
@@ -339,6 +350,99 @@ func TestServer_GetBlock(t *testing.T) {
 			require.NoError(t, proto.Unmarshal(marshaledBlk, v1Block))
 
 			if !reflect.DeepEqual(block.Data.Message, v1Block) {
+				t.Error("Expected blocks to equal")
+			}
+		})
+	}
+}
+
+func TestServer_GetBlockRoot(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	_, blkContainers := fillDBTestBlocks(ctx, t, db)
+	headBlock := blkContainers[len(blkContainers)-1]
+	bs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+		},
+	}
+
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
+	root, err := genBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name    string
+		blockID []byte
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name:    "slot",
+			blockID: []byte("30"),
+			want:    blkContainers[30].BlockRoot,
+		},
+		{
+			name:    "bad formatting",
+			blockID: []byte("3bad0"),
+			wantErr: true,
+		},
+		{
+			name:    "head",
+			blockID: []byte("head"),
+			want:    headBlock.BlockRoot,
+		},
+		{
+			name:    "finalized",
+			blockID: []byte("finalized"),
+			want:    blkContainers[64].BlockRoot,
+		},
+		{
+			name:    "genesis",
+			blockID: []byte("genesis"),
+			want:    root[:],
+		},
+		{
+			name:    "genesis root",
+			blockID: root[:],
+			want:    root[:],
+		},
+		{
+			name:    "root",
+			blockID: blkContainers[20].BlockRoot,
+			want:    blkContainers[20].BlockRoot,
+		},
+		{
+			name:    "non-existent root",
+			blockID: bytesutil.PadTo([]byte("hi there"), 32),
+			wantErr: true,
+		},
+		{
+			name:    "slot",
+			blockID: []byte("40"),
+			want:    blkContainers[40].BlockRoot,
+		},
+		{
+			name:    "no block",
+			blockID: []byte("105"),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blockRootResp, err := bs.GetBlockRoot(ctx, &ethpb.BlockRequest{
+				BlockId: tt.blockID,
+			})
+			if tt.wantErr {
+				require.NotEqual(t, err, nil)
+				return
+			}
+			require.NoError(t, err)
+
+			if !bytes.Equal(blockRootResp.Data.Root, tt.want) {
 				t.Error("Expected blocks to equal")
 			}
 		})
