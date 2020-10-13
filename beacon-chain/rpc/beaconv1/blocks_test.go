@@ -165,8 +165,9 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 	headBlock := blkContainers[len(blkContainers)-1]
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
+		BeaconDB:         db,
+		HeadFetcher:      &mock.ChainService{DB: db, Block: headBlock.Block},
+		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	b2 := testutil.NewBeaconBlock()
