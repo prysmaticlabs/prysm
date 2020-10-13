@@ -70,12 +70,6 @@ var (
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
 	}
-	disableInitSyncVerifyEverythingFlag = &cli.BoolFlag{
-		Name: "disable-initial-sync-verify-all-signatures",
-		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
-			"and attestation's aggregated signatures. With this flag, only the proposer " +
-			"signature is verified until the node reaches the end of the finalized chain.",
-	}
 	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
@@ -690,7 +684,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,
 	disableSSZCache,
-	disableInitSyncVerifyEverythingFlag,
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,

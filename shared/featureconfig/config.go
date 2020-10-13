@@ -43,7 +43,6 @@ type Flags struct {
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
 	EnableBlst                                 bool // Enables new BLS library from supranational.
@@ -186,11 +185,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableSSZCache.Name) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
-	}
-	cfg.InitSyncNoVerify = false
-	if ctx.Bool(disableInitSyncVerifyEverythingFlag.Name) {
-		log.Warn("Initial syncing while verifying only the block proposer signatures.")
-		cfg.InitSyncNoVerify = true
 	}
 	if ctx.Bool(skipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
