@@ -19,8 +19,9 @@ import (
 func TestServer_ListPoolAttesterSlashings(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
-	slashingsInPool := make([]*ethpb_alpha.AttesterSlashing, 20)
-	v1Slashings := make([]*ethpb.AttesterSlashing, 20)
+	count := uint64(10)
+	slashingsInPool := make([]*ethpb_alpha.AttesterSlashing, count)
+	v1Slashings := make([]*ethpb.AttesterSlashing, count)
 	for i := 0; i < len(slashingsInPool); i++ {
 		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
 		require.NoError(t, err)
@@ -42,14 +43,14 @@ func TestServer_ListPoolAttesterSlashings(t *testing.T) {
 			want:    []*ethpb.AttesterSlashing{},
 		},
 		{
-			name:    "All eligible",
-			pending: slashingsInPool,
-			want:    v1Slashings[0:2],
+			name:    "One",
+			pending: slashingsInPool[0:1],
+			want:    v1Slashings[0:1],
 		},
 		{
-			name:    "Multiple indices",
-			pending: slashingsInPool[3:6],
-			want:    v1Slashings[3:5],
+			name:    "All",
+			pending: slashingsInPool,
+			want:    v1Slashings,
 		},
 	}
 	for _, tt := range tests {
@@ -72,8 +73,9 @@ func TestServer_ListPoolAttesterSlashings(t *testing.T) {
 func TestServer_ListPoolProposerSlashings(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
-	slashingsInPool := make([]*ethpb_alpha.ProposerSlashing, 5)
-	v1Slashings := make([]*ethpb.ProposerSlashing, 5)
+	count := uint64(10)
+	slashingsInPool := make([]*ethpb_alpha.ProposerSlashing, count)
+	v1Slashings := make([]*ethpb.ProposerSlashing, count)
 	for i := 0; i < len(slashingsInPool); i++ {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
 		require.NoError(t, err)
@@ -100,7 +102,7 @@ func TestServer_ListPoolProposerSlashings(t *testing.T) {
 			want:    v1Slashings[0:1],
 		},
 		{
-			name:    "Multiple",
+			name:    "All",
 			pending: slashingsInPool,
 			want:    v1Slashings,
 		},
@@ -125,8 +127,9 @@ func TestServer_ListPoolProposerSlashings(t *testing.T) {
 func TestServer_ListPoolVoluntaryExits(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
-	exitsInPool := make([]*ethpb_alpha.SignedVoluntaryExit, 5)
-	v1Exits := make([]*ethpb.SignedVoluntaryExit, 5)
+	count := uint64(10)
+	exitsInPool := make([]*ethpb_alpha.SignedVoluntaryExit, count)
+	v1Exits := make([]*ethpb.SignedVoluntaryExit, count)
 	for i := 0; i < len(exitsInPool); i++ {
 		exit, err := testutil.GenerateVoluntaryExit(beaconState, privKeys[i], uint64(i))
 		require.NoError(t, err)
@@ -153,7 +156,7 @@ func TestServer_ListPoolVoluntaryExits(t *testing.T) {
 			want:    v1Exits[0:1],
 		},
 		{
-			name:    "Multiple",
+			name:    "All",
 			pending: exitsInPool,
 			want:    v1Exits,
 		},
