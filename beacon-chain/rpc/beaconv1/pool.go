@@ -5,10 +5,10 @@ import (
 	"errors"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 )
 
 // ListPoolAttestations retrieves attestations known by the node but
@@ -47,7 +47,32 @@ func (bs *Server) SubmitAttestation(ctx context.Context, req *ethpb.Attestation)
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Empty) (*ethpb.AttesterSlashingsPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	attSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState)
+	numAttSlashings := len(attSlashings)
+	if numAttSlashings == 0 {
+		return &ethpb.AttesterSlashingsPoolResponse{
+			Data: make([]*ethpb.AttesterSlashing, 0),
+		}, nil
+	}
+	v1AttSlashings := make([]*ethpb.AttesterSlashing, len(attSlashings))
+	for i, slashing := range attSlashings {
+		marshaledSlashing, err := slashing.Marshal()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal attester slashing: %v", err)
+		}
+		v1AttSlashing := &ethpb.AttesterSlashing{}
+		if err := proto.Unmarshal(marshaledSlashing, v1AttSlashing); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not unmarshal attester slashing: %v", err)
+		}
+		v1AttSlashings[i] = v1AttSlashing
+	}
+	return &ethpb.AttesterSlashingsPoolResponse{
+		Data: v1AttSlashings,
+	}, nil
 }
 
 // SubmitAttesterSlashing submits AttesterSlashing object to node's pool and
@@ -59,7 +84,32 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 // ListPoolProposerSlashings retrieves proposer slashings known by the node
 // but not necessarily incorporated into any block.
 func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *ptypes.Empty) (*ethpb.ProposerSlashingPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	slashings := bs.SlashingsPool.PendingProposerSlashings(ctx, headState)
+	numSlashings := len(slashings)
+	if numSlashings == 0 {
+		return &ethpb.ProposerSlashingPoolResponse{
+			Data: make([]*ethpb.ProposerSlashing, 0),
+		}, nil
+	}
+	v1Slashings := make([]*ethpb.ProposerSlashing, len(slashings))
+	for i, slashing := range slashings {
+		marshaledSlashing, err := slashing.Marshal()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal proposer slashing: %v", err)
+		}
+		v1Slashing := &ethpb.ProposerSlashing{}
+		if err := proto.Unmarshal(marshaledSlashing, v1Slashing); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not unmarshal proposer slashing: %v", err)
+		}
+		v1Slashings[i] = v1Slashing
+	}
+	return &ethpb.ProposerSlashingPoolResponse{
+		Data: v1Slashings,
+	}, nil
 }
 
 // SubmitProposerSlashing submits AttesterSlashing object to node's pool and if
@@ -71,7 +121,32 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.Propose
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty) (*ethpb.VoluntaryExitsPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	exits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot())
+	numExits := len(exits)
+	if numExits == 0 {
+		return &ethpb.VoluntaryExitsPoolResponse{
+			Data: make([]*ethpb.SignedVoluntaryExit, 0),
+		}, nil
+	}
+	v1Exits := make([]*ethpb.SignedVoluntaryExit, len(exits))
+	for i, exit := range exits {
+		marshaledExit, err := exit.Marshal()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal voluntary exit: %v", err)
+		}
+		v1Exit := &ethpb.SignedVoluntaryExit{}
+		if err := proto.Unmarshal(marshaledExit, v1Exit); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not unmarshal voluntary exit: %v", err)
+		}
+		v1Exits[i] = v1Exit
+	}
+	return &ethpb.VoluntaryExitsPoolResponse{
+		Data: v1Exits,
+	}, nil
 }
 
 // SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool

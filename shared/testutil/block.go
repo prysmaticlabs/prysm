@@ -531,6 +531,28 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
+// GenerateVoluntaryExitscreates a voluntary exit based on the passed in beacon state.
+func GenerateVoluntaryExit(
+	bState *stateTrie.BeaconState,
+	priv bls.SecretKey,
+	idx uint64,
+) (*ethpb.SignedVoluntaryExit, error) {
+	currentEpoch := helpers.CurrentEpoch(bState)
+
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          helpers.PrevEpoch(bState),
+			ValidatorIndex: idx,
+		},
+	}
+	signature, err := helpers.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	if err != nil {
+		return nil, err
+	}
+	exit.Signature = signature
+	return exit, nil
+}
+
 func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
 	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 	if err != nil {

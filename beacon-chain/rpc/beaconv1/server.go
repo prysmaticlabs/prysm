@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -42,6 +44,7 @@ type Server struct {
 	Broadcaster         p2p.Broadcaster
 	AttestationsPool    attestations.Pool
 	SlashingsPool       *slashings.Pool
+	VoluntaryExitsPool  *voluntaryexits.Pool
 	CanonicalStateChan  chan *pbp2p.BeaconState
 	ChainStartChan      chan time.Time
 	StateGen            *stategen.State
