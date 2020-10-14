@@ -6,13 +6,14 @@ import (
 	"reflect"
 	"testing"
 
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -81,12 +82,13 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, b3))
 
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
-		FinalizationFetcher: &mock.ChainService{
+		BeaconDB: db,
+		ChainInfoFetcher: &mock.ChainService{
+			DB:                  db,
+			Block:               headBlock.Block,
+			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
-		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	tests := []struct {
@@ -165,9 +167,13 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 	headBlock := blkContainers[len(blkContainers)-1]
 	bs := &Server{
-		BeaconDB:         db,
-		HeadFetcher:      &mock.ChainService{DB: db, Block: headBlock.Block},
-		CanonicalFetcher: &mock.ChainService{},
+		BeaconDB: db,
+		ChainInfoFetcher: &mock.ChainService{
+			DB:                  db,
+			Block:               headBlock.Block,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+		},
 	}
 
 	b2 := testutil.NewBeaconBlock()
@@ -257,7 +263,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		BlockReceiver:     c,
-		HeadFetcher:       c,
+		ChainInfoFetcher:  c,
 		BlockNotifier:     c.BlockNotifier(),
 		Broadcaster:       mockp2p.NewTestP2P(t),
 	}
@@ -292,12 +298,13 @@ func TestServer_GetBlock(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, b3))
 
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
-		FinalizationFetcher: &mock.ChainService{
+		BeaconDB: db,
+		ChainInfoFetcher: &mock.ChainService{
+			DB:                  db,
+			Block:               headBlock.Block,
+			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
-		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -391,7 +398,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	_, blkContainers := fillDBTestBlocks(ctx, t, db)
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
 	headBlock := blkContainers[len(blkContainers)-1]
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
@@ -401,19 +408,17 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 	require.NoError(t, db.SaveBlock(ctx, b3))
-	b3Root, err := b3.Block.HashTreeRoot()
-	require.NoError(t, err)
 
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block, Root: headBlock.BlockRoot},
-		FinalizationFetcher: &mock.ChainService{
+		BeaconDB: db,
+		ChainInfoFetcher: &mock.ChainService{
+			DB:                  db,
+			Block:               headBlock.Block,
+			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
-		CanonicalFetcher: &mock.ChainService{},
 	}
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -431,7 +436,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		{
 			name:    "canonical slot",
 			blockID: []byte("30"),
-			want:    b3Root[:],
+			want:    blkContainers[30].BlockRoot,
 		},
 		{
 			name:    "head",
@@ -499,12 +504,13 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
 	headBlock := blkContainers[len(blkContainers)-1]
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{DB: db, Block: headBlock.Block},
-		FinalizationFetcher: &mock.ChainService{
+		BeaconDB: db,
+		ChainInfoFetcher: &mock.ChainService{
+			DB:                  db,
+			Block:               headBlock.Block,
+			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
-		CanonicalFetcher: &mock.ChainService{},
 	}
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
