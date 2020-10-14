@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -20,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -552,9 +555,13 @@ func TestSignBlock(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 
-	keySetup()
-	validator.keyManager = testKeyManager
-	publicKeys := publicKeys(t, testKeyManager)
+	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
+	require.NoError(t, err, "Failed to generate key from bytes")
+	sks := make([]bls.SecretKey, 1)
+	sks[0] = secretKey
+	keyManager := v1.NewDirect(sks)
+	validator.keyManager = keyManager
+	publicKeys := publicKeys(t, keyManager)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
@@ -566,4 +573,8 @@ func TestSignBlock(t *testing.T) {
 	copy(pubKey[:], publicKeys[0])
 	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
 	require.NoError(t, err, "%x,%v,%v", sig, domain, err)
+	require.Equal(t, "0xb8bb84adb4d66317c882bd1e18e9ba3fd0ee59815ca"+
+		"1351a65e8717c1b1f0164e8a67b60918cb2ff29fe1da1fb13079319bf01f205b3d7"+
+		"a88962b773b1c56cd064481616e29a7b598b909796488fcf110327b165e510d15a5"+
+		"2c96d92b195d9ec", hex.EncodeToString(sig))
 }
