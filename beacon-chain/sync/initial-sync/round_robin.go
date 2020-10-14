@@ -114,21 +114,9 @@ func (s *Service) processFetchedData(
 	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
-	blockReceiver := s.chain.ReceiveBlockInitialSync
-	batchReceiver := s.chain.ReceiveBlockBatch
-
 	// Use Batch Block Verify to process and verify batches directly.
-	if featureconfig.Get().BatchBlockVerify {
-		if err := s.processBatchedBlocks(ctx, genesis, data.blocks, batchReceiver); err != nil {
-			log.WithError(err).Debug("Batch is not processed")
-		}
-		return
-	}
-	for _, blk := range data.blocks {
-		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Debug("Block is not processed")
-			continue
-		}
+	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
+		log.WithError(err).Debug("Batch is not processed")
 	}
 }
 
