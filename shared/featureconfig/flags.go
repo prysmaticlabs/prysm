@@ -46,11 +46,6 @@ var (
 		Name:  "disable-dynamic-committee-subnets",
 		Usage: "Disable dynamic committee attestation subnets.",
 	}
-	// disableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	disableSSZCache = &cli.BoolFlag{
-		Name:  "disable-ssz-cache",
-		Usage: "Disable ssz state root cache mechanism.",
-	}
 	enableBackupWebhookFlag = &cli.BoolFlag{
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
@@ -204,7 +199,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableDynamicCommitteeSubnets,
-	disableSSZCache,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	disableStrictAttestationPubsubVerificationFlag,

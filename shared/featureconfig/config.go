@@ -168,11 +168,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled dynamic attestation committee subnets")
 		cfg.DisableDynamicCommitteeSubnets = true
 	}
+
 	cfg.EnableSSZCache = true
-	if ctx.Bool(disableSSZCache.Name) {
-		log.Warn("Disabled ssz cache")
-		cfg.EnableSSZCache = false
-	}
+
 	if ctx.Bool(enableBackupWebhookFlag.Name) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
