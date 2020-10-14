@@ -408,18 +408,11 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 		want   []*ethpb.ProposerSlashing
 	}{
 		{
-			name: "one item",
-			fields: fields{
-				pending: slashings[:2],
-			},
-			want: result[:1],
-		},
-		{
 			name: "removes slashed",
 			fields: fields{
 				pending: slashings,
 			},
-			want: result[2:16],
+			want: result[:16],
 		},
 		{
 			name: "gets noLimit and no slashed",
@@ -436,6 +429,8 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 				pendingProposerSlashing: tt.fields.pending,
 			}
 			result := p.PendingProposerSlashings(context.Background(), beaconState, tt.fields.all /*noLimit*/)
+			t.Log(tt.want[0].Header_1.Header.ProposerIndex)
+			t.Log(result[0].Header_1.Header.ProposerIndex)
 			assert.DeepEqual(t, tt.want, result)
 		})
 	}
