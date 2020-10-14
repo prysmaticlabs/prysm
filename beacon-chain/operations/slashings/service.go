@@ -96,7 +96,7 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, state *beaconstate.
 		slashing := p.pendingProposerSlashing[i]
 		valid, err := p.validatorSlashingPreconditionCheck(state, slashing.Header_1.Header.ProposerIndex)
 		if err != nil {
-			log.Errorf("could not validate proposer slashing: %v", err)
+			log.WithError(err).Error("could not validate proposer slashing")
 			continue
 		}
 		if !valid {
