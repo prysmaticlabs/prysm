@@ -69,7 +69,6 @@ type Flags struct {
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
 	// Slasher toggles.
-	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 	EnableHistoricalDetection bool // EnableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
@@ -203,10 +202,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
-	}
-	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
-		log.Warn("Disabling slashing broadcasting to p2p network")
-		cfg.DisableBroadcastSlashings = true
 	}
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		cfg.DisableGRPCConnectionLogs = true
