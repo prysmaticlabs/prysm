@@ -31,14 +31,14 @@ func NewPool() *Pool {
 
 // PendingExits returns exits that are ready for inclusion at the given slot. This method will not
 // return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64, block bool) []*ethpb.SignedVoluntaryExit {
+func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64, noLimit bool) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	// Allocate pending slice with a capacity of min(len(p.pending), maxVoluntaryExits) since the
 	// array cannot exceed the max and is typically less than the max value.
 	maxExits := params.BeaconConfig().MaxVoluntaryExits
-	if !block {
+	if noLimit {
 		maxExits = uint64(len(p.pending))
 	}
 	pending := make([]*ethpb.SignedVoluntaryExit, 0, maxExits)

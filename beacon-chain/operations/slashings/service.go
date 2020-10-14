@@ -25,11 +25,11 @@ func NewPool() *Pool {
 }
 
 // PendingAttesterSlashings returns attester slashings that are able to be included into a block.
-// This method will return all pending attester slashings unless the `block` parameter is set to true
-// to indicate the request is for a block.
-func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.BeaconState, block bool) []*ethpb.AttesterSlashing {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+// This method will return the amount of pending attester slashings for a block transition unless parameter `noLimit` is true
+// to indicate the request is for noLimit pending items.
+func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.BeaconState, noLimit bool) []*ethpb.AttesterSlashing {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
 	defer span.End()
 
@@ -40,15 +40,15 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.
 
 	// Allocate pending slice with a capacity of maxAttesterSlashings or len(p.pendingAttesterSlashing)) depending on the request.
 	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
-	if !block {
+	if noLimit {
 		maxSlashings = uint64(len(p.pendingAttesterSlashing))
 	}
 	pending := make([]*ethpb.AttesterSlashing, 0, maxSlashings)
 	for i := 0; i < len(p.pendingAttesterSlashing); i++ {
-		slashing := p.pendingAttesterSlashing[i]
 		if uint64(len(pending)) >= maxSlashings {
 			break
 		}
+		slashing := p.pendingAttesterSlashing[i]
 		valid, err := p.validatorSlashingPreconditionCheck(state, slashing.validatorToSlash)
 		if err != nil {
 			log.WithError(err).Error("could not validate attester slashing")
@@ -72,11 +72,11 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.
 }
 
 // PendingProposerSlashings returns proposer slashings that are able to be included into a block.
-// This method will return all pending proposer slashings unless the `block` parameter is set to true
-// to indicate the request is for a block.
-func (p *Pool) PendingProposerSlashings(ctx context.Context, state *beaconstate.BeaconState, block bool) []*ethpb.ProposerSlashing {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+// This method will return the amount of pending proposer slashings for a block transition unless the `noLimit` parameter
+// is set to true to indicate the request is for noLimit pending items.
+func (p *Pool) PendingProposerSlashings(ctx context.Context, state *beaconstate.BeaconState, noLimit bool) []*ethpb.ProposerSlashing {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "operations.PendingProposerSlashing")
 	defer span.End()
 
@@ -85,18 +85,18 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, state *beaconstate.
 
 	// Allocate pending slice with a capacity of len(p.pendingProposerSlashing) or maxProposerSlashings depending on the request.
 	maxSlashings := params.BeaconConfig().MaxProposerSlashings
-	if !block {
+	if noLimit {
 		maxSlashings = uint64(len(p.pendingProposerSlashing))
 	}
 	pending := make([]*ethpb.ProposerSlashing, 0, maxSlashings)
 	for i := 0; i < len(p.pendingProposerSlashing); i++ {
-		slashing := p.pendingProposerSlashing[i]
 		if uint64(len(pending)) >= maxSlashings {
 			break
 		}
+		slashing := p.pendingProposerSlashing[i]
 		valid, err := p.validatorSlashingPreconditionCheck(state, slashing.Header_1.Header.ProposerIndex)
 		if err != nil {
-			log.WithError(err).Error("could not validate proposer slashing")
+			log.Errorf("could not validate proposer slashing: %v", err)
 			continue
 		}
 		if !valid {

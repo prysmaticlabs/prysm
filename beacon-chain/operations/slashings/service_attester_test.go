@@ -506,7 +506,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			p := &Pool{
 				pendingAttesterSlashing: tt.fields.pending,
 			}
-			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, !tt.fields.all))
+			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, tt.fields.all))
 		})
 	}
 }
@@ -566,7 +566,7 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{pendingAttesterSlashing: tt.fields.pending}
-			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, true /*block*/))
+			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, false /*noLimit*/))
 		})
 	}
 }
@@ -594,5 +594,5 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	p := &Pool{
 		pendingAttesterSlashing: pendingSlashings,
 	}
-	assert.DeepEqual(t, slashings[0:2], p.PendingAttesterSlashings(context.Background(), beaconState, true /*block*/))
+	assert.DeepEqual(t, slashings[0:2], p.PendingAttesterSlashings(context.Background(), beaconState, false /*noLimit*/))
 }

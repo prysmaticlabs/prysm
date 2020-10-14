@@ -332,7 +332,7 @@ func TestPool_MarkIncluded(t *testing.T) {
 func TestPool_PendingExits(t *testing.T) {
 	type fields struct {
 		pending []*ethpb.SignedVoluntaryExit
-		all     bool
+		noLimit bool
 	}
 	type args struct {
 		slot uint64
@@ -378,7 +378,7 @@ func TestPool_PendingExits(t *testing.T) {
 		{
 			name: "All eligible, above max",
 			fields: fields{
-				all: true,
+				noLimit: true,
 				pending: []*ethpb.SignedVoluntaryExit{
 					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
 					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
@@ -504,7 +504,7 @@ func TestPool_PendingExits(t *testing.T) {
 			}
 			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
 			require.NoError(t, err)
-			if got := p.PendingExits(s, tt.args.slot, !tt.fields.all); !reflect.DeepEqual(got, tt.want) {
+			if got := p.PendingExits(s, tt.args.slot, tt.fields.noLimit); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
 			}
 		})
