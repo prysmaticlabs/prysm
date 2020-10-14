@@ -63,7 +63,6 @@ func (sf *Service) FilterIncomingSubscriptions(_ peer.ID, subs []*pubsubpb.RPC_S
 	return pubsub.FilterSubscriptions(subs, sf.CanSubscribe), nil
 }
 
-
 // scanfcheck uses fmt.Sscanf to check that a given string matches expected format. This method
 // returns the number of formatting substitutions matched and error if the string does not match
 // the expected format. Note: this method only accepts integer compatible formatting substitutions
