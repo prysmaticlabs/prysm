@@ -258,16 +258,35 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	ctx, span := trace.StartSpan(ctx, "forkChoice.ancestor")
 	defer span.End()
 
-	// Stop recursive ancestry lookup if context is cancelled.
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
 	r := bytesutil.ToBytes32(root)
 	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
 	// This is most optimal outcome.
-	if s.forkChoiceStore.HasParent(r) {
-		return s.forkChoiceStore.AncestorRoot(ctx, r, slot)
+	ar, err := s.ancestorByForkChoiceStore(ctx, r, slot)
+	if err != nil {
+		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
+		// This is the second line of defense for retrieving ancestor root.
+		ar, err = s.ancestorByDB(ctx, r, slot)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ar, nil
+}
+
+// This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
+func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	if !s.forkChoiceStore.HasParent(r) {
+		return nil, errors.New("could not find root in fork choice store")
+	}
+	return s.forkChoiceStore.AncestorRoot(ctx, r, slot)
+}
+
+// This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	// Stop recursive ancestry lookup if context is cancelled.
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	signed, err := s.beaconDB.Block(ctx, r)
@@ -284,10 +303,10 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	}
 	b := signed.Block
 	if b.Slot == slot || b.Slot < slot {
-		return root, nil
+		return r[:], nil
 	}
 
-	return s.ancestor(ctx, b.ParentRoot, slot)
+	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot), slot)
 }
 
 // This updates justified check point in store, if the new justified is later than stored justified or
@@ -310,10 +329,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	if !attestationutil.CheckPointIsEqual(s.justifiedCheckpt, state.CurrentJustifiedCheckpoint()) {
 		if state.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-				return err
-			}
-			return nil
+			return s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
@@ -339,7 +355,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock,
-	fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	pendingNodes := make([]*ethpb.BeaconBlock, 0)
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)

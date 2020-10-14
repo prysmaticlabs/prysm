@@ -27,10 +27,10 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = ChainStartFetcher(&Service{})
-var _ = ChainInfoFetcher(&Service{})
-var _ = POWBlockFetcher(&Service{})
-var _ = Chain(&Service{})
+var _ ChainStartFetcher = (*Service)(nil)
+var _ ChainInfoFetcher = (*Service)(nil)
+var _ POWBlockFetcher = (*Service)(nil)
+var _ Chain = (*Service)(nil)
 
 type goodLogger struct {
 	backend *backends.SimulatedBackend
@@ -74,7 +74,7 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
-func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error) {
+func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
@@ -83,24 +83,34 @@ func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*geth
 			Number: big.NewInt(0),
 		}, nil
 	}
-	return g.backend.Blockchain().GetHeaderByHash(hash), nil
+	header := g.backend.Blockchain().GetHeaderByHash(hash)
+	if header == nil {
+		return nil, errors.New("nil header returned")
+	}
+	return header, nil
 
 }
 
-func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethTypes.Header, error) {
 	if g.backend == nil {
 		return &gethTypes.Header{
 			Number: big.NewInt(15),
 			Time:   150,
 		}, nil
 	}
+	var header *gethTypes.Header
 	if number == nil {
-		return g.backend.Blockchain().CurrentHeader(), nil
+		header = g.backend.Blockchain().CurrentHeader()
+	} else {
+		header = g.backend.Blockchain().GetHeaderByNumber(number.Uint64())
 	}
-	return g.backend.Blockchain().GetHeaderByNumber(number.Uint64()), nil
+	if header == nil {
+		return nil, errors.New("nil header returned")
+	}
+	return header, nil
 }
 
-func (g *goodFetcher) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
+func (g *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
 	return nil, nil
 }
 

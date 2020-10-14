@@ -6,11 +6,11 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -49,7 +49,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		return errors.Wrap(err, "could not validate pending slots")
 	}
 	slots := s.sortedPendingSlots()
-	parentRoots := [][32]byte{}
+	var parentRoots [][32]byte
 
 	span.AddAttributes(
 		trace.Int64Attribute("numSlots", int64(len(slots))),
@@ -113,7 +113,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block.Slot,
 					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block.ParentRoot)),
-				}).Info("Requesting parent block")
+				}).Debug("Requesting parent block")
 				parentRoots = append(parentRoots, bytesutil.ToBytes32(b.Block.ParentRoot))
 
 				span.End()
@@ -168,11 +168,11 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	// all the requested blocks, we randomly select another peer.
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
 	for i := 0; i < numOfTries; i++ {
-		req := roots
+		req := types.BeaconBlockByRootsReq(roots)
 		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
-		if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
+		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
 			traceutil.AnnotateError(span, err)
 			log.Debugf("Could not send recent block request: %v", err)
 		}

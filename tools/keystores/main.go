@@ -224,7 +224,7 @@ func encrypt(cliCtx *cli.Context) error {
 
 // Reads the keystore file at the provided path and attempts
 // to decrypt it with the specified passwords.
-func readAndDecryptKeystore(fullPath string, password string) error {
+func readAndDecryptKeystore(fullPath, password string) error {
 	file, err := ioutil.ReadFile(fullPath)
 	if err != nil {
 		return errors.Wrapf(err, "could not read file at path: %s", fullPath)

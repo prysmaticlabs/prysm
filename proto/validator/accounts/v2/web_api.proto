@@ -3,6 +3,8 @@ package ethereum.validator.accounts.v2;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
 
 service Wallet {
     rpc HasWallet(google.protobuf.Empty) returns (HasWalletResponse) {
@@ -10,10 +12,15 @@ service Wallet {
             get: "/v2/validator/wallet/exists"
         };
     }
-    rpc CreateWallet(CreateWalletRequest) returns (WalletResponse) {
+    rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/create",
             body: "*"
+        };
+    }
+    rpc DefaultWalletPath(google.protobuf.Empty) returns (DefaultWalletResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/wallet/default",
         };
     }
     rpc EditConfig(EditWalletConfigRequest) returns (WalletResponse) {
@@ -113,19 +120,24 @@ message CreateWalletRequest {
     string mnemonic = 4;
     // Number of accounts.
     uint64 num_accounts = 5;
-    // JSON-encoded keystore files to import during wallet creation.
-    repeated string keystores_imported = 6;
-    // Password to unlock imported keystore files.
-    string keystores_password = 7;
 
     // Remote address such as host.example.com:4000 for a gRPC remote signer server.
-    string remote_addr = 8;
+    string remote_addr = 6;
     // Path to client.crt for secure TLS connections to a remote signer server.
-    string remote_crt_path = 9;
+    string remote_crt_path = 7;
     // Path to client.key for secure TLS connections to a remote signer server.
-    string remote_key_path = 10;
+    string remote_key_path = 8;
     // Path to ca.crt for secure TLS connections to a remote signer server.
-    string remote_ca_crt_path = 11;
+    string remote_ca_crt_path = 9;
+}
+
+message CreateWalletResponse {
+    WalletResponse wallet = 1;
+    DepositDataResponse accounts_created = 2;
+}
+
+message DefaultWalletResponse {
+    string wallet_dir = 1;
 }
 
 message EditWalletConfigRequest {
@@ -152,10 +164,30 @@ message WalletResponse {
 message ListAccountsRequest {
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
+
+    // The maximum number of accounts to return in the response.
+    // This field is optional.
+    int32 page_size = 2;
+
+    // A pagination token returned from a previous call to `ListAccounts`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 3;
+
+    // Whether to return all available accounts in a single response.
+    bool all = 4;
 }
 
 message ListAccountsResponse {
     repeated Account accounts = 1;
+
+    // A pagination token returned from a previous call to `ListAccounts`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count matching the request.
+    int32 total_size = 3;
 }
 
 message Account {
@@ -178,6 +210,7 @@ message AccountRequest {
 
 message AuthRequest {
     string password = 1;
+    string wallet_dir = 2;
 }
 
 message AuthResponse {
@@ -201,8 +234,9 @@ message NodeConnectionResponse {
 }
 
 message ChangePasswordRequest {
-    string password = 1;
-    string password_confirmation = 2;
+    string current_password = 1;
+    string password = 2;
+    string password_confirmation = 3;
 }
 
 message HasWalletResponse {
@@ -226,19 +260,19 @@ message CreateAccountRequest {
     uint64 num_accounts = 1;
 }
 
+message DepositMessage {
+    bytes pubkey = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+    bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    uint64 amount = 3;
+}
+
 message DepositDataResponse {
     // The deposit data for each created account
     // represented as a list in the same format as
     // the deposit_data.json file from the eth2.0-deposit-cli.
     repeated DepositData deposit_data_list = 1;
     message DepositData {
-        string pubkey = 1;
-        string withdrawal_credentials = 2;
-        uint64 amount = 3;
-        string signature = 4;
-        string deposit_message_root = 5;
-        string deposit_data_root = 6;
-        string fork_version = 7;
+        map<string, string> data = 1;
     }
 }
 

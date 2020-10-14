@@ -2552,8 +2552,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:zM15JmyZ5v6B3xqVsYe34a8IXAoklYJo6glJ5V0kXyU=",
-        version = "v0.0.0-20201002012750-b612cbd9e525",
+        sum = "h1:dGeuKeaXxCepTbwsz7kYSfP1yazw1uRMn58CqNCcPP4=",
+        version = "v0.0.0-20201003171600-a72e5f77d233",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -3629,4 +3629,22 @@ def prysm_deps():
         importpath = "github.com/shirou/gopsutil",
         sum = "h1:tYH07UPoQt0OCQdgWWMgYHy3/a9bcxNpBIysykNIP7I=",
         version = "v2.20.5+incompatible",
+    )
+    go_repository(
+        name = "com_github_wadey_gocovmerge",
+        importpath = "github.com/wadey/gocovmerge",
+        sum = "h1:W0LEBv82YCGEtcmPA3uNZBI33/qF//HAAs3MawDjRa0=",
+        version = "v0.0.0-20160331181800-b5bfa59ec0ad",
+    )
+    go_repository(
+        name = "com_github_google_shlex",
+        importpath = "github.com/google/shlex",
+        sum = "h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=",
+        version = "v0.0.0-20191202100458-e7afc7fbc510",
+    )
+    go_repository(
+        name = "com_github_wercker_journalhook",
+        importpath = "github.com/wercker/journalhook",
+        sum = "h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=",
+        version = "v0.0.0-20180428041537-5d0a5ae867b3",
     )

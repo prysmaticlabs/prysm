@@ -133,6 +133,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		fetchRequests:       make(chan *fetchRequestParams, maxPendingRequests),
 		fetchResponses:      make(chan *fetchRequestResponse, maxPendingRequests),
 		capacityWeight:      capacityWeight,
+		mode:                cfg.mode,
 		quit:                make(chan struct{}),
 	}
 }

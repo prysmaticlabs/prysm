@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -123,7 +122,7 @@ func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) err
 }
 
 // GenesisBlock -- passthrough.
-func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+func (e Exporter) GenesisBlock(ctx context.Context) (*eth.SignedBeaconBlock, error) {
 	return e.db.GenesisBlock(ctx)
 }
 
@@ -208,7 +207,7 @@ func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 }
 
 // FinalizedChildBlock -- passthrough.
-func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
+func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
 	return e.db.FinalizedChildBlock(ctx, blockRoot)
 }
 
@@ -238,7 +237,7 @@ func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
 }
 
 // HighestSlotBlocksBelow -- passthrough
-func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, error) {
 	return e.db.HighestSlotBlocksBelow(ctx, slot)
 }
 

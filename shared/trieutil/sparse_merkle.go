@@ -22,7 +22,7 @@ type SparseMerkleTrie struct {
 }
 
 // NewTrie returns a new merkle trie filled with zerohashes to use.
-func NewTrie(depth int) (*SparseMerkleTrie, error) {
+func NewTrie(depth uint64) (*SparseMerkleTrie, error) {
 	var zeroBytes [32]byte
 	items := [][]byte{zeroBytes[:]}
 	return GenerateTrieFromItems(items, depth)
@@ -43,7 +43,7 @@ func CreateTrieFromProto(trieObj *protodb.SparseMerkleTrie) *SparseMerkleTrie {
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
-func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error) {
+func GenerateTrieFromItems(items [][]byte, depth uint64) (*SparseMerkleTrie, error) {
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
@@ -55,7 +55,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error)
 		transformedLeaves[i] = arr[:]
 	}
 	layers[0] = transformedLeaves
-	for i := 0; i < depth; i++ {
+	for i := uint64(0); i < depth; i++ {
 		if len(layers[i])%2 == 1 {
 			layers[i] = append(layers[i], ZeroHashes[i][:])
 		}
@@ -182,7 +182,7 @@ func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
 }
 
 // VerifyMerkleBranch verifies a Merkle branch against a root of a trie.
-func VerifyMerkleBranch(root []byte, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
+func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
 	if len(proof) != int(depth)+1 {
 		return false
 	}

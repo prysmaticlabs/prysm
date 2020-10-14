@@ -19,7 +19,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -311,6 +311,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 						}
 
 						wg.Done()
+					case <-ctx.Done():
+						log.Debug("Context closed, exiting goroutine")
+						return unionRespBlocks, nil
 					}
 				}
 			}
@@ -772,7 +775,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 	tests := []struct {
 		name   string
 		args   args
-		update func(s *peers.BlockProviderScorer)
+		update func(s *scorers.BlockProviderScorer)
 		want   []peer.ID
 	}{
 		{
@@ -821,7 +824,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 				peersPercentage: 1.0,
 				capacityWeight:  0.2,
 			},
-			update: func(s *peers.BlockProviderScorer) {
+			update: func(s *scorers.BlockProviderScorer) {
 				s.IncrementProcessedBlocks("a", batchSize*2)
 				s.IncrementProcessedBlocks("b", batchSize*2)
 				s.IncrementProcessedBlocks("c", batchSize*2)
@@ -843,7 +846,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 				peersPercentage: 0.8,
 				capacityWeight:  0.2,
 			},
-			update: func(s *peers.BlockProviderScorer) {
+			update: func(s *scorers.BlockProviderScorer) {
 				s.IncrementProcessedBlocks("e", s.Params().ProcessedBlocksCap)
 				s.IncrementProcessedBlocks("b", s.Params().ProcessedBlocksCap/2)
 				s.IncrementProcessedBlocks("c", s.Params().ProcessedBlocksCap/4)
@@ -865,7 +868,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 				peersPercentage: 0.8,
 				capacityWeight:  0.2,
 			},
-			update: func(s *peers.BlockProviderScorer) {
+			update: func(s *scorers.BlockProviderScorer) {
 				// Make sure that score takes priority over capacity.
 				s.IncrementProcessedBlocks("c", batchSize*5)
 				s.IncrementProcessedBlocks("b", batchSize*15)

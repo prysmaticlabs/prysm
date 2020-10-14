@@ -155,8 +155,5 @@ func (s *Service) Status() error {
 	if bs := s.beaconclient.Status(); bs != nil {
 		return bs
 	}
-	if ds := s.detector.Status(); ds != nil {
-		return ds
-	}
-	return nil
+	return s.detector.Status()
 }

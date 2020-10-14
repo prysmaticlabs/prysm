@@ -7,7 +7,7 @@ import (
 // SubsetUint64 returns true if the first array is
 // completely contained in the second array with time
 // complexity of approximately o(n).
-func SubsetUint64(a []uint64, b []uint64) bool {
+func SubsetUint64(a, b []uint64) bool {
 	if len(a) > len(b) {
 		return false
 	}
@@ -48,7 +48,7 @@ func IntersectionUint64(s ...[]uint64) []uint64 {
 	for i, num := 1, len(s); i < num; i++ {
 		for _, k := range s[i] {
 			// Increment and check only if item is present in both, and no increment has happened yet.
-			if _, found := m[k]; found && (i-m[k]) == 0 {
+			if _, found := m[k]; found && i == m[k] {
 				m[k]++
 				if m[k] == num {
 					intersect = append(intersect, k)
@@ -120,7 +120,7 @@ func IsUint64Sorted(a []uint64) bool {
 // not in slice a with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
-func NotUint64(a []uint64, b []uint64) []uint64 {
+func NotUint64(a, b []uint64) []uint64 {
 	set := make([]uint64, 0)
 	m := make(map[uint64]bool)
 
@@ -163,7 +163,7 @@ func IntersectionInt64(s ...[]int64) []int64 {
 	}
 	for i, num := 1, len(s); i < num; i++ {
 		for _, k := range s[i] {
-			if _, found := m[k]; found && (i-m[k]) == 0 {
+			if _, found := m[k]; found && i == m[k] {
 				m[k]++
 				if m[k] == num {
 					intersect = append(intersect, k)
@@ -206,7 +206,7 @@ func UnionInt64(s ...[]int64) []int64 {
 // not in slice b with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
-func NotInt64(a []int64, b []int64) []int64 {
+func NotInt64(a, b []int64) []int64 {
 	set := make([]int64, 0)
 	m := make(map[int64]bool)
 
@@ -269,7 +269,7 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 	}
 	for i, num := 1, len(s); i < num; i++ {
 		for _, k := range s[i] {
-			if _, found := m[string(k)]; found && (i-m[string(k)]) == 0 {
+			if _, found := m[string(k)]; found && i == m[string(k)] {
 				m[string(k)]++
 				if m[string(k)] == num {
 					inter = append(inter, k)
@@ -299,6 +299,6 @@ func SplitCommaSeparated(arr []string) []string {
 //     split(L, k)[i] == L[get_split_offset(len(L), k, i): get_split_offset(len(L), k, i+1)]
 //     """
 //     return (list_size * index) // chunks
-func SplitOffset(listSize uint64, chunks uint64, index uint64) uint64 {
+func SplitOffset(listSize, chunks, index uint64) uint64 {
 	return (listSize * index) / chunks
 }

@@ -23,6 +23,7 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -36,7 +37,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-var _ = shared.Service(&Service{})
+var _ shared.Service = (*Service)(nil)
 
 // In the event that we are at our peer limit, we
 // stop looking for new peers and instead poll
@@ -164,8 +165,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: int(s.cfg.MaxPeers),
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold:     maxBadResponses,
 				Weight:        -100,
 				DecayInterval: time.Hour,
@@ -369,19 +370,25 @@ func (s *Service) pingPeers() {
 func (s *Service) awaitStateInitialized() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
+	cleanup := stateSub.Unsubscribe
+	defer cleanup()
 	for {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
+					// log.Fatalf will prevent defer from being called
+					cleanup()
 					log.Fatalf("Received wrong data over state initialized feed: %v", data)
 				}
 				s.genesisTime = data.StartTime
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
 				return
 			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
 		}
 	}
 }

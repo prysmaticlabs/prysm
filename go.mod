@@ -9,10 +9,10 @@ require (
 	github.com/aws/aws-sdk-go v1.33.15 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
-	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
-	github.com/d4l3k/messagediff v1.2.1 // indirect
+	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
+	github.com/d4l3k/messagediff v1.2.1
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.3
@@ -34,6 +34,8 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.2-0.20200707131729-196ae77b8a26
 	github.com/google/gofuzz v1.1.1-0.20200604201612-c04b05f3adfa
+	github.com/google/gopacket v1.1.18 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/websocket v1.4.2
 	github.com/graph-gophers/graphql-go v0.0.0-20200309224638-dae41bde9ef9 // indirect
@@ -58,9 +60,6 @@ require (
 	github.com/libp2p/go-libp2p-circuit v0.3.1
 	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-crypto v0.1.0
-	github.com/libp2p/go-libp2p-host v0.1.0
-	github.com/libp2p/go-libp2p-kad-dht v0.8.3
-	github.com/libp2p/go-libp2p-net v0.1.0
 	github.com/libp2p/go-libp2p-noise v0.1.1
 	github.com/libp2p/go-libp2p-pubsub v0.3.3
 	github.com/libp2p/go-libp2p-secio v0.2.2
@@ -68,8 +67,10 @@ require (
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-mplex v0.1.3 // indirect
 	github.com/libp2p/go-reuseport-transport v0.0.4 // indirect
+	github.com/libp2p/go-sockaddr v0.1.0 // indirect
 	github.com/libp2p/go-yamux v1.3.8 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
+	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.0
 	github.com/minio/sha256-simd v0.1.1
@@ -87,7 +88,7 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20201002012750-b612cbd9e525
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20201003171600-a72e5f77d233
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
@@ -106,6 +107,7 @@ require (
 	github.com/wealdtech/go-eth2-wallet-nd/v2 v2.3.0
 	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.16.1
 	github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0
+	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4
 	go.opencensus.io v0.22.4

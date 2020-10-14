@@ -1,14 +1,19 @@
 package node
 
 import (
+	"crypto/rand"
 	"flag"
+	"fmt"
+	"math/big"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
 
@@ -31,6 +36,20 @@ func TestNode_Builds(t *testing.T) {
 	context := cli.NewContext(&app, set, nil)
 
 	require.NoError(t, v1.NewValidatorAccount(dir, "1234"), "Could not create validator account")
-	_, err := NewValidatorClient(context)
+	valClient, err := NewValidatorClient(context)
 	require.NoError(t, err, "Failed to create ValidatorClient")
+	err = valClient.db.Close()
+	require.NoError(t, err)
+}
+
+// TestClearDB tests clearing the database
+func TestClearDB(t *testing.T) {
+	hook := logTest.NewGlobal()
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	require.NoError(t, err, "Could not generate random number for file path")
+	tmp := filepath.Join(testutil.TempDir(), fmt.Sprintf("datadirtest%d", randPath))
+	require.NoError(t, os.RemoveAll(tmp))
+	err = clearDB(tmp, true)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Removing database")
 }

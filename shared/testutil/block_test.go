@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -46,6 +47,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
 	for i := 0; i < int(finalSlot); i++ {
+		helpers.ClearCache()
 		block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 		require.NoError(t, err)
 		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)

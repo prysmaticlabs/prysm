@@ -9,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -23,10 +22,10 @@ type ReadOnlyDatabase interface {
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
-	GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
+	GenesisBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
-	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error)
-	HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error)
+	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
+	HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	GenesisState(ctx context.Context) (*state.BeaconState, error)

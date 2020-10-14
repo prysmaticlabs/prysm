@@ -39,12 +39,14 @@ func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 
 	// Check that the public keys were added to the public keys cache.
 	for i, keyBytes := range pubKeys {
-		require.Equal(t, bytesutil.ToBytes48(keyBytes), dr.publicKeysCache[i])
+		require.Equal(t, bytesutil.ToBytes48(keyBytes), orderedPublicKeys[i])
 	}
 
 	// Check that the secret keys were added to the secret keys cache.
+	lock.RLock()
+	defer lock.RUnlock()
 	for i, keyBytes := range privKeys {
-		privKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(pubKeys[i])]
+		privKey, ok := secretKeysCache[bytesutil.ToBytes48(pubKeys[i])]
 		require.Equal(t, true, ok)
 		require.Equal(t, bytesutil.ToBytes48(keyBytes), bytesutil.ToBytes48(privKey.Marshal()))
 	}

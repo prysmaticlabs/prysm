@@ -16,13 +16,15 @@ import (
 // in the function input, encrypts them using the specified password,
 // and returns their respective EIP-2335 keystores.
 func (dr *Keymanager) ExtractKeystores(
-	ctx context.Context, publicKeys []bls.PublicKey, password string,
+	_ context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*v2keymanager.Keystore, error) {
+	lock.Lock()
+	defer lock.Unlock()
 	encryptor := keystorev4.New()
 	keystores := make([]*v2keymanager.Keystore, len(publicKeys))
 	for i, pk := range publicKeys {
 		pubKeyBytes := pk.Marshal()
-		secretKey, ok := dr.secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
+		secretKey, ok := secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
 		if !ok {
 			return nil, fmt.Errorf(
 				"secret key for public key %#x not found in cache",
