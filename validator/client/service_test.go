@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -15,40 +14,6 @@ import (
 )
 
 var _ shared.Service = (*ValidatorService)(nil)
-var validatorKey *keystore.Key
-var validatorPubKey [48]byte
-var keyMap map[[48]byte]*keystore.Key
-var keyMapThreeValidators map[[48]byte]*keystore.Key
-
-func keySetup() {
-	//keyMap = make(map[[48]byte]*keystore.Key)
-	//keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
-	//
-	//var err error
-	//validatorKey, err = keystore.NewKey()
-	//if err != nil {
-	//	log.WithError(err).Debug("Cannot create key")
-	//}
-	//copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
-	//keyMap[validatorPubKey] = validatorKey
-	//
-	//sks := make([]bls.SecretKey, 1)
-	//sks[0] = validatorKey.SecretKey
-	//testKeyManager = keymanager.NewDirect(sks)
-	//
-	//sks = make([]bls.SecretKey, 3)
-	//for i := 0; i < 3; i++ {
-	//	vKey, err := keystore.NewKey()
-	//	if err != nil {
-	//		log.WithError(err).Debug("Cannot create key")
-	//	}
-	//	var pubKey [48]byte
-	//	copy(pubKey[:], vKey.PublicKey.Marshal())
-	//	keyMapThreeValidators[pubKey] = vKey
-	//	sks[i] = vKey.SecretKey
-	//}
-	//testKeyManagerThreeValidators = keymanager.NewDirect(sks)
-}
 
 func TestMain(m *testing.M) {
 	dir := testutil.TempDir() + "/keystore1"
@@ -58,7 +23,6 @@ func TestMain(m *testing.M) {
 		}
 	}
 	defer cleanup()
-	keySetup()
 	code := m.Run()
 	// os.Exit will prevent defer from being called
 	cleanup()
