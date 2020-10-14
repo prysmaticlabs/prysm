@@ -294,7 +294,7 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 		highestSlot = cachedState.Slot()
 		state = cachedState
 	}
-	if err := SkipSlotCache.MarkInProgress(key); err == cache.ErrAlreadyInProgress {
+	if err := SkipSlotCache.MarkInProgress(key); errors.Is(err, cache.ErrAlreadyInProgress) {
 		cachedState, err = SkipSlotCache.Get(ctx, key)
 		if err != nil {
 			return nil, err

@@ -41,32 +41,27 @@ type Flags struct {
 	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
 
 	// Feature related flags.
-	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
-	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
-	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
-	EnableBlst                                 bool // Enables new BLS library from supranational.
-	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
-	LocalProtection                            bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
-	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
-	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
-	EnableStateGenSigVerify                    bool // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
-	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
-	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
-	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
-	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
-	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
-	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
-	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
-	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
-	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
-	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnablePruningDepositProofs                 bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
+	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
+	DisableDynamicCommitteeSubnets      bool // Disables dynamic attestation committee subnets via p2p.
+	SkipBLSVerify                       bool // Skips BLS verification across the runtime.
+	EnableBlst                          bool // Enables new BLS library from supranational.
+	EnableBackupWebhook                 bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates            bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression           bool // EnableSnappyDBCompression in the database.
+	LocalProtection                     bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
+	SlasherProtection                   bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	DisableUpdateHeadPerAttestation     bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
+	CheckHeadState                      bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
+	EnableNoise                         bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	DontPruneStateStartUp               bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
+	WaitForSynced                       bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
+	EnableAccountsV2                    bool // EnableAccountsV2 for Prysm validator clients.
+	InitSyncVerbose                     bool // InitSyncVerbose logs every processed block during initial syncing.
+	EnableFinalizedDepositsCache        bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
+	EnableEth1DataMajorityVote          bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
+	EnableAttBroadcastDiscoveryAttempts bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
+	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnablePruningDepositProofs          bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -180,15 +175,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled dynamic attestation committee subnets")
 		cfg.DisableDynamicCommitteeSubnets = true
 	}
+
 	cfg.EnableSSZCache = true
-	if ctx.Bool(disableSSZCache.Name) {
-		log.Warn("Disabled ssz cache")
-		cfg.EnableSSZCache = false
-	}
-	if ctx.Bool(skipBLSVerifyFlag.Name) {
-		log.Warn("UNSAFE: Skipping BLS verification at runtime")
-		cfg.SkipBLSVerify = true
-	}
+
 	if ctx.Bool(enableBackupWebhookFlag.Name) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
@@ -201,17 +190,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
 	}
-	if ctx.Bool(disableStrictAttestationPubsubVerificationFlag.Name) {
-		log.Warn("Disabled strict attestation signature verification in pubsub")
-		cfg.DisableStrictAttestationPubsubVerification = true
-	}
 	if ctx.Bool(disableUpdateHeadPerAttestation.Name) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
-	}
-	if ctx.Bool(enableStateGenSigVerify.Name) {
-		log.Warn("Enabling sig verify for state gen")
-		cfg.EnableStateGenSigVerify = true
 	}
 	if ctx.Bool(checkHeadState.Name) {
 		log.Warn("Enabling check head state for chainservice")
@@ -230,11 +211,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
 	}
-	cfg.ReduceAttesterStateCopy = true
-	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
-		log.Warn("Disabling reducing attester state copy")
-		cfg.ReduceAttesterStateCopy = false
-	}
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
@@ -245,11 +221,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableNewBeaconStateLocks.Name) {
 		log.Warn("Disabling new beacon state locks")
 		cfg.NewBeaconStateLocks = false
-	}
-	cfg.BatchBlockVerify = true
-	if ctx.Bool(disableBatchBlockVerify.Name) {
-		log.Warn("Disabling batch block verification when syncing.")
-		cfg.BatchBlockVerify = false
 	}
 	if ctx.Bool(initSyncVerbose.Name) {
 		log.Warn("Logging every processed block during initial syncing.")
@@ -325,11 +296,6 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
 		cfg.SlasherProtection = true
-	}
-	cfg.EnableDomainDataCache = true
-	if ctx.Bool(disableDomainDataCacheFlag.Name) {
-		log.Warn("Disabled domain data cache.")
-		cfg.EnableDomainDataCache = false
 	}
 	Init(cfg)
 }

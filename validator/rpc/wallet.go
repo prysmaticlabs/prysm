@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -183,7 +184,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 		return &pb.WalletResponse{}, nil
 	}
 	valid, err := wallet.IsValid(s.walletDir)
-	if err == wallet.ErrNoWalletFound {
+	if errors.Is(err, wallet.ErrNoWalletFound) {
 		return &pb.WalletResponse{}, nil
 	}
 	if err != nil {
@@ -255,7 +256,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
 	valid, err := wallet.IsValid(s.walletDir)
-	if err == wallet.ErrNoWalletFound {
+	if errors.Is(err, wallet.ErrNoWalletFound) {
 		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
 	}
 	if err != nil {

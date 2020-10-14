@@ -46,8 +46,10 @@ func TestService_Broadcast(t *testing.T) {
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 
-	msg := &testpb.TestSimpleMessage{
-		Bar: 55,
+	msg := &pb.Fork{
+		Epoch:           55,
+		CurrentVersion:  []byte("fooo"),
+		PreviousVersion: []byte("barr"),
 	}
 
 	topic := "/eth2/%x/testing"
@@ -75,7 +77,7 @@ func TestService_Broadcast(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &testpb.TestSimpleMessage{}
+		result := &pb.Fork{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)
