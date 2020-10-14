@@ -435,22 +435,7 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 			p := &Pool{
 				pendingProposerSlashing: tt.fields.pending,
 			}
-			t.Log(len(tt.fields.pending))
-			t.Log(tt.fields.pending[0].Header_1.Header.ProposerIndex)
-			t.Log(tt.fields.pending[1].Header_1.Header.ProposerIndex)
-			if len(tt.fields.pending) > 8 {
-				t.Log(tt.fields.pending[5].Header_1.Header.ProposerIndex)
-				t.Log(tt.fields.pending[6].Header_1.Header.ProposerIndex)
-			}
-			t.Log(len(tt.want))
 			result := p.PendingProposerSlashings(context.Background(), beaconState, tt.fields.all /*noLimit*/)
-			t.Log(len(result))
-			if len(result) > 8 {
-				t.Logf("want %d, result %d", tt.want[0].Header_1.Header.ProposerIndex, result[0].Header_1.Header.ProposerIndex)
-				t.Logf("want %d, result %d", tt.want[1].Header_1.Header.ProposerIndex, result[1].Header_1.Header.ProposerIndex)
-				t.Logf("want %d, result %d", tt.want[5].Header_1.Header.ProposerIndex, result[5].Header_1.Header.ProposerIndex)
-				t.Logf("want %d, result %d", tt.want[6].Header_1.Header.ProposerIndex, result[6].Header_1.Header.ProposerIndex)
-			}
 			assert.DeepEqual(t, tt.want, result)
 		})
 	}
