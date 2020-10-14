@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
@@ -103,6 +104,10 @@ func main() {
 			logrus.SetFormatter(joonix.NewFormatter())
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
+		case "journald":
+			if err := journald.Enable(); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}
