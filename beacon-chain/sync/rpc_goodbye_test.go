@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -80,7 +80,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(uint64)
+		out := new(p2pTypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
@@ -122,7 +122,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(uint64)
+		out := new(p2pTypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
