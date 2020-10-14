@@ -110,7 +110,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	as := r.slashingPool.PendingAttesterSlashings(ctx, beaconState)
+	as := r.slashingPool.PendingAttesterSlashings(ctx, beaconState, true /*block*/)
 	assert.Equal(t, 1, len(as), "Expected attester slashing")
 }
 
@@ -159,7 +159,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	ps := r.slashingPool.PendingProposerSlashings(ctx, beaconState)
+	ps := r.slashingPool.PendingProposerSlashings(ctx, beaconState, true /*block*/)
 	assert.Equal(t, 1, len(ps), "Expected proposer slashing")
 }
 

@@ -323,6 +323,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 func TestPool_PendingProposerSlashings(t *testing.T) {
 	type fields struct {
 		pending []*ethpb.ProposerSlashing
+		all     bool
 	}
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	slashings := make([]*ethpb.ProposerSlashing, 20)
@@ -344,7 +345,15 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 			want: []*ethpb.ProposerSlashing{},
 		},
 		{
-			name: "All eligible",
+			name: "All",
+			fields: fields{
+				pending: slashings,
+				all:     true,
+			},
+			want: slashings,
+		},
+		{
+			name: "All block eligible",
 			fields: fields{
 				pending: slashings[:params.BeaconConfig().MaxProposerSlashings],
 			},
@@ -363,7 +372,7 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 			p := &Pool{
 				pendingProposerSlashing: tt.fields.pending,
 			}
-			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState))
+			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState, !tt.fields.all))
 		})
 	}
 }
@@ -407,7 +416,7 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 			p := &Pool{
 				pendingProposerSlashing: tt.fields.pending,
 			}
-			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState))
+			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState, false /*block*/))
 		})
 	}
 }

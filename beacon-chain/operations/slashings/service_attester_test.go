@@ -451,6 +451,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 func TestPool_PendingAttesterSlashings(t *testing.T) {
 	type fields struct {
 		pending []*PendingAttesterSlashing
+		all     bool
 	}
 	params.SetupTestConfigCleanup(t)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
@@ -478,6 +479,14 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			want: []*ethpb.AttesterSlashing{},
 		},
 		{
+			name: "All pending",
+			fields: fields{
+				pending: pendingSlashings,
+				all:     true,
+			},
+			want: slashings,
+		},
+		{
 			name: "All eligible",
 			fields: fields{
 				pending: pendingSlashings,
@@ -497,7 +506,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			p := &Pool{
 				pendingAttesterSlashing: tt.fields.pending,
 			}
-			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState))
+			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, !tt.fields.all))
 		})
 	}
 }
@@ -557,7 +566,7 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{pendingAttesterSlashing: tt.fields.pending}
-			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState))
+			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, true /*block*/))
 		})
 	}
 }
@@ -585,5 +594,5 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	p := &Pool{
 		pendingAttesterSlashing: pendingSlashings,
 	}
-	assert.DeepEqual(t, slashings[0:2], p.PendingAttesterSlashings(context.Background(), beaconState))
+	assert.DeepEqual(t, slashings[0:2], p.PendingAttesterSlashings(context.Background(), beaconState, true /*block*/))
 }
