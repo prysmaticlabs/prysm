@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["types.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//shared/params:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["types_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/params:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
+    ],
+)
