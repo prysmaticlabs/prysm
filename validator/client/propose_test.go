@@ -547,3 +547,23 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 
 	assert.NoError(t, ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:]))
 }
+
+func TestSignBlock(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	keySetup()
+	validator.keyManager = testKeyManager
+	publicKeys := publicKeys(t, testKeyManager)
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+	ctx := context.Background()
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 1
+	blk.Block.ProposerIndex = 100
+	var pubKey [48]byte
+	copy(pubKey[:], publicKeys[0])
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
+	require.NoError(t, err, "%x,%v,%v", sig, domain, err)
+}
