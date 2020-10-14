@@ -15,12 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
@@ -111,11 +111,9 @@ func main() {
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
-		// Load any flags from file, if specified.
-		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
-			if err := altsrc.InitInputSourceWithContext(appFlags, altsrc.NewYamlSourceFromFlagFunc(cmd.ConfigFileFlag.Name))(ctx); err != nil {
-				return err
-			}
+		// Load flags from config file, if specified.
+		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
+			return err
 		}
 
 		format := ctx.String(cmd.LogFormat.Name)
@@ -136,6 +134,10 @@ func main() {
 			logrus.SetFormatter(f)
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
+		case "journald":
+			if err := journald.Enable(); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

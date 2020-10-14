@@ -56,7 +56,7 @@ func (m *Wallet) SetPassword(newPass string) {
 }
 
 // WriteFileAtPath --
-func (m *Wallet) WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error {
+func (m *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if m.Files[pathName] == nil {
@@ -67,7 +67,7 @@ func (m *Wallet) WriteFileAtPath(ctx context.Context, pathName string, fileName 
 }
 
 // ReadFileAtPath --
-func (m *Wallet) ReadFileAtPath(ctx context.Context, pathName string, fileName string) ([]byte, error) {
+func (m *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for f, v := range m.Files[pathName] {
@@ -79,14 +79,14 @@ func (m *Wallet) ReadFileAtPath(ctx context.Context, pathName string, fileName s
 }
 
 // ReadEncryptedSeedFromDisk --
-func (m *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
+func (m *Wallet) ReadEncryptedSeedFromDisk(_ context.Context) (io.ReadCloser, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return ioutil.NopCloser(bytes.NewReader(m.EncryptedSeedFile)), nil
 }
 
 // WriteEncryptedSeedToDisk --
-func (m *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
+func (m *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.EncryptedSeedFile = encoded
@@ -94,6 +94,6 @@ func (m *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 }
 
 // InitializeKeymanager --
-func (m *Wallet) InitializeKeymanager(ctx context.Context, skipMnemonicConfirm bool) (v2keymanager.IKeymanager, error) {
+func (m *Wallet) InitializeKeymanager(_ context.Context, _ bool) (v2keymanager.IKeymanager, error) {
 	return nil, nil
 }

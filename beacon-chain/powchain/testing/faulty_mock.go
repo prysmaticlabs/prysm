@@ -29,7 +29,7 @@ func (f *FaultyMockPOWChain) LatestBlockHeight() *big.Int {
 }
 
 // BlockExists --
-func (f *FaultyMockPOWChain) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
+func (f *FaultyMockPOWChain) BlockExists(_ context.Context, _ common.Hash) (bool, *big.Int, error) {
 	if f.HashesByHeight == nil {
 		return false, big.NewInt(1), errors.New("failed")
 	}
@@ -38,12 +38,12 @@ func (f *FaultyMockPOWChain) BlockExists(_ context.Context, hash common.Hash) (b
 }
 
 // BlockHashByHeight --
-func (f *FaultyMockPOWChain) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
+func (f *FaultyMockPOWChain) BlockHashByHeight(_ context.Context, _ *big.Int) (common.Hash, error) {
 	return [32]byte{}, errors.New("failed")
 }
 
 // BlockTimeByHeight --
-func (f *FaultyMockPOWChain) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64, error) {
+func (f *FaultyMockPOWChain) BlockTimeByHeight(_ context.Context, _ *big.Int) (uint64, error) {
 	return 0, errors.New("failed")
 }
 

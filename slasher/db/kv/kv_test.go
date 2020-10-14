@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 func TestMain(m *testing.M) {
@@ -22,7 +21,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func setupDB(t testing.TB, ctx *cli.Context) *Store {
+func setupDB(t testing.TB) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))

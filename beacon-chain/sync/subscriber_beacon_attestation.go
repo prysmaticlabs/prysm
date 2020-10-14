@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-func (s *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context, msg proto.Message) error {
+func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, msg proto.Message) error {
 	a, ok := msg.(*eth.Attestation)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
@@ -53,7 +53,7 @@ func (s *Service) persistentSubnetIndices() []uint64 {
 func (s *Service) aggregatorSubnetIndices(currentSlot uint64) []uint64 {
 	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
 	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
-	commIds := []uint64{}
+	var commIds []uint64
 	for i := currentSlot; i <= endSlot; i++ {
 		commIds = append(commIds, cache.SubnetIDs.GetAggregatorSubnetIDs(i)...)
 	}
@@ -63,7 +63,7 @@ func (s *Service) aggregatorSubnetIndices(currentSlot uint64) []uint64 {
 func (s *Service) attesterSubnetIndices(currentSlot uint64) []uint64 {
 	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
 	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
-	commIds := []uint64{}
+	var commIds []uint64
 	for i := currentSlot; i <= endSlot; i++ {
 		commIds = append(commIds, cache.SubnetIDs.GetAttesterSubnetIDs(i)...)
 	}

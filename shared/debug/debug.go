@@ -305,32 +305,6 @@ func expandHome(p string) string {
 	return filepath.Clean(p)
 }
 
-// MigrateFlags sets the global flag from a local flag when it's set.
-// This is a temporary function used for migrating old command/flags to the
-// new format.
-//
-// e.g. geth account new --keystore /tmp/mykeystore --lightkdf
-//
-// is equivalent after calling this method with:
-//
-// geth --keystore /tmp/mykeystore --lightkdf account new
-//
-// This allows the use of the existing configuration functionality.
-// When all flags are migrated this function can be removed and the existing
-// configuration functionality must be changed that is uses local flags
-func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error {
-	return func(ctx *cli.Context) error {
-		for _, name := range ctx.FlagNames() {
-			if ctx.IsSet(name) {
-				if err := ctx.Set(name, ctx.String(name)); err != nil {
-					return err
-				}
-			}
-		}
-		return action(ctx)
-	}
-}
-
 // Debug setup and exit functions.
 
 // Setup initializes profiling based on the CLI flags.

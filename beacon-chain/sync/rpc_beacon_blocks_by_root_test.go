@@ -53,7 +53,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		for i := range blkRoots {
-			expectSuccess(t, r, stream)
+			expectSuccess(t, stream)
 			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, &res))
 			if res.Block.Slot != uint64(i+1) {
@@ -119,7 +119,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := [][32]byte{}
+		var out [][32]byte
 		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
 		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
 		response := []*ethpb.SignedBeaconBlock{blockB, blockA}

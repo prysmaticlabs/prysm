@@ -22,7 +22,6 @@ package featureconfig
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -37,12 +36,12 @@ type Flags struct {
 	// Testnet Flags.
 	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the Altona testnet.
 	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the Onyx testnet.
+	MedallaTestnet bool // MedallaTestnet defines the flag through which we can enable the node to run on the Medalla testnet.
 	SpadinaTestnet bool // SpadinaTestnet defines the flag through which we can enable the node to run on the Spadina testnet.
 	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
 	EnableBlst                                 bool // Enables new BLS library from supranational.
@@ -67,6 +66,7 @@ type Flags struct {
 	EnableEth1DataMajorityVote                 bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts        bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                           bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnablePruningDepositProofs                 bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -123,41 +123,51 @@ func InitWithReset(c *Flags) func() {
 	return resetFunc
 }
 
+// configureTestnet sets the config according to specified testnet flag
+func configureTestnet(ctx *cli.Context, cfg *Flags) {
+	if ctx.Bool(AltonaTestnet.Name) {
+		log.Warn("Running on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
+	} else if ctx.Bool(OnyxTestnet.Name) {
+		log.Warn("Running on Onyx Testnet")
+		params.UseOnyxConfig()
+		params.UseOnyxNetworkConfig()
+		cfg.OnyxTestnet = true
+	} else if ctx.Bool(MedallaTestnet.Name) {
+		log.Warn("Running on Medalla Testnet")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
+	} else if ctx.Bool(SpadinaTestnet.Name) {
+		log.Warn("Running on Spadina Testnet")
+		params.UseSpadinaConfig()
+		params.UseSpadinaNetworkConfig()
+		cfg.SpadinaTestnet = true
+	} else if ctx.Bool(ZinkenTestnet.Name) {
+		log.Warn("Running on Zinken Testnet")
+		params.UseZinkenConfig()
+		params.UseZinkenNetworkConfig()
+		cfg.ZinkenTestnet = true
+	} else {
+		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
+		params.UseMedallaConfig()
+		params.UseMedallaNetworkConfig()
+		cfg.MedallaTestnet = true
+	}
+}
+
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
-	// Using Medalla as the default configuration for now.
-	params.UseMedallaConfig()
-
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running Node on Altona Testnet")
-		params.UseAltonaConfig()
-		params.UseAltonaNetworkConfig()
-		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(OnyxTestnet.Name) {
-		log.Warn("Running Node on Onyx Testnet")
-		params.UseOnyxConfig()
-		params.UseOnyxNetworkConfig()
-		cfg.OnyxTestnet = true
-	}
-	if ctx.Bool(SpadinaTestnet.Name) {
-		log.Warn("Running Node on Spadina Testnet")
-		params.UseSpadinaConfig()
-		params.UseSpadinaNetworkConfig()
-		cfg.SpadinaTestnet = true
-	}
-	if ctx.Bool(ZinkenTestnet.Name) {
-		log.Warn("Running Node on Zinken Testnet")
-		params.UseZinkenConfig()
-		params.UseZinkenNetworkConfig()
-		cfg.ZinkenTestnet = true
-	}
+	configureTestnet(ctx, cfg)
+
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
@@ -174,11 +184,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableSSZCache.Name) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
-	}
-	cfg.InitSyncNoVerify = false
-	if ctx.Bool(disableInitSyncVerifyEverythingFlag.Name) {
-		log.Warn("Initial syncing while verifying only the block proposer signatures.")
-		cfg.InitSyncNoVerify = true
 	}
 	if ctx.Bool(skipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
@@ -224,18 +229,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
-	}
-	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
-		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
-		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
-			log.WithError(err).Error("Failed to update P2PAllowList flag")
-		}
-	}
-	if ctx.IsSet(deprecatedP2PBlacklist.Name) {
-		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PBlacklist.Name, cmd.P2PDenyList.Name)
-		if err := ctx.Set(cmd.P2PDenyList.Name, ctx.String(deprecatedP2PBlacklist.Name)); err != nil {
-			log.WithError(err).Error("Failed to update P2PDenyList flag")
-		}
 	}
 	cfg.ReduceAttesterStateCopy = true
 	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
@@ -286,41 +279,20 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling new BLS library blst")
 		cfg.EnableBlst = true
 	}
+	if ctx.Bool(enablePruningDepositProofs.Name) {
+		log.Warn("Enabling pruning deposit proofs")
+		cfg.EnablePruningDepositProofs = true
+	}
 	Init(cfg)
 }
 
 // ConfigureSlasher sets the global config based
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
-	// Using Medalla as the default configuration for now.
-	params.UseMedallaConfig()
-
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running Validator on Altona Testnet")
-		params.UseAltonaConfig()
-		params.UseAltonaNetworkConfig()
-		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(OnyxTestnet.Name) {
-		log.Warn("Running Node on Onyx Testnet")
-		params.UseOnyxConfig()
-		params.UseOnyxNetworkConfig()
-		cfg.OnyxTestnet = true
-	}
-	if ctx.Bool(SpadinaTestnet.Name) {
-		log.Warn("Running Node on Spadina Testnet")
-		params.UseSpadinaConfig()
-		params.UseSpadinaNetworkConfig()
-		cfg.SpadinaTestnet = true
-	}
-	if ctx.Bool(ZinkenTestnet.Name) {
-		log.Warn("Running Node on Zinken Testnet")
-		params.UseZinkenConfig()
-		params.UseZinkenNetworkConfig()
-		cfg.ZinkenTestnet = true
-	}
+	configureTestnet(ctx, cfg)
+
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
 		cfg.DisableLookback = true
@@ -331,35 +303,10 @@ func ConfigureSlasher(ctx *cli.Context) {
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
-	// Using Medalla as the default configuration for now.
-	params.UseMedallaConfig()
-
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running Validator on Altona Testnet")
-		params.UseAltonaConfig()
-		params.UseAltonaNetworkConfig()
-		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(OnyxTestnet.Name) {
-		log.Warn("Running Node on Onyx Testnet")
-		params.UseOnyxConfig()
-		params.UseOnyxNetworkConfig()
-		cfg.OnyxTestnet = true
-	}
-	if ctx.Bool(SpadinaTestnet.Name) {
-		log.Warn("Running Node on Spadina Testnet")
-		params.UseSpadinaConfig()
-		params.UseSpadinaNetworkConfig()
-		cfg.SpadinaTestnet = true
-	}
-	if ctx.Bool(ZinkenTestnet.Name) {
-		log.Warn("Running Node on Zinken Testnet")
-		params.UseZinkenConfig()
-		params.UseZinkenNetworkConfig()
-		cfg.ZinkenTestnet = true
-	}
+	configureTestnet(ctx, cfg)
+
 	if ctx.Bool(enableLocalProtectionFlag.Name) {
 		cfg.LocalProtection = true
 	} else {

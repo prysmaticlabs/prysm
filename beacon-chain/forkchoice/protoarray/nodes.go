@@ -58,10 +58,8 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot uint64,
-	root [32]byte,
-	parent [32]byte,
-	graffiti [32]byte,
-	justifiedEpoch uint64, finalizedEpoch uint64) error {
+	root, parent, graffiti [32]byte,
+	justifiedEpoch, finalizedEpoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
@@ -73,7 +71,7 @@ func (s *Store) insert(ctx context.Context,
 		return nil
 	}
 
-	index := len(s.nodes)
+	index := uint64(len(s.nodes))
 	parentIndex, ok := s.nodesIndices[parent]
 	// Mark genesis block's parent as non existent.
 	if !ok {
@@ -92,12 +90,12 @@ func (s *Store) insert(ctx context.Context,
 		weight:         0,
 	}
 
-	s.nodesIndices[root] = uint64(index)
+	s.nodesIndices[root] = index
 	s.nodes = append(s.nodes, n)
 
 	// Update parent with the best child and descendent only if it's available.
 	if n.parent != NonExistentNode {
-		if err := s.updateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
+		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
 			return err
 		}
 	}
@@ -113,7 +111,7 @@ func (s *Store) insert(ctx context.Context,
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes delta to its parents delta. After scoring changes,
 // the best child is then updated along with best descendant.
-func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
+func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalizedEpoch uint64, delta []int) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
@@ -180,7 +178,7 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 // 2.)  The child is already the best child and the parent is updated with the new best descendant.
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become best child.
-func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
+func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
 
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {

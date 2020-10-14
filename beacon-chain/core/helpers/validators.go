@@ -29,7 +29,7 @@ func IsActiveValidatorUsingTrie(validator *stateTrie.ReadOnlyValidator, epoch ui
 	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
 }
 
-func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch uint64) bool {
+func checkValidatorActiveStatus(activationEpoch, exitEpoch, epoch uint64) bool {
 	return activationEpoch <= epoch && epoch < exitEpoch
 }
 
@@ -42,7 +42,7 @@ func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch 
 //  Check if ``validator`` is slashable.
 //  """
 //  return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
-func IsSlashableValidator(activationEpoch uint64, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func IsSlashableValidator(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
 	return checkValidatorSlashable(activationEpoch, withdrawableEpoch, slashed, epoch)
 }
 
@@ -51,7 +51,7 @@ func IsSlashableValidatorUsingTrie(val *stateTrie.ReadOnlyValidator, epoch uint6
 	return checkValidatorSlashable(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), epoch)
 }
 
-func checkValidatorSlashable(activationEpoch uint64, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func checkValidatorSlashable(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
 	active := activationEpoch <= epoch
 	beforeWithdrawable := epoch < withdrawableEpoch
 	return beforeWithdrawable && active && !slashed
@@ -175,20 +175,30 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
+	// The cache uses the block root of the previous epoch's last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
+	// For simplicity, the node will skip caching of genesis epoch.
+	if e > params.BeaconConfig().GenesisEpoch {
+		s, err := EndSlot(PrevEpoch(state))
+		if err != nil {
+			return 0, err
+		}
+		r, err := BlockRootAtSlot(state, s)
+		if err != nil {
+			return 0, err
+		}
+		proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
+		if err != nil {
+			return 0, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if proposerIndices != nil {
+			return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+		}
+		if err := UpdateProposerIndicesInCache(state, e); err != nil {
+			return 0, errors.Wrap(err, "could not update committee cache")
+		}
+	}
 
-	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not generate seed")
-	}
-	proposerIndices, err := committeeCache.ProposerIndices(seed)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not interface with committee cache")
-	}
-	if proposerIndices != nil {
-		return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
-	}
-
-	seed, err = Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
@@ -201,18 +211,10 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
-	if err := UpdateProposerIndicesInCache(state, e); err != nil {
-		return 0, errors.Wrap(err, "could not update committee cache")
-	}
-
 	return ComputeProposerIndex(state, indices, seedWithSlotHash)
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
-//
-//	This method is more efficient than ComputeProposerIndexWithValidators as it uses the read only validator
-//	abstraction to retrieve validator related data. Whereas the other method requires a whole copy of the validator
-//	set.
 //
 // Spec pseudocode definition:
 //  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
@@ -254,57 +256,6 @@ func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64,
 		}
 		effectiveBal := v.EffectiveBalance()
 
-		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
-			return candidateIndex, nil
-		}
-	}
-}
-
-// ComputeProposerIndexWithValidators returns the index sampled by effective balance, which is used to calculate proposer.
-//
-// Note: This method signature deviates slightly from the spec recommended definition. The full
-// state object is not required to compute the proposer index.
-//
-// Spec pseudocode definition:
-//  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
-//    """
-//    Return from ``indices`` a random index sampled by effective balance.
-//    """
-//    assert len(indices) > 0
-//    MAX_RANDOM_BYTE = 2**8 - 1
-//    i = 0
-//    while True:
-//        candidate_index = indices[compute_shuffled_index(ValidatorIndex(i % len(indices)), len(indices), seed)]
-//        random_byte = hash(seed + int_to_bytes(i // 32, length=8))[i % 32]
-//        effective_balance = state.validators[candidate_index].effective_balance
-//        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
-//            return ValidatorIndex(candidate_index)
-//        i += 1
-// Deprecated: Prefer using the beacon state with ComputeProposerIndex to avoid an unnecessary copy of the validator set.
-func ComputeProposerIndexWithValidators(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
-	length := uint64(len(activeIndices))
-	if length == 0 {
-		return 0, errors.New("empty active indices list")
-	}
-	maxRandomByte := uint64(1<<8 - 1)
-	hashFunc := hashutil.CustomSHA256Hasher()
-
-	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
-		if err != nil {
-			return 0, err
-		}
-		candidateIndex = activeIndices[candidateIndex]
-		if candidateIndex >= uint64(len(validators)) {
-			return 0, errors.New("active index out of range")
-		}
-		b := append(seed[:], bytesutil.Bytes8(i/32)...)
-		randomByte := hashFunc(b)[i%32]
-		v := validators[candidateIndex]
-		var effectiveBal uint64
-		if v != nil {
-			effectiveBal = v.EffectiveBalance
-		}
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}
@@ -362,7 +313,7 @@ func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidato
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
-func isEligibileForActivationQueue(activationEligibilityEpoch uint64, effectiveBalance uint64) bool {
+func isEligibileForActivationQueue(activationEligibilityEpoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
@@ -395,7 +346,7 @@ func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *s
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*
-func isEligibleForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
+func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch uint64) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }

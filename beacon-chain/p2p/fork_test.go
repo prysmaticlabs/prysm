@@ -93,7 +93,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	addrs := []ma.Multiaddr{}
+	var addrs []ma.Multiaddr
 
 	for _, n := range nodes {
 		if s.filterPeer(n) {
@@ -182,7 +182,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	addrs := []ma.Multiaddr{}
+	var addrs []ma.Multiaddr
 
 	for _, n := range nodes {
 		if s.filterPeer(n) {

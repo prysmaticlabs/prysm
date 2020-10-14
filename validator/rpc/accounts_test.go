@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,11 +18,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 )
 
-var _ = accountCreator(&mockAccountCreator{})
+var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
+var _ accountCreator = (*mockAccountCreator)(nil)
 
 type mockAccountCreator struct {
 	data   *ethpb.Deposit_Data
@@ -80,18 +83,52 @@ func TestServer_ListAccounts(t *testing.T) {
 		walletInitialized: true,
 		wallet:            w,
 	}
-	numAccounts := 5
+	numAccounts := 50
 	keys := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		key, _, err := km.(*derived.Keymanager).CreateAccount(ctx)
 		require.NoError(t, err)
 		keys[i] = key
 	}
-	resp, err := s.ListAccounts(ctx, &pb.ListAccountsRequest{})
+	resp, err := s.ListAccounts(ctx, &pb.ListAccountsRequest{
+		PageSize: int32(numAccounts),
+	})
 	require.NoError(t, err)
 	require.Equal(t, len(resp.Accounts), numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		assert.DeepEqual(t, resp.Accounts[i].ValidatingPublicKey, keys[i])
+	}
+
+	tests := []struct {
+		req *pb.ListAccountsRequest
+		res *pb.ListAccountsResponse
+	}{
+		{
+			req: &pb.ListAccountsRequest{
+				PageSize: 5,
+			},
+			res: &pb.ListAccountsResponse{
+				Accounts:      resp.Accounts[0:5],
+				NextPageToken: "1",
+				TotalSize:     int32(numAccounts),
+			},
+		},
+		{
+			req: &pb.ListAccountsRequest{
+				PageSize:  5,
+				PageToken: "1",
+			},
+			res: &pb.ListAccountsResponse{
+				Accounts:      resp.Accounts[5:10],
+				NextPageToken: "2",
+				TotalSize:     int32(numAccounts),
+			},
+		},
+	}
+	for _, test := range tests {
+		res, err := s.ListAccounts(context.Background(), test.req)
+		require.NoError(t, err)
+		assert.DeepEqual(t, res, test.res)
 	}
 }
 

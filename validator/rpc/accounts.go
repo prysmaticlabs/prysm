@@ -11,7 +11,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -66,6 +67,10 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
+			req.PageSize, cmd.Get().MaxRPCPageSize)
+	}
 	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, err
@@ -80,8 +85,25 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 			accounts[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		}
 	}
+	if req.All {
+		return &pb.ListAccountsResponse{
+			Accounts:      accounts,
+			TotalSize:     int32(len(keys)),
+			NextPageToken: "",
+		}, nil
+	}
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(keys))
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not paginate results: %v",
+			err,
+		)
+	}
 	return &pb.ListAccountsResponse{
-		Accounts: accounts,
+		Accounts:      accounts[start:end],
+		TotalSize:     int32(len(keys)),
+		NextPageToken: nextPageToken,
 	}, nil
 }
 
@@ -132,7 +154,7 @@ func (s *Server) BackupAccounts(
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derived keymanager: %v", err)
 		}
 	}
-	if keystoresToBackup == nil || len(keystoresToBackup) == 0 {
+	if len(keystoresToBackup) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores to backup")
 	}
 
@@ -195,34 +217,14 @@ func (s *Server) DeleteAccounts(
 
 func createAccountWithDepositData(ctx context.Context, km accountCreator) (*pb.DepositDataResponse_DepositData, error) {
 	// Create a new validator account using the specified keymanager.
-	pubKey, depositData, err := km.CreateAccount(ctx)
+	_, depositData, err := km.CreateAccount(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create account in wallet")
 	}
-	depositMessage := &pb.DepositMessage{
-		Pubkey:                pubKey,
-		WithdrawalCredentials: depositData.WithdrawalCredentials,
-		Amount:                depositData.Amount,
-	}
-	depositMessageRoot, err := depositMessage.HashTreeRoot()
+	data, err := v2.DepositDataJSON(depositData)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not create deposit data JSON")
 	}
-	depositDataRoot, err := depositData.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	// The reason we utilize this map is to ensure we match the format of
-	// the eth2 deposit cli, which utilizes snake case and hex strings to represent binary data.
-	// Our gRPC gateway instead uses camel case and base64, which is why we use this workaround.
-	data := make(map[string]string)
-	data["pubkey"] = fmt.Sprintf("%x", pubKey)
-	data["withdrawal_credentials"] = fmt.Sprintf("%x", depositData.WithdrawalCredentials)
-	data["amount"] = fmt.Sprintf("%d", depositData.Amount)
-	data["signature"] = fmt.Sprintf("%x", depositData.Signature)
-	data["deposit_message_root"] = fmt.Sprintf("%x", depositMessageRoot)
-	data["deposit_data_root"] = fmt.Sprintf("%x", depositDataRoot)
-	data["fork_version"] = fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion)
 	return &pb.DepositDataResponse_DepositData{
 		Data: data,
 	}, nil

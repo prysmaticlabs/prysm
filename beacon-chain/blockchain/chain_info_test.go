@@ -18,9 +18,9 @@ import (
 )
 
 // Ensure Service implements chain info interface.
-var _ = ChainInfoFetcher(&Service{})
-var _ = TimeFetcher(&Service{})
-var _ = ForkFetcher(&Service{})
+var _ ChainInfoFetcher = (*Service)(nil)
+var _ TimeFetcher = (*Service)(nil)
+var _ ForkFetcher = (*Service)(nil)
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
@@ -103,13 +103,15 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 	s, err := state.InitializeFromProto(&pb.BeaconState{})
 	require.NoError(t, err)
 	c.head = &head{slot: 100, state: s}
-	assert.Equal(t, uint64(100), c.headSlot())
+	assert.Equal(t, uint64(100), c.HeadSlot())
 }
 
 func TestHeadRoot_CanRetrieve(t *testing.T) {
 	c := &Service{}
 	c.head = &head{root: [32]byte{'A'}}
-	assert.Equal(t, [32]byte{'A'}, c.headRoot())
+	r, err := c.HeadRoot(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, [32]byte{'A'}, bytesutil.ToBytes32(r))
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {

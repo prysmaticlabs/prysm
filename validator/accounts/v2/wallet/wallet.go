@@ -55,10 +55,6 @@ var (
 	ErrNoWalletFound = errors.New(
 		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
 	)
-	// ErrWalletExists is an error returned when a wallet already exists in the path provided.
-	ErrWalletExists = errors.New("you already have a wallet at the specified path. You can " +
-		"edit your wallet configuration by running ./prysm.sh validator wallet-v2 edit-config",
-	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[v2keymanager.Kind]string{
 		v2keymanager.Derived: "HD Wallet (Recommended)",
@@ -130,7 +126,8 @@ func IsValid(walletDir string) (bool, error) {
 	}
 	f, err := os.Open(expanded)
 	if err != nil {
-		if strings.Contains(err.Error(), "no such file") {
+		if strings.Contains(err.Error(), "no such file") ||
+			strings.Contains(err.Error(), "cannot find the path") {
 			return false, nil
 		}
 		return false, err
@@ -215,7 +212,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
-func OpenWallet(ctx context.Context, cfg *Config) (*Wallet, error) {
+func OpenWallet(_ context.Context, cfg *Config) (*Wallet, error) {
 	exists, err := Exists(cfg.WalletDir)
 	if err != nil {
 		return nil, errors.Wrap(err, CheckExistsErrMsg)
@@ -305,7 +302,7 @@ func (w *Wallet) InitializeKeymanager(
 			if err != nil {
 				return nil, err
 			}
-			if keys == nil || len(keys) == 0 {
+			if len(keys) == 0 {
 				return nil, errors.New("please recreate your wallet with wallet-v2 create")
 			}
 			if err := w.SaveHashedPassword(ctx); err != nil {
@@ -349,7 +346,7 @@ func (w *Wallet) InitializeKeymanager(
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
-func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName string, data []byte) error {
+func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) error {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "could not create path: %s", accountPath)
@@ -366,7 +363,7 @@ func (w *Wallet) WriteFileAtPath(ctx context.Context, filePath string, fileName 
 }
 
 // ReadFileAtPath within the wallet directory given the desired path and filename.
-func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error) {
+func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([]byte, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
@@ -388,7 +385,7 @@ func (w *Wallet) ReadFileAtPath(ctx context.Context, filePath string, fileName s
 
 // FileNameAtPath return the full file name for the requested file. It allows for finding the file
 // with a regex pattern.
-func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName string) (string, error) {
+func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (string, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return "", errors.Wrapf(err, "could not create path: %s", accountPath)
@@ -407,7 +404,7 @@ func (w *Wallet) FileNameAtPath(ctx context.Context, filePath string, fileName s
 
 // ReadKeymanagerConfigFromDisk opens a keymanager config file
 // for reading if it exists at the wallet path.
-func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error) {
+func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser, error) {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
 	if !fileutil.FileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
@@ -419,7 +416,7 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 
 // LockWalletConfigFile lock read and write to wallet file in order to prevent
 // two validators from using the same keys.
-func (w *Wallet) LockWalletConfigFile(ctx context.Context) error {
+func (w *Wallet) LockWalletConfigFile(_ context.Context) error {
 	fileLock := flock.New(w.configFilePath)
 	locked, err := fileLock.TryLock()
 	if err != nil {
@@ -443,7 +440,7 @@ func (w *Wallet) UnlockWalletConfigFile() error {
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file
 // and writes it to the wallet path.
-func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error {
+func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) error {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
 	// Write the config file to disk.
 	if err := ioutil.WriteFile(configFilePath, encoded, params.BeaconIoConfig().ReadWritePermissions); err != nil {
@@ -455,7 +452,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 
 // ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
 // within the wallet path.
-func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, error) {
+func (w *Wallet) ReadEncryptedSeedFromDisk(_ context.Context) (io.ReadCloser, error) {
 	configFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
 	if !fileutil.FileExists(configFilePath) {
 		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
@@ -465,7 +462,7 @@ func (w *Wallet) ReadEncryptedSeedFromDisk(ctx context.Context) (io.ReadCloser, 
 
 // WriteEncryptedSeedToDisk writes the encrypted wallet seed configuration
 // within the wallet path.
-func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error {
+func (w *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) error {
 	seedFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
 	// Write the config file to disk.
 	if err := ioutil.WriteFile(seedFilePath, encoded, params.BeaconIoConfig().ReadWritePermissions); err != nil {
@@ -476,7 +473,7 @@ func (w *Wallet) WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) e
 }
 
 // SaveHashedPassword to disk for the wallet.
-func (w *Wallet) SaveHashedPassword(ctx context.Context) error {
+func (w *Wallet) SaveHashedPassword(_ context.Context) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(w.walletPassword), hashCost)
 	if err != nil {
 		return errors.Wrap(err, "could not generate hashed password")

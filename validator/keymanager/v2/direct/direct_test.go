@@ -223,9 +223,8 @@ func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
-	dr := &Keymanager{
-		secretKeysCache: make(map[[48]byte]bls.SecretKey),
-	}
+	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	dr := &Keymanager{}
 	_, err := dr.Sign(context.Background(), req)
 	assert.ErrorContains(t, "no signing key found in keys cache", err)
 }
