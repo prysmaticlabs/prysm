@@ -53,15 +53,6 @@ var (
 		Name:  "disable-fork-choice-unsafe",
 		Usage: "UNSAFE: disable fork choice for determining head of the beacon chain.",
 	}
-	// disableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	disableSSZCache = &cli.BoolFlag{
-		Name:  "disable-ssz-cache",
-		Usage: "Disable ssz state root cache mechanism.",
-	}
-	skipBLSVerifyFlag = &cli.BoolFlag{
-		Name:  "skip-bls-verify",
-		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
-	}
 	enableBackupWebhookFlag = &cli.BoolFlag{
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
@@ -229,8 +220,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,
-	disableSSZCache,
-	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	cacheFilteredBlockTreeFlag,
