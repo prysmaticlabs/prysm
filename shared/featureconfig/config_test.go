@@ -10,23 +10,23 @@ import (
 
 func TestInitFeatureConfig(t *testing.T) {
 	cfg := &Flags{
-		SkipBLSVerify: true,
+		MedallaTestnet: true,
 	}
 	Init(cfg)
 	c := Get()
-	assert.Equal(t, true, c.SkipBLSVerify)
+	assert.Equal(t, true, c.MedallaTestnet)
 
 	// Reset back to false for the follow up tests.
-	cfg = &Flags{SkipBLSVerify: false}
+	cfg = &Flags{MedallaTestnet: false}
 	Init(cfg)
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(skipBLSVerifyFlag.Name, true, "test")
+	set.Bool(MedallaTestnet.Name, true, "test")
 	context := cli.NewContext(&app, set, nil)
 	ConfigureBeaconChain(context)
 	c := Get()
-	assert.Equal(t, true, c.SkipBLSVerify)
+	assert.Equal(t, true, c.MedallaTestnet)
 }
