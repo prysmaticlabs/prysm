@@ -116,9 +116,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			Deposits:          deposits,
 			Attestations:      atts,
 			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head),
-			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head),
-			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot),
+			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:          graffiti[:],
 		},
 	}
