@@ -201,8 +201,5 @@ func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
 	if err != nil {
 		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
 	}
-	if selection == 2 {
-		return v2keymanager.Remote, nil
-	}
-	return v2keymanager.Kind(selection ^ 1), nil
+	return v2keymanager.Kind(selection), nil
 }
