@@ -113,11 +113,8 @@ func main() {
 
 	app.Before = func(ctx *cli.Context) error {
 		// verify if ToS accepted
-		if accepted, err := tos.VerifyTosAcceptedOrPrompt(ctx); accepted != true {
-			if err != nil {
-				return err
-			}
-			return fmt.Errorf("you have to accept TERMS AND CONDITIONS in order to continue")
+		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
+			return err
 		}
 
 		// Load flags from config file, if specified.

@@ -1,6 +1,7 @@
 package tos
 
 import (
+	"errors"
 	"io/ioutil"
 	"strings"
 
@@ -29,29 +30,38 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-Type "yes" to accept this terms and conditions[yes/no]:`
+Type "accept" to accept this terms and conditions[accept/decline]:`
 )
 
 var (
 	au  = aurora.NewAurora(true)
-	log = logrus.WithField("prefix", "prompt")
+	log = logrus.WithField("prefix", "tos")
 )
 
 // VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept
-func VerifyTosAcceptedOrPrompt(ctx *cli.Context) (bool, error) {
+func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
+	if ctx.Bool(cmd.E2EConfigFlag.Name) {
+		return nil
+	}
+
 	if fileutil.FileExists(ctx.String(cmd.DataDirFlag.Name) + "/" + acceptTosFilename) {
-		return true, nil
+		return nil
 	}
 	if ctx.Bool(cmd.AcceptTosFlag.Name) {
 		saveTosAccepted(ctx)
-		return true, nil
+		return nil
 	}
-	input, err := promptutil.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "no")
-	if strings.ToLower(input) == "yes" && err == nil {
-		saveTosAccepted(ctx)
-		return true, nil
+
+	input, err := promptutil.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "decline")
+	if err != nil {
+		return err
 	}
-	return false, err
+	if strings.ToLower(input) != "accept" {
+		return errors.New("you have to accept Terms and Conditions in order to continue")
+	}
+
+	saveTosAccepted(ctx)
+	return nil
 }
 
 // saveTosAccepted creates a file when Tos accepted

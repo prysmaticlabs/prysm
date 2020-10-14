@@ -206,7 +206,7 @@ var (
 	// AcceptTosFlag specifies user acceptance of ToS for non-interactive environments
 	AcceptTosFlag = &cli.BoolFlag{
 		Name:  "accept-terms-of-use",
-		Usage: "Accept TERMS AND CONDITIONS (for non-interactive environments)",
+		Usage: "Accept Terms and Conditions (for non-interactive environments)",
 	}
 )
 
