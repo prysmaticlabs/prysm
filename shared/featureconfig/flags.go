@@ -150,6 +150,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	ZinkenTestnet,
 	enableBlst,
 	enableEth1DataMajorityVote,
+	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	checkPtInfoCache,
 	enablePruningDepositProofs,
