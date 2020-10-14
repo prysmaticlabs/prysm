@@ -119,6 +119,7 @@ go_test(
         "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/p2p/peers/scorers:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
+        "//beacon-chain/p2p/types:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared/bytesutil:go_default_library",
