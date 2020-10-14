@@ -71,6 +71,7 @@ var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
 	flags.EnableHistoricalDetectionFlag,
 	flags.SpanCacheSize,
+	cmd.AcceptTosFlag,
 }
 
 func init() {

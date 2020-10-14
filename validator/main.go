@@ -106,6 +106,7 @@ var appFlags = []cli.Flag{
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
+	cmd.AcceptTosFlag,
 }
 
 func init() {
