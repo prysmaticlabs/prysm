@@ -561,9 +561,9 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 		{
 			name: "Skips gapped slashed",
 			fields: fields{
-				pending: pendingSlashings[2:5],
+				pending: pendingSlashings[4:7],
 			},
-			want: result[1:3],
+			want: result[3:5],
 		},
 		{
 			name: "All and skips gapped slashed validators",
