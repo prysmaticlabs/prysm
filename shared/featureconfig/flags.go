@@ -524,11 +524,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableAccountsV2 = &cli.BoolFlag{
-		Name:   "enable-accounts-v2",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedCustomGenesisDelay = &cli.BoolFlag{
 		Name:   "custom-genesis-delay",
 		Usage:  deprecatedUsage,
@@ -641,7 +636,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableProtectAttesterFlag,
 	deprecatedInitSyncVerifyEverythingFlag,
 	deprecatedSkipRegenHistoricalStates,
-	deprecatedEnableAccountsV2,
 	deprecatedCustomGenesisDelay,
 	deprecatedNewBeaconStateLocks,
 	deprectedForceMaxCoverAttestationAggregation,

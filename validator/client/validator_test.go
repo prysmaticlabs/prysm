@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -32,15 +31,15 @@ var _ Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
-func publicKeys(t *testing.T, km keymanager.KeyManager) [][]byte {
-	keys, err := km.FetchValidatingKeys()
-	assert.NoError(t, err, "Cannot fetch validating keys")
-	res := make([][]byte, len(keys))
-	for i := range keys {
-		res[i] = keys[i][:]
-	}
-	return res
-}
+//func publicKeys(t *testing.T, km keymanager.KeyManager) [][]byte {
+//	keys, err := km.FetchValidatingKeys()
+//	assert.NoError(t, err, "Cannot fetch validating keys")
+//	res := make([][]byte, len(keys))
+//	for i := range keys {
+//		res[i] = keys[i][:]
+//	}
+//	return res
+//}
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
 	multipleStatus := make([]*ethpb.ValidatorActivationResponse_Status, len(pubkeys))
@@ -61,7 +60,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
@@ -88,7 +87,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -115,7 +114,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
@@ -134,7 +133,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
@@ -157,7 +156,7 @@ func TestWaitForSynced_SetsGenesisTime(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
@@ -184,7 +183,6 @@ func TestWaitForSynced_ContextCanceled(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -211,7 +209,6 @@ func TestWaitForSynced_StreamSetupFails(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
@@ -230,7 +227,6 @@ func TestWaitForSynced_ReceiveErrorFromStream(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
@@ -253,7 +249,6 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
@@ -261,7 +256,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: nil,
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -279,14 +274,13 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: nil,
 		},
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForActivation(context.Background())
@@ -300,14 +294,13 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: nil,
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -326,17 +319,16 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(t, v.keyManager))
+	resp := generateMockStatusResponse(nil)
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: nil,
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -352,7 +344,6 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconChainClient(ctrl)
 	v := validator{
-		keyManager:   testKeyManager,
 		beaconClient: client,
 		genesisTime:  1,
 	}
@@ -369,7 +360,6 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconChainClient(ctrl)
 	v := validator{
-		keyManager:   testKeyManager,
 		beaconClient: client,
 	}
 	client.EXPECT().GetChainHead(
@@ -388,19 +378,17 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManagerThreeValidators,
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	publicKeys := publicKeys(t, v.keyManager)
-	resp := generateMockStatusResponse(publicKeys)
+	resp := generateMockStatusResponse(nil)
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	resp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys,
+			PublicKeys: nil,
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -417,11 +405,10 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManagerThreeValidators,
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(t, v.keyManager))
+	resp := generateMockStatusResponse(nil)
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
@@ -505,7 +492,6 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 
 	slot := uint64(1)
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 		duties: &ethpb.DutiesResponse{
 			Duties: []*ethpb.DutiesResponse_Duty{
@@ -531,7 +517,6 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 		duties: &ethpb.DutiesResponse{
 			Duties: []*ethpb.DutiesResponse_Duty{
@@ -572,7 +557,6 @@ func TestUpdateDuties_OK(t *testing.T) {
 		},
 	}
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	client.EXPECT().GetDuties(
@@ -650,7 +634,6 @@ func TestUpdateProtections_OK(t *testing.T) {
 	}
 	v := validator{
 		db:              db,
-		keyManager:      testKeyManager,
 		validatorClient: client,
 		duties:          duties,
 	}
@@ -672,7 +655,6 @@ func TestSaveProtections_OK(t *testing.T) {
 	require.NoError(t, err)
 	v := validator{
 		db:                      db,
-		keyManager:              testKeyManager,
 		validatorClient:         client,
 		attesterHistoryByPubKey: cleanHistories,
 	}
@@ -703,7 +685,6 @@ func TestRolesAt_OK(t *testing.T) {
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()
 	sks[3] = bls.RandKey()
-	v.keyManager = keymanager.NewDirect(sks)
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
@@ -759,7 +740,6 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	sks[0] = bls.RandKey()
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()
-	v.keyManager = keymanager.NewDirect(sks)
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
@@ -891,7 +871,6 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			defer ctrl.Finish()
 			client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 			v := validator{
-				keyManager:      testKeyManager,
 				validatorClient: client,
 				duties: &ethpb.DutiesResponse{
 					Duties: []*ethpb.DutiesResponse_Duty{

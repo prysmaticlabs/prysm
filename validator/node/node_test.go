@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -32,10 +31,8 @@ func TestNode_Builds(t *testing.T) {
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")
 	set.String("verbosity", "debug", "log verbosity")
-	set.Bool("disable-accounts-v2", true, "disabling accounts v2")
 	context := cli.NewContext(&app, set, nil)
 
-	require.NoError(t, v1.NewValidatorAccount(dir, "1234"), "Could not create validator account")
 	valClient, err := NewValidatorClient(context)
 	require.NoError(t, err, "Failed to create ValidatorClient")
 	err = valClient.db.Close()

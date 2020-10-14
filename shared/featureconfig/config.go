@@ -61,7 +61,6 @@ type Flags struct {
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
-	EnableAccountsV2                           bool // EnableAccountsV2 for Prysm validator clients.
 	BatchBlockVerify                           bool // BatchBlockVerify performs batched verification of block batches that we receive when syncing.
 	InitSyncVerbose                            bool // InitSyncVerbose logs every processed block during initial syncing.
 	EnableFinalizedDepositsCache               bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
@@ -330,16 +329,6 @@ func ConfigureValidator(ctx *cli.Context) {
 		cfg.LocalProtection = true
 	} else {
 		log.Warn("Validator slashing protection not enabled!")
-	}
-	cfg.EnableAccountsV2 = true
-	if ctx.Bool(disableAccountsV2.Name) {
-		log.Warn("Disabling v2 of Prysm validator accounts")
-		log.Error(
-			"Accounts v1 will be fully deprecated in Prysm within the next 2 releases! If you are still " +
-				"using this functionality, please begin to upgrade by creating a v2 wallet. More information can be " +
-				"found in our docs portal https://docs.prylabs.network/docs/wallet/introduction/",
-		)
-		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
