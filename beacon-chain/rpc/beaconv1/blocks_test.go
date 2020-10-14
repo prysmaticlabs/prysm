@@ -24,7 +24,6 @@ import (
 )
 
 func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb_alpha.SignedBeaconBlock, []*ethpb_alpha.BeaconBlockContainer) {
-	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
 	genBlk := testutil.NewBeaconBlock()
 	genBlk.Block.ParentRoot = parentRoot[:]
