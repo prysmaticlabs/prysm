@@ -10,7 +10,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -35,7 +34,7 @@ func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
 	if v, ok := msg.(fastssz.Marshaler); ok {
 		return v.MarshalSSZ()
 	}
-	return ssz.Marshal(msg)
+	return nil, errors.Errorf("non-supported type: %T", msg)
 }
 
 // EncodeGossip the proto gossip message to the io.Writer.
@@ -83,7 +82,7 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 	if v, ok := to.(fastssz.Unmarshaler); ok {
 		return v.UnmarshalSSZ(b)
 	}
-	return ssz.Unmarshal(b, to)
+	return errors.Errorf("non-supported type: %T", to)
 }
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
