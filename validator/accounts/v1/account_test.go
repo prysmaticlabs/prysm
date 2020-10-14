@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
@@ -197,12 +196,12 @@ func TestSplit(t *testing.T) {
 	pubKeys := [][48]byte{{1}, {2}}
 	sourceStore := dbTest.SetupDB(t, pubKeys)
 
-	proposalEpoch := uint64(0)
-	proposalHistory1 := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x01}
-	err := sourceStore.SaveProposalHistoryForEpoch(context.Background(), pubKeys[0][:], proposalEpoch, proposalHistory1)
+	proposalSlot := uint64(0)
+	signingRoot := bytesutil.PadTo([]byte{1}, 32)
+	err := sourceStore.SaveProposalHistoryForSlot(context.Background(), pubKeys[0][:], proposalSlot, signingRoot)
 	require.NoError(t, err, "Saving proposal history failed")
-	proposalHistory2 := bitfield.Bitlist{0x02, 0x00, 0x00, 0x00, 0x01}
-	err = sourceStore.SaveProposalHistoryForEpoch(context.Background(), pubKeys[1][:], proposalEpoch, proposalHistory2)
+	signingRoot2 := bytesutil.PadTo([]byte{2}, 32)
+	err = sourceStore.SaveProposalHistoryForSlot(context.Background(), pubKeys[1][:], proposalSlot, signingRoot2)
 	require.NoError(t, err, "Saving proposal history failed")
 
 	attestationHistoryMap1 := make(map[uint64]uint64)
