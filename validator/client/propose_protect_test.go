@@ -17,8 +17,10 @@ func TestPreBlockSignValidation(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	block := &ethpb.BeaconBlock{
 		Slot:          10,
@@ -26,10 +28,10 @@ func TestPreBlockSignValidation(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
-	err := validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
+	err := validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
 	mockProtector.AllowBlock = true
-	err = validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
@@ -40,8 +42,10 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -51,9 +55,9 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
-	err := validator.postBlockSignUpdate(context.Background(), validatorPubKey, block)
+	err := validator.postBlockSignUpdate(context.Background(), pubKey, block)
 	require.ErrorContains(t, failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
 	mockProtector.AllowBlock = true
-	err = validator.postBlockSignUpdate(context.Background(), validatorPubKey, block)
+	err = validator.postBlockSignUpdate(context.Background(), pubKey, block)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }

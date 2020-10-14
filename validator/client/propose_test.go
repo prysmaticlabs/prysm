@@ -47,8 +47,11 @@ func (m mockSignature) Copy() bls.Signature {
 	return m
 }
 
-func setup(t *testing.T) (*validator, *mocks, func()) {
-	valDB := testing2.SetupDB(t, [][48]byte{validatorPubKey})
+func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
+	validatorKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
@@ -66,62 +69,75 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		TargetToSource: cleanMap,
 	}
 	attHistoryByPubKey := make(map[[48]byte]*slashpb.AttestationHistory)
-	attHistoryByPubKey[validatorPubKey] = clean
-
+	attHistoryByPubKey[pubKey] = clean
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: validatorKey,
+		},
+	}
 	validator := &validator{
 		db:                             valDB,
+		keyManagerV2:                   km,
 		validatorClient:                m.validatorClient,
-		keyManager:                     testKeyManager,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		attesterHistoryByPubKey:        attHistoryByPubKey,
 	}
 
-	return validator, m, ctrl.Finish
+	return validator, m, validatorKey, ctrl.Finish
 }
 
 func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
-	validator.ProposeBlock(context.Background(), 0, validatorPubKey)
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.ProposeBlock(context.Background(), 0, pubKey)
 
 	require.LogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
 }
 
 func TestProposeBlock_DomainDataFailed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Failed to sign randao reveal")
 }
 
 func TestProposeBlock_DomainDataIsNil(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(nil /*response*/, nil)
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, domainDataErr)
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -133,14 +149,16 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 		gomock.Any(), // block request
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Failed to request block from beacon node")
 }
 
 func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -162,7 +180,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Failed to propose block")
 }
 
@@ -173,8 +191,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -197,10 +217,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
-	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
+	validator.ProposeBlock(context.Background(), slot, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
-	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
+	validator.ProposeBlock(context.Background(), slot, pubKey)
 	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
@@ -211,8 +231,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -235,10 +257,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
-	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
-	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
@@ -249,8 +271,10 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -275,7 +299,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	validator.ProposeBlock(context.Background(), farAhead, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farAhead, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
@@ -285,7 +309,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(blk2.Block, nil /*err*/)
-	validator.ProposeBlock(context.Background(), past, validatorPubKey)
+	validator.ProposeBlock(context.Background(), past, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
@@ -296,8 +320,10 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -322,7 +348,6 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	pubKey := validatorPubKey
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
@@ -338,8 +363,10 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -361,12 +388,14 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, pubKey)
 }
 
 func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	validator.graffiti = []byte("12345678901234567890123456789012")
 
@@ -397,12 +426,12 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 	})
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, pubKey)
 	assert.Equal(t, string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
 }
 
 func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
-	_, m, finish := setup(t)
+	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -410,14 +439,20 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, errors.New("uh oh"))
 
-	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
+	err := ProposeExit(
+		context.Background(),
+		m.validatorClient,
+		m.nodeClient,
+		m.signExitFunc,
+		validatorKey.PublicKey().Marshal(),
+	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
 	assert.ErrorContains(t, "gRPC call to get validator index failed", err)
 }
 
 func TestProposeExit_GetGenesisFailed(t *testing.T) {
-	_, m, finish := setup(t)
+	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -428,14 +463,20 @@ func TestProposeExit_GetGenesisFailed(t *testing.T) {
 		GetGenesis(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("uh oh"))
 
-	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
+	err := ProposeExit(
+		context.Background(),
+		m.validatorClient,
+		m.nodeClient,
+		m.signExitFunc,
+		validatorKey.PublicKey().Marshal(),
+	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
 	assert.ErrorContains(t, "gRPC call to get genesis time failed", err)
 }
 
 func TestProposeExit_DomainDataFailed(t *testing.T) {
-	_, m, finish := setup(t)
+	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -455,7 +496,13 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("uh oh"))
 
-	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
+	err := ProposeExit(
+		context.Background(),
+		m.validatorClient,
+		m.nodeClient,
+		m.signExitFunc,
+		validatorKey.PublicKey().Marshal(),
+	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
 	assert.ErrorContains(t, "uh oh", err)
@@ -463,7 +510,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 }
 
 func TestProposeExit_DomainDataIsNil(t *testing.T) {
-	_, m, finish := setup(t)
+	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -483,14 +530,20 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(nil, nil)
 
-	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
+	err := ProposeExit(
+		context.Background(),
+		m.validatorClient,
+		m.nodeClient,
+		m.signExitFunc,
+		validatorKey.PublicKey().Marshal(),
+	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
 	assert.ErrorContains(t, "failed to sign voluntary exit", err)
 }
 
 func TestProposeBlock_ProposeExitFailed(t *testing.T) {
-	_, m, finish := setup(t)
+	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -514,14 +567,20 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Return(nil, errors.New("uh oh"))
 
-	err := ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:])
+	err := ProposeExit(
+		context.Background(),
+		m.validatorClient,
+		m.nodeClient,
+		m.signExitFunc,
+		validatorKey.PublicKey().Marshal(),
+	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
 	assert.ErrorContains(t, "failed to propose voluntary exit", err)
 }
 
 func TestProposeExit_BroadcastsBlock(t *testing.T) {
-	_, m, finish := setup(t)
+	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -545,5 +604,11 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Return(&ethpb.ProposeExitResponse{}, nil)
 
-	assert.NoError(t, ProposeExit(context.Background(), m.validatorClient, m.nodeClient, m.signExitFunc, validatorPubKey[:]))
+	assert.NoError(t, ProposeExit(
+		context.Background(),
+		m.validatorClient,
+		m.nodeClient,
+		m.signExitFunc,
+		validatorKey.PublicKey().Marshal(),
+	))
 }

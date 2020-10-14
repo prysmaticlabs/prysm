@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -32,13 +31,17 @@ func NewPool() *Pool {
 
 // PendingExits returns exits that are ready for inclusion at the given slot. This method will not
 // return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64) []*ethpb.SignedVoluntaryExit {
+func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64, noLimit bool) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	// Allocate pending slice with a capacity of min(len(p.pending), maxVoluntaryExits) since the
 	// array cannot exceed the max and is typically less than the max value.
-	pending := make([]*ethpb.SignedVoluntaryExit, 0, mathutil.Min(uint64(len(p.pending)), params.BeaconConfig().MaxVoluntaryExits))
+	maxExits := params.BeaconConfig().MaxVoluntaryExits
+	if noLimit {
+		maxExits = uint64(len(p.pending))
+	}
+	pending := make([]*ethpb.SignedVoluntaryExit, 0, maxExits)
 	for _, e := range p.pending {
 		if e.Exit.Epoch > helpers.SlotToEpoch(slot) {
 			continue
@@ -47,8 +50,8 @@ func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64) []*ethp
 			pending = append(pending, e)
 		}
 	}
-	if uint64(len(pending)) > params.BeaconConfig().MaxVoluntaryExits {
-		pending = pending[:params.BeaconConfig().MaxVoluntaryExits]
+	if uint64(len(pending)) > maxExits {
+		pending = pending[:maxExits]
 	}
 	return pending
 }
