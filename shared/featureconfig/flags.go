@@ -57,6 +57,10 @@ var (
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
 			"transmitting a slashable offence over the network.",
 	}
+	waitForSyncedFlag = &cli.BoolFlag{
+		Name:  "wait-for-synced",
+		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
+	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
@@ -113,6 +117,7 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
+	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
 	MedallaTestnet,
@@ -133,7 +138,9 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
-var E2EValidatorFlags []string
+var E2EValidatorFlags = []string{
+	"--wait-for-synced",
+}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
@@ -141,6 +148,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
+	waitForSyncedFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	AltonaTestnet,

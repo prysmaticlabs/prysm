@@ -48,6 +48,7 @@ type Flags struct {
 	LocalProtection                     bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
 	SlasherProtection                   bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	EnableNoise                         bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	WaitForSynced                       bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	EnableAccountsV2                    bool // EnableAccountsV2 for Prysm validator clients.
 	EnableEth1DataMajorityVote          bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
