@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
+func TestService_CanSubscribe(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	type test struct {
@@ -110,7 +110,7 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 	}
 }
 
-func Test_subscriptionFilter_CanSubscribe_uninitialized(t *testing.T) {
+func TestService_CanSubscribe_uninitialized(t *testing.T) {
 	s := &Service{}
 	require.False(t, s.CanSubscribe("foo"))
 }
@@ -203,7 +203,7 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 	}
 }
 
-func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
+func TestService_FilterIncomingSubscriptions(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	type args struct {
@@ -321,7 +321,7 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 	}
 }
 
-func Test_subscriptionFilter_MonitorsStateForkUpdates(t *testing.T) {
+func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	notifier := &mock.MockStateNotifier{}
@@ -353,7 +353,7 @@ func Test_subscriptionFilter_MonitorsStateForkUpdates(t *testing.T) {
 	require.NotEmpty(t, s.currentForkDigest)
 }
 
-func Test_subscriptionFilter_doesntSupportForksYet(t *testing.T) {
+func TestService_doesntSupportForksYet(t *testing.T) {
 	// Part of phase 1 will include a state transition which updates the state's fork. In phase 0,
 	// there are no forks or fork schedule planned. As such, we'll work on supporting fork upgrades
 	// in phase 1 changes.
