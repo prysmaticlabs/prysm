@@ -25,7 +25,7 @@ func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.Remove(context.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename))
 
-	// no set
+	// not set
 	accepted, err = VerifyTosAcceptedOrPrompt(context)
 	require.Equal(t, false, accepted)
 	require.ErrorContains(t, "could not scan text input", err)

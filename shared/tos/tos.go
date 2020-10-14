@@ -37,7 +37,7 @@ var (
 	log = logrus.WithField("prefix", "prompt")
 )
 
-// VerifyTosAcceptedOrPrompt check if Tos was accepted before of asks to accept
+// VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept
 func VerifyTosAcceptedOrPrompt(ctx *cli.Context) (bool, error) {
 	if fileutil.FileExists(ctx.String(cmd.DataDirFlag.Name) + "/" + acceptTosFilename) {
 		return true, nil

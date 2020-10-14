@@ -203,10 +203,10 @@ var (
 		Usage: "Integer to define max recieve message call size (default: 4194304 (for 4MB))",
 		Value: 1 << 22,
 	}
-	// EnableUPnPFlag specifies if UPnP should be enabled or not. The default value is false.
+	// AcceptTosFlag specifies user acceptance of ToS for non-interactive environments
 	AcceptTosFlag = &cli.BoolFlag{
 		Name:  "accept-terms-of-use",
-		Usage: "Accept Prysmatic Labs TERMS AND CONDITIONS",
+		Usage: "Accept TERMS AND CONDITIONS (for non-interactive environments)",
 	}
 )
 
