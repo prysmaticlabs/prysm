@@ -129,8 +129,8 @@ func (store *Store) ImportOldProposalFormat(ctx context.Context) error {
 	return err
 }
 
-// UpdatePublicKeysNewBuckets for a specified list of keys.
-func (store *Store) UpdatePublicKeysNewBuckets(pubKeys [][48]byte) error {
+// UpdatePublicKeysBuckets for a specified list of keys.
+func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		for _, pubKey := range pubKeys {

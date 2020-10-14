@@ -92,9 +92,6 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 		if err := kv.UpdatePublicKeysBuckets(pubKeys); err != nil {
 			return nil, err
 		}
-		if err := kv.UpdatePublicKeysNewBuckets(pubKeys); err != nil {
-			return nil, err
-		}
 	}
 
 	return kv, err

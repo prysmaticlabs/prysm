@@ -201,7 +201,7 @@ func TestShouldImportProposals(t *testing.T) {
 	shouldImport, err := db.shouldImportProposals()
 	require.NoError(t, err)
 	require.Equal(t, false, shouldImport, "Empty bucket should not be imported")
-	err = db.UpdatePublicKeysBuckets([][48]byte{pubkey})
+	err = db.OldUpdatePublicKeysBuckets([][48]byte{pubkey})
 	require.NoError(t, err)
 	shouldImport, err = db.shouldImportProposals()
 	require.NoError(t, err)
@@ -212,7 +212,7 @@ func TestStore_UpdateProposalsProtectionDb(t *testing.T) {
 	pubkey := [48]byte{3}
 	db := setupDB(t, [][48]byte{pubkey})
 	ctx := context.Background()
-	err := db.UpdatePublicKeysBuckets([][48]byte{pubkey})
+	err := db.OldUpdatePublicKeysBuckets([][48]byte{pubkey})
 	require.NoError(t, err)
 	shouldImport, err := db.shouldImportProposals()
 	require.NoError(t, err)
