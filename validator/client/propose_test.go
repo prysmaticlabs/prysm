@@ -573,8 +573,8 @@ func TestSignBlock(t *testing.T) {
 	copy(pubKey[:], publicKeys[0])
 	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
 	require.NoError(t, err, "%x,%v,%v", sig, domain, err)
-	require.Equal(t, "0xb8bb84adb4d66317c882bd1e18e9ba3fd0ee59815ca"+
-		"1351a65e8717c1b1f0164e8a67b60918cb2ff29fe1da1fb13079319bf01f205b3d7"+
-		"a88962b773b1c56cd064481616e29a7b598b909796488fcf110327b165e510d15a5"+
-		"2c96d92b195d9ec", hex.EncodeToString(sig))
+	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
+		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
+		"faa9a09a88beaff697404ca028b1c7052b0de37dbcff985dfa500459783370312bdd"+
+		"36d6e0f224", hex.EncodeToString(sig))
 }
