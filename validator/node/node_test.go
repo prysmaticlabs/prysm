@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -12,6 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -21,17 +26,36 @@ func TestNode_Builds(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
-	dir := testutil.TempDir() + "/keystore1"
+	dir := testutil.TempDir() + "/walletpath"
+	passwordDir := testutil.TempDir() + "/password"
+	require.NoError(t, os.MkdirAll(passwordDir, os.ModePerm))
+	passwordFile := filepath.Join(passwordDir, "password.txt")
+	walletPassword := "$$Passw0rdz2$$"
+	require.NoError(t, ioutil.WriteFile(
+		passwordFile,
+		[]byte(walletPassword),
+		os.ModePerm,
+	))
 	defer func() {
 		assert.NoError(t, os.RemoveAll(dir))
-	}()
-	defer func() {
+		assert.NoError(t, os.RemoveAll(passwordDir))
 		assert.NoError(t, os.RemoveAll(testutil.TempDir()+"/datadir"))
 	}()
-	set.String("keystore-path", dir, "path to keystore")
-	set.String("password", "1234", "validator account password")
+	set.String("wallet-dir", dir, "path to wallet")
+	set.String("wallet-password-file", passwordFile, "path to wallet password")
+	set.String("keymanager-kind", "direct", "keymanager kind")
 	set.String("verbosity", "debug", "log verbosity")
+	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	context := cli.NewContext(&app, set, nil)
+	w, err := v2.CreateWalletWithKeymanager(context.Context, &v2.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      dir,
+			KeymanagerKind: v2keymanager.Direct,
+			WalletPassword: walletPassword,
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, w.SaveHashedPassword(context.Context))
 
 	valClient, err := NewValidatorClient(context)
 	require.NoError(t, err, "Failed to create ValidatorClient")
