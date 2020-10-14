@@ -62,7 +62,6 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Slasher is not ready: %v", err)
 		}
 	}
-
 	if featureconfig.Get().WaitForSynced {
 		if err := v.WaitForSynced(ctx); err != nil {
 			log.Fatalf("Could not determine if chain started and beacon node is synced: %v", err)
@@ -75,7 +74,6 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Could not determine if beacon node synced: %v", err)
 		}
 	}
-
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
