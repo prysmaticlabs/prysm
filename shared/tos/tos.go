@@ -16,19 +16,13 @@ import (
 const (
 	acceptTosFilename   = "tosaccepted"
 	acceptTosPromptText = `
-Prysmatic Labs 
+Prysmatic Labs Terms of Use
 
-TERMS AND CONDITIONS: https://docs.prylabs.network/docs/licenses/prysmatic-labs
+By downloading, accessing or using the Prysm implementation (“Prysm”), you (referenced herein
+as “you” or the “user”) certify that you have read and agreed to the terms and conditions below.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
 
 Type "accept" to accept this terms and conditions[accept/decline]:`
 )
