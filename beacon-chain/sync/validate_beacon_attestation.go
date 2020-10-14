@@ -193,13 +193,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Attestation's signature is a valid BLS signature and belongs to correct public key..
-	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
-			log.WithError(err).Error("Could not verify attestation")
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
-		}
+	if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
+		log.WithError(err).Error("Could not verify attestation")
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
 	}
 
 	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)

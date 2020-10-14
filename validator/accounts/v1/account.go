@@ -149,7 +149,7 @@ func Exists(keystorePath string, assertNonEmpty bool) (bool, error) {
 
 	if assertNonEmpty {
 		_, err = f.Readdirnames(1) // Or f.Readdir(1)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return false, nil
 		}
 	}
