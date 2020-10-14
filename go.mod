@@ -6,7 +6,6 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.0
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
-	github.com/aws/aws-sdk-go v1.33.15 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/cespare/cp v1.1.1 // indirect
@@ -99,14 +98,9 @@ require (
 	github.com/supranational/blst v0.1.2-alpha.1.0.20200917144033-cd0847a7580b
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
-	github.com/wealdtech/eth2-signer-api v1.3.0
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.5.0
-	github.com/wealdtech/go-eth2-wallet v1.12.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0
-	github.com/wealdtech/go-eth2-wallet-nd/v2 v2.3.0
-	github.com/wealdtech/go-eth2-wallet-store-filesystem v1.16.1
-	github.com/wealdtech/go-eth2-wallet-types/v2 v2.6.0
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4

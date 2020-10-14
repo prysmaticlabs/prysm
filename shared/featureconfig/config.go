@@ -49,7 +49,6 @@ type Flags struct {
 	SlasherProtection                   bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	EnableNoise                         bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	WaitForSynced                       bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
-	EnableAccountsV2                    bool // EnableAccountsV2 for Prysm validator clients.
 	EnableEth1DataMajorityVote          bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnablePruningDepositProofs          bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
@@ -221,16 +220,6 @@ func ConfigureValidator(ctx *cli.Context) {
 		cfg.LocalProtection = true
 	} else {
 		log.Warn("Validator slashing protection not enabled!")
-	}
-	cfg.EnableAccountsV2 = true
-	if ctx.Bool(disableAccountsV2.Name) {
-		log.Warn("Disabling v2 of Prysm validator accounts")
-		log.Error(
-			"Accounts v1 will be fully deprecated in Prysm within the next 2 releases! If you are still " +
-				"using this functionality, please begin to upgrade by creating a v2 wallet. More information can be " +
-				"found in our docs portal https://docs.prylabs.network/docs/wallet/introduction/",
-		)
-		cfg.EnableAccountsV2 = false
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
