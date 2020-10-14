@@ -263,7 +263,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		// If context is canceled we stop the loop.

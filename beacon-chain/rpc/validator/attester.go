@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -51,7 +52,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	}
 
 	if err := vs.AttestationCache.MarkInProgress(req); err != nil {
-		if err == cache.ErrAlreadyInProgress {
+		if errors.Is(err, cache.ErrAlreadyInProgress) {
 			res, err := vs.AttestationCache.Get(ctx, req)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
