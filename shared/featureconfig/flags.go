@@ -34,10 +34,6 @@ var (
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
 	}
-	disableBroadcastSlashingFlag = &cli.BoolFlag{
-		Name:  "disable-broadcast-slashings",
-		Usage: "Disables broadcasting slashings submitted to the beacon node.",
-	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
@@ -60,10 +56,6 @@ var (
 		Name: "enable-external-slasher-protection",
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
 			"transmitting a slashable offence over the network.",
-	}
-	disableUpdateHeadPerAttestation = &cli.BoolFlag{
-		Name:  "disable-update-head-attestation",
-		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
@@ -136,9 +128,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
-var E2EValidatorFlags = []string{
-	"--wait-for-synced",
-}
+var E2EValidatorFlags []string
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
@@ -146,7 +136,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	disableBroadcastSlashingFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	AltonaTestnet,

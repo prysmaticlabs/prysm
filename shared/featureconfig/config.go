@@ -39,20 +39,19 @@ type Flags struct {
 	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
 
 	// Feature related flags.
-	WriteSSZStateTransitions        bool // WriteSSZStateTransitions to tmp directory.
-	SkipBLSVerify                   bool // Skips BLS verification across the runtime.
-	EnableBlst                      bool // Enables new BLS library from supranational.
-	EnableBackupWebhook             bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates        bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression       bool // EnableSnappyDBCompression in the database.
-	LocalProtection                 bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
-	SlasherProtection               bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	DisableUpdateHeadPerAttestation bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-	EnableNoise                     bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	EnableAccountsV2                bool // EnableAccountsV2 for Prysm validator clients.
-	EnableEth1DataMajorityVote      bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
-	EnablePeerScorer                bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnablePruningDepositProofs      bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
+	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
+	SkipBLSVerify              bool // Skips BLS verification across the runtime.
+	EnableBlst                 bool // Enables new BLS library from supranational.
+	EnableBackupWebhook        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression  bool // EnableSnappyDBCompression in the database.
+	LocalProtection            bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
+	SlasherProtection          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	EnableNoise                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	EnableAccountsV2           bool // EnableAccountsV2 for Prysm validator clients.
+	EnableEth1DataMajorityVote bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
+	EnablePeerScorer           bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnablePruningDepositProofs bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -161,10 +160,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
-	}
-	if ctx.Bool(disableUpdateHeadPerAttestation.Name) {
-		log.Warn("Disabled update head on per attestation basis")
-		cfg.DisableUpdateHeadPerAttestation = true
 	}
 
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
