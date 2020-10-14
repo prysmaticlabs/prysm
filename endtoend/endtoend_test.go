@@ -80,7 +80,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		require.NoError(t, err, "Failed to dial")
 		conns[i] = conn
 		defer func() {
-			if err := conn.Close(); err != nil {
+			if err = conn.Close(); err != nil {
 				t.Log(err)
 			}
 		}()

@@ -176,7 +176,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			"Enter the password for your imported accounts", promptutil.NotEmpty,
 		)
 		if err != nil {
-			return fmt.Errorf("could not read account password: %v", err)
+			return fmt.Errorf("could not read account password: %w", err)
 		}
 	}
 	fmt.Println("Importing accounts, this may take a while...")
