@@ -71,7 +71,7 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 			}
 			return fmt.Errorf("expected status code OK for beacon node %d, received %v with body %s", i, resp.StatusCode, body)
 		}
-		if err := resp.Body.Close(); err != nil {
+		if err = resp.Body.Close(); err != nil {
 			return err
 		}
 		time.Sleep(connTimeDelay)
@@ -90,7 +90,7 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 			}
 			return fmt.Errorf("expected status code OK for validator client %d, received %v with body %s", i, resp.StatusCode, body)
 		}
-		if err := resp.Body.Close(); err != nil {
+		if err = resp.Body.Close(); err != nil {
 			return err
 		}
 		time.Sleep(connTimeDelay)
