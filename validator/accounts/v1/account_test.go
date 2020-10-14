@@ -280,8 +280,7 @@ func prepareSourcesForMerging(firstStorePubKey [48]byte, firstStore *kv.Store, s
 func assertMergedStore(
 	t *testing.T,
 	mergedStore *kv.Store,
-	firstStorePubKey [48]byte,
-	secondStorePubKey [48]byte,
+	firstStorePubKey, secondStorePubKey [48]byte,
 	history *sourceStoresHistory) {
 
 	mergedProposalHistory1, err := mergedStore.ProposalHistoryForEpoch(

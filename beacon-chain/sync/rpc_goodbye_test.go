@@ -39,7 +39,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectResetStream(t, r, stream)
+		expectResetStream(t, stream)
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)

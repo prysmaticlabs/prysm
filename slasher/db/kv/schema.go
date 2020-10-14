@@ -27,11 +27,11 @@ var (
 	validatorsMinMaxSpanBucketNew = []byte("validators-min-max-span-bucket-new")
 )
 
-func encodeSlotValidatorID(slot uint64, validatorID uint64) []byte {
+func encodeSlotValidatorID(slot, validatorID uint64) []byte {
 	return append(bytesutil.Bytes8(slot), bytesutil.Bytes8(validatorID)...)
 }
 
-func encodeSlotValidatorIDSig(slot uint64, validatorID uint64, sig []byte) []byte {
+func encodeSlotValidatorIDSig(slot, validatorID uint64, sig []byte) []byte {
 	return append(append(bytesutil.Bytes8(slot), bytesutil.Bytes8(validatorID)...), sig...)
 }
 

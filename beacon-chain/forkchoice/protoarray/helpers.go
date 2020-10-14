@@ -13,8 +13,7 @@ func computeDeltas(
 	ctx context.Context,
 	blockIndices map[[32]byte]uint64,
 	votes []Vote,
-	oldBalances []uint64,
-	newBalances []uint64,
+	oldBalances, newBalances []uint64,
 ) ([]int, []Vote, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.computeDeltas")
 	defer span.End()

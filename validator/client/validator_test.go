@@ -28,7 +28,7 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-var _ = Validator(&validator{})
+var _ Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 

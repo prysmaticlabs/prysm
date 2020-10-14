@@ -31,8 +31,6 @@ import (
 
 const (
 	walletDirName    = "wallet"
-	passwordDirName  = "walletpasswords"
-	exportDirName    = "export"
 	passwordFileName = "password.txt"
 	password         = "OhWOWthisisatest42!$"
 	mnemonicFileName = "mnemonic.txt"

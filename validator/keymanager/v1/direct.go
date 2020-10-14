@@ -40,7 +40,7 @@ func (km *Direct) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign signs a message for the validator to broadcast.
-func (km *Direct) Sign(ctx context.Context, pubKey [48]byte, root [32]byte) (bls.Signature, error) {
+func (km *Direct) Sign(_ context.Context, pubKey [48]byte, root [32]byte) (bls.Signature, error) {
 	if secretKey, exists := km.secretKeys[pubKey]; exists {
 		return secretKey.Sign(root[:]), nil
 	}

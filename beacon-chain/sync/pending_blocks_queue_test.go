@@ -114,18 +114,18 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 	b1r := [32]byte{'b'}
 
 	r.insertBlockToPendingQueue(b0.Block.Slot, b0, b0r)
-	require.Equal(t, int(1), len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was not added to map")
+	require.Equal(t, 1, len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was not added to map")
 
 	r.insertBlockToPendingQueue(b1.Block.Slot, b1, b1r)
-	require.Equal(t, int(1), len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was not added to map")
+	require.Equal(t, 1, len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was not added to map")
 
 	// Add duplicate block which should not be saved.
 	r.insertBlockToPendingQueue(b0.Block.Slot, b0, b0r)
-	require.Equal(t, int(1), len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was added to map")
+	require.Equal(t, 1, len(r.slotToPendingBlocks[b0.Block.Slot]), "Block was added to map")
 
 	// Add duplicate block which should not be saved.
 	r.insertBlockToPendingQueue(b1.Block.Slot, b1, b1r)
-	require.Equal(t, int(1), len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was added to map")
+	require.Equal(t, 1, len(r.slotToPendingBlocks[b1.Block.Slot]), "Block was added to map")
 
 }
 
@@ -380,7 +380,7 @@ func TestService_BatchRootRequest(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := p2pTypes.BeaconBlockByRootsReq{}
+		var out  p2pTypes.BeaconBlockByRootsReq{}
 		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
 		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
 		response := []*ethpb.SignedBeaconBlock{b2, b3, b4, b5}
